@@ -158,6 +158,7 @@ jobs:
             /tmp/generated-room/Harbor.roobj
             /tmp/generated-room/Harbor.bmp
             /tmp/generated-room/Key.bmp
+            /tmp/generated-room/Door.bmp
             /tmp/generated-room/Inv_Key.bmp
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
