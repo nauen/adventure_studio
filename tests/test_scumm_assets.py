@@ -59,6 +59,8 @@ class ScummAssetsTests(unittest.TestCase):
             bmp, source = write_room_sources(room, Path(tmp))
             self.assertEqual(struct.unpack_from("<ii", bmp.read_bytes(), 18), (320, 200))
             self.assertIn("room Cellar", source.read_text(encoding="utf-8"))
+            self.assertIn("local script entry()", source.read_text(encoding="utf-8"))
+            self.assertIn("putActorAt(VAR_EGO, 60, 100, Cellar)", source.read_text(encoding="utf-8"))
 
     def test_game_export_validates_all_room_references_before_writing(self):
         with tempfile.TemporaryDirectory() as tmp:
