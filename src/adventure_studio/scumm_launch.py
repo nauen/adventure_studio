@@ -55,6 +55,31 @@ def close_rgb(actual: tuple[int, int, int], expected: tuple[int, int, int], tole
     return all(abs(a - e) <= tolerance for a, e in zip(actual, expected))
 
 
+def count_gold_pixels(histogram: str) -> int:
+    """Count the fixture's key pixels in ImageMagick RGB histogram output."""
+    total = 0
+    for line in histogram.splitlines():
+        match = re.match(r"^\s*(\d+):\s*\((\d+),(\d+),(\d+)\)", line)
+        if match:
+            count, red, green, blue = map(int, match.groups())
+            if close_rgb((red, green, blue), (255, 220, 75), tolerance=15):
+                total += count
+    return total
+
+
+def visible_key_pixels(output_directory: Path) -> int:
+    """Inspect the cropped game viewport, excluding the SCUMM verb GUI."""
+    screenshot = output_directory / "scummvm-end.png"
+    result = subprocess.run(
+        ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
+         "-format", "%c", "histogram:info:"],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not inspect room colors: {result.stderr}")
+    return count_gold_pixels(result.stdout)
+
+
 def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) -> int:
     """Require visible frame variation; this alone does not prove scrolling."""
     if type(minimum_changed_pixels) is not int or minimum_changed_pixels < 1:
@@ -75,6 +100,7 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
     # 1024x768 Xvfb screen. The fixture's sky is blue in the first half and
     # orange in the second. This tests the *visible* camera pan signature.
     scroll_signature = close_rgb(start_rgb, (70, 130, 190)) and close_rgb(end_rgb, (240, 175, 95))
+    key_pixels = visible_key_pixels(output_directory)
     (output_directory / "scummvm-frame-report.json").write_text(
         json.dumps({
             "changed_pixels": count,
@@ -84,6 +110,8 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
             "start_rgb": start_rgb,
             "end_rgb": end_rgb,
             "scroll_color_signature_passed": scroll_signature,
+            "visible_key_pixels": key_pixels,
+            "key_sprite_visible": key_pixels >= 40,
             "smooth_scrolling_proven": False,
         }, indent=2) + "\n", encoding="utf-8",
     )
@@ -91,6 +119,8 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
         raise RuntimeError(f"Insufficient visual variation: {count} changed pixels")
     if not scroll_signature:
         raise RuntimeError(f"Expected blue-to-orange scroll marker missing: {start_rgb} -> {end_rgb}")
+    if key_pixels < 40:
+        raise RuntimeError(f"Expected key sprite missing from room: {key_pixels} gold pixels")
     return count
 
 
