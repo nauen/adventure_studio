@@ -32,24 +32,23 @@ All coordinates use **room/world pixels**, not screen pixels. Separate narrative
 objects and their placement, so an item can be created before its art exists.
 Use one stable object ID in story, interaction and placement layers.
 
-## Exporter-specific behavior
+## SCUMM v6 export semantics (primary target)
 
-| Feature | AGS | SCUMM v6 / ScummC |
-| --- | --- | --- |
-| Wide room | Background larger than camera/viewport; auto tracking supported | Strip-based graphics and scroll semantics; investigate limits per version |
-| Walk navigation | Walkable area masks | Walkboxes/box adjacency |
-| Occlusion | Walkbehind masks with baselines | SCUMM masks and actor draw ordering |
-| Interactions | Room objects/hotspots + scripts | Room objects + SCUMM scripts |
-| Animated backgrounds | AGS room background frames | Resource/version-specific; validate by backend |
-| Assets | AGS sprite resources | Palette/format/costume resources; toolchain-specific |
+| Feature | Required SCUMM implementation |
+| --- | --- |
+| Wide room | Strip-based background with camera scrolling (validate format limits) |
+| Walk navigation | Walkboxes and adjacency |
+| Occlusion | SCUMM masks and actor draw ordering |
+| Interactions | Room objects and SCUMM v6 scripts |
+| Animated backgrounds | Version-specific resource handling; must be proven |
+| Assets | Palette-encoded backgrounds, costumes, sound resources |
 
-### AGS references
+### Comparative design references (AGS, **not** an export target)
 
 - Camera and room scrolling: https://adventuregamestudio.github.io/ags-manual/Camera.html
 - Viewports: https://adventuregamestudio.github.io/ags-manual/Viewport.html
 - Room editor and masks: https://adventuregamestudio.github.io/ags-manual/EditorRoom.html
 - Screen auto-sizing: https://adventuregamestudio.github.io/ags-manual/Screen.html
-- ScummVM AGS compatibility: https://www.scummvm.org/compatibility/2026.4.0/ags%3Aags/
 
 ### SCUMM references
 
@@ -59,11 +58,12 @@ Use one stable object ID in story, interaction and placement layers.
 
 ## Compatibility decisions and verification gates
 
-1. Initial production target: a stable AGS 3.x format that the selected ScummVM
-   runtime supports. Confirm by running an actual exported game, not by
-   assuming generic AGS compatibility covers every feature.
-2. SCUMM v6 is a **separate experimental backend**, not a promise of equivalent
-   behavior. ScummC documents a patched ScummVM or a game-ID workaround.
+1. **Canonical output is SCUMM v6 game data for ScummVM**, not AGS. The editor
+   and story model are engine-neutral internally, but the first exporter only
+   targets SCUMM v6. ScummC is a candidate toolchain, not a completed backend.
+2. Original DOS interpreter support is a second, stricter compatibility profile
+   for the same family of game data. Never infer DOS compatibility merely from
+   ScummVM success.
 3. Each backend needs a capability manifest. Unsupported rendering/action
    features cause an explicit export error; never silently degrade a puzzle.
 4. Automated export acceptance fixture: one ordinary room, one 2x-width
@@ -71,8 +71,12 @@ Use one stable object ID in story, interaction and placement layers.
    one room transition, one item pickup and save/load.
 5. Ensure sprite/animation frame atlases and generated graphics are checked for
    palette, size, naming and memory limits of the selected backend.
-6. Test actual ScummVM detection and playability on the target release. A
-   compiled game existing on disk does not prove ScummVM compatibility.
+6. Test actual ScummVM detection and playability on a specified baseline
+   release, plus at least one older supported release when feasible. A compiled
+   game existing on disk does not prove ScummVM compatibility. No promise of
+   compatibility with *every* ScummVM build.
+7. The export readiness guard stays false until both SCUMM output and launch
+   have been automatically integration-tested. Do not silently substitute AGS.
 
 ## Important distinctions
 
