@@ -142,6 +142,9 @@ jobs:
             if test -f /tmp/scummvm-smoke/scummvm-frame-report.json; then
               python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-frame-report.json")); print("- Changed pixels: **{}** (minimum: {})".format(p["changed_pixels"],p["minimum_changed_pixels"])); print("- Frame variation: **{}**".format("PASS" if p["frame_variation_passed"] else "FAIL")); print("- Expected blue-to-orange camera marker: **{}**".format("PASS" if p["scroll_color_signature_passed"] else "FAIL")); print("- Rendered gold key pixels: **{}**".format(p["visible_key_pixels"])); print("- Smooth scrolling and input handling: **not yet proven**")'
               echo '- Start/end screenshots and diff are in the `scummc-research-output` artifact.'
+              if test -f /tmp/scummvm-smoke/scummvm-negative-report.json; then
+                python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-negative-report.json")); print("- Locked door rejects walking through: **{}**".format("PASS" if p["blocked"] else "FAIL"))'
+              fi
               if test -f /tmp/scummvm-smoke/scummvm-interaction-report.json; then
                 python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-interaction-report.json")); print("- Pick up moved key into inventory: **{}**".format("PASS" if p["key_removed_from_room"] else "FAIL")); print("- Inventory gold pixels: **{}**".format(p["inventory_gold_pixels"]))'
               fi
