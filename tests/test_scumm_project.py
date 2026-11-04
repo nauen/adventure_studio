@@ -50,6 +50,8 @@ class ScummProjectTests(unittest.TestCase):
         for edit in (
             lambda d: d.update({"execute": "rm -rf anything"}),
             lambda d: d.update({"format_version": 99}),
+            lambda d: d.update({"id": 123}),
+            lambda d: d["rooms"][0]["geometry"].update({"width": "640"}),
             lambda d: d["rooms"][0].update({"script": "startRoom(Evil)"}),
             lambda d: d["rooms"][0]["hotspots"][0].update({"script": "evil()"}),
             lambda d: d["rooms"][0].update({"pixels": "!!!"}),
