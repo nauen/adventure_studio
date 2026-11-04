@@ -316,6 +316,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     raise RuntimeError(f"Use interaction mouse input failed: {click.stderr}")
                 time.sleep(0.3)
             door_opened = False
+            room_changed = False
             remaining_door_pixels = initial_door_pixels
             door_deadline = time.monotonic() + 15.0
             while time.monotonic() < door_deadline:
@@ -323,18 +324,20 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     raise RuntimeError(f"ScummVM quit during door use (exit={process.returncode})")
                 capture_frame("door")
                 remaining_door_pixels = door_pixels(output_directory, "door")
-                if remaining_door_pixels < 10:
+                room_changed = close_rgb(scene_pixel(output_directory, "door"), (120, 70, 180))
+                if remaining_door_pixels < 10 and room_changed:
                     door_opened = True
                     break
                 time.sleep(0.4)
             (output_directory / "scummvm-use-report.json").write_text(
                 json.dumps({"inventory_item": "Key", "target": "Door",
                             "click": [door_x, door_y], "green_before": initial_door_pixels,
-                            "green_after": remaining_door_pixels, "door_opened": door_opened}, indent=2) + "\n",
+                            "green_after": remaining_door_pixels, "door_opened": door_opened,
+                            "destination_room_visible": room_changed}, indent=2) + "\n",
                 encoding="utf-8",
             )
             if not door_opened:
-                raise RuntimeError(f"Use Key with Door did not change target state: {remaining_door_pixels} green pixels")
+                raise RuntimeError(f"Use Key with Door did not reach Cellar: door={remaining_door_pixels}, destination={room_changed}")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -346,7 +349,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     print(f"ScummVM showed the blue room, then survived {seconds:.1f}s; final screenshot: {final_snapshot}")
     print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
     print(f"Pickup moved the key from room to inventory at ({key_x}, {key_y}).")
-    print(f"Using the inventory key removed the door at ({door_x}, {door_y}).")
+    print(f"Using the inventory key opened the door and entered Cellar at ({door_x}, {door_y}).")
     print("Camera, inventory and scripted use passed; save/load remains unverified.")
 
 
