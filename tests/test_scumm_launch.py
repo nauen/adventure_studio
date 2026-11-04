@@ -51,6 +51,14 @@ class ScummLaunchTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "duration"):
                 launch_smoke(path, path / "out", seconds=21)
 
+    def test_goal_manifest_required_for_runtime_probe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            (path / "tentacle.000").write_bytes(b"0")
+            (path / "tentacle.001").write_bytes(b"1")
+            with self.assertRaisesRegex(ValueError, "goal manifest"):
+                launch_smoke(path, path / "out")
+
 
 if __name__ == "__main__":
     unittest.main()
