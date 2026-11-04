@@ -7,13 +7,49 @@ and a captured framebuffer are *not* evidence of gameplay or scrolling.
 from __future__ import annotations
 
 import os
+import json
+import re
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 
-def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 4.0) -> None:
+def parse_changed_pixels(metric: str) -> int:
+    """Parse ImageMagick's absolute-error metric, rejecting ambiguous output."""
+    if not re.fullmatch(r"\s*\d+\s*", metric):
+        raise ValueError(f"Unexpected ImageMagick AE metric: {metric[:120]!r}")
+    return int(metric.strip())
+
+
+def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) -> int:
+    """Require visible frame variation; this alone does not prove scrolling."""
+    if type(minimum_changed_pixels) is not int or minimum_changed_pixels < 1:
+        raise ValueError("Invalid minimum changed pixel count")
+    start = output_directory / "scummvm-start.png"
+    end = output_directory / "scummvm-end.png"
+    diff = output_directory / "scummvm-diff.png"
+    result = subprocess.run(
+        ["compare", "-metric", "AE", "-fuzz", "5%", str(start), str(end), str(diff)],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode not in (0, 1):
+        raise RuntimeError(f"ImageMagick compare failed: {result.stderr}")
+    count = parse_changed_pixels(result.stderr)
+    (output_directory / "scummvm-frame-report.json").write_text(
+        json.dumps({
+            "changed_pixels": count,
+            "minimum_changed_pixels": minimum_changed_pixels,
+            "frame_variation_passed": count >= minimum_changed_pixels,
+            "scrolling_proven": False,
+        }, indent=2) + "\n", encoding="utf-8",
+    )
+    if count < minimum_changed_pixels:
+        raise RuntimeError(f"Insufficient visual variation: {count} changed pixels")
+    return count
+
+
+def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0) -> None:
     if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
@@ -55,7 +91,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             while time.monotonic() < deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
-                if not start_snapshot_taken and time.monotonic() >= deadline - seconds + 0.5:
+                if not start_snapshot_taken and time.monotonic() >= deadline - seconds + 1.5:
                     capture_frame("start")
                     start_snapshot_taken = True
                 time.sleep(0.1)
@@ -71,6 +107,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     process.kill()
                     process.wait(timeout=3)
     print(f"ScummVM process survived {seconds:.1f}s; final screenshot: {final_snapshot}")
+    changed = compare_frames(output_directory)
+    print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
     print("This does NOT prove game rendering, interactions, camera movement, or save/load.")
 
 
