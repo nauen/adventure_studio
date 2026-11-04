@@ -132,6 +132,7 @@ def scummc_room_source(room: RoomAsset) -> str:
         ])
         if hotspot.pickup:
             parts.extend(["        case PickUp:\n", "            pickupObject(objA,VAR_ROOM);\n",
+                          "            setObjectState(objA,0);\n",
                           "            return;\n"])
         parts.append("        }\n    }\n")
     if room.hotspots:
