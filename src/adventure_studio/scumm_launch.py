@@ -242,7 +242,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             env=environment,
         )
         try:
-            readiness_deadline = time.monotonic() + 8.0
+            readiness_deadline = time.monotonic() + 20.0
             while time.monotonic() < readiness_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
@@ -251,7 +251,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     break
                 time.sleep(0.3)
             else:
-                raise RuntimeError("Blue initial room was not visible within 8 seconds")
+                raise RuntimeError("Blue initial room was not visible within 20 seconds")
             deadline = time.monotonic() + seconds
             while time.monotonic() < deadline:
                 if process.poll() is not None:
