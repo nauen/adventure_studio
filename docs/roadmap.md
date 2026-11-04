@@ -47,6 +47,8 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 - [ ] Spielfigur kann kontrolliert laufen; Walkboxes und Grenzen funktionieren.
 - [ ] Zwei Bildschirmbreiten werden korrekt horizontal gescrollt.
 - [ ] Ein Gegenstand erscheint an der richtigen Position und hat einen Hotspot.
+- [x] Erster eigener Gegenstand wird als SCUMM-Bitmap gerendert und im
+      Kamerabild nachgewiesen (goldener Schlüssel; Pixelprüfung integriert).
 - [x] Automatisierte Screenshots belegen zwei verschiedene Kamerapositionen
       (CI-Lauf #41850260115: Blau-zu-Orange-Marker, 92 428 geänderte Pixel).
 - [ ] Konsolenlogs und Artefakte stehen in GitHub Actions zur Verfügung.
