@@ -21,6 +21,8 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("object Key", source)
         self.assertIn("case LookAt:", source)
         self.assertIn("case PickUp:", source)
+        self.assertIn('states = { { 0, 0, "Key.bmp" } };', source)
+        self.assertIn("class = { Pickable };", source)
         self.assertIn("pickupObject(objA,VAR_ROOM)", source)
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
         self.assertIn("setActorStanding()", source)
@@ -31,6 +33,9 @@ class ScummAssetsTests(unittest.TestCase):
             bmp, scc = write_room_sources(scrolling_fixture(), Path(tmp))
             self.assertGreater(bmp.stat().st_size, 128_000)
             self.assertIn("room Harbor", scc.read_text(encoding="utf-8"))
+            sprite = Path(tmp) / "Key.bmp"
+            self.assertTrue(sprite.is_file())
+            self.assertEqual(struct.unpack_from("<ii", sprite.read_bytes(), 18), (16, 12))
 
     def test_rejects_invalid_dimensions_and_names(self):
         room = scrolling_fixture()
@@ -50,6 +55,10 @@ class ScummAssetsTests(unittest.TestCase):
             scummc_room_source(replace(room, hotspots=(RoomHotspot("Key", 'key"; evil()', "bad", 0, 0, 10, 10),)))
         with self.assertRaisesRegex(ValueError, "outside room"):
             scummc_room_source(replace(room, hotspots=(replace(room.hotspots[0], x=639),)))
+        with self.assertRaisesRegex(ValueError, "sprite pixel buffer"):
+            scummc_room_source(replace(room, hotspots=(replace(room.hotspots[0], sprite_pixels=b""),)))
+        with self.assertRaisesRegex(ValueError, "sprite references"):
+            scummc_room_source(replace(room, hotspots=(replace(room.hotspots[0], sprite_pixels=b"\xff" * 192),)))
 
 
 if __name__ == "__main__":
