@@ -71,6 +71,8 @@ jobs:
           "$SLD_BIN" -o /tmp/generated-room/studio /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj
           test -s /tmp/generated-room/studio.000
           test -s /tmp/generated-room/studio.001
+          mkdir -p /tmp/studio-fixture
+          cp /tmp/generated-room/studio.000 /tmp/generated-room/studio.001 /tmp/studio-fixture/
       - name: Produce ScummC documented compatibility-only detection fixture
         # Research fixture only: this uses the Day of the Tentacle game ID
         # described by ScummC upstream. Never label it as native game support.
@@ -93,7 +95,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          python -c 'from pathlib import Path; from adventure_studio.scumm_probe import check_game_files; result = check_game_files(Path("/tmp/generated-room")); print(result); assert result[0]'
+          python -c 'from pathlib import Path; from adventure_studio.scumm_probe import check_game_files; result = check_game_files(Path("/tmp/studio-fixture")); print(result); assert result[0]'
       - name: Probe stock ScummVM detection (experimental, expected incompatibility possible)
         # A custom SCUMM v6 game is not guaranteed to appear in an unmodified
         # ScummVM detection table. Record this independently from compilation.
@@ -101,7 +103,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          python -m adventure_studio.scumm_probe /tmp/generated-room
+          python -m adventure_studio.scumm_probe /tmp/studio-fixture
       - name: Probe upstream SCUMM game detection (experimental)
         continue-on-error: true
         env:
@@ -126,6 +128,8 @@ jobs:
             /tmp/generated-room/Harbor.bmp
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
+            /tmp/studio-fixture/*.000
+            /tmp/studio-fixture/*.001
             /tmp/tentacle-fixture/*.000
             /tmp/tentacle-fixture/*.001
             /tmp/scummc-upstream/examples/road/*.000
