@@ -28,7 +28,7 @@ jobs:
       - name: Install compiler dependencies and stock ScummVM
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps imagemagick
+          sudo apt-get install -y build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick
       - name: Fetch unmodified ScummC
         run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
       - name: Fix legacy ScummC tool help paths in ephemeral checkout
@@ -137,6 +137,9 @@ jobs:
             if test -f /tmp/scummvm-smoke/scummvm-frame-report.json; then
               python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-frame-report.json")); print("- Changed pixels: **{}** (minimum: {})".format(p["changed_pixels"],p["minimum_changed_pixels"])); print("- Frame variation: **{}**".format("PASS" if p["frame_variation_passed"] else "FAIL")); print("- Expected blue-to-orange camera marker: **{}**".format("PASS" if p["scroll_color_signature_passed"] else "FAIL")); print("- Rendered gold key pixels: **{}**".format(p["visible_key_pixels"])); print("- Smooth scrolling and input handling: **not yet proven**")'
               echo '- Start/end screenshots and diff are in the `scummc-research-output` artifact.'
+              if test -f /tmp/scummvm-smoke/scummvm-interaction-report.json; then
+                python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-interaction-report.json")); print("- Pick up removed key sprite: **{}**".format("PASS" if p["key_removed_from_room"] else "FAIL"))'
+              fi
             else
               echo '- Visual comparison: **not produced** (see workflow steps and logs).'
             fi
