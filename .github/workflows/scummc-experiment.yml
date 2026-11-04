@@ -41,8 +41,16 @@ jobs:
         run: |
           SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
           test -n "$SCC_BIN"
-          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -R /tmp/generated-room -o /tmp/generated-room/Harbor.roobj /tmp/generated-room/Harbor.scc
+          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/scummc-upstream/examples/road -R /tmp/generated-room -o /tmp/generated-room/Harbor.roobj /tmp/generated-room/Harbor.scc
           test -s /tmp/generated-room/Harbor.roobj
+      - name: Link generated room with upstream game bootstrap
+        working-directory: /tmp/scummc-upstream/examples/road
+        run: |
+          SLD_BIN=$(find /tmp/scummc-upstream -type f -name sld -executable -print -quit)
+          test -n "$SLD_BIN"
+          "$SLD_BIN" -o studio common.roobj road.roobj /tmp/generated-room/Harbor.roobj
+          test -s studio.000
+          test -s studio.001
       - name: Rebuild the complete upstream demo using our generated background
         # This preserves upstream game logic and changes only the room art. It
         # tests image integration/linking, not our future game-script exporter.
