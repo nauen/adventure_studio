@@ -210,6 +210,17 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
         raise ValueError("Smoke duration must be between 0 and 20 seconds")
+    goal_path = game_directory / "game-goal.json"
+    if not goal_path.is_file():
+        raise ValueError("Missing deterministic goal manifest")
+    goal = json.loads(goal_path.read_text(encoding="utf-8"))
+    if goal.get("condition") != "enter_room" or not isinstance(goal.get("room_id"), str):
+        raise ValueError("Unsupported goal manifest")
+    expected_color = goal.get("fixture_probe_rgb")
+    if not isinstance(expected_color, list) or len(expected_color) != 3 or any(
+        type(channel) is not int or channel < 0 or channel > 255 for channel in expected_color
+    ):
+        raise ValueError("Invalid goal room color probe")
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("A virtual X display is required")
 
@@ -324,7 +335,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     raise RuntimeError(f"ScummVM quit during door use (exit={process.returncode})")
                 capture_frame("door")
                 remaining_door_pixels = door_pixels(output_directory, "door")
-                room_changed = close_rgb(scene_pixel(output_directory, "door"), (120, 70, 180))
+                room_changed = close_rgb(scene_pixel(output_directory, "door"), tuple(expected_color))
                 if remaining_door_pixels < 10 and room_changed:
                     door_opened = True
                     break
@@ -333,11 +344,12 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 json.dumps({"inventory_item": "Key", "target": "Door",
                             "click": [door_x, door_y], "green_before": initial_door_pixels,
                             "green_after": remaining_door_pixels, "door_opened": door_opened,
-                            "destination_room_visible": room_changed}, indent=2) + "\n",
+                            "destination_room_visible": room_changed,
+                            "goal_room": goal["room_id"], "goal_reached": room_changed}, indent=2) + "\n",
                 encoding="utf-8",
             )
             if not door_opened:
-                raise RuntimeError(f"Use Key with Door did not reach Cellar: door={remaining_door_pixels}, destination={room_changed}")
+                raise RuntimeError(f"Use Key with Door did not reach {goal['room_id']}: door={remaining_door_pixels}, destination={room_changed}")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -349,7 +361,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     print(f"ScummVM showed the blue room, then survived {seconds:.1f}s; final screenshot: {final_snapshot}")
     print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
     print(f"Pickup moved the key from room to inventory at ({key_x}, {key_y}).")
-    print(f"Using the inventory key opened the door and entered Cellar at ({door_x}, {door_y}).")
+    print(f"Using the inventory key opened the door and reached {goal['room_id']} at ({door_x}, {door_y}).")
     print("Camera, inventory and scripted use passed; save/load remains unverified.")
 
 
