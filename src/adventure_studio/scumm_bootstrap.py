@@ -28,12 +28,49 @@ def retarget_upstream_bootstrap(source: str, room_name: str) -> str:
     return source
 
 
+def inject_inventory_objects(source: str, icon_ids: tuple[str, ...]) -> str:
+    """Extend external example's ResRoom with data-driven inventory icons."""
+    marker = "    // the inventory icons\n"
+    if source.count(marker) != 1:
+        raise ValueError("Unexpected upstream inventory layout")
+    if len(icon_ids) != len(set(icon_ids)):
+        raise ValueError("Duplicate inventory icon identifier")
+    for icon_id in icon_ids:
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", icon_id):
+            raise ValueError("Invalid inventory icon identifier")
+    definitions = "".join(
+        f'    object {icon_id}Icon {{\n'
+        '        x = 0;\n        w = 40;\n        h = 16;\n'
+        f'        name = "{icon_id}";\n'
+        f'        states = {{ {{ 0, 0, "Inv_{icon_id}.bmp" }} }};\n'
+        '        state = 1;\n    }\n'
+        for icon_id in icon_ids
+    )
+    return source.replace(marker, marker + definitions, 1)
+
+
+def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str:
+    marker = "    // Inventory objects\n"
+    if header.count(marker) != 1:
+        raise ValueError("Unexpected upstream inventory header layout")
+    for icon_id in icon_ids:
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", icon_id):
+            raise ValueError("Invalid inventory icon identifier")
+    return header.replace(marker, marker + "".join(f"    object {icon_id}Icon;\n" for icon_id in icon_ids), 1)
+
+
 def main() -> int:
-    if len(sys.argv) != 4:
-        print("Usage: python -m adventure_studio.scumm_bootstrap INPUT OUTPUT ROOM_NAME")
+    if len(sys.argv) not in (4, 6):
+        print("Usage: python -m adventure_studio.scumm_bootstrap INPUT OUTPUT ROOM_NAME [HEADER_INPUT ICON_IDS]")
         return 2
     original = Path(sys.argv[1]).read_text(encoding="utf-8")
     result = retarget_upstream_bootstrap(original, sys.argv[3])
+    if len(sys.argv) == 6:
+        icon_ids = tuple(sys.argv[5].split(","))
+        result = inject_inventory_objects(result, icon_ids)
+        header = Path(sys.argv[4]).read_text(encoding="utf-8")
+        patched_header = inject_inventory_declarations(header, icon_ids)
+        Path(sys.argv[2]).with_name("common.sch").write_text(patched_header, encoding="utf-8")
     Path(sys.argv[2]).write_text(result, encoding="utf-8")
     return 0
 
