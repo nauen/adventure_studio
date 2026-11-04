@@ -28,6 +28,16 @@ jobs:
       - name: Build upstream road example
         working-directory: /tmp/scummc-upstream/examples/road
         run: make
+      - name: Generate Adventure Studio 640x200 room source
+        env:
+          PYTHONPATH: src
+        run: python -m adventure_studio.scumm_assets /tmp/generated-room
+      - name: Compile generated room with ScummC
+        run: |
+          SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
+          test -n "$SCC_BIN"
+          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -R /tmp/generated-room -o /tmp/generated-room/Harbor.roobj /tmp/generated-room/Harbor.scc
+          test -s /tmp/generated-room/Harbor.roobj
       - name: Check produced game pair and ScummVM detection
         env:
           PYTHONPATH: src
