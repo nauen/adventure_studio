@@ -48,7 +48,7 @@ shippable game. Detection probes do not hide compiler/linker failures.
 
 The experimental `scumm_launch.py` smoke test now starts the isolated
 `tentacle` compatibility fixture in an Xvfb display for four seconds and
-uploads its console log and raw X11 framebuffer (`.xwd`) as Actions artifacts.
+uploads its console log and screenshot (`.png`, plus raw `.xwd`) as Actions artifacts.
 It is designed to expose immediate crashes. A surviving process and a
 framebuffer screenshot do **not** establish that the game rendered correctly,
 that scrolling works, or that gameplay is possible. These remain separate
