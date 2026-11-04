@@ -127,6 +127,9 @@ def scummc_room_source(room: RoomAsset) -> str:
             "        ResRoom::showCursor();\n",
         ])
         if room.demo_walk_to_x is not None:
+            # Allow the headless test to observe the initial camera position
+            # before the diagnostic actor starts crossing the room.
+            parts.append("        delay(180);\n")
             parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, 100);\n")
         parts.append("    }\n")
     parts.append("}\n")
