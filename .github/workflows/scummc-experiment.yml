@@ -126,6 +126,22 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/tentacle-fixture /tmp/scummvm-smoke
+      - name: Publish visual probe summary
+        if: always()
+        run: |
+          {
+            echo '## SCUMM-v6 graphics probe'
+            echo
+            echo 'The gameplay fixture uses a temporary Day of the Tentacle compatibility identity, **not** native ScummVM game detection.'
+            echo
+            if test -f /tmp/scummvm-smoke/scummvm-frame-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-frame-report.json")); print("- Changed pixels: **{}** (minimum: {})".format(p["changed_pixels"],p["minimum_changed_pixels"])); print("- Frame variation: **{}**".format("PASS" if p["frame_variation_passed"] else "FAIL")); print("- Camera scrolling: **not yet proven**")'
+              echo '- Start/end screenshots and diff are in the `scummc-research-output` artifact.'
+            else
+              echo '- Visual comparison: **not produced** (see workflow steps and logs).'
+            fi
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload compiler outputs for inspection
         if: always()
         uses: actions/upload-artifact@v4
