@@ -33,6 +33,7 @@ class UseRule:
     target_id: str
     response: str
     hide_target: bool = False
+    destination_room: str | None = None
 
 
 @dataclass(frozen=True)
@@ -107,6 +108,10 @@ def _validate(room: RoomAsset) -> None:
             raise ValueError("Multiple use rules for the same target are not yet supported")
         targets.add(rule.target_id)
         _scumm_string(rule.response)
+        if rule.destination_room is not None and (
+            not _IDENTIFIER.fullmatch(rule.destination_room) or rule.destination_room == room.name
+        ):
+            raise ValueError("Invalid destination room in use rule")
 
 
 def _indexed_bmp(width: int, height: int, pixels: bytes, palette: tuple[tuple[int, int, int], ...]) -> bytes:
@@ -136,6 +141,8 @@ def scummc_room_source(room: RoomAsset) -> str:
         # The existing official example supplies Pickable/LookAt, egoSay and
         # pickupObject. This header must eventually be replaced by our own.
         parts.append('#include "common.sch"\n')
+    for destination in sorted({r.destination_room for r in room.use_rules if r.destination_room}):
+        parts.append(f"room {destination};\n")
     parts.append(f'\nroom {room.name} {{\n    image = "{room.name}.bmp";\n')
     for hotspot in room.hotspots:
         parts.extend([
@@ -174,6 +181,8 @@ def scummc_room_source(room: RoomAsset) -> str:
                 ])
                 if rule.hide_target:
                     parts.append("                setObjectState(objA,0);\n")
+                if rule.destination_room:
+                    parts.append(f"                startRoom({rule.destination_room});\n")
                 parts.extend(["                return;\n", "            }\n", "            return;\n"])
         parts.append("        }\n    }\n")
     if room.hotspots:
@@ -223,6 +232,21 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
     return bmp, scc
 
 
+def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[tuple[Path, Path], ...]:
+    """Validate all destinations before writing any linked-room source files."""
+    if not rooms:
+        raise ValueError("A game must contain at least one room")
+    names = [room.name for room in rooms]
+    if len(names) != len(set(names)):
+        raise ValueError("Duplicate room name")
+    for room in rooms:
+        _validate(room)
+        for rule in room.use_rules:
+            if rule.destination_room is not None and rule.destination_room not in names:
+                raise ValueError(f"Unknown destination room: {rule.destination_room}")
+    return tuple(write_room_sources(room, directory) for room in rooms)
+
+
 def scrolling_fixture() -> RoomAsset:
     """A synthetic two-screen-wide room with distinct left/right regions."""
     width, height = 640, 200
@@ -239,15 +263,25 @@ def scrolling_fixture() -> RoomAsset:
                      (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 16, True, key),
                       RoomHotspot("Door", "the door", "A locked door.", 450, 100, 16, 16, False, door)),
                      demo_walk_to_x=540,
-                     use_rules=(UseRule("Key", "Door", "The door is unlocked.", hide_target=True),))
+                     use_rules=(UseRule("Key", "Door", "The door is unlocked.",
+                                        hide_target=True, destination_room="Cellar"),))
+
+
+def destination_fixture() -> RoomAsset:
+    """The second room verifies a real engine transition after the puzzle."""
+    width, height = 320, 200
+    palette = ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75),
+               (60, 220, 90), (120, 70, 180))
+    return RoomAsset("Cellar", RoomGeometry(width, height, 320, 200), bytes([5]) * (width * height), palette)
 
 
 def main() -> int:
     if len(sys.argv) != 2:
         print("Usage: python -m adventure_studio.scumm_assets OUTPUT_DIRECTORY")
         return 2
-    for path in write_room_sources(scrolling_fixture(), Path(sys.argv[1])):
-        print(path)
+    for generated in write_game_sources((scrolling_fixture(), destination_fixture()), Path(sys.argv[1])):
+        for path in generated:
+            print(path)
     return 0
 
 
