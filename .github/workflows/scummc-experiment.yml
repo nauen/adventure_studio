@@ -26,7 +26,7 @@ jobs:
       - name: Install compiler dependencies and stock ScummVM
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bison flex pkg-config libglib2.0-dev scummvm
+          sudo apt-get install -y build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm
       - name: Fetch unmodified ScummC
         run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
       - name: Build ScummC tools
