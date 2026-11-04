@@ -152,6 +152,7 @@ jobs:
             /tmp/generated-room/Harbor.scc
             /tmp/generated-room/Harbor.roobj
             /tmp/generated-room/Harbor.bmp
+            /tmp/generated-room/Key.bmp
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
             /tmp/studio-fixture/*.000
