@@ -1,9 +1,20 @@
 import unittest
 
-from adventure_studio.scumm_bootstrap import retarget_upstream_bootstrap
+from adventure_studio.scumm_bootstrap import inject_inventory_declarations, inject_inventory_objects, retarget_upstream_bootstrap
 
 
 class BootstrapTests(unittest.TestCase):
+    def test_inventory_resource_is_declared_and_injected(self):
+        source = 'room ResRoom {\n    // the inventory icons\n    object axe {}\n}'
+        header = 'room ResRoom {\n    // Inventory objects\n    object axe;\n}'
+        self.assertIn('states = { { 0, 0, "Inv_Key.bmp" } };', inject_inventory_objects(source, ('Key',)))
+        self.assertIn('object KeyIcon;', inject_inventory_declarations(header, ('Key',)))
+
+    def test_inventory_patch_rejects_unknown_layout_and_names(self):
+        with self.assertRaisesRegex(ValueError, 'upstream inventory layout'):
+            inject_inventory_objects('room ResRoom {}', ('Key',))
+        with self.assertRaisesRegex(ValueError, 'identifier'):
+            inject_inventory_objects('    // the inventory icons\n', ('Bad;code',))
     def test_retarget_without_touching_other_logic(self):
         source = "room Road;\nloadRoom(Road);\nlockRoom(Road);\nstartRoom(Road);\nint untouched;\n"
         result = retarget_upstream_bootstrap(source, "Harbor")
