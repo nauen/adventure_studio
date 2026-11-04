@@ -67,9 +67,11 @@ def count_gold_pixels(histogram: str) -> int:
     return total
 
 
-def visible_key_pixels(output_directory: Path) -> int:
+def visible_key_pixels(output_directory: Path, frame: str = "end") -> int:
     """Inspect the cropped game viewport, excluding the SCUMM verb GUI."""
-    screenshot = output_directory / "scummvm-end.png"
+    if frame not in ("end", "pickup"):
+        raise ValueError("Invalid screenshot frame")
+    screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
          "-format", "%c", "histogram:info:"],
@@ -78,6 +80,31 @@ def visible_key_pixels(output_directory: Path) -> int:
     if result.returncode:
         raise RuntimeError(f"Could not inspect room colors: {result.stderr}")
     return count_gold_pixels(result.stdout)
+
+
+def parse_key_bounds(bounds: str) -> tuple[int, int]:
+    """Convert trimmed sprite bounds into absolute Xvfb click coordinates."""
+    match = re.fullmatch(r"(\d+)x(\d+)\+(\d+)\+(\d+)", bounds.strip())
+    if not match:
+        raise ValueError(f"Unexpected sprite bounds: {bounds[:100]!r}")
+    width, height, x, y = map(int, match.groups())
+    if not (1 <= width <= 640 and 1 <= height <= 288 and x + width <= 640 and y + height <= 288):
+        raise ValueError("Key sprite bounds outside game viewport")
+    return 192 + x + width // 2, 184 + y + height // 2
+
+
+def key_center(output_directory: Path) -> tuple[int, int]:
+    """Locate the visible key silhouette, rather than assuming camera offset."""
+    screenshot = output_directory / "scummvm-end.png"
+    result = subprocess.run(
+        ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
+         "-fuzz", "8%", "-fill", "white", "-opaque", "#FFDC4B",
+         "-fill", "black", "+opaque", "white", "-trim", "-format", "%wx%h%O", "info:"],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not locate key sprite: {result.stderr}")
+    return parse_key_bounds(result.stdout)
 
 
 def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) -> int:
@@ -179,6 +206,36 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             if process.poll() is not None:
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
             final_snapshot = capture_frame("end")
+            changed = compare_frames(output_directory)
+            key_x, key_y = key_center(output_directory)
+            for x, y in ((328, 506), (key_x, key_y)):
+                click = subprocess.run(
+                    ["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                    capture_output=True, text=True, timeout=5, check=False,
+                )
+                if click.returncode:
+                    raise RuntimeError(f"Mouse input failed: {click.stderr}")
+                time.sleep(0.3)
+            picked_up = False
+            remaining = visible_key_pixels(output_directory)
+            pickup_deadline = time.monotonic() + 7.0
+            while time.monotonic() < pickup_deadline:
+                if process.poll() is not None:
+                    raise RuntimeError(f"ScummVM quit during pickup (exit={process.returncode})")
+                capture_frame("pickup")
+                remaining = visible_key_pixels(output_directory, "pickup")
+                if remaining < 10:
+                    picked_up = True
+                    break
+                time.sleep(0.4)
+            (output_directory / "scummvm-interaction-report.json").write_text(
+                json.dumps({"verb": "PickUp", "key_click": [key_x, key_y],
+                            "remaining_gold_pixels": remaining,
+                            "key_removed_from_room": picked_up}, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            if not picked_up:
+                raise RuntimeError(f"Key pickup did not remove room sprite ({remaining} gold pixels)")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -188,9 +245,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     process.kill()
                     process.wait(timeout=3)
     print(f"ScummVM showed the blue room, then survived {seconds:.1f}s; final screenshot: {final_snapshot}")
-    changed = compare_frames(output_directory)
     print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
-    print("Expected scroll color marker passed; smooth motion, interactions and save/load remain unverified.")
+    print(f"Pickup action removed the key sprite at ({key_x}, {key_y}).")
+    print("Camera color and item removal passed; inventory contents and save/load remain unverified.")
 
 
 def main() -> int:
