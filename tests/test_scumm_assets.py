@@ -4,7 +4,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from adventure_studio.scumm_assets import indexed_bmp, scrolling_fixture, scummc_room_source, write_room_sources
+from adventure_studio.scumm_assets import RoomHotspot, indexed_bmp, scrolling_fixture, scummc_room_source, write_room_sources
 
 
 class ScummAssetsTests(unittest.TestCase):
@@ -16,8 +16,12 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertEqual(len(bmp), struct.unpack_from("<I", bmp, 2)[0])
 
     def test_scummc_room_source(self):
-        self.assertEqual(scummc_room_source(scrolling_fixture()),
-                         '#include <scummVars6.s>\n\nroom Harbor {\n    image = "Harbor.bmp";\n}\n')
+        source = scummc_room_source(scrolling_fixture())
+        self.assertIn("room Harbor", source)
+        self.assertIn("object Key", source)
+        self.assertIn("case LookAt:", source)
+        self.assertIn("case PickUp:", source)
+        self.assertIn("pickupObject(objA,VAR_ROOM)", source)
 
     def test_generated_files(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -33,6 +37,13 @@ class ScummAssetsTests(unittest.TestCase):
             indexed_bmp(replace(room, pixels=b""))
         with self.assertRaisesRegex(ValueError, "palette"):
             indexed_bmp(replace(room, palette=((1, 2, 3),)))
+
+    def test_rejects_hotspot_injection_and_out_of_bounds(self):
+        room = scrolling_fixture()
+        with self.assertRaisesRegex(ValueError, "text character"):
+            scummc_room_source(replace(room, hotspots=(RoomHotspot("Key", 'key"; evil()', "bad", 0, 0, 10, 10),)))
+        with self.assertRaisesRegex(ValueError, "outside room"):
+            scummc_room_source(replace(room, hotspots=(replace(room.hotspots[0], x=639),)))
 
 
 if __name__ == "__main__":
