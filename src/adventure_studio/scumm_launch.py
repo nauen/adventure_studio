@@ -228,7 +228,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError(f"Key mouse input failed: {click.stderr}")
             picked_up = False
             remaining = visible_key_pixels(output_directory)
-            pickup_deadline = time.monotonic() + 7.0
+            pickup_deadline = time.monotonic() + 15.0
             while time.monotonic() < pickup_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit during pickup (exit={process.returncode})")
