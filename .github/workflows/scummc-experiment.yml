@@ -53,22 +53,24 @@ jobs:
       - name: Generate Adventure Studio 640x200 room source
         env:
           PYTHONPATH: src
-        run: python -m adventure_studio.scumm_assets /tmp/generated-room
+        run: |
+          python -m adventure_studio.scumm_assets /tmp/generated-room
+          python -m adventure_studio.scumm_bootstrap /tmp/scummc-upstream/examples/road/common.scc /tmp/generated-room/bootstrap.scc Harbor /tmp/scummc-upstream/examples/road/common.sch Key
       - name: Compile generated room with ScummC
         run: |
           SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
           test -n "$SCC_BIN"
-          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/scummc-upstream/examples/road -R /tmp/generated-room -o /tmp/generated-room/Harbor.roobj /tmp/generated-room/Harbor.scc
+          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/generated-room -I /tmp/scummc-upstream/examples/road -R /tmp/generated-room -o /tmp/generated-room/Harbor.roobj /tmp/generated-room/Harbor.scc
           test -s /tmp/generated-room/Harbor.roobj
       - name: Link generated room with upstream game bootstrap
         env:
           PYTHONPATH: src
         run: |
-          python -m adventure_studio.scumm_bootstrap /tmp/scummc-upstream/examples/road/common.scc /tmp/generated-room/bootstrap.scc Harbor
+          cp /tmp/generated-room/Inv_Key.bmp /tmp/scummc-upstream/examples/road/Inv_Key.bmp
           SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
           SLD_BIN=$(find /tmp/scummc-upstream -type f -name sld -executable -print -quit)
           test -n "$SCC_BIN" && test -n "$SLD_BIN"
-          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/scummc-upstream/examples/road -R /tmp/scummc-upstream/examples/road -o /tmp/generated-room/bootstrap.roobj /tmp/generated-room/bootstrap.scc
+          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/generated-room -I /tmp/scummc-upstream/examples/road -R /tmp/scummc-upstream/examples/road -o /tmp/generated-room/bootstrap.roobj /tmp/generated-room/bootstrap.scc
           cd /tmp/scummc-upstream/examples/road
           "$SLD_BIN" -o /tmp/generated-room/studio /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj
           test -s /tmp/generated-room/studio.000
@@ -138,7 +140,7 @@ jobs:
               python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-frame-report.json")); print("- Changed pixels: **{}** (minimum: {})".format(p["changed_pixels"],p["minimum_changed_pixels"])); print("- Frame variation: **{}**".format("PASS" if p["frame_variation_passed"] else "FAIL")); print("- Expected blue-to-orange camera marker: **{}**".format("PASS" if p["scroll_color_signature_passed"] else "FAIL")); print("- Rendered gold key pixels: **{}**".format(p["visible_key_pixels"])); print("- Smooth scrolling and input handling: **not yet proven**")'
               echo '- Start/end screenshots and diff are in the `scummc-research-output` artifact.'
               if test -f /tmp/scummvm-smoke/scummvm-interaction-report.json; then
-                python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-interaction-report.json")); print("- Pick up removed key sprite: **{}**".format("PASS" if p["key_removed_from_room"] else "FAIL"))'
+                python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-interaction-report.json")); print("- Pick up moved key into inventory: **{}**".format("PASS" if p["key_removed_from_room"] else "FAIL")); print("- Inventory gold pixels: **{}**".format(p["inventory_gold_pixels"]))'
               fi
             else
               echo '- Visual comparison: **not produced** (see workflow steps and logs).'
@@ -156,6 +158,7 @@ jobs:
             /tmp/generated-room/Harbor.roobj
             /tmp/generated-room/Harbor.bmp
             /tmp/generated-room/Key.bmp
+            /tmp/generated-room/Inv_Key.bmp
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
             /tmp/studio-fixture/*.000
