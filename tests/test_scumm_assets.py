@@ -23,6 +23,8 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("case PickUp:", source)
         self.assertIn("pickupObject(objA,VAR_ROOM)", source)
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
+        self.assertIn("setActorStanding()", source)
+        self.assertIn("walkActorTo(VAR_EGO, 540, 100)", source)
 
     def test_generated_files(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -38,6 +40,9 @@ class ScummAssetsTests(unittest.TestCase):
             indexed_bmp(replace(room, pixels=b""))
         with self.assertRaisesRegex(ValueError, "palette"):
             indexed_bmp(replace(room, palette=((1, 2, 3),)))
+        with self.assertRaisesRegex(ValueError, "Demo walk"):
+            scummc_room_source(replace(room, demo_walk_to_x=700))
+        self.assertNotIn("walkActorTo(VAR_EGO", scummc_room_source(replace(room, demo_walk_to_x=None)))
 
     def test_rejects_hotspot_injection_and_out_of_bounds(self):
         room = scrolling_fixture()
