@@ -76,8 +76,13 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 
 - [ ] Vollständiges M2-Beispiel ausschließlich aus dem Projektmodell exportieren.
 - [ ] Keine projektindividuellen handgeschriebenen Runtime-Skripte nötig.
-- [ ] Zwei unterschiedliche Projekte aus denselben Generatorbausteinen bauen.
-- [ ] Konsistenter reproduzierbarer Export, dokumentierte Ressourcenstruktur.
+- [x] Zwei unterschiedliche SCUMM-Raumprojekte aus denselben Generatorbausteinen
+      bauen (Datenmodell- und Dateivergleichstest; echte ScummVM-Laufzeit für das
+      zweite Projekt noch offen).
+- [x] Kanonisches JSON-Projektformat v1 mit deterministischem Export,
+      strikter Feldprüfung und Dokumentation (`docs/project-format.md`).
+- [ ] Das erzählerische Story-Modell automatisch auf SCUMM-Projektressourcen
+      abbilden, ohne grafische Rohdaten von Autoren zu verlangen.
 
 ### M4 – Grafik- und Animationspipeline
 
