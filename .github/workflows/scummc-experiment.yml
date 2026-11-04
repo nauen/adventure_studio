@@ -8,7 +8,11 @@ on:
     paths:
       - '.github/workflows/scummc-experiment.yml'
       - 'src/adventure_studio/scumm_assets.py'
+      - 'src/adventure_studio/scumm_bootstrap.py'
       - 'src/adventure_studio/scumm_probe.py'
+      - 'tests/test_scumm_assets.py'
+      - 'tests/test_scumm_bootstrap.py'
+      - 'tests/test_scumm_probe.py'
 
 jobs:
   probe:
@@ -19,10 +23,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install legacy build dependencies and stock ScummVM
+      - name: Install compiler dependencies and stock ScummVM
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bison flex libgtk2.0-dev scummvm
+          sudo apt-get install -y build-essential bison flex pkg-config libglib2.0-dev scummvm
       - name: Fetch unmodified ScummC
         run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
       - name: Build ScummC tools
@@ -30,6 +34,7 @@ jobs:
         run: |
           ./configure
           make -j2
+          find . -type f \( -name scc -o -name sld \) -print
       - name: Build upstream road example
         working-directory: /tmp/scummc-upstream/examples/road
         run: make
@@ -56,6 +61,14 @@ jobs:
           "$SLD_BIN" -o /tmp/generated-room/studio /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj
           test -s /tmp/generated-room/studio.000
           test -s /tmp/generated-room/studio.001
+      - name: Produce ScummC documented compatibility-only detection fixture
+        # Research fixture only: this uses the Day of the Tentacle game ID
+        # described by ScummC upstream. Never label it as native game support.
+        run: |
+          SLD_BIN=$(find /tmp/scummc-upstream -type f -name sld -executable -print -quit)
+          "$SLD_BIN" -o /tmp/generated-room/tentacle -key 0x69 /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj
+          mkdir -p /tmp/tentacle-fixture
+          cp /tmp/generated-room/tentacle.000 /tmp/generated-room/tentacle.001 /tmp/tentacle-fixture/
       - name: Rebuild the complete upstream demo using our generated background
         # This preserves upstream game logic and changes only the room art. It
         # tests image integration/linking, not our future game-script exporter.
@@ -66,11 +79,31 @@ jobs:
           make
           test -s scummc6.000
           test -s scummc6.001
-      - name: Check produced game pair and ScummVM detection
+      - name: Verify linked SCUMM data pair
+        env:
+          PYTHONPATH: src
+        run: |
+          python -c 'from pathlib import Path; from adventure_studio.scumm_probe import check_game_files; result = check_game_files(Path("/tmp/generated-room")); print(result); assert result[0]'
+      - name: Probe stock ScummVM detection (experimental, expected incompatibility possible)
+        # A custom SCUMM v6 game is not guaranteed to appear in an unmodified
+        # ScummVM detection table. Record this independently from compilation.
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.scumm_probe /tmp/generated-room
+      - name: Probe upstream SCUMM game detection (experimental)
+        continue-on-error: true
         env:
           PYTHONPATH: src
         run: |
           python -m adventure_studio.scumm_probe /tmp/scummc-upstream/examples/road
+      - name: Probe documented compatibility fixture (not production support)
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.scumm_probe /tmp/tentacle-fixture
       - name: Upload compiler outputs for inspection
         if: always()
         uses: actions/upload-artifact@v4
@@ -83,6 +116,8 @@ jobs:
             /tmp/generated-room/Harbor.bmp
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
+            /tmp/tentacle-fixture/*.000
+            /tmp/tentacle-fixture/*.001
             /tmp/scummc-upstream/examples/road/*.000
             /tmp/scummc-upstream/examples/road/*.001
             /tmp/scummc-upstream/examples/road/*.sou
