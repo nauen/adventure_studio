@@ -154,6 +154,10 @@ def scummc_room_source(room: RoomAsset) -> str:
             f"        case LookAt:\n            egoSay({_scumm_string(hotspot.description)});\n            return;\n",
         ])
         if hotspot.pickup:
+            if any(rule.item_id == hotspot.id for rule in room.use_rules):
+                parts.extend(["        case Preposition:\n",
+                              '            sntcPrepo[0] = "with";\n',
+                              "            return;\n"])
             parts.extend(["        case PickUp:\n", "            pickupObject(objA,VAR_ROOM);\n",
                           "            setObjectState(objA,0);\n",
                           "            return;\n"])
