@@ -233,7 +233,7 @@ def scrolling_fixture() -> RoomAsset:
     return RoomAsset("Harbor", RoomGeometry(width, height, 320, 200), pixels,
                      ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75), (60, 220, 90)),
                      (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 16, True, key),
-                      RoomHotspot("Door", "the door", "A locked door.", 610, 100, 16, 16, False, door)),
+                      RoomHotspot("Door", "the door", "A locked door.", 450, 100, 16, 16, False, door)),
                      demo_walk_to_x=540,
                      use_rules=(UseRule("Key", "Door", "The door is unlocked.", hide_target=True),))
 
