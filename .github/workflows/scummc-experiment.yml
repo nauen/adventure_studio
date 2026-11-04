@@ -1,9 +1,14 @@
 name: Experimental SCUMM v6 compatibility probe
 
-# Deliberately manual: upstream ScummC's game detection in stock ScummVM is
-# currently unproven. A red run is a research result, not a release regression.
+# Experimental: upstream ScummC's detection in stock ScummVM is unproven.
+# Run for probe changes only; a red run is research, not a release regression.
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/scummc-experiment.yml'
+      - 'src/adventure_studio/scumm_assets.py'
+      - 'src/adventure_studio/scumm_probe.py'
 
 jobs:
   probe:
