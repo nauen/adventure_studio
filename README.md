@@ -32,11 +32,11 @@ The CLI probe `PYTHONPATH=src python -m adventure_studio.scumm_probe GAME_DIRECT
 checks for non-empty matching `.000`/`.001` files and asks unmodified ScummVM
 to detect them. This is an **early gate only**, not a playability test.
 
-An opt-in GitHub Actions workflow, `Experimental SCUMM v6 compatibility probe`,
-builds the upstream ScummC sample on Ubuntu and attempts recognition using
-stock ScummVM. It is not part of normal CI because the result is still under
-investigation. Build success, game detection, actual launch and save/load are
-separate acceptance gates.
+An experimental GitHub Actions workflow, `Experimental SCUMM v6 compatibility
+probe`, builds the upstream ScummC sample on Ubuntu and attempts recognition
+using stock ScummVM. It runs on relevant probe changes or manually. A red run
+is diagnostic and not a product-release failure. Build success, game detection,
+actual launch and save/load are separate acceptance gates.
 
 `scumm_assets.py` now emits an original 640×200 indexed BMP and a minimal
 ScummC `room` source. The experimental workflow attempts to compile this source
