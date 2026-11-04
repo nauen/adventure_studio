@@ -26,6 +26,7 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("class = { Pickable };", source)
         self.assertIn("pickupObject(objA,VAR_ROOM)", source)
         self.assertIn("setObjectState(objA,0)", source)
+        self.assertIn("ResRoom::KeyIcon", source)
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
         self.assertIn("setActorStanding()", source)
         self.assertIn("walkActorTo(VAR_EGO, 540, 100)", source)
@@ -38,6 +39,8 @@ class ScummAssetsTests(unittest.TestCase):
             sprite = Path(tmp) / "Key.bmp"
             self.assertTrue(sprite.is_file())
             self.assertEqual(struct.unpack_from("<ii", sprite.read_bytes(), 18), (16, 16))
+            icon = Path(tmp) / "Inv_Key.bmp"
+            self.assertEqual(struct.unpack_from("<ii", icon.read_bytes(), 18), (40, 16))
 
     def test_rejects_invalid_dimensions_and_names(self):
         room = scrolling_fixture()
