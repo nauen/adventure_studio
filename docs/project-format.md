@@ -36,3 +36,17 @@ werden direkt als SCUMM-Skript eingebettet.
 Nächste Architekturaufgabe: die erzählerischen `Story`-Objekte in dieses
 Projektformat überführen und Bild-, Layout- und Kostüm-Erzeugung getrennt
 konfigurieren, damit Autoren keine Base64-Daten sehen müssen.
+
+## Erste Story-Übersetzung
+
+`adventure_studio.story_to_scumm.compile_story_to_scumm(story)` übersetzt nun
+einen bewusst begrenzten Teil des erzählerischen `Story`-Modells direkt in ein
+`GameDocument`: ein Kapitel, zwei Szenen, ein aufnehmbarer Gegenstand, ein
+Schlüssel-Tür-Rätsel und ein Zielraum. Dekorative Gegenstände bleiben als
+Hotspots erhalten. Die grafische Darstellung ist vorerst eine klar erkennbare,
+deterministisch erzeugte Platzhaltergrafik; keine KI-Bildgenerierung.
+
+Weitere Figuren, zusätzliche Inventar-Puzzles oder komplexe Szenenfolgen werden
+explizit abgewiesen. Sie werden **nicht** stillschweigend aus der Geschichte
+entfernt. Story-Referenzen und Softlocks werden bereits vor dem SCUMM-Export
+mit dem deterministischen Rätsellöser überprüft.
