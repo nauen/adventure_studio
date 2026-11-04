@@ -10,10 +10,11 @@ from adventure_studio.scumm_launch import close_rgb, launch_smoke, parse_changed
 class ScummLaunchTests(unittest.TestCase):
     def test_color_marker_parser_and_tolerance(self):
         self.assertEqual(parse_srgb_pixel("srgb(65,129,189)"), (65, 129, 189))
+        self.assertEqual(parse_srgb_pixel("gray(0)"), (0, 0, 0))
         self.assertTrue(close_rgb((65, 129, 189), (70, 130, 190)))
         self.assertTrue(close_rgb((246, 173, 90), (240, 175, 95)))
         self.assertFalse(close_rgb((65, 129, 189), (240, 175, 95)))
-        for invalid in ("", "srgb(256,0,0)", "srgb(1.5,2,3)", "rgb(1,2,3)"):
+        for invalid in ("", "srgb(256,0,0)", "gray(256)", "srgb(1.5,2,3)", "rgb(1,2,3)"):
             with self.subTest(pixel=invalid), self.assertRaises(ValueError):
                 parse_srgb_pixel(invalid)
     def test_absolute_error_metric_parser(self):
