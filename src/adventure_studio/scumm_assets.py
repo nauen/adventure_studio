@@ -27,6 +27,15 @@ class RoomHotspot:
 
 
 @dataclass(frozen=True)
+class UseRule:
+    """Use an inventory item on a room hotspot; no arbitrary script payload."""
+    item_id: str
+    target_id: str
+    response: str
+    hide_target: bool = False
+
+
+@dataclass(frozen=True)
 class RoomAsset:
     name: str
     geometry: RoomGeometry
@@ -34,6 +43,7 @@ class RoomAsset:
     palette: tuple[tuple[int, int, int], ...]
     hotspots: tuple[RoomHotspot, ...] = ()
     demo_walk_to_x: int | None = None
+    use_rules: tuple[UseRule, ...] = ()
 
 
 def _scumm_string(value: str) -> str:
@@ -66,10 +76,13 @@ def _validate(room: RoomAsset) -> None:
     ):
         raise ValueError("Demo walk target outside room bounds")
     ids: set[str] = set()
+    pickups: set[str] = set()
     for hotspot in room.hotspots:
         if not _IDENTIFIER.fullmatch(hotspot.id) or hotspot.id in ids:
             raise ValueError("Invalid or duplicated hotspot identifier")
         ids.add(hotspot.id)
+        if hotspot.pickup:
+            pickups.add(hotspot.id)
         _scumm_string(hotspot.label)
         _scumm_string(hotspot.description)
         if any(type(v) is not int for v in (hotspot.x, hotspot.y, hotspot.width, hotspot.height)):
@@ -86,6 +99,14 @@ def _validate(room: RoomAsset) -> None:
                 raise ValueError("Hotspot sprite pixel buffer length mismatch")
             if hotspot.sprite_pixels and max(hotspot.sprite_pixels) >= len(room.palette):
                 raise ValueError("Hotspot sprite references missing palette entries")
+    targets: set[str] = set()
+    for rule in room.use_rules:
+        if rule.item_id not in pickups or rule.target_id not in ids or rule.item_id == rule.target_id:
+            raise ValueError("Use rule must connect an inventory pickup to another room hotspot")
+        if rule.target_id in targets:
+            raise ValueError("Multiple use rules for the same target are not yet supported")
+        targets.add(rule.target_id)
+        _scumm_string(rule.response)
 
 
 def _indexed_bmp(width: int, height: int, pixels: bytes, palette: tuple[tuple[int, int, int], ...]) -> bytes:
@@ -140,6 +161,16 @@ def scummc_room_source(room: RoomAsset) -> str:
                 parts.extend(["        case Icon:\n",
                               f"            startScript2(vrb,[ResRoom::{hotspot.id}Icon,objA,objB]);\n",
                               "            return;\n"])
+        for rule in room.use_rules:
+            if rule.target_id == hotspot.id:
+                parts.extend([
+                    "        case Use:\n",
+                    f"            if(objB == {rule.item_id}) {{\n",
+                    f"                egoSay({_scumm_string(rule.response)});\n",
+                ])
+                if rule.hide_target:
+                    parts.append("                setObjectState(objA,0);\n")
+                parts.extend(["                return;\n", "            }\n", "            return;\n"])
         parts.append("        }\n    }\n")
     if room.hotspots:
         parts.extend([
@@ -197,10 +228,14 @@ def scrolling_fixture() -> RoomAsset:
     key = bytes(3 if (2 <= y <= 4 and 1 <= x <= 5) or (y == 3 and 5 <= x <= 14)
                 or (x in (11, 14) and y in (4, 5)) else 2
                 for y in range(16) for x in range(16))
+    door = bytes(1 if x in (0, 15) or y in (0, 15) else 2
+                 for y in range(16) for x in range(16))
     return RoomAsset("Harbor", RoomGeometry(width, height, 320, 200), pixels,
                      ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75)),
-                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 16, True, key),),
-                     demo_walk_to_x=540)
+                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 16, True, key),
+                      RoomHotspot("Door", "the door", "A locked door.", 560, 100, 16, 16, False, door)),
+                     demo_walk_to_x=540,
+                     use_rules=(UseRule("Key", "Door", "The door is unlocked.", hide_target=True),))
 
 
 def main() -> int:
