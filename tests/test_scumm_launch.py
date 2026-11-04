@@ -4,10 +4,18 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from adventure_studio.scumm_launch import launch_smoke, parse_changed_pixels
+from adventure_studio.scumm_launch import close_rgb, launch_smoke, parse_changed_pixels, parse_srgb_pixel
 
 
 class ScummLaunchTests(unittest.TestCase):
+    def test_color_marker_parser_and_tolerance(self):
+        self.assertEqual(parse_srgb_pixel("srgb(65,129,189)"), (65, 129, 189))
+        self.assertTrue(close_rgb((65, 129, 189), (70, 130, 190)))
+        self.assertTrue(close_rgb((246, 173, 90), (240, 175, 95)))
+        self.assertFalse(close_rgb((65, 129, 189), (240, 175, 95)))
+        for invalid in ("", "srgb(256,0,0)", "srgb(1.5,2,3)", "rgb(1,2,3)"):
+            with self.subTest(pixel=invalid), self.assertRaises(ValueError):
+                parse_srgb_pixel(invalid)
     def test_absolute_error_metric_parser(self):
         self.assertEqual(parse_changed_pixels(" 12004 \n"), 12004)
         self.assertEqual(parse_changed_pixels("0"), 0)
