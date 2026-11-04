@@ -91,7 +91,7 @@ def count_cyan_pixels(histogram: str) -> int:
 
 
 def door_pixels(output_directory: Path, frame: str, open_state: bool = False) -> int:
-    if frame not in ("pickup", "door", "exit", "locked-before", "locked-after"):
+    if frame not in ("pickup", "door", "exit", "return", "locked-before", "locked-after"):
         raise ValueError("Invalid door frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -105,7 +105,7 @@ def door_pixels(output_directory: Path, frame: str, open_state: bool = False) ->
 
 
 def door_center(output_directory: Path, frame: str = "pickup") -> tuple[int, int]:
-    if frame not in ("pickup", "locked-before"):
+    if frame not in ("pickup", "locked-before", "exit"):
         raise ValueError("Invalid closed-door screenshot frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -134,7 +134,7 @@ def open_door_center(output_directory: Path) -> tuple[int, int]:
 
 def visible_key_pixels(output_directory: Path, frame: str = "end") -> int:
     """Inspect the cropped game viewport, excluding the SCUMM verb GUI."""
-    if frame not in ("end", "pickup"):
+    if frame not in ("end", "pickup", "return"):
         raise ValueError("Invalid screenshot frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -425,6 +425,32 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             )
             if not goal_reached:
                 raise RuntimeError(f"Opened door did not lead to {goal['room_id']}")
+            # Return from the goal room and verify that the engine preserved
+            # both object states (opened door and already collected key).
+            time.sleep(1)
+            capture_frame("exit")
+            stairs_x, stairs_y = door_center(output_directory, "exit")
+            go_back = subprocess.run(
+                ["xdotool", "mousemove", str(stairs_x), str(stairs_y), "click", "1"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            if go_back.returncode:
+                raise RuntimeError(f"Return exit input failed: {go_back.stderr}")
+            time.sleep(7)
+            capture_frame("return")
+            open_on_return = door_pixels(output_directory, "return", open_state=True)
+            closed_on_return = door_pixels(output_directory, "return")
+            key_on_return = visible_key_pixels(output_directory, "return")
+            preserved = open_on_return >= 40 and closed_on_return < 10 and key_on_return < 10
+            (output_directory / "scummvm-state-report.json").write_text(
+                json.dumps({"returned_from": goal["room_id"], "stairs_click": [stairs_x, stairs_y],
+                            "open_door_pixels": open_on_return,
+                            "closed_door_pixels": closed_on_return,
+                            "key_room_pixels": key_on_return,
+                            "state_preserved": preserved}, indent=2) + "\n", encoding="utf-8",
+            )
+            if not preserved:
+                raise RuntimeError(f"Object state lost on room return: open={open_on_return}, closed={closed_on_return}, key={key_on_return}")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -437,6 +463,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
     print(f"Pickup moved the key from room to inventory at ({key_x}, {key_y}).")
     print(f"Using the inventory key opened the door at ({door_x}, {door_y}); walking through reached {goal['room_id']} at ({exit_x}, {exit_y}).")
+    print("Return to Harbor preserved the unlocked door and collected key state.")
     print("Camera, inventory and scripted use passed; save/load remains unverified.")
 
 
