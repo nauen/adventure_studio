@@ -135,7 +135,7 @@ jobs:
             echo 'The gameplay fixture uses a temporary Day of the Tentacle compatibility identity, **not** native ScummVM game detection.'
             echo
             if test -f /tmp/scummvm-smoke/scummvm-frame-report.json; then
-              python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-frame-report.json")); print("- Changed pixels: **{}** (minimum: {})".format(p["changed_pixels"],p["minimum_changed_pixels"])); print("- Frame variation: **{}**".format("PASS" if p["frame_variation_passed"] else "FAIL")); print("- Expected blue-to-orange camera marker: **{}**".format("PASS" if p["scroll_color_signature_passed"] else "FAIL")); print("- Smooth scrolling and input handling: **not yet proven**")'
+              python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-frame-report.json")); print("- Changed pixels: **{}** (minimum: {})".format(p["changed_pixels"],p["minimum_changed_pixels"])); print("- Frame variation: **{}**".format("PASS" if p["frame_variation_passed"] else "FAIL")); print("- Expected blue-to-orange camera marker: **{}**".format("PASS" if p["scroll_color_signature_passed"] else "FAIL")); print("- Rendered gold key pixels: **{}**".format(p["visible_key_pixels"])); print("- Smooth scrolling and input handling: **not yet proven**")'
               echo '- Start/end screenshots and diff are in the `scummc-research-output` artifact.'
             else
               echo '- Visual comparison: **not produced** (see workflow steps and logs).'
