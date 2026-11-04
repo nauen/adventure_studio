@@ -79,8 +79,19 @@ def count_green_pixels(histogram: str) -> int:
     return total
 
 
-def door_pixels(output_directory: Path, frame: str) -> int:
-    if frame not in ("pickup", "door"):
+def count_cyan_pixels(histogram: str) -> int:
+    total = 0
+    for line in histogram.splitlines():
+        match = re.match(r"^\s*(\d+):\s*\((\d+),(\d+),(\d+)\)", line)
+        if match:
+            count, red, green, blue = map(int, match.groups())
+            if close_rgb((red, green, blue), (50, 220, 220), tolerance=15):
+                total += count
+    return total
+
+
+def door_pixels(output_directory: Path, frame: str, open_state: bool = False) -> int:
+    if frame not in ("pickup", "door", "exit"):
         raise ValueError("Invalid door frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -90,7 +101,7 @@ def door_pixels(output_directory: Path, frame: str) -> int:
     )
     if result.returncode:
         raise RuntimeError(f"Could not inspect door: {result.stderr}")
-    return count_green_pixels(result.stdout)
+    return (count_cyan_pixels if open_state else count_green_pixels)(result.stdout)
 
 
 def door_center(output_directory: Path) -> tuple[int, int]:
@@ -103,6 +114,19 @@ def door_center(output_directory: Path) -> tuple[int, int]:
     )
     if result.returncode:
         raise RuntimeError(f"Could not locate door: {result.stderr}")
+    return parse_key_bounds(result.stdout)
+
+
+def open_door_center(output_directory: Path) -> tuple[int, int]:
+    screenshot = output_directory / "scummvm-door.png"
+    result = subprocess.run(
+        ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
+         "-fuzz", "8%", "-fill", "white", "-opaque", "#32DCDC",
+         "-fill", "black", "+opaque", "white", "-trim", "-format", "%wx%h%O", "info:"],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not locate open door: {result.stderr}")
     return parse_key_bounds(result.stdout)
 
 
@@ -329,6 +353,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             door_opened = False
             room_changed = False
             remaining_door_pixels = initial_door_pixels
+            open_door_pixels = 0
             door_deadline = time.monotonic() + 15.0
             while time.monotonic() < door_deadline:
                 if process.poll() is not None:
@@ -336,20 +361,42 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 capture_frame("door")
                 remaining_door_pixels = door_pixels(output_directory, "door")
                 room_changed = close_rgb(scene_pixel(output_directory, "door"), tuple(expected_color))
-                if remaining_door_pixels < 10 and room_changed:
+                open_door_pixels = door_pixels(output_directory, "door", open_state=True)
+                if remaining_door_pixels < 10 and open_door_pixels >= 40 and not room_changed:
                     door_opened = True
+                    break
+                time.sleep(0.4)
+            if not door_opened:
+                raise RuntimeError(f"Use Key with Door did not leave an open door in Harbor: closed={remaining_door_pixels}, open={open_door_pixels}, transitioned={room_changed}")
+            exit_x, exit_y = open_door_center(output_directory)
+            exit_click = subprocess.run(
+                ["xdotool", "mousemove", str(exit_x), str(exit_y), "click", "1"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            if exit_click.returncode:
+                raise RuntimeError(f"Exit mouse input failed: {exit_click.stderr}")
+            goal_reached = False
+            exit_deadline = time.monotonic() + 15.0
+            while time.monotonic() < exit_deadline:
+                if process.poll() is not None:
+                    raise RuntimeError(f"ScummVM quit during exit (exit={process.returncode})")
+                capture_frame("exit")
+                goal_reached = close_rgb(scene_pixel(output_directory, "exit"), tuple(expected_color))
+                if goal_reached:
                     break
                 time.sleep(0.4)
             (output_directory / "scummvm-use-report.json").write_text(
                 json.dumps({"inventory_item": "Key", "target": "Door",
                             "click": [door_x, door_y], "green_before": initial_door_pixels,
                             "green_after": remaining_door_pixels, "door_opened": door_opened,
-                            "destination_room_visible": room_changed,
-                            "goal_room": goal["room_id"], "goal_reached": room_changed}, indent=2) + "\n",
+                            "open_door_pixels": open_door_pixels,
+                            "exit_click": [exit_x, exit_y],
+                            "destination_room_visible": goal_reached,
+                            "goal_room": goal["room_id"], "goal_reached": goal_reached}, indent=2) + "\n",
                 encoding="utf-8",
             )
-            if not door_opened:
-                raise RuntimeError(f"Use Key with Door did not reach {goal['room_id']}: door={remaining_door_pixels}, destination={room_changed}")
+            if not goal_reached:
+                raise RuntimeError(f"Opened door did not lead to {goal['room_id']}")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -361,7 +408,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     print(f"ScummVM showed the blue room, then survived {seconds:.1f}s; final screenshot: {final_snapshot}")
     print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
     print(f"Pickup moved the key from room to inventory at ({key_x}, {key_y}).")
-    print(f"Using the inventory key opened the door and reached {goal['room_id']} at ({door_x}, {door_y}).")
+    print(f"Using the inventory key opened the door at ({door_x}, {door_y}); walking through reached {goal['room_id']} at ({exit_x}, {exit_y}).")
     print("Camera, inventory and scripted use passed; save/load remains unverified.")
 
 
