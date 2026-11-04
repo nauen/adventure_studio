@@ -153,6 +153,9 @@ jobs:
                 python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-use-report.json")); print("- Open door sprite pixels: **{}**".format(p["open_door_pixels"])); print("- Separate exit click: **{}**".format(p["exit_click"]))'
                 python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-use-report.json")); print("- Goal reached ({}): **{}**".format(p["goal_room"],"PASS" if p["goal_reached"] else "FAIL"))'
               fi
+              if test -f /tmp/scummvm-smoke/scummvm-state-report.json; then
+                python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-state-report.json")); print("- Room-return object persistence: **{}**".format("PASS" if p["state_preserved"] else "FAIL")); print("- Return open/closed/key pixels: **{}/{}/{}**".format(p["open_door_pixels"],p["closed_door_pixels"],p["key_room_pixels"]))'
+              fi
             else
               echo '- Visual comparison: **not produced** (see workflow steps and logs).'
             fi
@@ -170,6 +173,7 @@ jobs:
             /tmp/generated-room/Cellar.scc
             /tmp/generated-room/Cellar.roobj
             /tmp/generated-room/Cellar.bmp
+            /tmp/generated-room/Stairs.bmp
             /tmp/generated-room/game-goal.json
             /tmp/generated-room/Harbor.bmp
             /tmp/generated-room/Key.bmp
