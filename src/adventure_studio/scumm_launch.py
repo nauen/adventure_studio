@@ -22,6 +22,33 @@ def parse_changed_pixels(metric: str) -> int:
     return int(metric.strip())
 
 
+def parse_srgb_pixel(value: str) -> tuple[int, int, int]:
+    """Read one 8-bit ImageMagick pixel without accepting arbitrary output."""
+    match = re.fullmatch(r"srgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)", value.strip())
+    if not match:
+        raise ValueError(f"Unexpected ImageMagick pixel format: {value[:100]!r}")
+    color = tuple(map(int, match.groups()))
+    if any(channel > 255 for channel in color):
+        raise ValueError("ImageMagick RGB channel out of range")
+    return color
+
+
+def scene_pixel(output_directory: Path, frame: str) -> tuple[int, int, int]:
+    """Read the right-side diagnostic sky marker in our fixed Xvfb viewport."""
+    screenshot = output_directory / f"scummvm-{frame}.png"
+    result = subprocess.run(
+        ["convert", str(screenshot), "-format", "%[pixel:p{700,280}]", "info:"],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not sample scene pixel: {result.stderr}")
+    return parse_srgb_pixel(result.stdout)
+
+
+def close_rgb(actual: tuple[int, int, int], expected: tuple[int, int, int], tolerance: int = 25) -> bool:
+    return all(abs(a - e) <= tolerance for a, e in zip(actual, expected))
+
+
 def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) -> int:
     """Require visible frame variation; this alone does not prove scrolling."""
     if type(minimum_changed_pixels) is not int or minimum_changed_pixels < 1:
@@ -36,16 +63,28 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
     if result.returncode not in (0, 1):
         raise RuntimeError(f"ImageMagick compare failed: {result.stderr}")
     count = parse_changed_pixels(result.stderr)
+    start_rgb = scene_pixel(output_directory, "start")
+    end_rgb = scene_pixel(output_directory, "end")
+    # SCUMM's 320x200 viewport is scaled 2x and centered inside our fixed
+    # 1024x768 Xvfb screen. The fixture's sky is blue in the first half and
+    # orange in the second. This tests the *visible* camera pan signature.
+    scroll_signature = close_rgb(start_rgb, (70, 130, 190)) and close_rgb(end_rgb, (240, 175, 95))
     (output_directory / "scummvm-frame-report.json").write_text(
         json.dumps({
             "changed_pixels": count,
             "minimum_changed_pixels": minimum_changed_pixels,
             "frame_variation_passed": count >= minimum_changed_pixels,
-            "scrolling_proven": False,
+            "scene_probe_pixel": [700, 280],
+            "start_rgb": start_rgb,
+            "end_rgb": end_rgb,
+            "scroll_color_signature_passed": scroll_signature,
+            "smooth_scrolling_proven": False,
         }, indent=2) + "\n", encoding="utf-8",
     )
     if count < minimum_changed_pixels:
         raise RuntimeError(f"Insufficient visual variation: {count} changed pixels")
+    if not scroll_signature:
+        raise RuntimeError(f"Expected blue-to-orange scroll marker missing: {start_rgb} -> {end_rgb}")
     return count
 
 
@@ -109,7 +148,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     print(f"ScummVM process survived {seconds:.1f}s; final screenshot: {final_snapshot}")
     changed = compare_frames(output_directory)
     print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
-    print("This does NOT prove game rendering, interactions, camera movement, or save/load.")
+    print("Expected scroll color marker passed; smooth motion, interactions and save/load remain unverified.")
 
 
 def main() -> int:
