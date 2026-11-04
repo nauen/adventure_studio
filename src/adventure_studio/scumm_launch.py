@@ -24,6 +24,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     output_directory.mkdir(parents=True, exist_ok=True)
     log_path = output_directory / "scummvm-launch.log"
     image_path = output_directory / "scummvm-screen.xwd"
+    preview_path = output_directory / "scummvm-screen.png"
     environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
     with log_path.open("w", encoding="utf-8") as log:
         process = subprocess.Popen(
@@ -49,6 +50,15 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             )
             if capture.returncode != 0 or not image_path.is_file() or image_path.stat().st_size < 1024:
                 raise RuntimeError(f"X framebuffer capture failed: {capture.stderr}")
+            preview = subprocess.run(
+                ["convert", str(image_path), str(preview_path)],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                check=False,
+            )
+            if preview.returncode != 0 or not preview_path.is_file() or preview_path.stat().st_size < 1024:
+                raise RuntimeError(f"Screenshot PNG conversion failed: {preview.stderr}")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -57,7 +67,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait(timeout=3)
-    print(f"ScummVM process survived {seconds:.1f}s; X framebuffer saved: {image_path}")
+    print(f"ScummVM process survived {seconds:.1f}s; screenshot saved: {preview_path}")
     print("This does NOT prove game rendering, interactions, camera movement, or save/load.")
 
 
