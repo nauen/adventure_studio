@@ -63,6 +63,13 @@ sky (RGB tolerance 25/channel). That is a reproducible camera-pan signature,
 but is not proof of smooth scrolling or arbitrary-room behavior. Those remain
 separate integration milestones.
 
+The M1 probe now also locates the generated gold key using a cropped room
+screenshot, clicks the classic SCUMM `Pick up` verb using an X11 automation
+tool, clicks the detected key coordinates and checks whether the sprite
+disappears from the room. This is a deliberately narrow interaction test:
+successful removal does **not** yet establish correct inventory rendering,
+save/load, or general-purpose object behavior.
+
 `scumm_assets.py` now emits an original 640×200 indexed BMP and a SCUMM-v6
 `room` source with data-driven object hotspots, LookAt and PickUp handlers.
 The experimental workflow attempts to compile the room and link it with the
