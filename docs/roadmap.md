@@ -60,7 +60,13 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 - [ ] Verschlossene Tür, Schlüsselprüfung, Türöffnung und Raumwechsel.
 - [x] Teilziel: deklarative `UseRule` kompiliert und echtes „Use Key with Door“
       entfernt den Tür-Sprite in ScummVM (CI-Lauf #41870570921).
-- [ ] Ein explizites Spielziel mit deterministisch testbarem Lösungsweg.
+- [x] Teilziel: echtes `startRoom(Cellar)` und sichtbarer Zielraum in stock
+      ScummVM nachgewiesen (CI-Lauf #41872141558).
+- [x] Deklaratives Ziel „Keller erreichen“, genau ein Zielraum und prüfbares
+      Zielmanifest (`game-goal.json`); lokale Validierung und Tests grün.
+- [ ] Zielmanifestauswertung und Abschlussmeldung in ScummVM-CI bestätigt.
+- [ ] Komplette Türöffnung als persistenter Zustand und Raumwechsel über einen
+      eigenen Ausgang statt unmittelbar beim Schlüsselbenutzen.
 - [ ] Ungültige Handlungen und Softlocks werden getestet.
 
 ### M3 – Adventure aus Daten
