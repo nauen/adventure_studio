@@ -29,6 +29,16 @@ jobs:
           sudo apt-get install -y build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm
       - name: Fetch unmodified ScummC
         run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
+      - name: Fix legacy ScummC tool help paths in ephemeral checkout
+        # Upstream Makefile.target expects man/scc.xml, but the actual file is
+        # man/tools/scc.xml. Keep this compatibility adjustment outside our
+        # product source; fail if the expected upstream layout changes.
+        working-directory: /tmp/scummc-upstream
+        run: |
+          test -f man/tools/scc.xml
+          test -f man/tools/header.xslt
+          grep -Fq '$(SRCDIR)/man/%.xml' Makefile.target
+          sed -i 's@$(SRCDIR)/man/%.xml@$(SRCDIR)/man/tools/%.xml@g; s@$(SRCDIR)/man/header.xslt@$(SRCDIR)/man/tools/header.xslt@g' Makefile.target
       - name: Build ScummC tools
         working-directory: /tmp/scummc-upstream
         run: |
