@@ -70,7 +70,7 @@ def document_dict(document: GameDocument) -> dict:
 
 
 def _validate_document(document: GameDocument) -> None:
-    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", document.id):
+    if not isinstance(document.id, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", document.id):
         raise ValueError("Invalid game project identifier")
     if not document.rooms or len(document.rooms) > 64:
         raise ValueError("Project must contain between 1 and 64 rooms")
@@ -100,6 +100,8 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Unsupported project format version")
     if not isinstance(data["rooms"], list):
         raise ValueError("Rooms must be a list")
+    if len(data["rooms"]) > 64:
+        raise ValueError("Too many rooms")
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules",
@@ -108,6 +110,8 @@ def parse_document(source: str) -> GameDocument:
                       "demo_walk_to_x", "goal_text"})
         g = _only(room["geometry"], {"width", "height", "viewport_width", "viewport_height"},
                   {"width", "height", "viewport_width", "viewport_height"})
+        if any(type(value) is not int for value in g.values()):
+            raise ValueError("Room geometry must use integers")
         if not isinstance(room["hotspots"], list) or not isinstance(room["use_rules"], list):
             raise ValueError("Hotspots and rules must be lists")
         hotspots = []
