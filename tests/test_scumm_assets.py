@@ -4,7 +4,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from adventure_studio.scumm_assets import RoomHotspot, UseRule, indexed_bmp, scrolling_fixture, scummc_room_source, write_room_sources
+from adventure_studio.scumm_assets import RoomHotspot, UseRule, destination_fixture, indexed_bmp, scrolling_fixture, scummc_room_source, write_game_sources, write_room_sources
 
 
 class ScummAssetsTests(unittest.TestCase):
@@ -32,6 +32,8 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("if(objB == Key)", source)
         self.assertIn('sntcPrepo[0] = "with"', source)
         self.assertIn('egoSay("The door is unlocked.")', source)
+        self.assertIn("room Cellar;", source)
+        self.assertIn("startRoom(Cellar)", source)
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
         self.assertIn("setActorStanding()", source)
         self.assertIn("walkActorTo(VAR_EGO, 540, 100)", source)
@@ -49,6 +51,26 @@ class ScummAssetsTests(unittest.TestCase):
             door = Path(tmp) / "Door.bmp"
             self.assertEqual(struct.unpack_from("<ii", door.read_bytes(), 18), (16, 16))
 
+    def test_destination_room_is_a_distinct_generated_resource(self):
+        room = destination_fixture()
+        self.assertEqual(room.geometry.room_width, 320)
+        self.assertEqual(room.pixels[0], 5)
+        with tempfile.TemporaryDirectory() as tmp:
+            bmp, source = write_room_sources(room, Path(tmp))
+            self.assertEqual(struct.unpack_from("<ii", bmp.read_bytes(), 18), (320, 200))
+            self.assertIn("room Cellar", source.read_text(encoding="utf-8"))
+
+    def test_game_export_validates_all_room_references_before_writing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp)
+            with self.assertRaisesRegex(ValueError, "Unknown destination"):
+                write_game_sources((scrolling_fixture(),), target)
+            self.assertEqual(list(target.iterdir()), [])
+            with self.assertRaisesRegex(ValueError, "Duplicate room"):
+                write_game_sources((scrolling_fixture(), scrolling_fixture()), target)
+            self.assertEqual(len(write_game_sources((scrolling_fixture(), destination_fixture()), target)), 2)
+            self.assertTrue((target / "Cellar.scc").exists())
+
     def test_use_rules_reject_invalid_references_and_duplicates(self):
         room = scrolling_fixture()
         for rules in (
@@ -61,6 +83,8 @@ class ScummAssetsTests(unittest.TestCase):
                 scummc_room_source(replace(room, use_rules=rules))
         with self.assertRaisesRegex(ValueError, "text character"):
             scummc_room_source(replace(room, use_rules=(UseRule("Key", "Door", 'oops";'),)))
+        with self.assertRaisesRegex(ValueError, "destination room"):
+            scummc_room_source(replace(room, use_rules=(UseRule("Key", "Door", "OK", destination_room='bad;code'),)))
 
     def test_rejects_invalid_dimensions_and_names(self):
         room = scrolling_fixture()
