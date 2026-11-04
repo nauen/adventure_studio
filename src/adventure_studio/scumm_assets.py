@@ -228,12 +228,12 @@ def scrolling_fixture() -> RoomAsset:
     key = bytes(3 if (2 <= y <= 4 and 1 <= x <= 5) or (y == 3 and 5 <= x <= 14)
                 or (x in (11, 14) and y in (4, 5)) else 2
                 for y in range(16) for x in range(16))
-    door = bytes(1 if x in (0, 15) or y in (0, 15) else 2
+    door = bytes(4 if x in (0, 15) or y in (0, 15) else 1
                  for y in range(16) for x in range(16))
     return RoomAsset("Harbor", RoomGeometry(width, height, 320, 200), pixels,
-                     ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75)),
+                     ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75), (60, 220, 90)),
                      (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 16, True, key),
-                      RoomHotspot("Door", "the door", "A locked door.", 560, 100, 16, 16, False, door)),
+                      RoomHotspot("Door", "the door", "A locked door.", 610, 100, 16, 16, False, door)),
                      demo_walk_to_x=540,
                      use_rules=(UseRule("Key", "Door", "The door is unlocked.", hide_target=True),))
 
