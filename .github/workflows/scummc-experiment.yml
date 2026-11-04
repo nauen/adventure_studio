@@ -10,9 +10,11 @@ on:
       - 'src/adventure_studio/scumm_assets.py'
       - 'src/adventure_studio/scumm_bootstrap.py'
       - 'src/adventure_studio/scumm_probe.py'
+      - 'src/adventure_studio/scumm_launch.py'
       - 'tests/test_scumm_assets.py'
       - 'tests/test_scumm_bootstrap.py'
       - 'tests/test_scumm_probe.py'
+      - 'tests/test_scumm_launch.py'
 
 jobs:
   probe:
@@ -26,7 +28,7 @@ jobs:
       - name: Install compiler dependencies and stock ScummVM
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm
+          sudo apt-get install -y build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps
       - name: Fetch unmodified ScummC
         run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
       - name: Fix legacy ScummC tool help paths in ephemeral checkout
@@ -116,6 +118,14 @@ jobs:
           PYTHONPATH: src
         run: |
           python -m adventure_studio.scumm_probe /tmp/tentacle-fixture
+      - name: Launch compatibility fixture in virtual X display (experimental)
+        # This is an actual ScummVM process smoke test, not a gameplay test.
+        # Failures should be visible without masking compilation or detection.
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/tentacle-fixture /tmp/scummvm-smoke
       - name: Upload compiler outputs for inspection
         if: always()
         uses: actions/upload-artifact@v4
@@ -132,6 +142,7 @@ jobs:
             /tmp/studio-fixture/*.001
             /tmp/tentacle-fixture/*.000
             /tmp/tentacle-fixture/*.001
+            /tmp/scummvm-smoke/*
             /tmp/scummc-upstream/examples/road/*.000
             /tmp/scummc-upstream/examples/road/*.001
             /tmp/scummc-upstream/examples/road/*.sou
