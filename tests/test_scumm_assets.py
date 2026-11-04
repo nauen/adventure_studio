@@ -25,6 +25,7 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("state = 1;", source)
         self.assertIn("class = { Pickable };", source)
         self.assertIn("pickupObject(objA,VAR_ROOM)", source)
+        self.assertIn("setObjectState(objA,0)", source)
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
         self.assertIn("setActorStanding()", source)
         self.assertIn("walkActorTo(VAR_EGO, 540, 100)", source)
