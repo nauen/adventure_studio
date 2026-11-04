@@ -82,6 +82,19 @@ def visible_key_pixels(output_directory: Path, frame: str = "end") -> int:
     return count_gold_pixels(result.stdout)
 
 
+def inventory_key_pixels(output_directory: Path) -> int:
+    """Count visible key-colored pixels in SCUMM's lower verb/inventory UI."""
+    screenshot = output_directory / "scummvm-pickup.png"
+    result = subprocess.run(
+        ["convert", str(screenshot), "-crop", "640x112+192+472", "+repage",
+         "-format", "%c", "histogram:info:"],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not inspect inventory colors: {result.stderr}")
+    return count_gold_pixels(result.stdout)
+
+
 def parse_key_bounds(bounds: str) -> tuple[int, int]:
     """Convert trimmed sprite bounds into absolute Xvfb click coordinates."""
     match = re.fullmatch(r"(\d+)x(\d+)\+(\d+)\+(\d+)", bounds.strip())
@@ -228,24 +241,27 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError(f"Key mouse input failed: {click.stderr}")
             picked_up = False
             remaining = visible_key_pixels(output_directory)
+            inventory_pixels = 0
             pickup_deadline = time.monotonic() + 15.0
             while time.monotonic() < pickup_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit during pickup (exit={process.returncode})")
                 capture_frame("pickup")
                 remaining = visible_key_pixels(output_directory, "pickup")
-                if remaining < 10:
+                inventory_pixels = inventory_key_pixels(output_directory)
+                if remaining < 10 and inventory_pixels >= 40:
                     picked_up = True
                     break
                 time.sleep(0.4)
             (output_directory / "scummvm-interaction-report.json").write_text(
                 json.dumps({"verb": "PickUp", "key_click": [key_x, key_y],
                             "remaining_gold_pixels": remaining,
+                            "inventory_gold_pixels": inventory_pixels,
                             "key_removed_from_room": picked_up}, indent=2) + "\n",
                 encoding="utf-8",
             )
             if not picked_up:
-                raise RuntimeError(f"Key pickup did not remove room sprite ({remaining} gold pixels)")
+                raise RuntimeError(f"Pickup/inventory mismatch: room={remaining}, inventory={inventory_pixels} gold pixels")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -256,8 +272,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     process.wait(timeout=3)
     print(f"ScummVM showed the blue room, then survived {seconds:.1f}s; final screenshot: {final_snapshot}")
     print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
-    print(f"Pickup action removed the key sprite at ({key_x}, {key_y}).")
-    print("Camera color and item removal passed; inventory contents and save/load remain unverified.")
+    print(f"Pickup moved the key from room to inventory at ({key_x}, {key_y}).")
+    print("Camera and inventory icon passed; save/load remains unverified.")
 
 
 def main() -> int:
