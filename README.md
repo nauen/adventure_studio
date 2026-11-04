@@ -48,13 +48,14 @@ Day of the Tentacle: it is useful for isolating detection failures, but is
 **not** proof of native recognition, general ScummVM compatibility, or a
 shippable game. Detection probes do not hide compiler/linker failures.
 
-The experimental `scumm_launch.py` smoke test now starts the isolated
-`tentacle` compatibility fixture in an Xvfb display for four seconds and
-uploads its console log and screenshot (`.png`, plus raw `.xwd`) as Actions artifacts.
-It is designed to expose immediate crashes. A surviving process and a
-framebuffer screenshot do **not** establish that the game rendered correctly,
-that scrolling works, or that gameplay is possible. These remain separate
-integration milestones.
+The experimental `scumm_launch.py` smoke test starts the isolated `tentacle`
+compatibility fixture in an Xvfb display for six seconds. It uploads start/end
+screenshots (`.png`, plus raw `.xwd`), an ImageMagick difference image, a JSON
+pixel-change report and console logs as Actions artifacts. The comparison
+uses a 5% pixel color tolerance and requires at least 500 changed pixels.
+This detects a stationary or entirely unchanged output but **does not prove**
+camera scrolling, game interactions, save/load or correct rendering. Those
+remain separate integration milestones.
 
 `scumm_assets.py` now emits an original 640×200 indexed BMP and a SCUMM-v6
 `room` source with data-driven object hotspots, LookAt and PickUp handlers.
