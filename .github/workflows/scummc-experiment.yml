@@ -1,0 +1,35 @@
+name: Experimental SCUMM v6 compatibility probe
+
+# Deliberately manual: upstream ScummC's game detection in stock ScummVM is
+# currently unproven. A red run is a research result, not a release regression.
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install legacy build dependencies and stock ScummVM
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential bison flex libgtk2.0-dev scummvm
+      - name: Fetch unmodified ScummC
+        run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
+      - name: Build ScummC tools
+        working-directory: /tmp/scummc-upstream
+        run: |
+          ./configure
+          make -j2
+      - name: Build upstream road example
+        working-directory: /tmp/scummc-upstream/examples/road
+        run: make
+      - name: Check produced game pair and ScummVM detection
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.scumm_probe /tmp/scummc-upstream/examples/road
