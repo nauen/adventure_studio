@@ -81,8 +81,12 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       zweite Projekt noch offen).
 - [x] Kanonisches JSON-Projektformat v1 mit deterministischem Export,
       strikter Feldprüfung und Dokumentation (`docs/project-format.md`).
-- [ ] Das erzählerische Story-Modell automatisch auf SCUMM-Projektressourcen
-      abbilden, ohne grafische Rohdaten von Autoren zu verlangen.
+- [x] Erster begrenzter Story-zu-SCUMM-Adapter: Kapitel, zwei Szenen,
+      Schlüssel, Dekoration, Tür-Rätsel und Zielraum werden ohne Rohgrafikdaten
+      des Autors übersetzt (`story_to_scumm.py`, lokale Tests).
+- [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
+      erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
+      ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.
 
 ### M4 – Grafik- und Animationspipeline
 
