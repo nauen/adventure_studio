@@ -147,6 +147,7 @@ jobs:
               fi
               if test -f /tmp/scummvm-smoke/scummvm-use-report.json; then
                 python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-use-report.json")); print("- Use Key with Door: **{}**".format("PASS" if p["door_opened"] else "FAIL")); print("- Visible door pixels: **{} -> {}**".format(p["green_before"],p["green_after"]))'
+                python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-use-report.json")); print("- Open door sprite pixels: **{}**".format(p["open_door_pixels"])); print("- Separate exit click: **{}**".format(p["exit_click"]))'
                 python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-use-report.json")); print("- Goal reached ({}): **{}**".format(p["goal_room"],"PASS" if p["goal_reached"] else "FAIL"))'
               fi
             else
@@ -170,6 +171,7 @@ jobs:
             /tmp/generated-room/Harbor.bmp
             /tmp/generated-room/Key.bmp
             /tmp/generated-room/Door.bmp
+            /tmp/generated-room/DoorOpen.bmp
             /tmp/generated-room/Inv_Key.bmp
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
