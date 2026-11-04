@@ -4,10 +4,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from adventure_studio.scumm_launch import close_rgb, count_gold_pixels, launch_smoke, parse_changed_pixels, parse_srgb_pixel
+from adventure_studio.scumm_launch import close_rgb, count_gold_pixels, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
 
 
 class ScummLaunchTests(unittest.TestCase):
+    def test_key_click_geometry(self):
+        self.assertEqual(parse_key_bounds("28x8+338+204"), (544, 392))
+        for invalid in ("", "1x1-1+2", "20x20+630+0", "0x1+1+1"):
+            with self.subTest(bounds=invalid), self.assertRaises(ValueError):
+                parse_key_bounds(invalid)
     def test_key_pixel_histogram(self):
         histogram = "   250: (246,173,90) #F6AD5A srgb(246,173,90)\n   112: (255,222,74) #FFDE4A srgb(255,222,74)\n"
         self.assertEqual(count_gold_pixels(histogram), 112)
