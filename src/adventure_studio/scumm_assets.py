@@ -136,11 +136,9 @@ def indexed_bmp(room: RoomAsset) -> bytes:
 
 def scummc_room_source(room: RoomAsset) -> str:
     _validate(room)
-    parts = ["#include <scummVars6.s>\n"]
-    if room.hotspots:
-        # The existing official example supplies Pickable/LookAt, egoSay and
-        # pickupObject. This header must eventually be replaced by our own.
-        parts.append('#include "common.sch"\n')
+    # The external test bootstrap provides verbs, actor and UI. A generated
+    # room always owns its own entry script, even when it has no hotspots.
+    parts = ["#include <scummVars6.s>\n", '#include "common.sch"\n']
     for destination in sorted({r.destination_room for r in room.use_rules if r.destination_room}):
         parts.append(f"room {destination};\n")
     parts.append(f'\nroom {room.name} {{\n    image = "{room.name}.bmp";\n')
@@ -185,20 +183,19 @@ def scummc_room_source(room: RoomAsset) -> str:
                     parts.append(f"                startRoom({rule.destination_room});\n")
                 parts.extend(["                return;\n", "            }\n", "            return;\n"])
         parts.append("        }\n    }\n")
-    if room.hotspots:
-        parts.extend([
-            "    local script entry() {\n",
-            "        setCurrentActor(VAR_EGO);\n",
-            f"        putActorAt(VAR_EGO, 60, 100, {room.name});\n",
-            "        setActorIgnoreBoxes();\n",
-            "        setActorStanding();\n",
-            "        cameraFollowActor(VAR_EGO);\n",
-            "        ResRoom::showVerbs(1);\n",
-            "        ResRoom::showCursor();\n",
-        ])
-        if room.demo_walk_to_x is not None:
-            parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, 100);\n")
-        parts.append("    }\n")
+    parts.extend([
+        "    local script entry() {\n",
+        "        setCurrentActor(VAR_EGO);\n",
+        f"        putActorAt(VAR_EGO, 60, 100, {room.name});\n",
+        "        setActorIgnoreBoxes();\n",
+        "        setActorStanding();\n",
+        "        cameraFollowActor(VAR_EGO);\n",
+        "        ResRoom::showVerbs(1);\n",
+        "        ResRoom::showCursor();\n",
+    ])
+    if room.demo_walk_to_x is not None:
+        parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, 100);\n")
+    parts.append("    }\n")
     parts.append("}\n")
     return "".join(parts)
 
