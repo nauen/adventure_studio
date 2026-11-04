@@ -115,8 +115,6 @@ def _validate(room: RoomAsset) -> None:
         if hotspot.exit_destination is not None:
             if not _IDENTIFIER.fullmatch(hotspot.exit_destination) or hotspot.exit_destination == room.name:
                 raise ValueError("Invalid exit destination room")
-            if hotspot.open_sprite_pixels is None:
-                raise ValueError("Exit hotspot must have an open-state sprite")
     targets: set[str] = set()
     for rule in room.use_rules:
         if rule.item_id not in pickups or rule.target_id not in ids or rule.item_id == rule.target_id:
@@ -185,12 +183,16 @@ def scummc_room_source(room: RoomAsset) -> str:
             f"        case LookAt:\n            egoSay({_scumm_string(hotspot.description)});\n            return;\n",
         ])
         if hotspot.exit_destination is not None:
-            parts.extend(["        case WalkTo:\n",
-                          "            if(getObjectState(objA) == 2) {\n",
-                          f"                startRoom({hotspot.exit_destination});\n",
-                          "            } else {\n",
-                          '                egoSay("The door is locked.");\n',
-                          "            }\n            return;\n"])
+            parts.append("        case WalkTo:\n")
+            if hotspot.open_sprite_pixels is not None:
+                parts.extend(["            if(getObjectState(objA) == 2) {\n",
+                              f"                startRoom({hotspot.exit_destination});\n",
+                              "            } else {\n",
+                              '                egoSay("The door is locked.");\n',
+                              "            }\n"])
+            else:
+                parts.append(f"            startRoom({hotspot.exit_destination});\n")
+            parts.append("            return;\n")
         if hotspot.pickup:
             if any(rule.item_id == hotspot.id for rule in room.use_rules):
                 parts.extend(["        case Preposition:\n",
@@ -330,7 +332,12 @@ def destination_fixture() -> RoomAsset:
     width, height = 320, 200
     palette = ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75),
                (60, 220, 90), (120, 70, 180))
+    stairs = bytes(4 if x in (0, 15) or y in (0, 15) else 1
+                   for y in range(16) for x in range(16))
     return RoomAsset("Cellar", RoomGeometry(width, height, 320, 200), bytes([5]) * (width * height), palette,
+                     hotspots=(RoomHotspot("Stairs", "stairs to the harbor", "The way back.",
+                                           125, 100, 16, 16, sprite_pixels=stairs,
+                                           exit_destination="Harbor"),),
                      goal_text="You reached the cellar. Puzzle solved!")
 
 
