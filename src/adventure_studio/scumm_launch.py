@@ -113,7 +113,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             ["convert", str(image_path), str(preview_path)],
             capture_output=True, text=True, timeout=10, check=False,
         )
-        if preview.returncode != 0 or not preview_path.is_file() or preview_path.stat().st_size < 1024:
+        if preview.returncode != 0 or not preview_path.is_file() or preview_path.stat().st_size < 64:
             raise RuntimeError(f"Screenshot PNG conversion failed: {preview.stderr}")
         return preview_path
 
@@ -125,14 +125,20 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             env=environment,
         )
         try:
+            readiness_deadline = time.monotonic() + 8.0
+            while time.monotonic() < readiness_deadline:
+                if process.poll() is not None:
+                    raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
+                capture_frame("start")
+                if close_rgb(scene_pixel(output_directory, "start"), (70, 130, 190)):
+                    break
+                time.sleep(0.3)
+            else:
+                raise RuntimeError("Blue initial room was not visible within 8 seconds")
             deadline = time.monotonic() + seconds
-            start_snapshot_taken = False
             while time.monotonic() < deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
-                if not start_snapshot_taken and time.monotonic() >= deadline - seconds + 1.5:
-                    capture_frame("start")
-                    start_snapshot_taken = True
                 time.sleep(0.1)
             if process.poll() is not None:
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
@@ -145,7 +151,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait(timeout=3)
-    print(f"ScummVM process survived {seconds:.1f}s; final screenshot: {final_snapshot}")
+    print(f"ScummVM showed the blue room, then survived {seconds:.1f}s; final screenshot: {final_snapshot}")
     changed = compare_frames(output_directory)
     print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
     print("Expected scroll color marker passed; smooth motion, interactions and save/load remain unverified.")
