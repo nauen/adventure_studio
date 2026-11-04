@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import struct
 import sys
@@ -45,6 +46,7 @@ class RoomAsset:
     hotspots: tuple[RoomHotspot, ...] = ()
     demo_walk_to_x: int | None = None
     use_rules: tuple[UseRule, ...] = ()
+    goal_text: str | None = None
 
 
 def _scumm_string(value: str) -> str:
@@ -76,6 +78,8 @@ def _validate(room: RoomAsset) -> None:
         or not 0 <= room.demo_walk_to_x < width
     ):
         raise ValueError("Demo walk target outside room bounds")
+    if room.goal_text is not None:
+        _scumm_string(room.goal_text)
     ids: set[str] = set()
     pickups: set[str] = set()
     for hotspot in room.hotspots:
@@ -195,6 +199,8 @@ def scummc_room_source(room: RoomAsset) -> str:
     ])
     if room.demo_walk_to_x is not None:
         parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, 100);\n")
+    if room.goal_text is not None:
+        parts.append(f"        egoSay({_scumm_string(room.goal_text)});\n")
     parts.append("    }\n")
     parts.append("}\n")
     return "".join(parts)
@@ -241,7 +247,20 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
         for rule in room.use_rules:
             if rule.destination_room is not None and rule.destination_room not in names:
                 raise ValueError(f"Unknown destination room: {rule.destination_room}")
-    return tuple(write_room_sources(room, directory) for room in rooms)
+    if sum(room.goal_text is not None for room in rooms) != 1:
+        raise ValueError("A game needs exactly one goal room")
+    generated = tuple(write_room_sources(room, directory) for room in rooms)
+    goal_room = next(room for room in rooms if room.goal_text is not None)
+    # Synthetic CI fixture only: the goal room fills its background uniformly,
+    # so the known screen probe color demonstrates the actual destination.
+    probe_rgb = goal_room.palette[goal_room.pixels[0]]
+    (directory / "game-goal.json").write_text(
+        json.dumps({"condition": "enter_room", "room_id": goal_room.name,
+                    "description": goal_room.goal_text,
+                    "fixture_probe_rgb": probe_rgb}, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return generated
 
 
 def scrolling_fixture() -> RoomAsset:
@@ -269,7 +288,8 @@ def destination_fixture() -> RoomAsset:
     width, height = 320, 200
     palette = ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75),
                (60, 220, 90), (120, 70, 180))
-    return RoomAsset("Cellar", RoomGeometry(width, height, 320, 200), bytes([5]) * (width * height), palette)
+    return RoomAsset("Cellar", RoomGeometry(width, height, 320, 200), bytes([5]) * (width * height), palette,
+                     goal_text="You reached the cellar. Puzzle solved!")
 
 
 def main() -> int:
