@@ -22,6 +22,7 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("case LookAt:", source)
         self.assertIn("case PickUp:", source)
         self.assertIn('states = { { 0, 0, "Key.bmp" } };', source)
+        self.assertIn("state = 1;", source)
         self.assertIn("class = { Pickable };", source)
         self.assertIn("pickupObject(objA,VAR_ROOM)", source)
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
