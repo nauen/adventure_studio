@@ -2,6 +2,15 @@
 
 Story-first adventure creation, with a strictly data-driven, testable engine.
 
+## Product target
+
+**Produce original SCUMM v6 game data that runs in ScummVM.** The author never
+needs to know about compilers or game file formats. Compatibility with an
+original DOS SCUMM interpreter is a *separate optional goal*, not an assumption.
+AGS is **not** an export target. The first integration candidate is ScummC;
+its outputs and game recognition must be tested with unmodified ScummVM before
+we can claim a working exporter. See `docs/room-and-export-contract.md`.
+
 ## Run tests
 
 ```bash
@@ -15,6 +24,7 @@ with revision checks. It now also includes a story bible (`story.py`) with
 chapters, scenes, characters, items and puzzles, a deterministic story compiler,
 typed story changes and a strict JSON protocol for untrusted AI proposals.
 It does **not** yet include an actual AI provider, a UI, graphics, or ScummVM export.
+`targets.py` defines the SCUMM v6 target policy and a fail-closed export gate.
 
 ## Boundaries
 
