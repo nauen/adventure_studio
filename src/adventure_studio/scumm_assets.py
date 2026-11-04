@@ -109,6 +109,17 @@ def scummc_room_source(room: RoomAsset) -> str:
             parts.extend(["        case PickUp:\n", "            pickupObject(objA,VAR_ROOM);\n",
                           "            return;\n"])
         parts.append("        }\n    }\n")
+    if room.hotspots:
+        parts.extend([
+            "    local script entry() {\n",
+            "        setCurrentActor(VAR_EGO);\n",
+            f"        putActorAt(VAR_EGO, 60, 100, {room.name});\n",
+            "        setActorIgnoreBoxes();\n",
+            "        cameraFollowActor(VAR_EGO);\n",
+            "        ResRoom::showVerbs(1);\n",
+            "        ResRoom::showCursor();\n",
+            "    }\n",
+        ])
     parts.append("}\n")
     return "".join(parts)
 
@@ -132,7 +143,7 @@ def scrolling_fixture() -> RoomAsset:
                    for y in range(height) for x in range(width))
     return RoomAsset("Harbor", RoomGeometry(width, height, 320, 200), pixels,
                      ((70, 130, 190), (95, 60, 35), (240, 175, 95)),
-                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 160, 16, 12, True),))
+                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 12, True),))
 
 
 def main() -> int:
