@@ -2,6 +2,8 @@
 
 Story-first adventure creation, with a strictly data-driven, testable engine.
 
+Project milestones and acceptance criteria: [`docs/roadmap.md`](docs/roadmap.md).
+
 ## Product target
 
 **Produce original SCUMM v6 game data that runs in ScummVM.** The author never
