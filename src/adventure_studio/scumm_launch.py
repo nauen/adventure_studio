@@ -24,6 +24,12 @@ def parse_changed_pixels(metric: str) -> int:
 
 def parse_srgb_pixel(value: str) -> tuple[int, int, int]:
     """Read one 8-bit ImageMagick pixel without accepting arbitrary output."""
+    gray = re.fullmatch(r"gray\((\d{1,3})\)", value.strip())
+    if gray:
+        channel = int(gray.group(1))
+        if channel > 255:
+            raise ValueError("ImageMagick gray channel out of range")
+        return (channel, channel, channel)
     match = re.fullmatch(r"srgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)", value.strip())
     if not match:
         raise ValueError(f"Unexpected ImageMagick pixel format: {value[:100]!r}")
