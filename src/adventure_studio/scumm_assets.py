@@ -32,6 +32,7 @@ class RoomAsset:
     pixels: bytes
     palette: tuple[tuple[int, int, int], ...]
     hotspots: tuple[RoomHotspot, ...] = ()
+    demo_walk_to_x: int | None = None
 
 
 def _scumm_string(value: str) -> str:
@@ -58,6 +59,11 @@ def _validate(room: RoomAsset) -> None:
         raise ValueError("Palette contains invalid RGB values")
     if room.pixels and max(room.pixels) >= len(room.palette):
         raise ValueError("Pixels reference missing palette entries")
+    if room.demo_walk_to_x is not None and (
+        type(room.demo_walk_to_x) is not int
+        or not 0 <= room.demo_walk_to_x < width
+    ):
+        raise ValueError("Demo walk target outside room bounds")
     ids: set[str] = set()
     for hotspot in room.hotspots:
         if not _IDENTIFIER.fullmatch(hotspot.id) or hotspot.id in ids:
@@ -115,11 +121,14 @@ def scummc_room_source(room: RoomAsset) -> str:
             "        setCurrentActor(VAR_EGO);\n",
             f"        putActorAt(VAR_EGO, 60, 100, {room.name});\n",
             "        setActorIgnoreBoxes();\n",
+            "        setActorStanding();\n",
             "        cameraFollowActor(VAR_EGO);\n",
             "        ResRoom::showVerbs(1);\n",
             "        ResRoom::showCursor();\n",
-            "    }\n",
         ])
+        if room.demo_walk_to_x is not None:
+            parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, 100);\n")
+        parts.append("    }\n")
     parts.append("}\n")
     return "".join(parts)
 
@@ -143,7 +152,8 @@ def scrolling_fixture() -> RoomAsset:
                    for y in range(height) for x in range(width))
     return RoomAsset("Harbor", RoomGeometry(width, height, 320, 200), pixels,
                      ((70, 130, 190), (95, 60, 35), (240, 175, 95)),
-                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 12, True),))
+                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 12, True),),
+                     demo_walk_to_x=540)
 
 
 def main() -> int:
