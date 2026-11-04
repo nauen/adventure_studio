@@ -67,6 +67,45 @@ def count_gold_pixels(histogram: str) -> int:
     return total
 
 
+def count_green_pixels(histogram: str) -> int:
+    """Detect the uniquely green door frame (not the room or inventory)."""
+    total = 0
+    for line in histogram.splitlines():
+        match = re.match(r"^\s*(\d+):\s*\((\d+),(\d+),(\d+)\)", line)
+        if match:
+            count, red, green, blue = map(int, match.groups())
+            if close_rgb((red, green, blue), (60, 220, 90), tolerance=15):
+                total += count
+    return total
+
+
+def door_pixels(output_directory: Path, frame: str) -> int:
+    if frame not in ("pickup", "door"):
+        raise ValueError("Invalid door frame")
+    screenshot = output_directory / f"scummvm-{frame}.png"
+    result = subprocess.run(
+        ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
+         "-format", "%c", "histogram:info:"],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not inspect door: {result.stderr}")
+    return count_green_pixels(result.stdout)
+
+
+def door_center(output_directory: Path) -> tuple[int, int]:
+    screenshot = output_directory / "scummvm-pickup.png"
+    result = subprocess.run(
+        ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
+         "-fuzz", "8%", "-fill", "white", "-opaque", "#3CDC5A",
+         "-fill", "black", "+opaque", "white", "-trim", "-format", "%wx%h%O", "info:"],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not locate door: {result.stderr}")
+    return parse_key_bounds(result.stdout)
+
+
 def visible_key_pixels(output_directory: Path, frame: str = "end") -> int:
     """Inspect the cropped game viewport, excluding the SCUMM verb GUI."""
     if frame not in ("end", "pickup"):
@@ -262,6 +301,40 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             )
             if not picked_up:
                 raise RuntimeError(f"Pickup/inventory mismatch: room={remaining}, inventory={inventory_pixels} gold pixels")
+            initial_door_pixels = door_pixels(output_directory, "pickup")
+            if initial_door_pixels < 40:
+                raise RuntimeError(f"Door not visible before using key: {initial_door_pixels} green pixels")
+            door_x, door_y = door_center(output_directory)
+            # Use -> inventory slot -> target. The example UI has its first
+            # inventory slot at x536..568,y504..536 on our 1024x768 Xvfb.
+            for click_x, click_y in ((408, 506), (552, 520), (door_x, door_y)):
+                click = subprocess.run(
+                    ["xdotool", "mousemove", str(click_x), str(click_y), "click", "1"],
+                    capture_output=True, text=True, timeout=5, check=False,
+                )
+                if click.returncode:
+                    raise RuntimeError(f"Use interaction mouse input failed: {click.stderr}")
+                time.sleep(0.3)
+            door_opened = False
+            remaining_door_pixels = initial_door_pixels
+            door_deadline = time.monotonic() + 15.0
+            while time.monotonic() < door_deadline:
+                if process.poll() is not None:
+                    raise RuntimeError(f"ScummVM quit during door use (exit={process.returncode})")
+                capture_frame("door")
+                remaining_door_pixels = door_pixels(output_directory, "door")
+                if remaining_door_pixels < 10:
+                    door_opened = True
+                    break
+                time.sleep(0.4)
+            (output_directory / "scummvm-use-report.json").write_text(
+                json.dumps({"inventory_item": "Key", "target": "Door",
+                            "click": [door_x, door_y], "green_before": initial_door_pixels,
+                            "green_after": remaining_door_pixels, "door_opened": door_opened}, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            if not door_opened:
+                raise RuntimeError(f"Use Key with Door did not change target state: {remaining_door_pixels} green pixels")
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -273,7 +346,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     print(f"ScummVM showed the blue room, then survived {seconds:.1f}s; final screenshot: {final_snapshot}")
     print(f"Visible frame variation: {changed} changed pixels (5% color tolerance)")
     print(f"Pickup moved the key from room to inventory at ({key_x}, {key_y}).")
-    print("Camera and inventory icon passed; save/load remains unverified.")
+    print(f"Using the inventory key removed the door at ({door_x}, {door_y}).")
+    print("Camera, inventory and scripted use passed; save/load remains unverified.")
 
 
 def main() -> int:
