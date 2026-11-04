@@ -54,8 +54,12 @@ screenshots (`.png`, plus raw `.xwd`), an ImageMagick difference image, a JSON
 pixel-change report and console logs as Actions artifacts. The comparison
 uses a 5% pixel color tolerance and requires at least 500 changed pixels.
 This detects a stationary or entirely unchanged output but **does not prove**
-camera scrolling, game interactions, save/load or correct rendering. Those
-remain separate integration milestones.
+game interactions, save/load or correct rendering. For the fixed 1024x768
+test display it additionally samples pixel `(700,280)` in both screenshots:
+the scripted two-screen room must visibly transition from blue sky to orange
+sky (RGB tolerance 25/channel). That is a reproducible camera-pan signature,
+but is not proof of smooth scrolling or arbitrary-room behavior. Those remain
+separate integration milestones.
 
 `scumm_assets.py` now emits an original 640×200 indexed BMP and a SCUMM-v6
 `room` source with data-driven object hotspots, LookAt and PickUp handlers.
