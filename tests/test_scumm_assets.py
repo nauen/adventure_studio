@@ -30,6 +30,7 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("object Door", source)
         self.assertIn("case Use:", source)
         self.assertIn("if(objB == Key)", source)
+        self.assertIn('sntcPrepo[0] = "with"', source)
         self.assertIn('egoSay("The door is unlocked.")', source)
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
         self.assertIn("setActorStanding()", source)
