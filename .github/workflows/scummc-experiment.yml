@@ -28,7 +28,7 @@ jobs:
       - name: Install compiler dependencies and stock ScummVM
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps
+          sudo apt-get install -y build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps imagemagick
       - name: Fetch unmodified ScummC
         run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
       - name: Fix legacy ScummC tool help paths in ephemeral checkout
