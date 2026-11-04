@@ -4,7 +4,7 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from adventure_studio.scumm_assets import RoomHotspot, indexed_bmp, scrolling_fixture, scummc_room_source, write_room_sources
+from adventure_studio.scumm_assets import RoomHotspot, UseRule, indexed_bmp, scrolling_fixture, scummc_room_source, write_room_sources
 
 
 class ScummAssetsTests(unittest.TestCase):
@@ -27,6 +27,10 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("pickupObject(objA,VAR_ROOM)", source)
         self.assertIn("setObjectState(objA,0)", source)
         self.assertIn("ResRoom::KeyIcon", source)
+        self.assertIn("object Door", source)
+        self.assertIn("case Use:", source)
+        self.assertIn("if(objB == Key)", source)
+        self.assertIn('egoSay("The door is unlocked.")', source)
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
         self.assertIn("setActorStanding()", source)
         self.assertIn("walkActorTo(VAR_EGO, 540, 100)", source)
@@ -41,6 +45,21 @@ class ScummAssetsTests(unittest.TestCase):
             self.assertEqual(struct.unpack_from("<ii", sprite.read_bytes(), 18), (16, 16))
             icon = Path(tmp) / "Inv_Key.bmp"
             self.assertEqual(struct.unpack_from("<ii", icon.read_bytes(), 18), (40, 16))
+            door = Path(tmp) / "Door.bmp"
+            self.assertEqual(struct.unpack_from("<ii", door.read_bytes(), 18), (16, 16))
+
+    def test_use_rules_reject_invalid_references_and_duplicates(self):
+        room = scrolling_fixture()
+        for rules in (
+            (UseRule("Missing", "Door", "No."),),
+            (UseRule("Key", "Missing", "No."),),
+            (UseRule("Key", "Key", "No."),),
+            (UseRule("Key", "Door", "OK."), UseRule("Key", "Door", "Again.")),
+        ):
+            with self.subTest(rules=rules), self.assertRaises(ValueError):
+                scummc_room_source(replace(room, use_rules=rules))
+        with self.assertRaisesRegex(ValueError, "text character"):
+            scummc_room_source(replace(room, use_rules=(UseRule("Key", "Door", 'oops";'),)))
 
     def test_rejects_invalid_dimensions_and_names(self):
         room = scrolling_fixture()
