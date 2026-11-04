@@ -22,6 +22,7 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("case LookAt:", source)
         self.assertIn("case PickUp:", source)
         self.assertIn("pickupObject(objA,VAR_ROOM)", source)
+        self.assertIn("cameraFollowActor(VAR_EGO)", source)
 
     def test_generated_files(self):
         with tempfile.TemporaryDirectory() as tmp:
