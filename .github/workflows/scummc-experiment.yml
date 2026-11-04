@@ -44,13 +44,18 @@ jobs:
           "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/scummc-upstream/examples/road -R /tmp/generated-room -o /tmp/generated-room/Harbor.roobj /tmp/generated-room/Harbor.scc
           test -s /tmp/generated-room/Harbor.roobj
       - name: Link generated room with upstream game bootstrap
-        working-directory: /tmp/scummc-upstream/examples/road
+        env:
+          PYTHONPATH: src
         run: |
+          python -m adventure_studio.scumm_bootstrap /tmp/scummc-upstream/examples/road/common.scc /tmp/generated-room/bootstrap.scc Harbor
+          SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
           SLD_BIN=$(find /tmp/scummc-upstream -type f -name sld -executable -print -quit)
-          test -n "$SLD_BIN"
-          "$SLD_BIN" -o studio common.roobj road.roobj /tmp/generated-room/Harbor.roobj
-          test -s studio.000
-          test -s studio.001
+          test -n "$SCC_BIN" && test -n "$SLD_BIN"
+          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/scummc-upstream/examples/road -R /tmp/scummc-upstream/examples/road -o /tmp/generated-room/bootstrap.roobj /tmp/generated-room/bootstrap.scc
+          cd /tmp/scummc-upstream/examples/road
+          "$SLD_BIN" -o /tmp/generated-room/studio /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj
+          test -s /tmp/generated-room/studio.000
+          test -s /tmp/generated-room/studio.001
       - name: Rebuild the complete upstream demo using our generated background
         # This preserves upstream game logic and changes only the room art. It
         # tests image integration/linking, not our future game-script exporter.
@@ -76,6 +81,8 @@ jobs:
             /tmp/generated-room/Harbor.scc
             /tmp/generated-room/Harbor.roobj
             /tmp/generated-room/Harbor.bmp
+            /tmp/generated-room/studio.000
+            /tmp/generated-room/studio.001
             /tmp/scummc-upstream/examples/road/*.000
             /tmp/scummc-upstream/examples/road/*.001
             /tmp/scummc-upstream/examples/road/*.sou
