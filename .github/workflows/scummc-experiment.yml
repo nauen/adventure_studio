@@ -62,6 +62,8 @@ jobs:
           test -n "$SCC_BIN"
           "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/generated-room -I /tmp/scummc-upstream/examples/road -R /tmp/generated-room -o /tmp/generated-room/Harbor.roobj /tmp/generated-room/Harbor.scc
           test -s /tmp/generated-room/Harbor.roobj
+          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/generated-room -I /tmp/scummc-upstream/examples/road -R /tmp/generated-room -o /tmp/generated-room/Cellar.roobj /tmp/generated-room/Cellar.scc
+          test -s /tmp/generated-room/Cellar.roobj
       - name: Link generated room with upstream game bootstrap
         env:
           PYTHONPATH: src
@@ -72,7 +74,7 @@ jobs:
           test -n "$SCC_BIN" && test -n "$SLD_BIN"
           "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/generated-room -I /tmp/scummc-upstream/examples/road -R /tmp/scummc-upstream/examples/road -o /tmp/generated-room/bootstrap.roobj /tmp/generated-room/bootstrap.scc
           cd /tmp/scummc-upstream/examples/road
-          "$SLD_BIN" -o /tmp/generated-room/studio /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj
+          "$SLD_BIN" -o /tmp/generated-room/studio /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj /tmp/generated-room/Cellar.roobj
           test -s /tmp/generated-room/studio.000
           test -s /tmp/generated-room/studio.001
           mkdir -p /tmp/studio-fixture
@@ -82,7 +84,7 @@ jobs:
         # described by ScummC upstream. Never label it as native game support.
         run: |
           SLD_BIN=$(find /tmp/scummc-upstream -type f -name sld -executable -print -quit)
-          "$SLD_BIN" -o /tmp/generated-room/tentacle -key 0x69 /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj
+          "$SLD_BIN" -o /tmp/generated-room/tentacle -key 0x69 /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj /tmp/generated-room/Cellar.roobj
           mkdir -p /tmp/tentacle-fixture
           cp /tmp/generated-room/tentacle.000 /tmp/generated-room/tentacle.001 /tmp/tentacle-fixture/
       - name: Rebuild the complete upstream demo using our generated background
@@ -159,6 +161,9 @@ jobs:
           path: |
             /tmp/generated-room/Harbor.scc
             /tmp/generated-room/Harbor.roobj
+            /tmp/generated-room/Cellar.scc
+            /tmp/generated-room/Cellar.roobj
+            /tmp/generated-room/Cellar.bmp
             /tmp/generated-room/Harbor.bmp
             /tmp/generated-room/Key.bmp
             /tmp/generated-room/Door.bmp
