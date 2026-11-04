@@ -68,6 +68,8 @@ class ScummAssetsTests(unittest.TestCase):
             self.assertIn("local script entry()", source.read_text(encoding="utf-8"))
             self.assertIn("putActorAt(VAR_EGO, 60, 100, Cellar)", source.read_text(encoding="utf-8"))
             self.assertIn('egoSay("You reached the cellar. Puzzle solved!")', source.read_text(encoding="utf-8"))
+            self.assertIn("object Stairs", source.read_text(encoding="utf-8"))
+            self.assertIn("startRoom(Harbor)", source.read_text(encoding="utf-8"))
 
     def test_game_export_validates_all_room_references_before_writing(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -85,7 +87,7 @@ class ScummAssetsTests(unittest.TestCase):
             self.assertEqual(goal["fixture_probe_rgb"], [120, 70, 180])
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaisesRegex(ValueError, "exactly one goal"):
-                write_game_sources((replace(destination_fixture(), goal_text=None),), Path(tmp))
+                write_game_sources((scrolling_fixture(), replace(destination_fixture(), goal_text=None)), Path(tmp))
 
     def test_use_rules_reject_invalid_references_and_duplicates(self):
         room = scrolling_fixture()
