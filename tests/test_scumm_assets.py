@@ -1,3 +1,4 @@
+import json
 import struct
 import tempfile
 import unittest
@@ -61,6 +62,7 @@ class ScummAssetsTests(unittest.TestCase):
             self.assertIn("room Cellar", source.read_text(encoding="utf-8"))
             self.assertIn("local script entry()", source.read_text(encoding="utf-8"))
             self.assertIn("putActorAt(VAR_EGO, 60, 100, Cellar)", source.read_text(encoding="utf-8"))
+            self.assertIn('egoSay("You reached the cellar. Puzzle solved!")', source.read_text(encoding="utf-8"))
 
     def test_game_export_validates_all_room_references_before_writing(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -72,6 +74,13 @@ class ScummAssetsTests(unittest.TestCase):
                 write_game_sources((scrolling_fixture(), scrolling_fixture()), target)
             self.assertEqual(len(write_game_sources((scrolling_fixture(), destination_fixture()), target)), 2)
             self.assertTrue((target / "Cellar.scc").exists())
+            goal = json.loads((target / "game-goal.json").read_text(encoding="utf-8"))
+            self.assertEqual(goal["condition"], "enter_room")
+            self.assertEqual(goal["room_id"], "Cellar")
+            self.assertEqual(goal["fixture_probe_rgb"], [120, 70, 180])
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "exactly one goal"):
+                write_game_sources((replace(destination_fixture(), goal_text=None),), Path(tmp))
 
     def test_use_rules_reject_invalid_references_and_duplicates(self):
         room = scrolling_fixture()
