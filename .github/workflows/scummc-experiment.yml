@@ -120,8 +120,8 @@ jobs:
           python -m adventure_studio.scumm_probe /tmp/tentacle-fixture
       - name: Launch compatibility fixture in virtual X display (experimental)
         # This is an actual ScummVM process smoke test, not a gameplay test.
-        # Failures should be visible without masking compilation or detection.
-        continue-on-error: true
+        # A failed visual gate must make this research workflow red; GitHub's
+        # step conclusion otherwise reports "success" due to continue-on-error.
         env:
           PYTHONPATH: src
         run: |
