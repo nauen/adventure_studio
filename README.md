@@ -26,6 +26,18 @@ typed story changes and a strict JSON protocol for untrusted AI proposals.
 It does **not** yet include an actual AI provider, a UI, graphics, or ScummVM export.
 `targets.py` defines the SCUMM v6 target policy and a fail-closed export gate.
 
+## SCUMM toolchain research
+
+The CLI probe `PYTHONPATH=src python -m adventure_studio.scumm_probe GAME_DIRECTORY`
+checks for non-empty matching `.000`/`.001` files and asks unmodified ScummVM
+to detect them. This is an **early gate only**, not a playability test.
+
+An opt-in GitHub Actions workflow, `Experimental SCUMM v6 compatibility probe`,
+builds the upstream ScummC sample on Ubuntu and attempts recognition using
+stock ScummVM. It is not part of normal CI because the result is still under
+investigation. Build success, game detection, actual launch and save/load are
+separate acceptance gates.
+
 ## Boundaries
 
 The AI should eventually propose typed project operations, not executable scripts.
