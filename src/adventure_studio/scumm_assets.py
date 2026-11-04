@@ -78,6 +78,8 @@ def _validate(room: RoomAsset) -> None:
                 or hotspot.x + hotspot.width > width or hotspot.y + hotspot.height > height):
             raise ValueError("Hotspot outside room bounds")
         if hotspot.sprite_pixels is not None:
+            if hotspot.width % 8 or hotspot.height % 8:
+                raise ValueError("SCUMM sprite dimensions must be multiples of eight")
             if len(hotspot.sprite_pixels) != hotspot.width * hotspot.height:
                 raise ValueError("Hotspot sprite pixel buffer length mismatch")
             if hotspot.sprite_pixels and max(hotspot.sprite_pixels) >= len(room.palette):
@@ -174,10 +176,10 @@ def scrolling_fixture() -> RoomAsset:
     # An 8-bit golden key silhouette, with orange sky matching its room area.
     key = bytes(3 if (2 <= y <= 4 and 1 <= x <= 5) or (y == 3 and 5 <= x <= 14)
                 or (x in (11, 14) and y in (4, 5)) else 2
-                for y in range(12) for x in range(16))
+                for y in range(16) for x in range(16))
     return RoomAsset("Harbor", RoomGeometry(width, height, 320, 200), pixels,
                      ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75)),
-                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 12, True, key),),
+                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 16, True, key),),
                      demo_walk_to_x=540)
 
 
