@@ -25,6 +25,7 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
         self.assertIn("setActorStanding()", source)
         self.assertIn("walkActorTo(VAR_EGO, 540, 100)", source)
+        self.assertIn("delay(180)", source)
 
     def test_generated_files(self):
         with tempfile.TemporaryDirectory() as tmp:
