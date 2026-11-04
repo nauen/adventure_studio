@@ -35,6 +35,9 @@ class ScummAssetsTests(unittest.TestCase):
         self.assertIn('egoSay("The door is unlocked.")', source)
         self.assertIn("room Cellar;", source)
         self.assertIn("startRoom(Cellar)", source)
+        self.assertIn("if(getObjectState(objA) == 2)", source)
+        self.assertIn("setObjectState(objA,2)", source)
+        self.assertIn('"DoorOpen.bmp"', source)
         self.assertIn("cameraFollowActor(VAR_EGO)", source)
         self.assertIn("setActorStanding()", source)
         self.assertIn("walkActorTo(VAR_EGO, 540, 100)", source)
@@ -51,6 +54,8 @@ class ScummAssetsTests(unittest.TestCase):
             self.assertEqual(struct.unpack_from("<ii", icon.read_bytes(), 18), (40, 16))
             door = Path(tmp) / "Door.bmp"
             self.assertEqual(struct.unpack_from("<ii", door.read_bytes(), 18), (16, 16))
+            open_door = Path(tmp) / "DoorOpen.bmp"
+            self.assertEqual(struct.unpack_from("<ii", open_door.read_bytes(), 18), (16, 16))
 
     def test_destination_room_is_a_distinct_generated_resource(self):
         room = destination_fixture()
@@ -67,7 +72,7 @@ class ScummAssetsTests(unittest.TestCase):
     def test_game_export_validates_all_room_references_before_writing(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp)
-            with self.assertRaisesRegex(ValueError, "Unknown destination"):
+            with self.assertRaisesRegex(ValueError, "Unknown exit destination"):
                 write_game_sources((scrolling_fixture(),), target)
             self.assertEqual(list(target.iterdir()), [])
             with self.assertRaisesRegex(ValueError, "Duplicate room"):
@@ -96,6 +101,8 @@ class ScummAssetsTests(unittest.TestCase):
             scummc_room_source(replace(room, use_rules=(UseRule("Key", "Door", 'oops";'),)))
         with self.assertRaisesRegex(ValueError, "destination room"):
             scummc_room_source(replace(room, use_rules=(UseRule("Key", "Door", "OK", destination_room='bad;code'),)))
+        with self.assertRaisesRegex(ValueError, "cannot hide and open"):
+            scummc_room_source(replace(room, use_rules=(UseRule("Key", "Door", "OK", hide_target=True, open_target=True),)))
 
     def test_rejects_invalid_dimensions_and_names(self):
         room = scrolling_fixture()
