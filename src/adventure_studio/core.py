@@ -64,6 +64,17 @@ def validate(project: Project) -> None:
     if len(state) != len(project.initial):
         raise ValueError("Duplicate state key")
     keys = set(state)
+    object_ids_set = set(object_ids)
+    for obj in project.objects:
+        if not obj.id or not obj.name or not obj.location:
+            raise ValueError("Object ID, name and location must not be empty")
+    for action in project.actions:
+        if not action.id or not action.name:
+            raise ValueError("Action ID and name must not be empty")
+    for key in keys:
+        # Namespaced keys are bound to objects when the namespace is an object ID.
+        if not key or "." not in key:
+            raise ValueError(f"Invalid state key: {key}")
     for condition in (*project.goals, *(c for a in project.actions for c in a.requires)):
         if condition.key not in keys:
             raise ValueError(f"Unknown state key: {condition.key}")
@@ -136,8 +147,7 @@ def analyze(project: Project, max_states: int = 100_000) -> Analysis:
 
 def consolidate(project: Project) -> tuple[Project, tuple[str, ...]]:
     """Remove unreferenced optional objects; preserve explicitly retained content."""
-    referenced = {key.split(".", 1)[0] for key, _ in project.initial}
-    referenced.update(c.key.split(".", 1)[0] for c in project.goals)
+    referenced = {c.key.split(".", 1)[0] for c in project.goals}
     for action in project.actions:
         referenced.update(c.key.split(".", 1)[0] for c in action.requires)
         referenced.update(e.key.split(".", 1)[0] for e in action.effects)
