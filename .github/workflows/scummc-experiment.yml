@@ -43,8 +43,31 @@ jobs:
           test -n "$SCC_BIN"
           "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -R /tmp/generated-room -o /tmp/generated-room/Harbor.roobj /tmp/generated-room/Harbor.scc
           test -s /tmp/generated-room/Harbor.roobj
+      - name: Rebuild the complete upstream demo using our generated background
+        # This preserves upstream game logic and changes only the room art. It
+        # tests image integration/linking, not our future game-script exporter.
+        working-directory: /tmp/scummc-upstream/examples/road
+        run: |
+          cp /tmp/generated-room/Harbor.bmp road.bmp
+          make clean
+          make
+          test -s scummc6.000
+          test -s scummc6.001
       - name: Check produced game pair and ScummVM detection
         env:
           PYTHONPATH: src
         run: |
           python -m adventure_studio.scumm_probe /tmp/scummc-upstream/examples/road
+      - name: Upload compiler outputs for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scummc-research-output
+          if-no-files-found: ignore
+          path: |
+            /tmp/generated-room/Harbor.scc
+            /tmp/generated-room/Harbor.roobj
+            /tmp/generated-room/Harbor.bmp
+            /tmp/scummc-upstream/examples/road/*.000
+            /tmp/scummc-upstream/examples/road/*.001
+            /tmp/scummc-upstream/examples/road/*.sou
