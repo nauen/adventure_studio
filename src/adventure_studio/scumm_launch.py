@@ -91,7 +91,7 @@ def count_cyan_pixels(histogram: str) -> int:
 
 
 def door_pixels(output_directory: Path, frame: str, open_state: bool = False) -> int:
-    if frame not in ("pickup", "door", "exit"):
+    if frame not in ("pickup", "door", "exit", "locked-before", "locked-after"):
         raise ValueError("Invalid door frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -104,8 +104,10 @@ def door_pixels(output_directory: Path, frame: str, open_state: bool = False) ->
     return (count_cyan_pixels if open_state else count_green_pixels)(result.stdout)
 
 
-def door_center(output_directory: Path) -> tuple[int, int]:
-    screenshot = output_directory / "scummvm-pickup.png"
+def door_center(output_directory: Path, frame: str = "pickup") -> tuple[int, int]:
+    if frame not in ("pickup", "locked-before"):
+        raise ValueError("Invalid closed-door screenshot frame")
+    screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
          "-fuzz", "8%", "-fill", "white", "-opaque", "#3CDC5A",
@@ -296,6 +298,32 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
             final_snapshot = capture_frame("end")
             changed = compare_frames(output_directory)
+            # Negative path: walking into the locked door must leave it closed
+            # and must not satisfy the goal. Check before collecting the key.
+            capture_frame("locked-before")
+            locked_before = door_pixels(output_directory, "locked-before")
+            if locked_before < 40:
+                raise RuntimeError(f"Closed door not visible for negative test: {locked_before}")
+            locked_x, locked_y = door_center(output_directory, "locked-before")
+            locked_click = subprocess.run(
+                ["xdotool", "mousemove", str(locked_x), str(locked_y), "click", "1"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            if locked_click.returncode:
+                raise RuntimeError(f"Locked door input failed: {locked_click.stderr}")
+            time.sleep(3)
+            capture_frame("locked-after")
+            locked_after = door_pixels(output_directory, "locked-after")
+            still_locked = (locked_after >= 40
+                            and door_pixels(output_directory, "locked-after", open_state=True) < 10
+                            and not close_rgb(scene_pixel(output_directory, "locked-after"), tuple(expected_color)))
+            (output_directory / "scummvm-negative-report.json").write_text(
+                json.dumps({"action": "WalkTo closed Door", "click": [locked_x, locked_y],
+                            "closed_before": locked_before, "closed_after": locked_after,
+                            "blocked": still_locked}, indent=2) + "\n", encoding="utf-8",
+            )
+            if not still_locked:
+                raise RuntimeError("Locked door allowed an invalid transition or changed state")
             # First choose the verb, then locate the key again: the camera
             # continues to move while the actor is walking.
             verb_click = subprocess.run(
