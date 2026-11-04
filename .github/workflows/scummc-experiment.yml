@@ -87,6 +87,7 @@ jobs:
           "$SLD_BIN" -o /tmp/generated-room/tentacle -key 0x69 /tmp/generated-room/bootstrap.roobj /tmp/generated-room/Harbor.roobj /tmp/generated-room/Cellar.roobj
           mkdir -p /tmp/tentacle-fixture
           cp /tmp/generated-room/tentacle.000 /tmp/generated-room/tentacle.001 /tmp/tentacle-fixture/
+          cp /tmp/generated-room/game-goal.json /tmp/tentacle-fixture/
       - name: Rebuild the complete upstream demo using our generated background
         # This preserves upstream game logic and changes only the room art. It
         # tests image integration/linking, not our future game-script exporter.
@@ -146,6 +147,7 @@ jobs:
               fi
               if test -f /tmp/scummvm-smoke/scummvm-use-report.json; then
                 python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-use-report.json")); print("- Use Key with Door: **{}**".format("PASS" if p["door_opened"] else "FAIL")); print("- Visible door pixels: **{} -> {}**".format(p["green_before"],p["green_after"]))'
+                python -c 'import json; p=json.load(open("/tmp/scummvm-smoke/scummvm-use-report.json")); print("- Goal reached ({}): **{}**".format(p["goal_room"],"PASS" if p["goal_reached"] else "FAIL"))'
               fi
             else
               echo '- Visual comparison: **not produced** (see workflow steps and logs).'
@@ -164,6 +166,7 @@ jobs:
             /tmp/generated-room/Cellar.scc
             /tmp/generated-room/Cellar.roobj
             /tmp/generated-room/Cellar.bmp
+            /tmp/generated-room/game-goal.json
             /tmp/generated-room/Harbor.bmp
             /tmp/generated-room/Key.bmp
             /tmp/generated-room/Door.bmp
