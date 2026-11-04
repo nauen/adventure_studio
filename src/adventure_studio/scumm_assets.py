@@ -123,6 +123,7 @@ def scummc_room_source(room: RoomAsset) -> str:
         ])
         if hotspot.sprite_pixels is not None:
             parts.append(f'        states = {{ {{ 0, 0, "{hotspot.id}.bmp" }} }};\n')
+            parts.append("        state = 1;\n")
         if hotspot.pickup:
             parts.append("        class = { Pickable };\n")
         parts.extend([
