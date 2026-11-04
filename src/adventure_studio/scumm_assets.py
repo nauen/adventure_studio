@@ -80,6 +80,8 @@ def _validate(room: RoomAsset) -> None:
         if hotspot.sprite_pixels is not None:
             if hotspot.width % 8 or hotspot.height % 8:
                 raise ValueError("SCUMM sprite dimensions must be multiples of eight")
+            if hotspot.pickup and (hotspot.width > 40 or hotspot.height > 16):
+                raise ValueError("Inventory icon sprite exceeds fixed 40x16 GUI slot")
             if len(hotspot.sprite_pixels) != hotspot.width * hotspot.height:
                 raise ValueError("Hotspot sprite pixel buffer length mismatch")
             if hotspot.sprite_pixels and max(hotspot.sprite_pixels) >= len(room.palette):
@@ -134,6 +136,10 @@ def scummc_room_source(room: RoomAsset) -> str:
             parts.extend(["        case PickUp:\n", "            pickupObject(objA,VAR_ROOM);\n",
                           "            setObjectState(objA,0);\n",
                           "            return;\n"])
+            if hotspot.sprite_pixels is not None:
+                parts.extend(["        case Icon:\n",
+                              f"            startScript2(vrb,[ResRoom::{hotspot.id}Icon,objA,objB]);\n",
+                              "            return;\n"])
         parts.append("        }\n    }\n")
     if room.hotspots:
         parts.extend([
@@ -167,6 +173,18 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
             (directory / f"{hotspot.id}.bmp").write_bytes(
                 _indexed_bmp(hotspot.width, hotspot.height, hotspot.sprite_pixels, room.palette)
             )
+            if hotspot.pickup:
+                # The inherited SCUMM verb UI allocates 40x16 pixels per item.
+                # Use the same source sprite, centered on a GUI-blue backdrop.
+                icon_width, icon_height = 40, 16
+                x_offset = (icon_width - hotspot.width) // 2
+                icon_pixels = bytearray(icon_width * icon_height)
+                for y in range(hotspot.height):
+                    start = y * icon_width + x_offset
+                    icon_pixels[start:start + hotspot.width] = hotspot.sprite_pixels[y * hotspot.width:(y + 1) * hotspot.width]
+                (directory / f"Inv_{hotspot.id}.bmp").write_bytes(
+                    _indexed_bmp(icon_width, icon_height, bytes(icon_pixels), room.palette)
+                )
     return bmp, scc
 
 
