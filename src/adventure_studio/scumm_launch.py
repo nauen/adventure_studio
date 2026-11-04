@@ -93,9 +93,11 @@ def parse_key_bounds(bounds: str) -> tuple[int, int]:
     return 192 + x + width // 2, 184 + y + height // 2
 
 
-def key_center(output_directory: Path) -> tuple[int, int]:
+def key_center(output_directory: Path, frame: str = "end") -> tuple[int, int]:
     """Locate the visible key silhouette, rather than assuming camera offset."""
-    screenshot = output_directory / "scummvm-end.png"
+    if frame not in ("end", "pre-pickup"):
+        raise ValueError("Invalid key location frame")
+    screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
          "-fuzz", "8%", "-fill", "white", "-opaque", "#FFDC4B",
@@ -207,15 +209,23 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
             final_snapshot = capture_frame("end")
             changed = compare_frames(output_directory)
-            key_x, key_y = key_center(output_directory)
-            for x, y in ((328, 506), (key_x, key_y)):
-                click = subprocess.run(
-                    ["xdotool", "mousemove", str(x), str(y), "click", "1"],
-                    capture_output=True, text=True, timeout=5, check=False,
-                )
-                if click.returncode:
-                    raise RuntimeError(f"Mouse input failed: {click.stderr}")
-                time.sleep(0.3)
+            # First choose the verb, then locate the key again: the camera
+            # continues to move while the actor is walking.
+            verb_click = subprocess.run(
+                ["xdotool", "mousemove", "328", "506", "click", "1"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            if verb_click.returncode:
+                raise RuntimeError(f"Mouse input failed: {verb_click.stderr}")
+            time.sleep(0.3)
+            capture_frame("pre-pickup")
+            key_x, key_y = key_center(output_directory, "pre-pickup")
+            click = subprocess.run(
+                ["xdotool", "mousemove", str(key_x), str(key_y), "click", "1"],
+                capture_output=True, text=True, timeout=5, check=False,
+            )
+            if click.returncode:
+                raise RuntimeError(f"Key mouse input failed: {click.stderr}")
             picked_up = False
             remaining = visible_key_pixels(output_directory)
             pickup_deadline = time.monotonic() + 7.0
