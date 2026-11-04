@@ -23,6 +23,7 @@ class RoomHotspot:
     width: int
     height: int
     pickup: bool = False
+    sprite_pixels: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -76,22 +77,31 @@ def _validate(room: RoomAsset) -> None:
         if (hotspot.x < 0 or hotspot.y < 0 or hotspot.width <= 0 or hotspot.height <= 0
                 or hotspot.x + hotspot.width > width or hotspot.y + hotspot.height > height):
             raise ValueError("Hotspot outside room bounds")
+        if hotspot.sprite_pixels is not None:
+            if len(hotspot.sprite_pixels) != hotspot.width * hotspot.height:
+                raise ValueError("Hotspot sprite pixel buffer length mismatch")
+            if hotspot.sprite_pixels and max(hotspot.sprite_pixels) >= len(room.palette):
+                raise ValueError("Hotspot sprite references missing palette entries")
+
+
+def _indexed_bmp(width: int, height: int, pixels: bytes, palette: tuple[tuple[int, int, int], ...]) -> bytes:
+    """Encode validated 8-bit indexed pixels in a bottom-up Windows BMP."""
+    stride = (width + 3) & ~3
+    pixel_data = b"".join(pixels[y * width:(y + 1) * width] + b"\x00" * (stride - width)
+                          for y in range(height - 1, -1, -1))
+    palette_data = b"".join(bytes((b, g, r, 0)) for r, g, b in palette)
+    offset = 14 + 40 + len(palette_data)
+    file_size = offset + len(pixel_data)
+    header = struct.pack("<2sIHHI", b"BM", file_size, 0, 0, offset)
+    info = struct.pack("<IiiHHIIiiII", 40, width, height, 1, 8, 0, len(pixel_data),
+                       2835, 2835, len(palette), 0)
+    return header + info + palette_data + pixel_data
 
 
 def indexed_bmp(room: RoomAsset) -> bytes:
     """Emit an uncompressed bottom-up Windows BMP with 8-bit indexed pixels."""
     _validate(room)
-    width, height = room.geometry.room_width, room.geometry.room_height
-    stride = (width + 3) & ~3
-    pixel_data = b"".join(room.pixels[y * width:(y + 1) * width] + b"\x00" * (stride - width)
-                          for y in range(height - 1, -1, -1))
-    palette_data = b"".join(bytes((b, g, r, 0)) for r, g, b in room.palette)
-    offset = 14 + 40 + len(palette_data)
-    file_size = offset + len(pixel_data)
-    header = struct.pack("<2sIHHI", b"BM", file_size, 0, 0, offset)
-    info = struct.pack("<IiiHHIIiiII", 40, width, height, 1, 8, 0, len(pixel_data),
-                       2835, 2835, len(room.palette), 0)
-    return header + info + palette_data + pixel_data
+    return _indexed_bmp(room.geometry.room_width, room.geometry.room_height, room.pixels, room.palette)
 
 
 def scummc_room_source(room: RoomAsset) -> str:
@@ -108,6 +118,12 @@ def scummc_room_source(room: RoomAsset) -> str:
             f"        x = {hotspot.x};\n        y = {hotspot.y};\n",
             f"        w = {hotspot.width};\n        h = {hotspot.height};\n",
             f"        name = {_scumm_string(hotspot.label)};\n",
+        ])
+        if hotspot.sprite_pixels is not None:
+            parts.append(f'        states = {{ {{ 0, 0, "{hotspot.id}.bmp" }} }};\n')
+        if hotspot.pickup:
+            parts.append("        class = { Pickable };\n")
+        parts.extend([
             "        verb(int vrb, int objA, int objB) {\n",
             f"        case LookAt:\n            egoSay({_scumm_string(hotspot.description)});\n            return;\n",
         ])
@@ -142,6 +158,11 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
     scc = directory / f"{room.name}.scc"
     bmp.write_bytes(binary)
     scc.write_text(source, encoding="utf-8")
+    for hotspot in room.hotspots:
+        if hotspot.sprite_pixels is not None:
+            (directory / f"{hotspot.id}.bmp").write_bytes(
+                _indexed_bmp(hotspot.width, hotspot.height, hotspot.sprite_pixels, room.palette)
+            )
     return bmp, scc
 
 
@@ -150,9 +171,13 @@ def scrolling_fixture() -> RoomAsset:
     width, height = 640, 200
     pixels = bytes(1 if y >= 150 else (2 if x >= 320 else 0)
                    for y in range(height) for x in range(width))
+    # An 8-bit golden key silhouette, with orange sky matching its room area.
+    key = bytes(3 if (2 <= y <= 4 and 1 <= x <= 5) or (y == 3 and 5 <= x <= 14)
+                or (x in (11, 14) and y in (4, 5)) else 2
+                for y in range(12) for x in range(16))
     return RoomAsset("Harbor", RoomGeometry(width, height, 320, 200), pixels,
-                     ((70, 130, 190), (95, 60, 35), (240, 175, 95)),
-                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 12, True),),
+                     ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75)),
+                     (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 12, True, key),),
                      demo_walk_to_x=540)
 
 
