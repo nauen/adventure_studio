@@ -38,6 +38,14 @@ using stock ScummVM. It runs on relevant probe changes or manually. A red run
 is diagnostic and not a product-release failure. Build success, game detection,
 actual launch and save/load are separate acceptance gates.
 
+The workflow tests **three distinct detection cases**: our normally linked
+`studio.000/.001` files, the untouched upstream sample, and a separate
+`tentacle.000/.001` research fixture created with ScummC's documented
+`-key 0x69` compatibility option. The last case deliberately identifies as
+Day of the Tentacle: it is useful for isolating detection failures, but is
+**not** proof of native recognition, general ScummVM compatibility, or a
+shippable game. Detection probes do not hide compiler/linker failures.
+
 `scumm_assets.py` now emits an original 640×200 indexed BMP and a SCUMM-v6
 `room` source with data-driven object hotspots, LookAt and PickUp handlers.
 The experimental workflow attempts to compile the room and link it with the
