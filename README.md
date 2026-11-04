@@ -49,7 +49,9 @@ Day of the Tentacle: it is useful for isolating detection failures, but is
 shippable game. Detection probes do not hide compiler/linker failures.
 
 The experimental `scumm_launch.py` smoke test starts the isolated `tentacle`
-compatibility fixture in an Xvfb display for six seconds. It uploads start/end
+compatibility fixture in an Xvfb display. It waits up to eight seconds until
+the blue initial room is actually rendered, then observes six more seconds
+of scripted movement. It uploads start/end
 screenshots (`.png`, plus raw `.xwd`), an ImageMagick difference image, a JSON
 pixel-change report and console logs as Actions artifacts. The comparison
 uses a 5% pixel color tolerance and requires at least 500 changed pixels.
