@@ -51,12 +51,15 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       Kamerabild nachgewiesen (goldener Schlüssel; Pixelprüfung integriert).
 - [x] Automatisierte Screenshots belegen zwei verschiedene Kamerapositionen
       (CI-Lauf #41850260115: Blau-zu-Orange-Marker, 92 428 geänderte Pixel).
-- [ ] Konsolenlogs und Artefakte stehen in GitHub Actions zur Verfügung.
+- [x] Konsolenlogs und Screenshot-Artefakte stehen in GitHub Actions zur Verfügung.
 
 ### M2 – Geschlossenes Mini-Adventure
 
-- [ ] Schlüssel aufnehmen, ins Inventar übertragen und visuell bestätigen.
+- [x] Schlüssel aufnehmen, ins Inventar übertragen und visuell bestätigen
+      (CI-Lauf #41863693962).
 - [ ] Verschlossene Tür, Schlüsselprüfung, Türöffnung und Raumwechsel.
+- [x] Teilziel: deklarative `UseRule` kompiliert und echtes „Use Key with Door“
+      entfernt den Tür-Sprite in ScummVM (CI-Lauf #41870570921).
 - [ ] Ein explizites Spielziel mit deterministisch testbarem Lösungsweg.
 - [ ] Ungültige Handlungen und Softlocks werden getestet.
 
@@ -105,5 +108,6 @@ mit konkreten Commits, Testresultaten und verbleibenden Blockern berichtet.
 
 ## Aktuelle Priorität
 
-M1: Spielfigur sichtbar machen, kontrollierte Kamerabewegung auslösen und
-Screenshots des Anfangs und des Endes mit deterministischen Prüfungen vergleichen.
+M2: Nachgewiesene Aufnahme und Verwendung des Schlüssels erweitern um eine
+persistente Türöffnung, einen Raumwechsel und ein explizites Spielziel.
+M1 bleibt offen für Steuerung, Walkboxes und die Überprüfung flüssigen Scrollings.
