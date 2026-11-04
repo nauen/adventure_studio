@@ -25,6 +25,8 @@ class RoomHotspot:
     height: int
     pickup: bool = False
     sprite_pixels: bytes | None = None
+    open_sprite_pixels: bytes | None = None
+    exit_destination: str | None = None
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,7 @@ class UseRule:
     response: str
     hide_target: bool = False
     destination_room: str | None = None
+    open_target: bool = False
 
 
 @dataclass(frozen=True)
@@ -104,6 +107,16 @@ def _validate(room: RoomAsset) -> None:
                 raise ValueError("Hotspot sprite pixel buffer length mismatch")
             if hotspot.sprite_pixels and max(hotspot.sprite_pixels) >= len(room.palette):
                 raise ValueError("Hotspot sprite references missing palette entries")
+        if hotspot.open_sprite_pixels is not None:
+            if hotspot.sprite_pixels is None or len(hotspot.open_sprite_pixels) != hotspot.width * hotspot.height:
+                raise ValueError("Open sprite dimensions do not match closed sprite")
+            if max(hotspot.open_sprite_pixels) >= len(room.palette):
+                raise ValueError("Open sprite references missing palette entries")
+        if hotspot.exit_destination is not None:
+            if not _IDENTIFIER.fullmatch(hotspot.exit_destination) or hotspot.exit_destination == room.name:
+                raise ValueError("Invalid exit destination room")
+            if hotspot.open_sprite_pixels is None:
+                raise ValueError("Exit hotspot must have an open-state sprite")
     targets: set[str] = set()
     for rule in room.use_rules:
         if rule.item_id not in pickups or rule.target_id not in ids or rule.item_id == rule.target_id:
@@ -116,6 +129,10 @@ def _validate(room: RoomAsset) -> None:
             not _IDENTIFIER.fullmatch(rule.destination_room) or rule.destination_room == room.name
         ):
             raise ValueError("Invalid destination room in use rule")
+        if rule.open_target and rule.hide_target:
+            raise ValueError("Use rule cannot hide and open the same target")
+        if rule.open_target and next(h for h in room.hotspots if h.id == rule.target_id).open_sprite_pixels is None:
+            raise ValueError("Use rule open target needs an open-state sprite")
 
 
 def _indexed_bmp(width: int, height: int, pixels: bytes, palette: tuple[tuple[int, int, int], ...]) -> bytes:
@@ -143,7 +160,9 @@ def scummc_room_source(room: RoomAsset) -> str:
     # The external test bootstrap provides verbs, actor and UI. A generated
     # room always owns its own entry script, even when it has no hotspots.
     parts = ["#include <scummVars6.s>\n", '#include "common.sch"\n']
-    for destination in sorted({r.destination_room for r in room.use_rules if r.destination_room}):
+    destinations = ({r.destination_room for r in room.use_rules if r.destination_room}
+                    | {h.exit_destination for h in room.hotspots if h.exit_destination})
+    for destination in sorted(destinations):
         parts.append(f"room {destination};\n")
     parts.append(f'\nroom {room.name} {{\n    image = "{room.name}.bmp";\n')
     for hotspot in room.hotspots:
@@ -154,7 +173,10 @@ def scummc_room_source(room: RoomAsset) -> str:
             f"        name = {_scumm_string(hotspot.label)};\n",
         ])
         if hotspot.sprite_pixels is not None:
-            parts.append(f'        states = {{ {{ 0, 0, "{hotspot.id}.bmp" }} }};\n')
+            if hotspot.open_sprite_pixels is None:
+                parts.append(f'        states = {{ {{ 0, 0, "{hotspot.id}.bmp" }} }};\n')
+            else:
+                parts.append(f'        states = {{ {{ 0, 0, "{hotspot.id}.bmp" }}, {{ 0, 0, "{hotspot.id}Open.bmp" }} }};\n')
             parts.append("        state = 1;\n")
         if hotspot.pickup:
             parts.append("        class = { Pickable };\n")
@@ -162,6 +184,13 @@ def scummc_room_source(room: RoomAsset) -> str:
             "        verb(int vrb, int objA, int objB) {\n",
             f"        case LookAt:\n            egoSay({_scumm_string(hotspot.description)});\n            return;\n",
         ])
+        if hotspot.exit_destination is not None:
+            parts.extend(["        case WalkTo:\n",
+                          "            if(getObjectState(objA) == 2) {\n",
+                          f"                startRoom({hotspot.exit_destination});\n",
+                          "            } else {\n",
+                          '                egoSay("The door is locked.");\n',
+                          "            }\n            return;\n"])
         if hotspot.pickup:
             if any(rule.item_id == hotspot.id for rule in room.use_rules):
                 parts.extend(["        case Preposition:\n",
@@ -183,6 +212,8 @@ def scummc_room_source(room: RoomAsset) -> str:
                 ])
                 if rule.hide_target:
                     parts.append("                setObjectState(objA,0);\n")
+                if rule.open_target:
+                    parts.append("                setObjectState(objA,2);\n")
                 if rule.destination_room:
                     parts.append(f"                startRoom({rule.destination_room});\n")
                 parts.extend(["                return;\n", "            }\n", "            return;\n"])
@@ -220,6 +251,10 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
             (directory / f"{hotspot.id}.bmp").write_bytes(
                 _indexed_bmp(hotspot.width, hotspot.height, hotspot.sprite_pixels, room.palette)
             )
+            if hotspot.open_sprite_pixels is not None:
+                (directory / f"{hotspot.id}Open.bmp").write_bytes(
+                    _indexed_bmp(hotspot.width, hotspot.height, hotspot.open_sprite_pixels, room.palette)
+                )
             if hotspot.pickup:
                 # The inherited SCUMM verb UI allocates 40x16 pixels per item.
                 # Use the same source sprite, centered on a GUI-blue backdrop.
@@ -247,6 +282,9 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
         for rule in room.use_rules:
             if rule.destination_room is not None and rule.destination_room not in names:
                 raise ValueError(f"Unknown destination room: {rule.destination_room}")
+        for hotspot in room.hotspots:
+            if hotspot.exit_destination is not None and hotspot.exit_destination not in names:
+                raise ValueError(f"Unknown exit destination room: {hotspot.exit_destination}")
     if sum(room.goal_text is not None for room in rooms) != 1:
         raise ValueError("A game needs exactly one goal room")
     generated = tuple(write_room_sources(room, directory) for room in rooms)
@@ -274,13 +312,17 @@ def scrolling_fixture() -> RoomAsset:
                 for y in range(16) for x in range(16))
     door = bytes(4 if x in (0, 15) or y in (0, 15) else 1
                  for y in range(16) for x in range(16))
+    open_door = bytes(5 if x in (0, 15) or y in (0, 15) else 2
+                      for y in range(16) for x in range(16))
     return RoomAsset("Harbor", RoomGeometry(width, height, 320, 200), pixels,
-                     ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75), (60, 220, 90)),
+                     ((70, 130, 190), (95, 60, 35), (240, 175, 95), (255, 220, 75),
+                      (60, 220, 90), (50, 220, 220)),
                      (RoomHotspot("Key", "the key", "A rusty key.", 355, 100, 16, 16, True, key),
-                      RoomHotspot("Door", "the door", "A locked door.", 450, 100, 16, 16, False, door)),
+                      RoomHotspot("Door", "the door", "A locked door.", 450, 100, 16, 16, False, door,
+                                  open_sprite_pixels=open_door, exit_destination="Cellar")),
                      demo_walk_to_x=540,
                      use_rules=(UseRule("Key", "Door", "The door is unlocked.",
-                                        hide_target=True, destination_room="Cellar"),))
+                                        open_target=True),))
 
 
 def destination_fixture() -> RoomAsset:
