@@ -35,7 +35,7 @@ class ScummAssetsTests(unittest.TestCase):
             self.assertIn("room Harbor", scc.read_text(encoding="utf-8"))
             sprite = Path(tmp) / "Key.bmp"
             self.assertTrue(sprite.is_file())
-            self.assertEqual(struct.unpack_from("<ii", sprite.read_bytes(), 18), (16, 12))
+            self.assertEqual(struct.unpack_from("<ii", sprite.read_bytes(), 18), (16, 16))
 
     def test_rejects_invalid_dimensions_and_names(self):
         room = scrolling_fixture()
@@ -57,8 +57,10 @@ class ScummAssetsTests(unittest.TestCase):
             scummc_room_source(replace(room, hotspots=(replace(room.hotspots[0], x=639),)))
         with self.assertRaisesRegex(ValueError, "sprite pixel buffer"):
             scummc_room_source(replace(room, hotspots=(replace(room.hotspots[0], sprite_pixels=b""),)))
+        with self.assertRaisesRegex(ValueError, "sprite dimensions"):
+            scummc_room_source(replace(room, hotspots=(replace(room.hotspots[0], height=12),)))
         with self.assertRaisesRegex(ValueError, "sprite references"):
-            scummc_room_source(replace(room, hotspots=(replace(room.hotspots[0], sprite_pixels=b"\xff" * 192),)))
+            scummc_room_source(replace(room, hotspots=(replace(room.hotspots[0], sprite_pixels=b"\xff" * 256),)))
 
 
 if __name__ == "__main__":
