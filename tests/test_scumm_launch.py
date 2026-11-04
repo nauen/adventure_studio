@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from adventure_studio.scumm_launch import close_rgb, count_gold_pixels, count_green_pixels, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
+from adventure_studio.scumm_launch import close_rgb, count_cyan_pixels, count_gold_pixels, count_green_pixels, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
 
 
 class ScummLaunchTests(unittest.TestCase):
@@ -22,6 +22,8 @@ class ScummLaunchTests(unittest.TestCase):
         histogram = "  80: (60,220,90) #3CDC5A srgb(60,220,90)\n  90: (255,220,75) #FFDC4B srgb(255,220,75)\n"
         self.assertEqual(count_green_pixels(histogram), 80)
         self.assertEqual(count_green_pixels(" 80: (95,60,35) #5F3C23\n"), 0)
+        self.assertEqual(count_cyan_pixels(" 80: (50,220,220) #32DCDC srgb(50,220,220)\n"), 80)
+        self.assertEqual(count_cyan_pixels(histogram), 0)
     def test_color_marker_parser_and_tolerance(self):
         self.assertEqual(parse_srgb_pixel("srgb(65,129,189)"), (65, 129, 189))
         self.assertEqual(parse_srgb_pixel("gray(0)"), (0, 0, 0))
