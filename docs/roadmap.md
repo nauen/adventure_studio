@@ -106,6 +106,9 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       Schlüssel allein als auch Schlüssel und Abzeichen ohne Münze lassen die
       Tür verschlossen; erst das vollständige Inventar öffnet den Zielraum
       (CI-Lauf #42024978434).
+- [ ] Lineare Rätselkette mit zwei Türen und drei Szenen: Story-JSON-Export,
+      verknüpfte Ressourcen und ScummVM-Start als Zwischenziel; vollständigen
+      Spielweg durch beide Türen anschließend separat in der Runtime prüfen.
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.

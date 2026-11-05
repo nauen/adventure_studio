@@ -12,9 +12,20 @@ from adventure_studio.story_document import (
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 THREE_ITEMS = EXAMPLE.with_name("mini_story_three_items.json")
+CHAIN = EXAMPLE.with_name("mini_story_chain.json")
 
 
 class StoryDocumentTests(unittest.TestCase):
+    def test_two_puzzles_form_three_sequential_rooms(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = build_story_document(CHAIN.read_text(encoding="utf-8"), Path(tmp))
+            rooms = result.resource_directory
+            self.assertEqual(json.loads(result.project_json.read_text())["rooms"][2]["name"], "Archive")
+            self.assertIn("startRoom(Cellar)", (rooms / "Harbor.scc").read_text())
+            self.assertIn("startRoom(Archive)", (rooms / "Cellar.scc").read_text())
+            self.assertIn("object Door2", (rooms / "Cellar.scc").read_text())
+            self.assertTrue((rooms / "Inv_Badge.bmp").is_file())
+
     def test_three_required_items_generate_distinct_verifiable_icons(self):
         with tempfile.TemporaryDirectory() as tmp:
             result = build_story_document(THREE_ITEMS.read_text(encoding="utf-8"), Path(tmp))

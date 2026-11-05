@@ -74,6 +74,19 @@ class StoryToScummTests(unittest.TestCase):
             compile_story_to_scumm(replace(story, items=story.items +
                                            (Item("Coin", "Münze", "Gold", "Tavern"),)))
 
+    def test_branching_and_cross_room_pickups_fail_closed(self):
+        from adventure_studio.story import verify_story
+        story = small_story()
+        extra = Puzzle("Other", "Another lock", "Tavern", ("Key",), "Shed")
+        with self.assertRaisesRegex(ValueError, "unbranched route"):
+            compile_story_to_scumm(replace(story, puzzles=story.puzzles + (extra,),
+                                           scenes=story.scenes + (Scene("Final", "intro", "Final", "Final room"),)))
+        other = Puzzle("Other", "Another lock", "Shed", ("Key",), "Final")
+        with self.assertRaisesRegex(ValueError, "own scene"):
+            compile_story_to_scumm(replace(story, puzzles=story.puzzles + (other,),
+                                           scenes=story.scenes + (Scene("Final", "intro", "Final", "Final room"),),
+                                           final_puzzle_id="Other"))
+
 
 if __name__ == "__main__":
     unittest.main()

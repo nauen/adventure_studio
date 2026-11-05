@@ -18,6 +18,7 @@ on:
       - 'examples/mini_story.json'
       - 'examples/mini_story_two_items.json'
       - 'examples/mini_story_three_items.json'
+      - 'examples/mini_story_chain.json'
       - 'examples/PLAY_STORY_PREVIEW.txt'
       - 'tests/test_scumm_assets.py'
       - 'tests/test_scumm_bootstrap.py'
@@ -184,6 +185,20 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/three-item-fixture /tmp/three-item-smoke --puzzle-only
+      - name: Compile chained two-puzzle three-room adventure from story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/mini_story_chain.json /tmp/chain-story-build
+          python -m adventure_studio.scumm_toolchain /tmp/chain-story-build /tmp/scummc-upstream /tmp/chain-fixture
+          test -s /tmp/chain-story-build/resources/Archive.roobj
+          test -s /tmp/chain-fixture/tentacle.000
+          test -s /tmp/chain-fixture/tentacle.001
+      - name: Render initial scene of story-compiled chained adventure in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/chain-fixture /tmp/chain-smoke --scene-only
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -241,6 +256,10 @@ jobs:
             if test -f /tmp/three-item-smoke/scummvm-use-report.json; then
               python -c 'import json; p=json.load(open("/tmp/three-item-smoke/scummvm-use-report.json")); print("- Three-item puzzle opens door and reaches goal: **{}**".format("PASS" if p["door_opened"] and p["goal_reached"] else "FAIL"))'
             fi
+            if test -f /tmp/chain-smoke/scummvm-frame-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/chain-smoke/scummvm-frame-report.json")); print("- Three-room chained Story JSON compiled, linked and initial scene rendered: **{}**".format("PASS" if p["frame_variation_passed"] and p["scroll_color_signature_passed"] else "FAIL"))'
+              echo '- Chain gameplay progression through both doors: **not yet tested**.'
+            fi
             echo
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload compiler outputs for inspection
@@ -278,6 +297,9 @@ jobs:
             /tmp/three-item-story-build/project.json
             /tmp/three-item-story-build/resources/*
             /tmp/three-item-smoke/*
+            /tmp/chain-story-build/project.json
+            /tmp/chain-story-build/resources/*
+            /tmp/chain-smoke/*
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
             /tmp/studio-fixture/*.000
@@ -321,3 +343,13 @@ jobs:
             /tmp/three-item-fixture/tentacle.001
             /tmp/three-item-fixture/game-goal.json
             /tmp/three-item-fixture/README.txt
+      - name: Upload linked three-room chain fixture for development
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: story-three-room-chain-experimental
+          if-no-files-found: ignore
+          path: |
+            /tmp/chain-fixture/tentacle.000
+            /tmp/chain-fixture/tentacle.001
+            /tmp/chain-fixture/game-goal.json
