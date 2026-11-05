@@ -168,6 +168,40 @@ jobs:
           cp "$GITHUB_WORKSPACE/examples/PLAY_STORY_PREVIEW.txt" /tmp/story-fixture/README.txt
           test -s /tmp/story-fixture/tentacle.000
           test -s /tmp/story-fixture/tentacle.001
+      # Independent media gates run before the longer gameplay interaction suite.
+      # A flaky UI click in a puzzle must not prevent palette/audio evidence.
+      - name: Compile indexed-water SCUMM v6 palette-cycle fixture
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.palette_demo examples/mini_story.json /tmp/palette-story-build
+          python -m adventure_studio.scumm_toolchain /tmp/palette-story-build /tmp/scummc-upstream /tmp/palette-fixture
+          test -s /tmp/palette-story-build/resources/Harbor.roobj
+          test -s /tmp/palette-fixture/tentacle.000
+          test -s /tmp/palette-fixture/tentacle.001
+      - name: Verify real palette animation and unaffected sky in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_palette_probe /tmp/palette-fixture /tmp/palette-smoke
+      - name: Generate original MIDI and wrap as a ScummC GMD sound resource
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.music_demo examples/mini_story.json /tmp/music-story-build
+          SOUN_BIN=$(find /tmp/scummc-upstream -type f -name soun -executable -print -quit)
+          test -n "$SOUN_BIN"
+          "$SOUN_BIN" -gmd /tmp/music-story-build/resources/HarborTheme.mid -o /tmp/music-story-build/resources/HarborTheme.soun
+          test -s /tmp/music-story-build/resources/HarborTheme.soun
+          python -m adventure_studio.scumm_toolchain /tmp/music-story-build /tmp/scummc-upstream /tmp/music-fixture
+          test -s /tmp/music-fixture/tentacle.000
+          test -s /tmp/music-fixture/tentacle.001
+      - name: Experimental PCM capture from stock ScummVM
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_audio_probe /tmp/music-fixture /tmp/music-smoke /tmp/story-fixture
       - name: Launch story-built adventure in stock ScummVM
         env:
           PYTHONPATH: src
@@ -229,38 +263,6 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-fixture /tmp/recipe-smoke --recipe-only
-      - name: Compile indexed-water SCUMM v6 palette-cycle fixture
-        env:
-          PYTHONPATH: src
-        run: |
-          python -m adventure_studio.palette_demo examples/mini_story.json /tmp/palette-story-build
-          python -m adventure_studio.scumm_toolchain /tmp/palette-story-build /tmp/scummc-upstream /tmp/palette-fixture
-          test -s /tmp/palette-story-build/resources/Harbor.roobj
-          test -s /tmp/palette-fixture/tentacle.000
-          test -s /tmp/palette-fixture/tentacle.001
-      - name: Verify real palette animation and unaffected sky in stock ScummVM
-        env:
-          PYTHONPATH: src
-        run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_palette_probe /tmp/palette-fixture /tmp/palette-smoke
-      - name: Generate original MIDI and wrap as a ScummC GMD sound resource
-        env:
-          PYTHONPATH: src
-        run: |
-          python -m adventure_studio.music_demo examples/mini_story.json /tmp/music-story-build
-          SOUN_BIN=$(find /tmp/scummc-upstream -type f -name soun -executable -print -quit)
-          test -n "$SOUN_BIN"
-          "$SOUN_BIN" -gmd /tmp/music-story-build/resources/HarborTheme.mid -o /tmp/music-story-build/resources/HarborTheme.soun
-          test -s /tmp/music-story-build/resources/HarborTheme.soun
-          python -m adventure_studio.scumm_toolchain /tmp/music-story-build /tmp/scummc-upstream /tmp/music-fixture
-          test -s /tmp/music-fixture/tentacle.000
-          test -s /tmp/music-fixture/tentacle.001
-      - name: Experimental PCM capture from stock ScummVM
-        continue-on-error: true
-        env:
-          PYTHONPATH: src
-        run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_audio_probe /tmp/music-fixture /tmp/music-smoke /tmp/story-fixture
       - name: Publish visual probe summary
         if: always()
         run: |
