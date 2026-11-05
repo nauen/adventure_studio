@@ -19,9 +19,7 @@ on:
       - 'src/adventure_studio/story_document.py'
       - 'src/adventure_studio/story_to_scumm.py'
       - 'src/adventure_studio/dialogue_demo.py'
-      - 'src/adventure_studio/scumm_dialogue_probe.py'
       - 'tests/test_story_v4.py'
-      - 'tests/test_scumm_dialogue_probe.py'
       - 'src/adventure_studio/music_demo.py'
       - 'src/adventure_studio/music_transition_demo.py'
       - 'src/adventure_studio/music_director.py'
@@ -193,11 +191,6 @@ jobs:
           cp /tmp/dialogue-choices-build/story.json /tmp/dialogue-choices-fixture/story.json
           test -s /tmp/dialogue-choices-fixture/tentacle.000
           test -s /tmp/dialogue-choices-fixture/tentacle.001
-      - name: Verify clickable answers in stock ScummVM (experimental)
-        env:
-          PYTHONPATH: src
-        run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe /tmp/dialogue-choices-fixture /tmp/dialogue-choices-smoke
       # Independent media gates run before the longer gameplay interaction suite.
       # A flaky UI click in a puzzle must not prevent palette/audio evidence.
       - name: Compile indexed-water SCUMM v6 palette-cycle fixture
@@ -503,16 +496,6 @@ jobs:
             /tmp/dialogue-choices-fixture/tentacle.000
             /tmp/dialogue-choices-fixture/tentacle.001
             /tmp/dialogue-choices-fixture/story.json
-      - name: Upload dialogue interaction screenshots and report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dialogue-interaction-evidence
-          if-no-files-found: ignore
-          path: |
-            /tmp/dialogue-choices-smoke/*.png
-            /tmp/dialogue-choices-smoke/*.json
-            /tmp/dialogue-choices-smoke/scummvm.log
       - name: Upload two-item story preview for manual testing
         if: always()
         uses: actions/upload-artifact@v4

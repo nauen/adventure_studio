@@ -111,6 +111,7 @@ def run(game_directory: Path, output: Path) -> dict:
             # one ImageMagick bounding box: its center can lie in the gap.
             # Choose the first fixture answer at story-space (240,130).
             answer_x, answer_y = 192 + 240 * 2 + 16, 184 + 130 * 2 + 16
+            _click(330, 560)  # Re-select Talk to; SCUMM may reset the verb.
             _click(answer_x, answer_y)
             dismissed = displayed
             for _ in range(35):
