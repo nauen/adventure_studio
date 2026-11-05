@@ -44,16 +44,19 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    # ScummVM pulls a large data package. The Ubuntu mirror occasionally
+    # stalls; give the full job enough time while bounding the install step.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - name: Install compiler dependencies and stock ScummVM
+        timeout-minutes: 18
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick
+          sudo apt-get -o Acquire::Retries=4 -o Acquire::http::Timeout=45 update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=4 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick
       - name: Fetch unmodified ScummC
         run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
       - name: Fix legacy ScummC tool help paths in ephemeral checkout
@@ -227,8 +230,6 @@ jobs:
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-fixture /tmp/recipe-smoke --recipe-only
       - name: Compile indexed-water SCUMM v6 palette-cycle fixture
-        # Palette research is parked while the music/audio path is explored.
-        if: false
         env:
           PYTHONPATH: src
         run: |
@@ -238,7 +239,6 @@ jobs:
           test -s /tmp/palette-fixture/tentacle.000
           test -s /tmp/palette-fixture/tentacle.001
       - name: Verify real palette animation and unaffected sky in stock ScummVM
-        if: false
         env:
           PYTHONPATH: src
         run: |
