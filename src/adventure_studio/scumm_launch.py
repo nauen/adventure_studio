@@ -95,22 +95,25 @@ def colored_item_pixels(output_directory: Path, frame: str,
 
 
 def colored_item_center(output_directory: Path, frame: str,
-                        rgb: tuple[int, int, int]) -> tuple[int, int]:
+                        rgb: tuple[int, int, int], inventory: bool = False) -> tuple[int, int]:
     screenshot = output_directory / f"scummvm-{frame}.png"
     color_hex = "#" + "".join(f"{channel:02X}" for channel in rgb)
+    crop = "640x112+192+472" if inventory else "640x288+192+184"
     result = subprocess.run(
-        ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
+        ["convert", str(screenshot), "-crop", crop, "+repage",
          "-fuzz", "8%", "-fill", "white", "-opaque", color_hex,
          "-fill", "black", "+opaque", "white", "-trim", "-format", "%wx%h%O", "info:"],
         capture_output=True, text=True, timeout=10, check=False,
     )
     if result.returncode:
         raise RuntimeError(f"Could not locate colored inventory item: {result.stderr}")
-    return parse_key_bounds(result.stdout)
+    x, y = parse_key_bounds(result.stdout)
+    return (x, y + 288) if inventory else (x, y)
 
 
 def door_pixels(output_directory: Path, frame: str, open_state: bool = False) -> int:
-    if frame not in ("pickup", "door", "exit", "return", "locked-before", "locked-after", "gated-use"):
+    if frame not in ("pickup", "door", "exit", "return", "locked-before", "locked-after",
+                     "gated-use", "chain-second", "chain-second-open", "chain-arrival"):
         raise ValueError("Invalid door frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -124,7 +127,7 @@ def door_pixels(output_directory: Path, frame: str, open_state: bool = False) ->
 
 
 def door_center(output_directory: Path, frame: str = "pickup") -> tuple[int, int]:
-    if frame not in ("pickup", "locked-before", "exit"):
+    if frame not in ("pickup", "locked-before", "exit", "chain-second", "chain-arrival"):
         raise ValueError("Invalid closed-door screenshot frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -138,8 +141,10 @@ def door_center(output_directory: Path, frame: str = "pickup") -> tuple[int, int
     return parse_key_bounds(result.stdout)
 
 
-def open_door_center(output_directory: Path) -> tuple[int, int]:
-    screenshot = output_directory / "scummvm-door.png"
+def open_door_center(output_directory: Path, frame: str = "door") -> tuple[int, int]:
+    if frame not in ("door", "chain-second-open"):
+        raise ValueError("Invalid opened-door screenshot frame")
+    screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
          "-fuzz", "8%", "-fill", "white", "-opaque", "#32DCDC",
@@ -251,7 +256,8 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
 
 
 def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0,
-                 scene_only: bool = False, verify_return: bool = True) -> None:
+                 scene_only: bool = False, verify_return: bool = True,
+                 verify_chain: bool = False) -> None:
     if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
@@ -275,6 +281,18 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         for gate in gates
     ):
         raise ValueError("Invalid fixture inventory gates")
+    route = goal.get("fixture_route", [])
+    if not isinstance(route, list) or len(route) > 2 or any(
+        not isinstance(step, dict) or set(step) != {"room_id", "item_id", "rgb", "next_room_id"}
+        or not all(isinstance(step[field], str) and step[field] for field in ("room_id", "item_id", "next_room_id"))
+        or not isinstance(step["rgb"], list) or len(step["rgb"]) != 3
+        or any(type(c) is not int or not 0 <= c <= 255 for c in step["rgb"])
+        for step in route
+    ):
+        raise ValueError("Invalid fixture route")
+    if verify_chain and (len(route) != 2 or route[0]["next_room_id"] != route[1]["room_id"]
+                         or route[1]["next_room_id"] != goal["room_id"] or gates):
+        raise ValueError("Chain smoke requires exactly two sequential single-item doors")
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("A virtual X display is required")
 
@@ -510,6 +528,97 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             )
             if exit_click.returncode:
                 raise RuntimeError(f"Exit mouse input failed: {exit_click.stderr}")
+            if verify_chain:
+                second = route[1]
+                rgb = tuple(second["rgb"])
+                # Entering the intermediate room restores its own local
+                # pickup and closed exit; the first door is already open.
+                arrived = False
+                arrival_deadline = time.monotonic() + 20
+                while time.monotonic() < arrival_deadline:
+                    if process.poll() is not None:
+                        raise RuntimeError("ScummVM quit during chain room transition")
+                    capture_frame("chain-arrival")
+                    if (colored_item_pixels(output_directory, "chain-arrival", rgb) >= 40
+                            and door_pixels(output_directory, "chain-arrival") >= 40):
+                        arrived = True
+                        break
+                    time.sleep(0.4)
+                if not arrived:
+                    raise RuntimeError("Second story room did not render its pickup and locked exit")
+                # The second room cannot be left before collecting its item.
+                second_door = door_center(output_directory, "chain-arrival")
+                for x, y in ((328, 506),):
+                    command = subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                                             capture_output=True, text=True, timeout=5, check=False)
+                    if command.returncode:
+                        raise RuntimeError(f"Second room PickUp verb failed: {command.stderr}")
+                time.sleep(0.3)
+                capture_frame("chain-second")
+                item_x, item_y = colored_item_center(output_directory, "chain-second", rgb)
+                command = subprocess.run(
+                    ["xdotool", "mousemove", str(item_x), str(item_y), "click", "1"],
+                    capture_output=True, text=True, timeout=5, check=False,
+                )
+                if command.returncode:
+                    raise RuntimeError(f"Second room item click failed: {command.stderr}")
+                acquired = False
+                acquire_deadline = time.monotonic() + 15
+                while time.monotonic() < acquire_deadline:
+                    capture_frame("chain-second")
+                    if (colored_item_pixels(output_directory, "chain-second", rgb) < 10
+                            and colored_item_pixels(output_directory, "chain-second", rgb, inventory=True) >= 40):
+                        acquired = True
+                        break
+                    time.sleep(0.4)
+                if not acquired:
+                    raise RuntimeError("Second room pickup was not transferred to inventory")
+                inventory_x, inventory_y = colored_item_center(output_directory, "chain-second", rgb, inventory=True)
+                second_door = door_center(output_directory, "chain-second")
+                for x, y in ((408, 506), (inventory_x, inventory_y), second_door):
+                    command = subprocess.run(
+                        ["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                        capture_output=True, text=True, timeout=5, check=False,
+                    )
+                    if command.returncode:
+                        raise RuntimeError(f"Second room use failed: {command.stderr}")
+                    time.sleep(0.3)
+                opened = False
+                open_deadline = time.monotonic() + 15
+                while time.monotonic() < open_deadline:
+                    capture_frame("chain-second-open")
+                    if (door_pixels(output_directory, "chain-second-open") < 10
+                            and door_pixels(output_directory, "chain-second-open", open_state=True) >= 40):
+                        opened = True
+                        break
+                    time.sleep(0.4)
+                if not opened:
+                    raise RuntimeError("Second room door did not open with its story item")
+                second_exit = open_door_center(output_directory, "chain-second-open")
+                command = subprocess.run(
+                    ["xdotool", "mousemove", str(second_exit[0]), str(second_exit[1]), "click", "1"],
+                    capture_output=True, text=True, timeout=5, check=False,
+                )
+                if command.returncode:
+                    raise RuntimeError(f"Second room exit failed: {command.stderr}")
+                reached = False
+                reach_deadline = time.monotonic() + 15
+                while time.monotonic() < reach_deadline:
+                    capture_frame("chain-goal")
+                    if close_rgb(scene_pixel(output_directory, "chain-goal"), tuple(expected_color)):
+                        reached = True
+                        break
+                    time.sleep(0.4)
+                (output_directory / "scummvm-chain-report.json").write_text(
+                    json.dumps({"room_route": [step["room_id"] for step in route] + [goal["room_id"]],
+                                "first_door_opened": door_opened, "intermediate_room_visible": arrived,
+                                "second_item_acquired": acquired, "second_door_opened": opened,
+                                "goal_reached": reached}, indent=2) + "\n", encoding="utf-8",
+                )
+                if not reached:
+                    raise RuntimeError("Chain did not reach its final story room")
+                print("Full chained story gameplay succeeded: both inventory doors opened and final room reached")
+                return
             goal_reached = False
             exit_deadline = time.monotonic() + 15.0
             while time.monotonic() < exit_deadline:
@@ -578,12 +687,13 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only")):
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only")):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only]")
         return 2
     mode = sys.argv[3] if len(sys.argv) == 4 else ""
     launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]),
-                 scene_only=mode == "--scene-only", verify_return=mode != "--puzzle-only")
+                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only"),
+                 verify_chain=mode == "--chain-only")
     return 0
 
 

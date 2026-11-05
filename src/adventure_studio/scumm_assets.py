@@ -309,9 +309,16 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
     # must be acquired before the use rule can open its target. The palette
     # colors identify sprites in screenshots without knowing story item names.
     gates = []
+    fixture_route = []
     for room in rooms:
         pickups = {hotspot.id: hotspot for hotspot in room.hotspots if hotspot.pickup}
         for rule in room.use_rules:
+            source = pickups[rule.item_id]
+            assert source.sprite_pixels is not None
+            destination = next(h.exit_destination for h in room.hotspots if h.id == rule.target_id)
+            fixture_route.append({"room_id": room.name, "item_id": rule.item_id,
+                                  "rgb": list(room.palette[source.sprite_pixels[0]]),
+                                  "next_room_id": destination})
             for item_id in rule.requires_inventory:
                 hotspot = pickups[item_id]
                 assert hotspot.sprite_pixels is not None
@@ -321,7 +328,8 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
         json.dumps({"condition": "enter_room", "room_id": goal_room.name,
                     "description": goal_room.goal_text,
                     "fixture_probe_rgb": probe_rgb,
-                    "fixture_inventory_gates": gates}, sort_keys=True, indent=2) + "\n",
+                    "fixture_inventory_gates": gates,
+                    "fixture_route": fixture_route}, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
     (directory / "inventory-ids.txt").write_text(",".join(sorted(pickup_ids)) + "\n", encoding="ascii")

@@ -25,6 +25,11 @@ class StoryDocumentTests(unittest.TestCase):
             self.assertIn("startRoom(Archive)", (rooms / "Cellar.scc").read_text())
             self.assertIn("object Door2", (rooms / "Cellar.scc").read_text())
             self.assertTrue((rooms / "Inv_Badge.bmp").is_file())
+            goal = json.loads((rooms / "game-goal.json").read_text())
+            self.assertEqual(goal["fixture_route"], [
+                {"room_id": "Harbor", "item_id": "Key", "rgb": [255, 220, 75], "next_room_id": "Cellar"},
+                {"room_id": "Cellar", "item_id": "Badge", "rgb": [225, 80, 180], "next_room_id": "Archive"},
+            ])
 
     def test_three_required_items_generate_distinct_verifiable_icons(self):
         with tempfile.TemporaryDirectory() as tmp:

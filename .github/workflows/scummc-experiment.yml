@@ -194,11 +194,11 @@ jobs:
           test -s /tmp/chain-story-build/resources/Archive.roobj
           test -s /tmp/chain-fixture/tentacle.000
           test -s /tmp/chain-fixture/tentacle.001
-      - name: Render initial scene of story-compiled chained adventure in stock ScummVM
+      - name: Play both doors and reach final room of chained adventure in stock ScummVM
         env:
           PYTHONPATH: src
         run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/chain-fixture /tmp/chain-smoke --scene-only
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/chain-fixture /tmp/chain-smoke --chain-only
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -258,7 +258,11 @@ jobs:
             fi
             if test -f /tmp/chain-smoke/scummvm-frame-report.json; then
               python -c 'import json; p=json.load(open("/tmp/chain-smoke/scummvm-frame-report.json")); print("- Three-room chained Story JSON compiled, linked and initial scene rendered: **{}**".format("PASS" if p["frame_variation_passed"] and p["scroll_color_signature_passed"] else "FAIL"))'
-              echo '- Chain gameplay progression through both doors: **not yet tested**.'
+            fi
+            if test -f /tmp/chain-smoke/scummvm-chain-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/chain-smoke/scummvm-chain-report.json")); print("- Chained two-door story reached final scene: **{}**".format("PASS" if p["first_door_opened"] and p["intermediate_room_visible"] and p["second_item_acquired"] and p["second_door_opened"] and p["goal_reached"] else "FAIL"))'
+            else
+              echo '- Full chained gameplay: **not produced**.'
             fi
             echo
           } >> "$GITHUB_STEP_SUMMARY"

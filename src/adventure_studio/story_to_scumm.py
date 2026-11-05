@@ -91,6 +91,7 @@ def compile_story_to_scumm(story: Story) -> GameDocument:
             raise ValueError("Too many decorations for the current automatic layout")
 
     result = []
+    pickup_number = 0
     for scene_index, scene_id in enumerate(route):
         goal = scene_index == len(ordered_puzzles)
         puzzle = ordered_puzzles[scene_index] if not goal else None
@@ -102,10 +103,13 @@ def compile_story_to_scumm(story: Story) -> GameDocument:
                                 sprite_pixels=_sprite(1, 4))
                     for index, i in enumerate(decorations)]
         if not goal:
-            hotspots.extend(RoomHotspot(item.id, _text(item.name), _text(item.description),
-                                        355 + index * 26, 100, 16, 16, True,
-                                        _sprite(_PICKUP_COLORS[index], 2))
-                            for index, item in enumerate(pickups))
+            for index, item in enumerate(pickups):
+                if pickup_number >= len(_PICKUP_COLORS):
+                    raise ValueError("Current visual fixture supports at most three pickups across the route")
+                hotspots.append(RoomHotspot(item.id, _text(item.name), _text(item.description),
+                                            355 + index * 26, 100, 16, 16, True,
+                                            _sprite(_PICKUP_COLORS[pickup_number], 2)))
+                pickup_number += 1
             door_id = "Door" if scene_index == 0 else f"Door{scene_index + 1}"
             hotspots.append(RoomHotspot(door_id, "the exit", _text(puzzle.title),
                                         450, 100, 16, 16, False, _sprite(4, 1),
