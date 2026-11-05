@@ -8,6 +8,9 @@ on:
     paths:
       - '.github/workflows/scummc-experiment.yml'
       - 'src/adventure_studio/scumm_assets.py'
+      - 'src/adventure_studio/palette_animation.py'
+      - 'src/adventure_studio/palette_demo.py'
+      - 'src/adventure_studio/scumm_palette_probe.py'
       - 'src/adventure_studio/scumm_bootstrap.py'
       - 'src/adventure_studio/scumm_probe.py'
       - 'src/adventure_studio/scumm_launch.py'
@@ -22,6 +25,9 @@ on:
       - 'examples/recipe_story.json'
       - 'examples/PLAY_STORY_PREVIEW.txt'
       - 'tests/test_scumm_assets.py'
+      - 'tests/test_palette_animation.py'
+      - 'tests/test_palette_demo.py'
+      - 'tests/test_scumm_palette_probe.py'
       - 'tests/test_scumm_bootstrap.py'
       - 'tests/test_scumm_probe.py'
       - 'tests/test_scumm_launch.py'
@@ -214,6 +220,20 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-fixture /tmp/recipe-smoke --recipe-only
+      - name: Compile indexed-water SCUMM v6 palette-cycle fixture
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.palette_demo examples/mini_story.json /tmp/palette-story-build
+          python -m adventure_studio.scumm_toolchain /tmp/palette-story-build /tmp/scummc-upstream /tmp/palette-fixture
+          test -s /tmp/palette-story-build/resources/Harbor.roobj
+          test -s /tmp/palette-fixture/tentacle.000
+          test -s /tmp/palette-fixture/tentacle.001
+      - name: Verify real palette animation and unaffected sky in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_palette_probe /tmp/palette-fixture /tmp/palette-smoke
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -288,6 +308,11 @@ jobs:
             if test -f /tmp/recipe-smoke/scummvm-use-report.json; then
               python -c 'import json; p=json.load(open("/tmp/recipe-smoke/scummvm-use-report.json")); print("- Crafted recipe item unlocked goal room: **{}**".format("PASS" if p["door_opened"] and p["goal_reached"] else "FAIL"))'
             fi
+            if test -f /tmp/palette-smoke/palette-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/palette-smoke/palette-report.json")); print("- Real SCUMM palette cycling: **{}**, {} observed water colors, static sky: **{}**".format("PASS" if p["passed"] else "FAIL",p["distinct_water_colors"],"PASS" if p["sky_remained_static"] else "FAIL"))'
+            else
+              echo '- Real SCUMM palette cycling: **not verified**.'
+            fi
             echo
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload compiler outputs for inspection
@@ -331,6 +356,9 @@ jobs:
             /tmp/recipe-story-build/project.json
             /tmp/recipe-story-build/resources/*
             /tmp/recipe-smoke/*
+            /tmp/palette-story-build/project.json
+            /tmp/palette-story-build/resources/*
+            /tmp/palette-smoke/*
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
             /tmp/studio-fixture/*.000

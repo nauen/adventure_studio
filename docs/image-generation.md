@@ -50,9 +50,18 @@ Animationsschritte, sichtbare Bildunterschiede im echten ScummVM.
 `palette_animation.py` implementiert dafür bereits eine **reine Vorschau**:
 `PaletteCycle` beschreibt Bereich und Tick-Intervall, `palette_at_tick` liefert
 aus der Originalpalette ein deterministisches Ergebnis. Überlappungen und
-Zugriffe auf explizit geschützte Farbindizes werden abgewiesen. Das beweist
-noch keine Laufzeitunterstützung: SCUMM-Skripterzeugung und Screenshot-Tests
-sind ein eigenständiger nächster Schritt.
+Zugriffe auf explizit geschützte Farbindizes werden abgewiesen.
+
+Der SCUMM-v6-Exporter übersetzt `RoomAsset.palette_cycles` nun zusätzlich
+in ScummC-Deklarationen `cycle NAME = {delay, flags, start, end};`. Das ist
+die echte CYCL-Ressource, keine periodische Folge von neu generierten BMPs.
+Flags 2 bedeutet Rückwärtsrotation. Das optionale Testspiel aus
+`python -m adventure_studio.palette_demo examples/mini_story.json BUILD_DIR`
+verwendet vier reservierte blaue Palettenfarben und unveränderte Pixelindices
+im Wasserbecken. `scumm_palette_probe.py` prüft im CI-Bildschirmfoto, dass
+ein Wasserpixel mindestens zwei Rampenfarben annimmt, während der Himmel
+unverändert bleibt. Erst ein erfolgreicher ScummVM-Lauf bestätigt die
+Laufzeitkompatibilität; bis dahin ist diese Stufe experimentell.
 
 ## Schrittweise Einführung
 

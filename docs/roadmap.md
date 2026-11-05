@@ -149,7 +149,15 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 - [x] Erste deterministische, providerunabhängige Palettenzyklus-Vorschau
       (`palette_animation.py`): Bereichs-/Timingprüfung, geschützte Indizes,
       disjunkte Zyklen, Vorwärts-/Rückwärtsrotation und Tests. Noch **kein**
-      SCUMM-Runtime-Export und daher noch kein ScummVM-Effekt-Nachweis.
+      ScummVM-Effekt-Nachweis.
+- [x] Deklarative Palettenzyklen werden als SCUMM-v6-`CYCL`-Ressourcen
+      aus `RoomAsset` erzeugt und in das kanonische Projekt-JSON übernommen;
+      reservierte Transparenz- und Sprite-Indizes dürfen nicht rotieren.
+- [x] Separates opt-in-Wasserfixture und ScummVM-Screenshot-Probe in CI
+      integriert, inklusive JSON-Auswertung von animiertem Wasser und
+      unveränderter Himmelsfarbe (`palette_demo.py`, `scumm_palette_probe.py`).
+- [ ] **CI-Gate:** echtes ScummVM bestätigt wechselnde Wasserfarben und
+      statischen Himmel; bis zum grünen Workflow bleibt Laufzeitverhalten offen.
 
 Die KI-Bildworkflows sind **selbst für Pixel-Art-Stil, Zielauflösung und
 Farbpalette zuständig**. Adventure Studio quantisiert oder skaliert ein

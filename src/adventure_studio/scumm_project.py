@@ -13,6 +13,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from .palette_animation import PaletteCycle
 from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, UseRule, _validate, write_game_sources
 from .targets import RoomGeometry
 
@@ -69,6 +70,10 @@ def document_dict(document: GameDocument) -> dict:
             **({"combine_rules": [{"first_id": rule.first_id, "second_id": rule.second_id,
                                     "result_id": rule.result_id, "response": rule.response}
                                    for rule in room.combine_rules]} if room.combine_rules else {}),
+            **({"palette_cycles": [{"name": cycle.name, "first": cycle.first,
+                                     "last": cycle.last, "period_ticks": cycle.period_ticks,
+                                     "reverse": cycle.reverse}
+                                    for cycle in room.palette_cycles]} if room.palette_cycles else {}),
         } for room in document.rooms],
     }
 
@@ -108,7 +113,7 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Too many rooms")
     rooms = []
     for raw in data["rooms"]:
-        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules",
+        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles",
                            "demo_walk_to_x", "goal_text"},
                      {"name", "geometry", "pixels", "palette", "hotspots", "use_rules",
                       "demo_walk_to_x", "goal_text"})
@@ -122,6 +127,16 @@ def parse_document(source: str) -> GameDocument:
         if not isinstance(raw_combinations, list) or len(raw_combinations) > 3:
             raise ValueError("Invalid combine rules")
         combinations = []
+        raw_cycles = room.get("palette_cycles", [])
+        if not isinstance(raw_cycles, list) or len(raw_cycles) > 16:
+            raise ValueError("Invalid palette cycles")
+        cycles = []
+        for raw_cycle in raw_cycles:
+            cycle = _only(raw_cycle, {"name", "first", "last", "period_ticks", "reverse"},
+                          {"name", "first", "last", "period_ticks", "reverse"})
+            if not isinstance(cycle["name"], str) or type(cycle["reverse"]) is not bool:
+                raise ValueError("Invalid palette cycle fields")
+            cycles.append(PaletteCycle(**cycle))
         for raw_rule in raw_combinations:
             rule = _only(raw_rule, {"first_id", "second_id", "result_id", "response"},
                          {"first_id", "second_id", "result_id", "response"})
@@ -161,6 +176,7 @@ def parse_document(source: str) -> GameDocument:
             room["name"], RoomGeometry(g["width"], g["height"], g["viewport_width"], g["viewport_height"]),
             _decode_pixels(room["pixels"]), tuple(tuple(rgb) for rgb in room["palette"]),
             tuple(hotspots), room["demo_walk_to_x"], tuple(rules), room["goal_text"], tuple(combinations),
+            tuple(cycles),
         ))
     document = GameDocument(data["id"], tuple(rooms))
     _validate_document(document)

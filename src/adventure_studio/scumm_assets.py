@@ -9,6 +9,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
+from .palette_animation import PaletteCycle, validate_cycles
 from .targets import RoomGeometry, validate_geometry
 
 _IDENTIFIER = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
@@ -61,6 +62,7 @@ class RoomAsset:
     use_rules: tuple[UseRule, ...] = ()
     goal_text: str | None = None
     combine_rules: tuple[CombineRule, ...] = ()
+    palette_cycles: tuple[PaletteCycle, ...] = ()
 
 
 def _scumm_string(value: str) -> str:
@@ -126,6 +128,17 @@ def _validate(room: RoomAsset) -> None:
         if hotspot.exit_destination is not None:
             if not _IDENTIFIER.fullmatch(hotspot.exit_destination) or hotspot.exit_destination == room.name:
                 raise ValueError("Invalid exit destination room")
+    # Check cycles after hotspot validation so malformed sprite indices receive
+    # their canonical asset error instead of a misleading cycle error.
+    protected = {0}
+    for hotspot in room.hotspots:
+        for sprite in (hotspot.sprite_pixels, hotspot.open_sprite_pixels):
+            if sprite is not None:
+                protected.update(sprite)
+    validate_cycles(room.palette, room.palette_cycles, frozenset(protected))
+    if any(c.period_ticks > 16384 or not _IDENTIFIER.fullmatch(c.name)
+           for c in room.palette_cycles):
+        raise ValueError("SCUMM v6 palette cycle delay or name is invalid")
     targets: set[str] = set()
     for rule in room.use_rules:
         if rule.item_id not in pickups or rule.target_id not in ids or rule.item_id == rule.target_id:
@@ -189,6 +202,11 @@ def scummc_room_source(room: RoomAsset) -> str:
     for destination in sorted(destinations):
         parts.append(f"room {destination};\n")
     parts.append(f'\nroom {room.name} {{\n    image = "{room.name}.bmp";\n')
+    for cycle in room.palette_cycles:
+        # ScummC scc_parse.y: cycle name = {delay, flags, start, end};
+        # flags bit 1 reverses the direction of palette cycling.
+        parts.append(f"    cycle {cycle.name} = {{{cycle.period_ticks},"
+                     f"{2 if cycle.reverse else 0},{cycle.first},{cycle.last}}};\n")
     hidden = {rule.result_id for rule in room.combine_rules}
     # ScummC resolves object symbols as it parses each script body. Explicit
     # forward declarations keep the generated helper independent of object
