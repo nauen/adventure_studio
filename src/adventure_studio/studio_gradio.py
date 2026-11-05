@@ -81,7 +81,7 @@ def render_scene(raw: str, scene_id: str):
 def safe_render_scene(raw: str, scene_id: str):
     try:
         return render_scene(raw, scene_id)
-    except ValueError:
+    except (ValueError, ImportError):
         return None  # Authoring data is valid, but SCUMM preview is unavailable.
 
 
