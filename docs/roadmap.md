@@ -196,8 +196,17 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 
 ### M6 – Gradio Studio und MCP
 
-- [ ] Story-Chat, Kapitelbaum, Raumvorschau, Objektinspektor, Testbericht.
-- [ ] Manuelle Korrektur ohne Änderungen am generierten SCUMM-Quelltext.
+- [x] Erste **optionale lokale Gradio-Oberfläche** mit Story-JSON-Import,
+      Kapitel-/Szenenübersicht, Raumvorschau samt Hotspot-Markierungen,
+      Szenen- und Gegenstandseditor, neuen Dekorationsobjekten,
+      deterministischem Änderungs-/Prüfbericht und JSON-Export.
+      Die UI importiert die Gradio-Abhängigkeit erst beim Start und benutzt
+      `studio_service.py` als testbare, UI-unabhängige Grenze.
+- [x] Manuelle Textkorrekturen ohne Änderungen am generierten SCUMM-Quelltext;
+      atomare Modelländerung mit `edit_story` und zusätzlichem SCUMM-Adaptercheck.
+- [ ] Rätsel-, Kapitel- und Dialogeditor, Drag-and-drop-Positionierung und
+      eine tatsächlich live gestartete ScummVM-Spielvorschau.
+- [ ] Story-Chat über validierte Änderungsvorschläge statt generierten Code.
 - [ ] API/MCP-Operationen greifen auf dieselben validierten Modelle zu.
 
 ### M7 – Freigabefähiger Export

@@ -85,9 +85,11 @@ PYTHONPATH=src python -m adventure_studio.story_document examples/mini_story.jso
 The bounded adapter supports two scenes, up to three required inventory items,
 an unlock puzzle and decorations. Unsupported narrative mechanics fail closed.
 The GitHub research workflow also compiles this independent story fixture with
-ScummC, runs a ScummVM scene smoke test and uploads a `story-playable-preview`
-artifact for manual testing. The story-fixture gameplay interaction sequence is
-not yet as thoroughly tested as the original fixed research fixture.
+ScummC, runs a full single-key puzzle interaction in ScummVM and uploads a
+`story-playable-preview` artifact for manual testing. The story-derived
+key pickup, door unlock and goal-room transition passed in workflow
+[#42021639269](https://github.com/nauen/adventure_studio/actions/runs/42021639269).
+Multi-item gameplay and save/load have not yet been verified in ScummVM.
 See [`docs/project-format.md`](docs/project-format.md) for the precise contract.
 
 `scumm_assets.py` now emits an original 640×200 indexed BMP and a SCUMM-v6
@@ -133,3 +135,26 @@ positioning and dynamic story generation are deliberately **not** implemented.
 Dead-end analysis uses reverse reachability from winning states, so loops that
 cannot reach a goal are classified as dead ends too. The current model remains
 deliberately small: Boolean flags and predefined actions only.
+# Gradio Studio (erste lokale Vorschau)
+
+Der erste Editor verwendet dasselbe validierte Storymodell wie der
+deterministische SCUMM-Exporter. In einem Python-3.11+-Environment:
+
+```bash
+python -m pip install -e '.[studio]'
+python -m adventure_studio.studio_gradio
+```
+
+Gradio öffnet eine lokale Oberfläche im Browser (kein ComfyUI, kein API-Key).
+Du kannst eine vorhandene Story-JSON laden, Kapitel und Szenen prüfen,
+Szenentitel und -texte bearbeiten, Gegenstände umbenennen, Dekorationen
+hinzufügen und eine Raumvorschau mit Hotspots anzeigen. Jede Änderung läuft
+durch den Story-Solver und den SCUMM-Adapter. Ungültige Änderungen werden
+abgewiesen; der Änderungsbericht ist direkt sichtbar. Über **Geprüfte Story
+exportieren** lädst du die aktuelle JSON-Datei herunter. Änderungen bleiben
+bis dahin nur in der laufenden Sitzung und überschreiben keine Projektdateien.
+
+Noch nicht enthalten: KI-Chat, Echtzeit-ScummVM-Spielvorschau, grafischer
+Drag-and-drop-Objekteditor und automatisches ComfyUI. Die Vorschau verwendet
+bewusst die bisherigen technischen Platzhaltergrafiken.
+
