@@ -221,9 +221,11 @@ def key_center(output_directory: Path, frame: str = "end") -> tuple[int, int]:
     return parse_key_bounds(result.stdout)
 
 
-def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) -> int:
+def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
+                   expect_scroll: bool = True) -> int:
     """Require visible frame variation; this alone does not prove scrolling."""
-    if type(minimum_changed_pixels) is not int or minimum_changed_pixels < 1:
+    if (type(minimum_changed_pixels) is not int or minimum_changed_pixels < 0
+            or (expect_scroll and minimum_changed_pixels == 0)):
         raise ValueError("Invalid minimum changed pixel count")
     start = output_directory / "scummvm-start.png"
     end = output_directory / "scummvm-end.png"
@@ -247,10 +249,12 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
             "changed_pixels": count,
             "minimum_changed_pixels": minimum_changed_pixels,
             "frame_variation_passed": count >= minimum_changed_pixels,
+            "frame_variation_required": minimum_changed_pixels > 0,
             "scene_probe_pixel": [700, 280],
             "start_rgb": start_rgb,
             "end_rgb": end_rgb,
             "scroll_color_signature_passed": scroll_signature,
+            "scroll_expected": expect_scroll,
             "visible_key_pixels": key_pixels,
             "key_sprite_visible": key_pixels >= 40,
             "smooth_scrolling_proven": False,
@@ -258,7 +262,7 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
     )
     if count < minimum_changed_pixels:
         raise RuntimeError(f"Insufficient visual variation: {count} changed pixels")
-    if not scroll_signature:
+    if expect_scroll and not scroll_signature:
         raise RuntimeError(f"Expected blue-to-orange scroll marker missing: {start_rgb} -> {end_rgb}")
     if key_pixels < 40:
         raise RuntimeError(f"Expected key sprite missing from room: {key_pixels} gold pixels")
@@ -267,7 +271,10 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
 
 def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0,
                  scene_only: bool = False, verify_return: bool = True,
-                 verify_chain: bool = False, verify_recipe: bool = False) -> None:
+                 verify_chain: bool = False, verify_recipe: bool = False,
+                 allow_static_scene: bool = False) -> None:
+    if allow_static_scene and not verify_chain:
+        raise ValueError("Static scene exception is only for the chain/palette fixture")
     if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
@@ -367,7 +374,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             if process.poll() is not None:
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
             final_snapshot = capture_frame("end")
-            changed = compare_frames(output_directory)
+            changed = compare_frames(output_directory,
+                                     minimum_changed_pixels=0 if allow_static_scene else 500,
+                                     expect_scroll=not allow_static_scene)
             if scene_only:
                 print(f"Story-compiled SCUMM room rendered and scrolled: {changed} changed pixels")
                 print(f"Scene-only screenshots: {output_directory}")
@@ -831,13 +840,14 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--recipe-only")):
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--recipe-only]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only")):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only]")
         return 2
     mode = sys.argv[3] if len(sys.argv) == 4 else ""
     launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]),
-                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--recipe-only"),
-                 verify_chain=mode == "--chain-only", verify_recipe=mode == "--recipe-only")
+                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only"),
+                 verify_chain=mode in ("--chain-only", "--static-chain-only"), verify_recipe=mode == "--recipe-only",
+                 allow_static_scene=mode == "--static-chain-only")
     return 0
 
 

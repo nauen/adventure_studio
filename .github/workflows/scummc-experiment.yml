@@ -224,7 +224,10 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/music-transition-fixture /tmp/music-transition-smoke --chain-only
+          # This scene intentionally holds the camera still so the palette
+          # animation can be observed. Gameplay gates still run in full;
+          # palette changes have their own strict pixel-level probe below.
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/music-transition-fixture /tmp/music-transition-smoke --static-chain-only
       - name: Verify palette cycling in the same playable two-theme adventure
         env:
           PYTHONPATH: src

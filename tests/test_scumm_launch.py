@@ -78,6 +78,12 @@ class ScummLaunchTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Missing isolated"):
                 launch_smoke(path, path / "out", verify_recipe=True)
 
+    def test_static_scene_exception_requires_full_chain_verification(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            with self.assertRaisesRegex(ValueError, "only for the chain"):
+                launch_smoke(path, path / "out", allow_static_scene=True)
+
 
 if __name__ == "__main__":
     unittest.main()
