@@ -57,6 +57,11 @@ class ScummFontTests(unittest.TestCase):
             self.assertGreater(path.stat().st_size, 200)
 
     def test_japanese_missing_glyph_must_fail_not_display_tofu(self):
+        try:
+            from PIL import Image
+            import fontTools
+        except ImportError:
+            self.skipTest("Optional font dependencies are unavailable")
         if not self.font().is_file():
             self.skipTest("DejaVu font is unavailable")
         catalog = LanguageCatalog("ja", ("ja",), (
