@@ -114,27 +114,25 @@ def inject_language_room_probe(source: str, destination: str, catalog) -> str:
     validate_catalog(catalog)
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", destination):
         raise ValueError("Invalid language probe destination")
-    marker = "script keyboardHandler(int key) {\\n        switch(key) {"
-    if source.count(marker) != 1 or "int GameLanguage;" in source:
-        # GameLanguage is declared in the header, not the .scc source.
-        if source.count(marker) != 1:
-            raise ValueError("Missing language keyboard handler")
+    marker = "script keyboardHandler(int key) {\n        switch(key) {"
+    if source.count(marker) != 1:
+        raise ValueError("Missing language keyboard handler")
     if source.count("case '0':") or source.count("case '6':"):
         raise ValueError("Language probe keys already reserved")
     if not catalog.lines:
         raise ValueError("Language probe needs a translated line")
     dispatch = scumm_language_dispatch(catalog, catalog.lines[0].id)
-    branches = "".join("            " + line + "\\n" for line in dispatch.splitlines())
+    branches = "".join("            " + line + "\n" for line in dispatch.splitlines())
     probe = (
-        "\\n        case '0':\\n"
-        f"            startRoom({destination});\\n"
-        "            break;\\n"
-        "        case '6':\\n"
+        "\n        case '0':\n"
+        f"            startRoom({destination});\n"
+        "            break;\n"
+        "        case '6':\n"
         + branches
         + "            break;"
     )
     source = source.replace(marker, marker + probe, 1)
-    return f"room {destination};\\n" + source
+    return f"room {destination};\n" + source
 
 
 def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str:
