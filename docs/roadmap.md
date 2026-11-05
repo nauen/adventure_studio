@@ -68,17 +68,19 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 - [x] Zielmanifestauswertung und Zielraum in ScummVM-CI bestätigt
       (CI-Lauf #41876135550); Abschlussdialog wird kompiliert, aber nicht
       gesondert als Textinhalt aus dem Frame erkannt.
-- [ ] Türzustand über Verlassen/erneutes Betreten des Raums sowie Save/Load
-      hinweg erhalten und prüfen.
-- [ ] Ungültige Handlungen und Softlocks werden getestet.
+- [x] Geöffnete Tür und aufgenommener Schlüssel bleiben beim Verlassen und
+      erneuten Betreten des Hafens erhalten (CI-Lauf #42020306920).
+- [ ] Save/Load erhält diese Zustände; bislang nicht geprüft.
+- [x] Negativfall „verschlossene Tür ohne Schlüssel“ im Gameplay-Test sowie
+      Softlock-Erkennung im deterministischen Story-Solver geprüft.
 
 ### M3 – Adventure aus Daten
 
 - [ ] Vollständiges M2-Beispiel ausschließlich aus dem Projektmodell exportieren.
 - [ ] Keine projektindividuellen handgeschriebenen Runtime-Skripte nötig.
 - [x] Zwei unterschiedliche SCUMM-Raumprojekte aus denselben Generatorbausteinen
-      bauen (Datenmodell- und Dateivergleichstest; echte ScummVM-Laufzeit für das
-      zweite Projekt noch offen).
+      bauen (Datenmodell- und Dateivergleichstest sowie Story-JSON-Variante in
+      stock ScummVM gestartet: CI-Lauf #42020306920).
 - [x] Kanonisches JSON-Projektformat v1 mit deterministischem Export,
       strikter Feldprüfung und Dokumentation (`docs/project-format.md`).
 - [x] Erster begrenzter Story-zu-SCUMM-Adapter: Kapitel, zwei Szenen,
@@ -88,8 +90,8 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       Export und bytegleichen Wiederholungs-Builds (`story_document.py`).
 - [x] Bis zu drei erforderliche Inventargegenstände werden als deklarative
       Inventarbedingungen und automatisch abgeleitete Icon-Ressourcen übersetzt.
-- [ ] ScummVM-CI für den unabhängigen Story-JSON-Build und das getrennte
-      `story-playable-preview`-Artefakt grün bestätigen.
+- [x] ScummVM-CI für den unabhängigen Story-JSON-Build und das getrennte
+      `story-playable-preview`-Artefakt erfolgreich (#42020306920).
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.
