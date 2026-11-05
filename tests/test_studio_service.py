@@ -4,7 +4,7 @@ from pathlib import Path
 
 from adventure_studio.studio_service import (
     accept_proposal, add_decoration, change_item, change_puzzle, change_scene,
-    describe_story, prepare_proposal, report_text, scene_preview, translation_draft,
+    describe_story, prepare_proposal, report_text, scene_preview, translation_draft, validate_translation_draft,
 )
 from adventure_studio.story_document import parse_story_document
 
@@ -22,6 +22,23 @@ class StudioServiceTests(unittest.TestCase):
             self.assertIsInstance(line["translations"]["en"], str)
             self.assertIsNone(line["translations"]["de"])
         self.assertEqual(translation_draft(SAMPLE), translation_draft(SAMPLE))
+
+    def test_completed_translations_require_story_and_charset_coverage(self):
+        draft = json.loads(translation_draft(SAMPLE))
+        for line in draft["lines"]:
+            for language in draft["languages"]:
+                line["translations"][language] = line["translations"]["en"]
+        complete = json.dumps(draft, ensure_ascii=False)
+        validated = validate_translation_draft(SAMPLE, complete)
+        self.assertEqual(json.loads(validated), draft)
+        changed = json.loads(complete)
+        changed["lines"][0]["translations"]["en"] = "Wrong source"
+        with self.assertRaisesRegex(ValueError, "Source translation differs"):
+            validate_translation_draft(SAMPLE, json.dumps(changed))
+        changed = json.loads(complete)
+        changed["lines"].pop()
+        with self.assertRaisesRegex(ValueError, "translation IDs mismatch"):
+            validate_translation_draft(SAMPLE, json.dumps(changed))
 
     def test_scene_edit_is_validated_and_reports_exact_change(self):
         original = parse_story_document(SAMPLE)
