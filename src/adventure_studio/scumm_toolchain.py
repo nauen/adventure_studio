@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Callable
 
 from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_objects,
-                              inject_language_keys, inject_multilingual_charset,
+                              inject_language_keys, inject_language_room_probe, inject_multilingual_charset,
                               retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
 from .scumm_project import parse_document
@@ -34,7 +34,8 @@ def _tool(upstream: Path, name: str) -> Path:
 
 
 def compile_story_game(build_directory: Path, upstream: Path, output: Path,
-                       runner: Callable = subprocess.run) -> Path:
+                       runner: Callable = subprocess.run,
+                       language_room_probe: bool = False) -> Path:
     """Compile and link all validated rooms; return a loadable research fixture."""
     document = parse_document((build_directory / "project.json").read_text(encoding="utf-8"))
     resources = build_directory / "resources"
@@ -79,8 +80,13 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
             language_catalog = catalog
         bootstrap = inject_multilingual_charset(bootstrap)
         shutil.copyfile(custom_font, road / custom_font.name)
+    if language_room_probe and (language_catalog is None or len(document.rooms) < 2):
+        raise ValueError("Room language probe needs a language package and two rooms")
     if language_catalog is not None:
         bootstrap, header = inject_language_keys(bootstrap, header, language_catalog)
+        if language_room_probe:
+            bootstrap = inject_language_room_probe(bootstrap, document.rooms[1].name,
+                                                   language_catalog)
     (resources / "bootstrap.scc").write_text(inject_inventory_objects(bootstrap, icon_ids), encoding="utf-8")
     (resources / "common.sch").write_text(inject_inventory_declarations(header, icon_ids), encoding="utf-8")
     for name in icon_ids:
@@ -120,10 +126,11 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
 
 
 def main() -> int:
-    if len(sys.argv) != 4:
-        print("Usage: python -m adventure_studio.scumm_toolchain STORY_BUILD_DIRECTORY SCUMMC_DIRECTORY GAME_OUTPUT_DIRECTORY")
+    if len(sys.argv) not in (4, 5) or (len(sys.argv) == 5 and sys.argv[4] != "--language-room-probe"):
+        print("Usage: python -m adventure_studio.scumm_toolchain STORY_BUILD_DIRECTORY SCUMMC_DIRECTORY GAME_OUTPUT_DIRECTORY [--language-room-probe]")
         return 2
-    print(compile_story_game(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])))
+    print(compile_story_game(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]),
+                             language_room_probe=len(sys.argv) == 5))
     return 0
 
 
