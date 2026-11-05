@@ -42,9 +42,22 @@ class StudioCatalogTests(unittest.TestCase):
 
     def test_room_gallery_contains_images(self):
         view = catalog_view(SAMPLE)
-        self.assertEqual(len(view), 12)
-        self.assertEqual(len(view[10]), 3 if importlib.util.find_spec("PIL") else 0)
+        self.assertEqual(len(view), 13)
+        self.assertEqual(len(view[11]), 3 if importlib.util.find_spec("PIL") else 0)
         self.assertIn("Figuren", view[0])
+
+    def test_dialogue_choice_nodes_are_visible_even_when_terminal(self):
+        from adventure_studio.dialogue_demo import dialogue_fixture
+        raw = dialogue_fixture(SAMPLE, choices=True)
+        catalog = story_catalog(raw)
+        self.assertEqual(len(catalog.dialogue_choices), 2)
+        for choice_id, node_id, label, next_node in catalog.dialogue_choices:
+            self.assertIn(("dialogue_node", node_id, "dialogue_choice", choice_id, "Antwort"), catalog.edges)
+            self.assertTrue(label)
+            self.assertTrue(next_node)
+            if next_node != "Ende":
+                self.assertIn(("dialogue_choice", choice_id, "dialogue_node", next_node, "führt zu"), catalog.edges)
+            self.assertIn(choice_id, relationship_svg(raw))
 
 
 if __name__ == "__main__":

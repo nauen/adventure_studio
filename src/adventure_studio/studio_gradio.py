@@ -105,7 +105,7 @@ def catalog_view(raw: str):
     return (summary, list(catalog.chapters), list(catalog.scenes),
             list(catalog.characters), list(catalog.items), list(catalog.puzzles),
             list(catalog.recipes), list(catalog.dialogues), list(catalog.dialogue_nodes),
-            list(catalog.assets), gallery, relationship_svg(raw))
+            list(catalog.dialogue_choices), list(catalog.assets), gallery, relationship_svg(raw))
 
 
 def make_app():
@@ -248,7 +248,8 @@ def make_app():
             with gr.Accordion("Dialoge und Antworten", open=False):
                 dialogue_grid = gr.Dataframe(headers=["ID", "Szene", "Startknoten"], interactive=False)
                 dialogue_node_grid = gr.Dataframe(headers=["ID", "Dialog", "Sprecher", "Text", "Weiter"], interactive=False)
-                gr.Markdown("Antwortverzweigungen sind im Graph enthalten. Dialoge werden im Storyformat v4 geprüft, aber noch **nicht** in SCUMM exportiert.")
+                dialogue_choice_grid = gr.Dataframe(headers=["ID", "Knoten", "Antworttext", "Weiter/Ende"], interactive=False)
+                gr.Markdown("Einfache Gespräche und bis zu drei terminale Antwortzweige werden als SCUMM v6 exportiert. Mehrstufige Dialogbäume und spielverändernde Antworten sind noch nicht implementiert.")
             with gr.Accordion("Asset-Referenzen", open=False):
                 asset_grid = gr.Dataframe(headers=["ID", "Zieltyp", "Ziel-ID", "Art", "Quelle"], interactive=False)
                 gr.Markdown("Asset-IDs und SHA-256-Hashes sind versionierte Metadaten. Die Bilddateien selbst werden noch nicht aus externen Providern geladen.")
@@ -302,7 +303,7 @@ def make_app():
                      position_x, position_y, preview, dialogue_node_select, dialogue_text,
                      catalog_summary, chapter_grid, scene_grid,
                      character_grid, item_grid, puzzle_grid, recipe_grid, dialogue_grid,
-                     dialogue_node_grid, asset_grid, room_gallery, graph_view]
+                     dialogue_node_grid, dialogue_choice_grid, asset_grid, room_gallery, graph_view]
         app.load(selectors, inputs=[state], outputs=refreshed)
         def load_and_clear(file_path):
             raw, *rest = load_file(file_path)

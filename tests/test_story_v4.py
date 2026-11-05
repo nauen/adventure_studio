@@ -161,8 +161,8 @@ class StoryV4Tests(unittest.TestCase):
         raw = canonical_story_json(dialogue_story())
         preview = catalog_view(raw)
         self.assertEqual(len(preview[7]), 1)  # dialogue list
-        self.assertEqual(len(preview[9]), 2)  # asset references
-        self.assertEqual(preview[10], [])  # no fake game frame
+        self.assertEqual(len(preview[10]), 2)  # asset references
+        self.assertEqual(preview[11], [])  # no fake game frame
         self.assertIsNone(safe_render_scene(raw, "Harbor"))
         edit = change_scene(raw, "Harbor", "Neuer Hafen", "Andere Beschreibung")
         self.assertIn("SCUMM-Export noch nicht möglich", report_text(edit.report))

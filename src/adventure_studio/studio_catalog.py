@@ -18,6 +18,7 @@ class StudioCatalog:
     recipes: tuple[tuple[str, str, str, str], ...]
     dialogues: tuple[tuple[str, str, str], ...]
     dialogue_nodes: tuple[tuple[str, str, str, str, str], ...]
+    dialogue_choices: tuple[tuple[str, str, str, str], ...]
     assets: tuple[tuple[str, str, str, str, str], ...]
     edges: tuple[tuple[str, str, str, str, str], ...]
 
@@ -40,6 +41,8 @@ def story_catalog(raw: str) -> StudioCatalog:
     dialogues = tuple((d.id, d.scene_id, d.entry_node_id) for d in story.dialogues)
     nodes = tuple((n.id, n.dialogue_id, n.speaker_id, n.text, n.next_node_id or "–")
                   for n in story.dialogue_nodes)
+    choices = tuple((c.id, c.node_id, c.text, c.next_node_id or "Ende")
+                    for c in story.dialogue_choices)
     assets = tuple((a.id, a.target_kind, a.target_id, a.asset_kind, a.source_id)
                    for a in story.assets)
     edges: list[tuple[str, str, str, str, str]] = []
@@ -67,12 +70,13 @@ def story_catalog(raw: str) -> StudioCatalog:
         if node.next_node_id:
             edges.append(("dialogue_node", node.id, "dialogue_node", node.next_node_id, "weiter"))
     for choice in story.dialogue_choices:
+        edges.append(("dialogue_node", choice.node_id, "dialogue_choice", choice.id, "Antwort"))
         if choice.next_node_id:
-            edges.append(("dialogue_node", choice.node_id, "dialogue_node", choice.next_node_id, "Antwort"))
+            edges.append(("dialogue_choice", choice.id, "dialogue_node", choice.next_node_id, "führt zu"))
     for asset in story.assets:
         edges.append(("asset", asset.id, asset.target_kind, asset.target_id, "zugeordnet"))
     return StudioCatalog(chapters, scenes, characters, items, puzzles, recipes,
-                         dialogues, nodes, assets, tuple(edges))
+                         dialogues, nodes, choices, assets, tuple(edges))
 
 
 def relationship_svg(raw: str) -> str:
@@ -88,9 +92,10 @@ def relationship_svg(raw: str) -> str:
         ("recipe", [(r.id, r.title) for r in story.recipes], 1115, "#e5f7fb"),
         ("dialogue", [(d.id, d.id) for d in story.dialogues], 1335, "#fae8ff"),
         ("dialogue_node", [(n.id, n.text) for n in story.dialogue_nodes], 1555, "#ecefff"),
-        ("asset", [(a.id, a.asset_kind) for a in story.assets], 1775, "#e2f6ed"),
+        ("dialogue_choice", [(c.id, c.text) for c in story.dialogue_choices], 1775, "#fff2db"),
+        ("asset", [(a.id, a.asset_kind) for a in story.assets], 1995, "#e2f6ed"),
     )
-    width = 1990
+    width = 2210
     max_rows = max((len(rows) for _, rows, _, _ in types), default=0)
     height = max(145, 90 + 62 * max_rows)
     nodes: dict[tuple[str, str], tuple[int, int]] = {}
