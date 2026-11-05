@@ -28,6 +28,7 @@ on:
       - 'examples/mini_story_chain.json'
       - 'examples/recipe_story.json'
       - 'examples/PLAY_STORY_PREVIEW.txt'
+      - 'examples/PLAY_MUSIC_TRANSITION.txt'
       - 'tests/test_scumm_assets.py'
       - 'tests/test_palette_animation.py'
       - 'tests/test_palette_demo.py'
@@ -216,6 +217,7 @@ jobs:
             test -s "/tmp/music-transition-build/resources/${TRACK}.soun"
           done
           python -m adventure_studio.scumm_toolchain /tmp/music-transition-build /tmp/scummc-upstream /tmp/music-transition-fixture
+          cp examples/PLAY_MUSIC_TRANSITION.txt /tmp/music-transition-fixture/README.txt
           test -s /tmp/music-transition-fixture/tentacle.000
           test -s /tmp/music-transition-fixture/tentacle.001
       - name: Play music-transition adventure through both rooms in ScummVM
@@ -478,6 +480,16 @@ jobs:
             /tmp/chain-fixture/tentacle.000
             /tmp/chain-fixture/tentacle.001
             /tmp/chain-fixture/game-goal.json
+      - name: Upload playable two-theme music transition game
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: music-two-theme-playable-preview
+          if-no-files-found: error
+          path: |
+            /tmp/music-transition-fixture/tentacle.000
+            /tmp/music-transition-fixture/tentacle.001
+            /tmp/music-transition-fixture/README.txt
       - name: Upload recipe story preview for manual testing
         if: always()
         uses: actions/upload-artifact@v4
