@@ -25,7 +25,10 @@ container dependencies, structured change reports and atomic JSON persistence
 with revision checks. It now also includes a story bible (`story.py`) with
 chapters, scenes, characters, items and puzzles, a deterministic story compiler,
 typed story changes and a strict JSON protocol for untrusted AI proposals.
-It does **not** yet include an actual AI provider, a UI, graphics, or ScummVM export.
+It does **not** yet include an actual AI provider or a visual editor. It now
+generates experimental SCUMM-v6 graphics, room scripts and linked game fixtures.
+The linked fixture still uses an external GPL ScummC bootstrap and a temporary
+ScummVM game identity, so it is not a standalone release-ready export.
 `targets.py` defines the SCUMM v6 target policy and a fail-closed export gate.
 
 ## SCUMM toolchain research
@@ -49,26 +52,43 @@ Day of the Tentacle: it is useful for isolating detection failures, but is
 shippable game. Detection probes do not hide compiler/linker failures.
 
 The experimental `scumm_launch.py` smoke test starts the isolated `tentacle`
-compatibility fixture in an Xvfb display. It waits up to eight seconds until
+compatibility fixture in an Xvfb display. It waits up to twenty seconds until
 the blue initial room is actually rendered, then observes six more seconds
 of scripted movement. It uploads start/end
 screenshots (`.png`, plus raw `.xwd`), an ImageMagick difference image, a JSON
 pixel-change report and console logs as Actions artifacts. The comparison
 uses a 5% pixel color tolerance and requires at least 500 changed pixels.
-This detects a stationary or entirely unchanged output but **does not prove**
-game interactions, save/load or correct rendering. For the fixed 1024x768
+This detects a stationary or entirely unchanged output but does not by itself
+prove interactions or save/load. For the fixed 1024x768
 test display it additionally samples pixel `(700,280)` in both screenshots:
 the scripted two-screen room must visibly transition from blue sky to orange
 sky (RGB tolerance 25/channel). That is a reproducible camera-pan signature,
 but is not proof of smooth scrolling or arbitrary-room behavior. Those remain
 separate integration milestones.
 
-The M1 probe now also locates the generated gold key using a cropped room
-screenshot, clicks the classic SCUMM `Pick up` verb using an X11 automation
-tool, clicks the detected key coordinates and checks whether the sprite
-disappears from the room. This is a deliberately narrow interaction test:
-successful removal does **not** yet establish correct inventory rendering,
-save/load, or general-purpose object behavior.
+The live gameplay probe clicks the original SCUMM verbs and checks rendered
+pixels through the sequence: locked door rejects entry, key pickup moves its
+sprite to the inventory, `Use` opens the door, then a separate click enters
+the goal room. A further research gate tests return to the first room and
+object persistence. Save/load remains unverified.
+
+## Story JSON to SCUMM
+
+The story can now be represented as a versioned, code-free JSON document.
+An example is checked into [`examples/mini_story.json`](examples/mini_story.json).
+Generate the corresponding project model, SCUMM room sources and pixel assets:
+
+```bash
+PYTHONPATH=src python -m adventure_studio.story_document examples/mini_story.json build/story
+```
+
+The bounded adapter supports two scenes, up to three required inventory items,
+an unlock puzzle and decorations. Unsupported narrative mechanics fail closed.
+The GitHub research workflow also compiles this independent story fixture with
+ScummC, runs a ScummVM scene smoke test and uploads a `story-playable-preview`
+artifact for manual testing. The story-fixture gameplay interaction sequence is
+not yet as thoroughly tested as the original fixed research fixture.
+See [`docs/project-format.md`](docs/project-format.md) for the precise contract.
 
 `scumm_assets.py` now emits an original 640×200 indexed BMP and a SCUMM-v6
 `room` source with data-driven object hotspots, LookAt and PickUp handlers.

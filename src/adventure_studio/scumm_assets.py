@@ -38,6 +38,7 @@ class UseRule:
     hide_target: bool = False
     destination_room: str | None = None
     open_target: bool = False
+    requires_inventory: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -131,6 +132,10 @@ def _validate(room: RoomAsset) -> None:
             raise ValueError("Use rule cannot hide and open the same target")
         if rule.open_target and next(h for h in room.hotspots if h.id == rule.target_id).open_sprite_pixels is None:
             raise ValueError("Use rule open target needs an open-state sprite")
+        if len(set(rule.requires_inventory)) != len(rule.requires_inventory):
+            raise ValueError("Duplicate inventory requirements")
+        if rule.item_id in rule.requires_inventory or any(item not in pickups for item in rule.requires_inventory):
+            raise ValueError("Use rule inventory requirements must reference distinct pickup items")
 
 
 def _indexed_bmp(width: int, height: int, pixels: bytes, palette: tuple[tuple[int, int, int], ...]) -> bytes:
@@ -207,9 +212,12 @@ def scummc_room_source(room: RoomAsset) -> str:
                               "            return;\n"])
         for rule in room.use_rules:
             if rule.target_id == hotspot.id:
+                requirements = "".join(
+                    f" && getObjectOwner({item}) == VAR_EGO" for item in rule.requires_inventory
+                )
                 parts.extend([
                     "        case Use:\n",
-                    f"            if(objB == {rule.item_id}) {{\n",
+                    f"            if(objB == {rule.item_id}{requirements}) {{\n",
                     f"                egoSay({_scumm_string(rule.response)});\n",
                 ])
                 if rule.hide_target:
@@ -289,6 +297,9 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
                 raise ValueError(f"Unknown exit destination room: {hotspot.exit_destination}")
     if sum(room.goal_text is not None for room in rooms) != 1:
         raise ValueError("A game needs exactly one goal room")
+    pickup_ids = [h.id for room in rooms for h in room.hotspots if h.pickup]
+    if len(pickup_ids) != len(set(pickup_ids)):
+        raise ValueError("Duplicate global inventory identifier")
     generated = tuple(write_room_sources(room, directory) for room in rooms)
     goal_room = next(room for room in rooms if room.goal_text is not None)
     # Synthetic CI fixture only: the goal room fills its background uniformly,
@@ -300,6 +311,7 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
                     "fixture_probe_rgb": probe_rgb}, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
+    (directory / "inventory-ids.txt").write_text(",".join(sorted(pickup_ids)) + "\n", encoding="ascii")
     return generated
 
 

@@ -11,10 +11,17 @@ on:
       - 'src/adventure_studio/scumm_bootstrap.py'
       - 'src/adventure_studio/scumm_probe.py'
       - 'src/adventure_studio/scumm_launch.py'
+      - 'src/adventure_studio/scumm_project.py'
+      - 'src/adventure_studio/story_document.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'examples/mini_story.json'
+      - 'examples/PLAY_STORY_PREVIEW.txt'
       - 'tests/test_scumm_assets.py'
       - 'tests/test_scumm_bootstrap.py'
       - 'tests/test_scumm_probe.py'
       - 'tests/test_scumm_launch.py'
+      - 'tests/test_story_document.py'
+      - 'tests/test_story_to_scumm.py'
 
 jobs:
   probe:
@@ -55,7 +62,7 @@ jobs:
           PYTHONPATH: src
         run: |
           python -m adventure_studio.scumm_assets /tmp/generated-room
-          python -m adventure_studio.scumm_bootstrap /tmp/scummc-upstream/examples/road/common.scc /tmp/generated-room/bootstrap.scc Harbor /tmp/scummc-upstream/examples/road/common.sch Key
+          python -m adventure_studio.scumm_bootstrap /tmp/scummc-upstream/examples/road/common.scc /tmp/generated-room/bootstrap.scc Harbor /tmp/scummc-upstream/examples/road/common.sch @/tmp/generated-room/inventory-ids.txt
       - name: Compile generated room with ScummC
         run: |
           SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
@@ -131,6 +138,32 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/tentacle-fixture /tmp/scummvm-smoke
+      - name: Compile independent adventure directly from story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/mini_story.json /tmp/story-build
+          python -m adventure_studio.scumm_bootstrap /tmp/scummc-upstream/examples/road/common.scc /tmp/story-build/resources/bootstrap.scc Harbor /tmp/scummc-upstream/examples/road/common.sch @/tmp/story-build/resources/inventory-ids.txt
+          SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
+          SLD_BIN=$(find /tmp/scummc-upstream -type f -name sld -executable -print -quit)
+          test -n "$SCC_BIN" && test -n "$SLD_BIN"
+          for ROOM in Harbor Cellar; do
+            "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/story-build/resources -I /tmp/scummc-upstream/examples/road -R /tmp/story-build/resources -o "/tmp/story-build/resources/$ROOM.roobj" "/tmp/story-build/resources/$ROOM.scc"
+          done
+          cp /tmp/story-build/resources/Inv_*.bmp /tmp/scummc-upstream/examples/road/
+          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/story-build/resources -I /tmp/scummc-upstream/examples/road -R /tmp/scummc-upstream/examples/road -o /tmp/story-build/resources/bootstrap.roobj /tmp/story-build/resources/bootstrap.scc
+          cd /tmp/scummc-upstream/examples/road
+          "$SLD_BIN" -o /tmp/story-build/tentacle -key 0x69 /tmp/story-build/resources/bootstrap.roobj /tmp/story-build/resources/Harbor.roobj /tmp/story-build/resources/Cellar.roobj
+          mkdir -p /tmp/story-fixture
+          cp /tmp/story-build/tentacle.000 /tmp/story-build/tentacle.001 /tmp/story-build/resources/game-goal.json /tmp/story-fixture/
+          cp "$GITHUB_WORKSPACE/examples/PLAY_STORY_PREVIEW.txt" /tmp/story-fixture/README.txt
+          test -s /tmp/story-fixture/tentacle.000
+          test -s /tmp/story-fixture/tentacle.001
+      - name: Launch story-built adventure in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/story-fixture /tmp/story-smoke --scene-only
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -159,6 +192,11 @@ jobs:
             else
               echo '- Visual comparison: **not produced** (see workflow steps and logs).'
             fi
+            if test -f /tmp/story-smoke/scummvm-frame-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/story-smoke/scummvm-frame-report.json")); print("- Story JSON to rendered SCUMM room: **{}**".format("PASS" if p["scroll_color_signature_passed"] and p["key_sprite_visible"] else "FAIL"))'
+            else
+              echo '- Story-built ScummVM preview: **not produced**.'
+            fi
             echo
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload compiler outputs for inspection
@@ -175,11 +213,21 @@ jobs:
             /tmp/generated-room/Cellar.bmp
             /tmp/generated-room/Stairs.bmp
             /tmp/generated-room/game-goal.json
+            /tmp/generated-room/inventory-ids.txt
             /tmp/generated-room/Harbor.bmp
             /tmp/generated-room/Key.bmp
             /tmp/generated-room/Door.bmp
             /tmp/generated-room/DoorOpen.bmp
             /tmp/generated-room/Inv_Key.bmp
+            /tmp/story-build/project.json
+            /tmp/story-build/resources/*.scc
+            /tmp/story-build/resources/*.roobj
+            /tmp/story-build/resources/*.bmp
+            /tmp/story-build/resources/game-goal.json
+            /tmp/story-build/resources/inventory-ids.txt
+            /tmp/story-fixture/*.000
+            /tmp/story-fixture/*.001
+            /tmp/story-smoke/*
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
             /tmp/studio-fixture/*.000
@@ -190,3 +238,14 @@ jobs:
             /tmp/scummc-upstream/examples/road/*.000
             /tmp/scummc-upstream/examples/road/*.001
             /tmp/scummc-upstream/examples/road/*.sou
+      - name: Upload story-playable preview for manual testing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: story-playable-preview
+          if-no-files-found: ignore
+          path: |
+            /tmp/story-fixture/tentacle.000
+            /tmp/story-fixture/tentacle.001
+            /tmp/story-fixture/game-goal.json
+            /tmp/story-fixture/README.txt

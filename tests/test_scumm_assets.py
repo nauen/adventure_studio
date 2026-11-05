@@ -96,6 +96,8 @@ class ScummAssetsTests(unittest.TestCase):
             (UseRule("Key", "Missing", "No."),),
             (UseRule("Key", "Key", "No."),),
             (UseRule("Key", "Door", "OK."), UseRule("Key", "Door", "Again.")),
+            (UseRule("Key", "Door", "No.", requires_inventory=("Unknown",)),),
+            (UseRule("Key", "Door", "No.", requires_inventory=("Key",)),),
         ):
             with self.subTest(rules=rules), self.assertRaises(ValueError):
                 scummc_room_source(replace(room, use_rules=rules))

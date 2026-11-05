@@ -84,6 +84,12 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 - [x] Erster begrenzter Story-zu-SCUMM-Adapter: Kapitel, zwei Szenen,
       Schlüssel, Dekoration, Tür-Rätsel und Zielraum werden ohne Rohgrafikdaten
       des Autors übersetzt (`story_to_scumm.py`, lokale Tests).
+- [x] Versionierter Story-JSON-Eingang mit strikter Validierung, kanonischem
+      Export und bytegleichen Wiederholungs-Builds (`story_document.py`).
+- [x] Bis zu drei erforderliche Inventargegenstände werden als deklarative
+      Inventarbedingungen und automatisch abgeleitete Icon-Ressourcen übersetzt.
+- [ ] ScummVM-CI für den unabhängigen Story-JSON-Build und das getrennte
+      `story-playable-preview`-Artefakt grün bestätigen.
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.

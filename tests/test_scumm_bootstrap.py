@@ -1,9 +1,19 @@
 import unittest
+import tempfile
+from pathlib import Path
 
-from adventure_studio.scumm_bootstrap import inject_inventory_declarations, inject_inventory_objects, retarget_upstream_bootstrap
+from adventure_studio.scumm_bootstrap import inject_inventory_declarations, inject_inventory_objects, read_icon_ids, retarget_upstream_bootstrap
 
 
 class BootstrapTests(unittest.TestCase):
+    def test_inventory_ids_can_be_read_from_generated_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "inventory-ids.txt"
+            manifest.write_text("Badge,Key\n", encoding="ascii")
+            self.assertEqual(read_icon_ids(f"@{manifest}"), ("Badge", "Key"))
+            self.assertEqual(read_icon_ids(""), ())
+            with self.assertRaisesRegex(ValueError, "duplicated"):
+                read_icon_ids("Key,Key")
     def test_inventory_resource_is_declared_and_injected(self):
         source = 'room ResRoom {\n    // the inventory icons\n    object axe {}\n}'
         header = 'room ResRoom {\n    // Inventory objects\n    object axe;\n}'

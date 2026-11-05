@@ -1,0 +1,18 @@
+Adventure Studio - SCUMM v6 Story Preview (experimentell)
+
+Dieses Adventure wird aus examples/mini_story.json erzeugt und mit ScummC
+kompiliert. Der Build benutzt voruebergehend eine Day-of-the-Tentacle-
+Kompatibilitaetskennung, damit eine unveraenderte ScummVM den Prototyp laden
+kann. Es handelt sich NICHT um ein originales Day-of-the-Tentacle-Spiel.
+
+1. Alle Dateien aus diesem ZIP in denselben Ordner entpacken.
+2. Eine lokale ScummVM-Installation starten (https://www.scummvm.org/).
+3. Im entpackten Ordner eine Konsole oeffnen und ausfuehren:
+
+   scummvm --path=. tentacle
+
+Unter Windows entsprechend scummvm.exe --path=. tentacle.
+
+Die Raumgrafiken und Charaktere sind noch Platzhalter bzw. stammen aus dem
+externen, GPL-lizenzierten ScummC-Demoprojekt. Die Kompatibilitaet ist derzeit
+ein Forschungstest und kein fertiges, eigenstaendiges Spiel-Release.

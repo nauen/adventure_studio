@@ -45,12 +45,26 @@ class StoryToScummTests(unittest.TestCase):
         self.assertNotEqual(canonical_json(compile_story_to_scumm(first)),
                             canonical_json(compile_story_to_scumm(second)))
 
+    def test_two_required_inventory_items_produce_guarded_use_rule(self):
+        story = small_story()
+        story = replace(story,
+                        items=story.items + (Item("Badge", "Abzeichen", "Wichtig", "Tavern"),),
+                        puzzles=(replace(story.puzzles[0], requires=("Key", "Badge")),))
+        game = compile_story_to_scumm(story)
+        self.assertEqual(game.rooms[0].use_rules[0].requires_inventory, ("Badge",))
+        with tempfile.TemporaryDirectory() as tmp:
+            export_document(game, Path(tmp))
+            room_source = (Path(tmp) / "Tavern.scc").read_text(encoding="utf-8")
+            self.assertIn("if(objB == Key && getObjectOwner(Badge) == VAR_EGO)", room_source)
+            self.assertEqual((Path(tmp) / "inventory-ids.txt").read_text().strip(), "Badge,Key")
+            self.assertTrue((Path(tmp) / "Inv_Badge.bmp").is_file())
+
     def test_unsupported_story_mechanics_fail_closed(self):
         story = small_story()
         with self.assertRaisesRegex(ValueError, "no custom actors"):
             from adventure_studio.story import Character
             compile_story_to_scumm(replace(story, characters=(Character("hero", "Held", "", "Tavern"),)))
-        with self.assertRaisesRegex(ValueError, "Additional pickup"):
+        with self.assertRaisesRegex(ValueError, "Unreferenced pickup"):
             compile_story_to_scumm(replace(story, items=story.items +
                                            (Item("Coin", "Münze", "Gold", "Tavern"),)))
 

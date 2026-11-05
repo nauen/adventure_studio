@@ -59,6 +59,15 @@ def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str
     return header.replace(marker, marker + "".join(f"    object {icon_id}Icon;\n" for icon_id in icon_ids), 1)
 
 
+def read_icon_ids(argument: str) -> tuple[str, ...]:
+    if argument.startswith("@"):
+        argument = Path(argument[1:]).read_text(encoding="ascii").strip()
+    ids = tuple(argument.split(",")) if argument else ()
+    if len(ids) != len(set(ids)) or any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", icon) for icon in ids):
+        raise ValueError("Invalid or duplicated inventory icon IDs")
+    return ids
+
+
 def main() -> int:
     if len(sys.argv) not in (4, 6):
         print("Usage: python -m adventure_studio.scumm_bootstrap INPUT OUTPUT ROOM_NAME [HEADER_INPUT ICON_IDS]")
@@ -66,7 +75,7 @@ def main() -> int:
     original = Path(sys.argv[1]).read_text(encoding="utf-8")
     result = retarget_upstream_bootstrap(original, sys.argv[3])
     if len(sys.argv) == 6:
-        icon_ids = tuple(sys.argv[5].split(","))
+        icon_ids = read_icon_ids(sys.argv[5])
         result = inject_inventory_objects(result, icon_ids)
         header = Path(sys.argv[4]).read_text(encoding="utf-8")
         patched_header = inject_inventory_declarations(header, icon_ids)

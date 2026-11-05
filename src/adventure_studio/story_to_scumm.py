@@ -1,7 +1,7 @@
 """A deliberately bounded, deterministic story-to-SCUMM adapter.
 
-Only the first fully implemented puzzle pattern is supported: one pickup item
-unlocks a visible exit into the final scene. Unsupported narrative mechanics
+Only a bounded puzzle pattern is supported: one to three pickup items together
+unlock a visible exit into the final scene. Unsupported narrative mechanics
 fail closed instead of silently disappearing from the exported adventure.
 """
 
@@ -29,7 +29,9 @@ def _text(value: str) -> str:
     value = " ".join(value.replace('"', "'").replace("\\", "-").split())
     if not value:
         raise ValueError("Story text cannot be represented in the demo font")
-    return value[:160]
+    if len(value) > 160:
+        raise ValueError("Story text exceeds the SCUMM demo text limit")
+    return value
 
 
 def _sprite(index: int, interior: int) -> bytes:
@@ -54,19 +56,19 @@ def compile_story_to_scumm(story: Story) -> GameDocument:
         raise ValueError("Final goal must be the room-unlocking puzzle")
     puzzle = story.puzzles[0]
     if (puzzle.scene_id != story.starting_scene_id or puzzle.opens_scene_id is None
-            or puzzle.opens_scene_id == story.starting_scene_id or len(puzzle.requires) != 1):
-        raise ValueError("Final puzzle must unlock the second scene using exactly one item")
+            or puzzle.opens_scene_id == story.starting_scene_id or not 1 <= len(puzzle.requires) <= 3):
+        raise ValueError("Final puzzle must unlock the second scene using one to three items")
     if any(not _ID.fullmatch(id_) for id_ in
            [*(c.id for c in story.chapters), *(s.id for s in story.scenes),
             *(i.id for i in story.items), puzzle.id]):
         raise ValueError("Story identifiers must be valid SCUMM identifiers")
     if "Door" in {i.id for i in story.items}:
         raise ValueError("Story item conflicts with generated exit identifier")
-    key = next(i for i in story.items if i.id == puzzle.requires[0])
-    if key.scene_id != story.starting_scene_id or key.role != "pickup":
-        raise ValueError("Required item must be a pickup in the initial room")
-    if any(i.role == "pickup" and i.id != key.id for i in story.items):
-        raise ValueError("Additional pickup mechanics are not yet supported")
+    pickups = tuple(next(i for i in story.items if i.id == required) for required in puzzle.requires)
+    if any(item.scene_id != story.starting_scene_id or item.role != "pickup" for item in pickups):
+        raise ValueError("Required items must be pickups in the initial room")
+    if any(i.role == "pickup" and i.id not in puzzle.requires for i in story.items):
+        raise ValueError("Unreferenced pickup mechanics are not yet supported")
     for scene in story.scenes:
         if sum(i.role == "decoration" and i.scene_id == scene.id for i in story.items) > 4:
             raise ValueError("Too many decorations for the current automatic layout")
@@ -84,17 +86,17 @@ def compile_story_to_scumm(story: Story) -> GameDocument:
                                 sprite_pixels=_sprite(1, 4))
                     for index, i in enumerate(decorations)]
         if not goal:
-            hotspots.extend([
-                RoomHotspot(key.id, _text(key.name), _text(key.description),
-                            355, 100, 16, 16, True, _sprite(3, 2)),
-                RoomHotspot("Door", "the exit", _text(puzzle.title),
-                            450, 100, 16, 16, False, _sprite(4, 1),
-                            open_sprite_pixels=_sprite(5, 2), exit_destination=target),
-            ])
+            hotspots.extend(RoomHotspot(item.id, _text(item.name), _text(item.description),
+                                        355 + index * 26, 100, 16, 16, True, _sprite(3, 2))
+                            for index, item in enumerate(pickups))
+            hotspots.append(RoomHotspot("Door", "the exit", _text(puzzle.title),
+                                        450, 100, 16, 16, False, _sprite(4, 1),
+                                        open_sprite_pixels=_sprite(5, 2), exit_destination=target))
         result.append(RoomAsset(
             scene_id, RoomGeometry(width, 200, 320, 200), _room_pixels(width, goal), _PALETTE,
             hotspots=tuple(hotspots), demo_walk_to_x=540 if not goal else None,
-            use_rules=(UseRule(key.id, "Door", _text(puzzle.title), open_target=True),) if not goal else (),
+            use_rules=(UseRule(pickups[0].id, "Door", _text(puzzle.title), open_target=True,
+                               requires_inventory=tuple(item.id for item in pickups[1:])),) if not goal else (),
             goal_text=_text(puzzle.title) if goal else None,
         ))
     return GameDocument(story.chapters[0].id + "Game", tuple(result))

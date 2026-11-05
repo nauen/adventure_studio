@@ -231,7 +231,8 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
     return count
 
 
-def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0) -> None:
+def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0,
+                 scene_only: bool = False) -> None:
     if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
@@ -298,6 +299,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
             final_snapshot = capture_frame("end")
             changed = compare_frames(output_directory)
+            if scene_only:
+                print(f"Story-compiled SCUMM room rendered and scrolled: {changed} changed pixels")
+                print(f"Scene-only screenshots: {output_directory}")
+                return
             # Negative path: walking into the locked door must leave it closed
             # and must not satisfy the goal. Check before collecting the key.
             capture_frame("locked-before")
@@ -468,10 +473,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] != "--scene-only"):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only]")
         return 2
-    launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]))
+    launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]), scene_only=len(sys.argv) == 4)
     return 0
 
 

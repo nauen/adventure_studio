@@ -61,7 +61,8 @@ def document_dict(document: GameDocument) -> dict:
                           "exit_destination": h.exit_destination} for h in room.hotspots],
             "use_rules": [{"item_id": r.item_id, "target_id": r.target_id,
                            "response": r.response, "hide_target": r.hide_target,
-                           "destination_room": r.destination_room, "open_target": r.open_target}
+                           "destination_room": r.destination_room, "open_target": r.open_target,
+                           "requires_inventory": list(r.requires_inventory)}
                           for r in room.use_rules],
             "demo_walk_to_x": room.demo_walk_to_x,
             "goal_text": room.goal_text,
@@ -131,12 +132,16 @@ def parse_document(source: str) -> GameDocument:
         rules = []
         for item in room["use_rules"]:
             r = _only(item, {"item_id", "target_id", "response", "hide_target", "destination_room",
-                             "open_target"},
+                             "open_target", "requires_inventory"},
                       {"item_id", "target_id", "response", "hide_target", "destination_room",
-                       "open_target"})
+                       "open_target", "requires_inventory"})
             if type(r["hide_target"]) is not bool or type(r["open_target"]) is not bool:
                 raise ValueError("Rule state actions must be Booleans")
-            rules.append(UseRule(**r))
+            if not isinstance(r["requires_inventory"], list) or len(r["requires_inventory"]) > 16:
+                raise ValueError("Invalid inventory requirements")
+            if any(not isinstance(item_id, str) for item_id in r["requires_inventory"]):
+                raise ValueError("Inventory requirement IDs must be strings")
+            rules.append(UseRule(**{**r, "requires_inventory": tuple(r["requires_inventory"])}))
         if not isinstance(room["palette"], list):
             raise ValueError("Palette must be a list")
         rooms.append(RoomAsset(

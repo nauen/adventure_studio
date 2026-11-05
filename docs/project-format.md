@@ -41,12 +41,31 @@ konfigurieren, damit Autoren keine Base64-Daten sehen müssen.
 
 `adventure_studio.story_to_scumm.compile_story_to_scumm(story)` übersetzt nun
 einen bewusst begrenzten Teil des erzählerischen `Story`-Modells direkt in ein
-`GameDocument`: ein Kapitel, zwei Szenen, ein aufnehmbarer Gegenstand, ein
-Schlüssel-Tür-Rätsel und ein Zielraum. Dekorative Gegenstände bleiben als
-Hotspots erhalten. Die grafische Darstellung ist vorerst eine klar erkennbare,
+`GameDocument`: ein Kapitel, zwei Szenen, ein bis drei aufnehmbare Gegenstände,
+ein Inventar-Tür-Rätsel und ein Zielraum. Bei mehreren benötigten Gegenständen
+wird die erste Voraussetzung als Werkzeug verwendet; die übrigen müssen bereits
+im Inventar sein. Dekorative Gegenstände bleiben als Hotspots erhalten.
+Die grafische Darstellung ist vorerst eine klar erkennbare,
 deterministisch erzeugte Platzhaltergrafik; keine KI-Bildgenerierung.
 
-Weitere Figuren, zusätzliche Inventar-Puzzles oder komplexe Szenenfolgen werden
+Weitere Figuren, mehrere unabhängige Puzzles oder komplexe Szenenfolgen werden
 explizit abgewiesen. Sie werden **nicht** stillschweigend aus der Geschichte
 entfernt. Story-Referenzen und Softlocks werden bereits vor dem SCUMM-Export
 mit dem deterministischen Rätsellöser überprüft.
+
+### Direkter Story-Build
+
+`examples/mini_story.json` ist eine vollständige, versionierte Story-Datei,
+die keine Engine-Quellen oder Grafikdaten enthält. Aus ihr entsteht ein
+SCUMM-Projekt inklusive Inventarmanifest und BMP-Ressourcen:
+
+```bash
+PYTHONPATH=src python -m adventure_studio.story_document examples/mini_story.json build/story
+```
+
+Die GitHub-Action **Experimental SCUMM v6 compatibility probe** baut zusätzlich
+dieses Story-Beispiel mit ScummC, prüft Start, Kamerabild und Hotspotgrafik in
+einer echten ScummVM und stellt die Dateien als `story-playable-preview` bereit.
+Das bleibt ein experimenteller DOTT-Kompatibilitäts-Build, kein eigenständiger
+ScummVM-Spielidentifikator. Der vollständige Gameplay-Lauf der Story-Variante
+wird separat aufgebaut; momentan beweist deren CI zunächst Bild und Spielstart.
