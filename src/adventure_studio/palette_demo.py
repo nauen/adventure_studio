@@ -19,9 +19,9 @@ from .story_to_scumm import compile_story_to_scumm
 WATER_PALETTE = ((12, 70, 160), (25, 110, 200), (55, 150, 235), (110, 195, 255))
 
 
-def add_water_cycle(game: GameDocument) -> GameDocument:
-    if len(game.rooms) != 2 or game.rooms[0].geometry.room_width != 640:
-        raise ValueError("Water probe requires a bounded two-room story")
+def add_water_cycle(game: GameDocument, *, wide_water: bool = False) -> GameDocument:
+    if len(game.rooms) < 2 or game.rooms[0].geometry.room_width != 640:
+        raise ValueError("Water probe requires a bounded multi-room story")
     room = game.rooms[0]
     if room.palette_cycles or len(room.palette) > 252:
         raise ValueError("Probe room needs four unreserved palette entries")
@@ -30,13 +30,13 @@ def add_water_cycle(game: GameDocument) -> GameDocument:
     width = room.geometry.room_width
     # A purpose-built indexed ramp. The base bitmap never changes in runtime;
     # palette rotation creates the apparent movement.
-    for y in range(125, 145):
-        for x in range(45, 135):
+    for y in range(125, 150 if wide_water else 145):
+        for x in range(45, 300 if wide_water else 135):
             pixels[y * width + x] = first + (x // 4 + y // 3) % 4
     water = PaletteCycle("Water", first, first + 3, 2)
     new_room = replace(room, pixels=bytes(pixels), palette=room.palette + WATER_PALETTE,
                        palette_cycles=(water,), demo_walk_to_x=None)
-    return replace(game, rooms=(new_room, game.rooms[1]))
+    return replace(game, rooms=(new_room, *game.rooms[1:]))
 
 
 def main() -> int:

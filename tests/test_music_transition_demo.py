@@ -19,6 +19,8 @@ class MusicTransitionDemoTests(unittest.TestCase):
             game = build(STORY, directory)
             self.assertEqual(tuple(room.music_id for room in game.rooms[:2]),
                              ("HarborTheme", "CellarTheme"))
+            self.assertEqual(len(game.rooms[0].palette_cycles), 1)
+            self.assertIn("cycle Water", scummc_room_source(game.rooms[0]))
             self.assertEqual(parse_document((directory / "project.json").read_text()), game)
             for index, (track_id, _) in enumerate(TRACKS):
                 self.assertIn(f"startMusic({track_id});", scummc_room_source(game.rooms[index]))

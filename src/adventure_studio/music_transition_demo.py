@@ -11,6 +11,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from .music_demo import original_midi_theme
+from .palette_demo import add_water_cycle
 from .scumm_project import GameDocument, canonical_json, export_document
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -32,7 +33,9 @@ def add_room_music_switch(game: GameDocument) -> GameDocument:
 
 def build(story_path: Path, directory: Path) -> GameDocument:
     story = parse_story_document(story_path.read_text(encoding="utf-8"))
-    game = add_room_music_switch(compile_story_to_scumm(story))
+    # Compose two independent opt-in features on the same validated document:
+    # indexed palette animation in the harbor, then a MIDI change in the cellar.
+    game = add_room_music_switch(add_water_cycle(compile_story_to_scumm(story), wide_water=True))
     resources = directory / "resources"
     export_document(game, resources)
     for track_id, transpose in TRACKS:
