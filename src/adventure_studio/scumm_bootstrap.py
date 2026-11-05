@@ -102,6 +102,41 @@ def inject_language_keys(source: str, header: str, catalog) -> tuple[str, str]:
     return source, header
 
 
+
+def inject_language_room_probe(source: str, destination: str, catalog) -> str:
+    """Add opt-in test keys: 0 changes rooms, 6 repeats the saved language.
+
+    This is only for the runtime fixture, never for regular game controls.
+    The source must already contain the language keyboard selector.
+    """
+    from .localization import scumm_language_dispatch, validate_catalog
+
+    validate_catalog(catalog)
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", destination):
+        raise ValueError("Invalid language probe destination")
+    marker = "script keyboardHandler(int key) {\\n        switch(key) {"
+    if source.count(marker) != 1 or "int GameLanguage;" in source:
+        # GameLanguage is declared in the header, not the .scc source.
+        if source.count(marker) != 1:
+            raise ValueError("Missing language keyboard handler")
+    if source.count("case '0':") or source.count("case '6':"):
+        raise ValueError("Language probe keys already reserved")
+    if not catalog.lines:
+        raise ValueError("Language probe needs a translated line")
+    dispatch = scumm_language_dispatch(catalog, catalog.lines[0].id)
+    branches = "".join("            " + line + "\\n" for line in dispatch.splitlines())
+    probe = (
+        "\\n        case '0':\\n"
+        f"            startRoom({destination});\\n"
+        "            break;\\n"
+        "        case '6':\\n"
+        + branches
+        + "            break;"
+    )
+    source = source.replace(marker, marker + probe, 1)
+    return f"room {destination};\\n" + source
+
+
 def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str:
     marker = "    // Inventory objects\n"
     if header.count(marker) != 1:
