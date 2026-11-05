@@ -102,7 +102,10 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       Gameplay-Test nachgewiesen: Schlüssel allein öffnet die Tür nicht,
       zusätzlicher Gegenstand wird in das Inventar übernommen, danach öffnet
       die Tür und der Zielraum wird betreten (CI-Lauf #42023767043).
-- [ ] Dieselbe Runtime-Prüfung für drei erforderliche Gegenstände nachweisen.
+- [x] Drei erforderliche Gegenstände in stock ScummVM nachgewiesen: sowohl
+      Schlüssel allein als auch Schlüssel und Abzeichen ohne Münze lassen die
+      Tür verschlossen; erst das vollständige Inventar öffnet den Zielraum
+      (CI-Lauf #42024978434).
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.
