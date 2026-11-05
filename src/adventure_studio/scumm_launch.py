@@ -232,7 +232,7 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
 
 
 def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0,
-                 scene_only: bool = False) -> None:
+                 scene_only: bool = False, verify_return: bool = True) -> None:
     if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
@@ -430,6 +430,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             )
             if not goal_reached:
                 raise RuntimeError(f"Opened door did not lead to {goal['room_id']}")
+            if not verify_return:
+                print(f"Story-built puzzle succeeded: picked up Key, unlocked Door, entered {goal['room_id']}")
+                return
             # Return from the goal room and verify that the engine preserved
             # both object states (opened door and already collected key).
             time.sleep(1)
@@ -473,10 +476,12 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] != "--scene-only"):
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only")):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only]")
         return 2
-    launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]), scene_only=len(sys.argv) == 4)
+    mode = sys.argv[3] if len(sys.argv) == 4 else ""
+    launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]),
+                 scene_only=mode == "--scene-only", verify_return=mode != "--puzzle-only")
     return 0
 
 

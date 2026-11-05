@@ -163,7 +163,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/story-fixture /tmp/story-smoke --scene-only
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/story-fixture /tmp/story-smoke --puzzle-only
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -196,6 +196,11 @@ jobs:
               python -c 'import json; p=json.load(open("/tmp/story-smoke/scummvm-frame-report.json")); print("- Story JSON to rendered SCUMM room: **{}**".format("PASS" if p["scroll_color_signature_passed"] and p["key_sprite_visible"] else "FAIL"))'
             else
               echo '- Story-built ScummVM preview: **not produced**.'
+            fi
+            if test -f /tmp/story-smoke/scummvm-use-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/story-smoke/scummvm-use-report.json")); print("- Story-derived key-to-door puzzle and goal: **{}**".format("PASS" if p["door_opened"] and p["goal_reached"] else "FAIL"))'
+            else
+              echo '- Story-derived gameplay test: **not produced**.'
             fi
             echo
           } >> "$GITHUB_STEP_SUMMARY"
