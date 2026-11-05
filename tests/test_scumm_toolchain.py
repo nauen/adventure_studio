@@ -5,7 +5,8 @@ import unittest
 from pathlib import Path
 
 from adventure_studio.scumm_toolchain import compile_story_game
-from adventure_studio.scumm_bootstrap import inject_multilingual_charset
+from adventure_studio.scumm_bootstrap import inject_language_keys, inject_multilingual_charset
+from adventure_studio.localization import parse_catalog
 from adventure_studio.story_document import build_story_document
 
 
@@ -27,6 +28,23 @@ def fake_upstream(path: Path):
 
 
 class ToolchainTests(unittest.TestCase):
+    def test_language_keyboard_selection_is_global_and_byte_encoded(self):
+        catalog = parse_catalog('{"format_version":1,"source_language":"de",'
+            '"languages":["de","ja","pl"],"lines":[{"id":"hello",'
+            '"translations":{"de":"Grüße","ja":"扉","pl":"Cześć"}}]}')
+        source = ('script keyboardHandler(int key) {\n        switch(key) {\n'
+                  "        case 'q':\n            shutdown();\n            break;\n        }\n    }\n"
+                  '        setupActors();')
+        result, header = inject_language_keys(source, '// Dialog string list', catalog)
+        self.assertEqual(header.count('int GameLanguage;'), 1)
+        self.assertIn("case '1':", result)
+        self.assertIn("case '2':", result)
+        self.assertIn("case '3':", result)
+        self.assertIn('GameLanguage = 25701;', result)  # de, stable ISO pair
+        self.assertIn('GameLanguage = 27233;', result)  # ja
+        self.assertIn('\\x80', result)
+        self.assertNotIn('Grüße', result)
+
     def test_custom_font_replaces_both_dialogue_fonts_not_gui(self):
         example = ('chset chset1 @ 1 = "vera-gui.char";\n'
                    'chset chtest = "vera.char";\n'

@@ -64,6 +64,44 @@ def inject_multilingual_charset(source: str) -> str:
     return source
 
 
+def inject_language_keys(source: str, header: str, catalog) -> tuple[str, str]:
+    """Add an in-game keyboard language probe using one global SCUMM variable.
+
+    Keys 1..9 choose a language and display the same translated sample line.
+    This probes actual byte rendering, not yet localization of story objects.
+    """
+    from .localization import charset_plan, encode_scumm_literal, validate_catalog
+
+    validate_catalog(catalog)
+    if len(catalog.languages) > 9 or any(len(lang) != 2 for lang in catalog.languages):
+        raise ValueError("Keyboard language probe supports one to nine two-letter languages")
+    if not catalog.lines:
+        raise ValueError("Language selector requires at least one translated line")
+    declaration = "int GameLanguage;\n"
+    header_marker = "// Dialog string list"
+    switch_marker = "script keyboardHandler(int key) {\n        switch(key) {"
+    init_marker = "        setupActors();"
+    for body, marker in ((header, header_marker),
+                         (source, switch_marker), (source, init_marker)):
+        if body.count(marker) != 1:
+            raise ValueError(f"Unexpected upstream language selector layout: {marker}")
+    header = header.replace(header_marker, declaration + header_marker, 1)
+    sample = catalog.lines[0]
+    plan = charset_plan(catalog)
+    lines = []
+    for index, language in enumerate(catalog.languages, 1):
+        code = int.from_bytes(language.encode("ascii"), "big")
+        value = dict(sample.translations)[language]
+        lines.extend((f"        case '{index}':",
+                      f"            GameLanguage = {code};",
+                      f"            egoSay({encode_scumm_literal(value, plan)});",
+                      "            break;"))
+    source = source.replace(switch_marker, switch_marker + "\n" + "\n".join(lines), 1)
+    initial = int.from_bytes(catalog.source_language.encode("ascii"), "big")
+    source = source.replace(init_marker, f"        GameLanguage = {initial};\n" + init_marker, 1)
+    return source, header
+
+
 def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str:
     marker = "    // Inventory objects\n"
     if header.count(marker) != 1:

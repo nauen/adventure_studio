@@ -81,6 +81,17 @@ führt zum Abbruch statt zu einem stillen Rückfall auf die Demo-Schrift.
 Wenn die Paketmanifest-Datei vorliegt, prüft der Linker-Adapter zusätzlich
 die SHA-256-Prüfsummen und die Zeichenbelegung gegen den Katalog.
 
+Mit einem geprüften Sprachpaket fügt der Bootstrap-Adapter jetzt eine
+globale SCUMM-Variable `GameLanguage` und eine begrenzte Tastaturauswahl
+(`1` bis `9`, alphabetisch sortierte Sprachcodes) hinzu. Beim Spielstart
+wird die Quellsprache initialisiert; eine Ziffer ändert die Sprache und
+gibt als kontrollierte Laufzeitprobe die erste übersetzte Katalogzeile
+mit den Bytewerten des gebündelten Fonts aus. Die Variable gehört zum
+Spielzustand und wird beim normalen Raumwechsel nicht neu gesetzt.
+Dies ist **noch kein grafisches Auswahlmenü** und noch keine automatische
+Übersetzung sämtlicher Objekt-/Dialogtexte. Der tatsächliche Compiler-
+und ScummVM-Nachweis dieses neuen Tastaturpfads steht noch aus.
+
 **Noch nicht abgeschlossen:** Der Story-Export liefert den Übersetzungskatalog
 und die CHAR-Datei noch nicht automatisch gemeinsam aus. Auch die laufende
 Sprachauswahl und der Screenshot-Nachweis für polnische bzw. japanische Glyphen

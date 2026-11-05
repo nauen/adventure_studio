@@ -17,7 +17,8 @@ from pathlib import Path
 from typing import Callable
 
 from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_objects,
-                              inject_multilingual_charset, retarget_upstream_bootstrap)
+                              inject_language_keys, inject_multilingual_charset,
+                              retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
 from .scumm_project import parse_document
 
@@ -52,6 +53,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
     header = (road / "common.sch").read_text(encoding="utf-8")
     start = document.rooms[0].name
     bootstrap = retarget_upstream_bootstrap(original, start)
+    language_catalog = None
     custom_font = resources / "multilingual-font.char"
     if custom_font.exists():
         # Glyphs needed by the stock 7-bit UI and story text must be present.
@@ -74,8 +76,11 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
             if manifest.get("languages") != list(catalog.languages) or manifest.get("glyph_map") != expected:
                 raise ValueError("Language package glyph map mismatch")
             verify_char_resource(custom_font, {code for _, code in plan.extra_glyphs} | set(range(32, 127)))
+            language_catalog = catalog
         bootstrap = inject_multilingual_charset(bootstrap)
         shutil.copyfile(custom_font, road / custom_font.name)
+    if language_catalog is not None:
+        bootstrap, header = inject_language_keys(bootstrap, header, language_catalog)
     (resources / "bootstrap.scc").write_text(inject_inventory_objects(bootstrap, icon_ids), encoding="utf-8")
     (resources / "common.sch").write_text(inject_inventory_declarations(header, icon_ids), encoding="utf-8")
     for name in icon_ids:
