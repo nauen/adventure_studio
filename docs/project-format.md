@@ -64,8 +64,13 @@ PYTHONPATH=src python -m adventure_studio.story_document examples/mini_story.jso
 ```
 
 Die GitHub-Action **Experimental SCUMM v6 compatibility probe** baut zusätzlich
-dieses Story-Beispiel mit ScummC, prüft Start, Kamerabild und Hotspotgrafik in
-einer echten ScummVM und stellt die Dateien als `story-playable-preview` bereit.
+dieses Story-Beispiel mit ScummC, prüft Start, Kamerabild, Inventar-Aufnahme,
+Türöffnung und Raumwechsel in einer echten ScummVM und stellt die Dateien als
+`story-playable-preview` bereit (grüner Lauf #42021639269).
+Die externe Compiler-/Linker-Anbindung ist in `scumm_toolchain.py` gekapselt.
+Sie liest Raumliste und Inventar-IDs aus dem validierten Projekt, statt
+Raumnamen oder Spielgegenstände im GitHub-Workflow fest einzutragen.
 Das bleibt ein experimenteller DOTT-Kompatibilitäts-Build, kein eigenständiger
-ScummVM-Spielidentifikator. Der vollständige Gameplay-Lauf der Story-Variante
-wird separat aufgebaut; momentan beweist deren CI zunächst Bild und Spielstart.
+ScummVM-Spielidentifikator. Für die Story-Variante ist damit ein vollständiges
+Ein-Schlüssel-Rätsel nachgewiesen; die Mehr-Gegenstand-Bedingungen sind bisher
+deterministisch getestet, aber noch nicht im ScummVM-Gameplay durchgespielt.

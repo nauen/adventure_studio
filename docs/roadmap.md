@@ -92,6 +92,13 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       Inventarbedingungen und automatisch abgeleitete Icon-Ressourcen übersetzt.
 - [x] ScummVM-CI für den unabhängigen Story-JSON-Build und das getrennte
       `story-playable-preview`-Artefakt erfolgreich (#42020306920).
+- [x] Vollständige Schlüssel-Tür-Rätselinteraktion des aus Story-JSON
+      kompilierten Adventures in stock ScummVM erfolgreich (#42021639269).
+- [x] Dynamischer ScummC-Compiler-/Linker-Adapter liest Raum- und Inventarliste
+      aus dem Projekt, statt projektspezifische Namen im CI-Workflow zu pflegen
+      (`scumm_toolchain.py`, lokale Boundary-Tests).
+- [ ] Rätsel mit zwei oder drei erforderlichen Gegenständen ebenfalls als
+      vollständigen ScummVM-Gameplay-Test nachweisen.
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.

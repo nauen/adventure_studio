@@ -12,6 +12,7 @@ on:
       - 'src/adventure_studio/scumm_probe.py'
       - 'src/adventure_studio/scumm_launch.py'
       - 'src/adventure_studio/scumm_project.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
       - 'src/adventure_studio/story_document.py'
       - 'src/adventure_studio/story_to_scumm.py'
       - 'examples/mini_story.json'
@@ -22,6 +23,7 @@ on:
       - 'tests/test_scumm_launch.py'
       - 'tests/test_story_document.py'
       - 'tests/test_story_to_scumm.py'
+      - 'tests/test_scumm_toolchain.py'
 
 jobs:
   probe:
@@ -143,19 +145,7 @@ jobs:
           PYTHONPATH: src
         run: |
           python -m adventure_studio.story_document examples/mini_story.json /tmp/story-build
-          python -m adventure_studio.scumm_bootstrap /tmp/scummc-upstream/examples/road/common.scc /tmp/story-build/resources/bootstrap.scc Harbor /tmp/scummc-upstream/examples/road/common.sch @/tmp/story-build/resources/inventory-ids.txt
-          SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
-          SLD_BIN=$(find /tmp/scummc-upstream -type f -name sld -executable -print -quit)
-          test -n "$SCC_BIN" && test -n "$SLD_BIN"
-          for ROOM in Harbor Cellar; do
-            "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/story-build/resources -I /tmp/scummc-upstream/examples/road -R /tmp/story-build/resources -o "/tmp/story-build/resources/$ROOM.roobj" "/tmp/story-build/resources/$ROOM.scc"
-          done
-          cp /tmp/story-build/resources/Inv_*.bmp /tmp/scummc-upstream/examples/road/
-          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/story-build/resources -I /tmp/scummc-upstream/examples/road -R /tmp/scummc-upstream/examples/road -o /tmp/story-build/resources/bootstrap.roobj /tmp/story-build/resources/bootstrap.scc
-          cd /tmp/scummc-upstream/examples/road
-          "$SLD_BIN" -o /tmp/story-build/tentacle -key 0x69 /tmp/story-build/resources/bootstrap.roobj /tmp/story-build/resources/Harbor.roobj /tmp/story-build/resources/Cellar.roobj
-          mkdir -p /tmp/story-fixture
-          cp /tmp/story-build/tentacle.000 /tmp/story-build/tentacle.001 /tmp/story-build/resources/game-goal.json /tmp/story-fixture/
+          python -m adventure_studio.scumm_toolchain /tmp/story-build /tmp/scummc-upstream /tmp/story-fixture
           cp "$GITHUB_WORKSPACE/examples/PLAY_STORY_PREVIEW.txt" /tmp/story-fixture/README.txt
           test -s /tmp/story-fixture/tentacle.000
           test -s /tmp/story-fixture/tentacle.001
