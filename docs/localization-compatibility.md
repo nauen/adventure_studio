@@ -92,10 +92,18 @@ Dies ist **noch kein grafisches Auswahlmenü** und noch keine automatische
 Übersetzung sämtlicher Objekt-/Dialogtexte. Der tatsächliche Compiler-
 und ScummVM-Nachweis dieses neuen Tastaturpfads steht noch aus.
 
+Der unabhängige GitHub-Workflow `language-runtime.yml` baut dafür den
+unveränderten ScummC, erzeugt ein echtes Sprachpaket, verlinkt damit
+ein kleines Adventure und startet es in stock ScummVM. Nach den Tasten
+`1` (Deutsch), `4` (Japanisch) und `5` (Polnisch) werden Screenshots und
+Engine-Log abgelegt. Der Test prüft zunächst, ob der Interpreter läuft
+und die Screenshots erzeugt. **Die Glyphen selbst werden noch nicht durch
+OCR oder Pixelreferenzen verifiziert**; diese Schranke bleibt offen.
+
 **Noch nicht abgeschlossen:** Der Story-Export liefert den Übersetzungskatalog
-und die CHAR-Datei noch nicht automatisch gemeinsam aus. Auch die laufende
-Sprachauswahl und der Screenshot-Nachweis für polnische bzw. japanische Glyphen
-fehlen noch. Der Adapter ist ausdrücklich nur die geprüfte Einbaustufe.
+und die CHAR-Datei noch nicht automatisch gemeinsam aus. Eine vollständige
+Sprachumschaltung für sämtliche Story-Texte und der Pixelnachweis für polnische
+bzw. japanische Glyphen fehlen noch.
 
 ## Verbindliche Kompatibilitäts-Gates vor Aktivierung im Spiel-Export
 

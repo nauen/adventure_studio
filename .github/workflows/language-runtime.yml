@@ -1,0 +1,82 @@
+name: SCUMM v6 multilingual gameplay probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/language-runtime.yml'
+      - 'src/adventure_studio/scumm_bootstrap.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/scumm_font.py'
+      - 'src/adventure_studio/scumm_font_probe.py'
+      - 'src/adventure_studio/scumm_language_package.py'
+      - 'src/adventure_studio/scumm_language_runtime_probe.py'
+      - 'src/adventure_studio/localization.py'
+      - 'examples/language_probe.json'
+  pull_request:
+    paths:
+      - '.github/workflows/language-runtime.yml'
+      - 'src/adventure_studio/scumm_bootstrap.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/scumm_font.py'
+      - 'src/adventure_studio/scumm_language_package.py'
+      - 'src/adventure_studio/scumm_language_runtime_probe.py'
+
+jobs:
+  language:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install ScummC, ScummVM and multilingual font dependencies
+        timeout-minutes: 18
+        run: |
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core fonts-ipafont-gothic
+          python -m pip install 'Pillow>=10,<13' 'fonttools>=4,<6'
+      - name: Build upstream ScummC and original room assets
+        run: |
+          git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-language
+          test -f /tmp/scummc-language/man/tools/scc.xml
+          grep -Fq '$(SRCDIR)/man/%.xml' /tmp/scummc-language/Makefile.target
+          sed -i 's@$(SRCDIR)/man/%.xml@$(SRCDIR)/man/tools/%.xml@g; s@$(SRCDIR)/man/header.xslt@$(SRCDIR)/man/tools/header.xslt@g' /tmp/scummc-language/Makefile.target
+          cd /tmp/scummc-language
+          ./configure
+          make -j2
+          cd examples/road
+          make
+          test -s vera-gui.char
+      - name: Build SCUMM game with one five-language font package
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/mini_story.json /tmp/language-story
+          CHAR_BIN=$(find /tmp/scummc-language -type f -name char -executable -print -quit)
+          LATIN_FONT=$(find /usr/share/fonts -type f -name DejaVuSans.ttf -print -quit)
+          CJK_FONT=$(find /usr/share/fonts -type f \( -iname 'ipag.ttf' -o -iname 'ipagp.ttf' \) -print -quit)
+          test -n "$CHAR_BIN" && test -n "$LATIN_FONT" && test -n "$CJK_FONT"
+          python -m adventure_studio.scumm_language_package examples/language_probe.json "$LATIN_FONT" "$CJK_FONT" "$CHAR_BIN" /tmp/language-story/resources
+          python -m adventure_studio.scumm_toolchain /tmp/language-story /tmp/scummc-language /tmp/language-game
+          test -s /tmp/language-game/tentacle.000
+          test -s /tmp/language-game/tentacle.001
+      - name: Select German, Japanese and Polish in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_language_runtime_probe /tmp/language-game /tmp/language-evidence
+      - name: Upload linked game and screenshots for visual inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multilingual-game-runtime-evidence
+          if-no-files-found: ignore
+          path: |
+            /tmp/language-game/tentacle.000
+            /tmp/language-game/tentacle.001
+            /tmp/language-story/resources/language-package.json
+            /tmp/language-evidence/*.png
+            /tmp/language-evidence/*.json
+            /tmp/language-evidence/scummvm.log
