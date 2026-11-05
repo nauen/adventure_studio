@@ -108,8 +108,11 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       (CI-Lauf #42024978434).
 - [x] Lineare Rätselkette mit zwei Türen und drei Szenen: Story-JSON-Export,
       verknüpfte Ressourcen und ScummVM-Start erfolgreich (CI #42026108989).
-- [ ] Vollständigen Spielweg durch beide Türen der Rätselkette in ScummVM
-      nachweisen, inklusive persistenter Zustände und Rückwegen.
+- [x] Vollständigen Spielweg durch beide Türen der Rätselkette in ScummVM
+      nachgewiesen: Hafenhaus-Schlüssel, erster Raumwechsel, Keller-Abzeichen,
+      zweite Tür und finaler Archivraum (CI-Lauf #42028572233).
+- [ ] Persistente Zustände und Rückwege über mehrere verknüpfte Räume hinweg
+      unabhängig im laufenden Spiel prüfen.
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.
