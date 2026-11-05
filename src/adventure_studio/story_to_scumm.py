@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from .scumm_assets import RoomAsset, RoomHotspot, UseRule
+from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, UseRule
 from .scumm_project import GameDocument
 from .story import Story, verify_story
 from .targets import RoomGeometry
@@ -48,11 +48,63 @@ def _room_pixels(width: int, goal: bool) -> bytes:
                  for y in range(200) for x in range(width))
 
 
+def _compile_recipe_story(story: Story) -> GameDocument:
+    """Bounded v2 fixture: one two-ingredient recipe unlocks one visible exit."""
+    if (len(story.chapters) != 1 or len(story.scenes) != 2 or len(story.puzzles) != 1
+            or len(story.recipes) != 1 or story.characters):
+        raise ValueError("Recipe SCUMM adapter supports one recipe, one door and two scenes")
+    recipe, puzzle = story.recipes[0], story.puzzles[0]
+    if (puzzle.id != story.final_puzzle_id or puzzle.scene_id != story.starting_scene_id
+            or puzzle.opens_scene_id is None or puzzle.opens_scene_id == story.starting_scene_id
+            or puzzle.requires != (recipe.result_item_id,)):
+        raise ValueError("Recipe result must be the only required item of the final door")
+    if any(not _ID.fullmatch(v) for v in
+           [*(c.id for c in story.chapters), *(s.id for s in story.scenes),
+            *(i.id for i in story.items), puzzle.id, recipe.id]):
+        raise ValueError("Story identifiers must be valid SCUMM identifiers")
+    by_id = {i.id: i for i in story.items}
+    if any(by_id[item_id].role != "pickup" or by_id[item_id].scene_id != story.starting_scene_id
+           for item_id in recipe.ingredients):
+        raise ValueError("Recipe ingredients must be physical pickups in the starting scene")
+    result = by_id[recipe.result_item_id]
+    if result.role != "crafted" or result.scene_id != story.starting_scene_id:
+        raise ValueError("Crafted result must belong to starting scene")
+    if any(i.role in ("pickup", "crafted") and i.id not in (*recipe.ingredients, result.id)
+           for i in story.items):
+        raise ValueError("Recipe fixture has an unreferenced mechanical item")
+    if "Door" in by_id:
+        raise ValueError("Story item conflicts with generated Door")
+    decorations = [i for i in story.items if i.role == "decoration" and i.scene_id == story.starting_scene_id]
+    if len(decorations) > 4:
+        raise ValueError("Too many decorations for automatic layout")
+    hotspots = [RoomHotspot(i.id, _text(i.name), _text(i.description),
+                            160 + index * 40, 100, 16, 16, sprite_pixels=_sprite(1, 4))
+                for index, i in enumerate(decorations)]
+    for index, item_id in enumerate((*recipe.ingredients, result.id)):
+        item = by_id[item_id]
+        hotspots.append(RoomHotspot(item.id, _text(item.name), _text(item.description),
+                                    355 + index * 26, 100, 16, 16, True,
+                                    _sprite(_PICKUP_COLORS[index], 2)))
+    hotspots.append(RoomHotspot("Door", "the exit", _text(puzzle.title),
+                                450, 100, 16, 16, False, _sprite(4, 1),
+                                open_sprite_pixels=_sprite(5, 2),
+                                exit_destination=puzzle.opens_scene_id))
+    start_room = RoomAsset(story.starting_scene_id, RoomGeometry(640, 200, 320, 200),
+                           _room_pixels(640, False), _PALETTE, tuple(hotspots), 540,
+                           (UseRule(result.id, "Door", _text(puzzle.title), open_target=True),),
+                           combine_rules=(CombineRule(recipe.ingredients[0], recipe.ingredients[1],
+                                                      result.id, _text(recipe.title)),))
+    goal_room = RoomAsset(puzzle.opens_scene_id, RoomGeometry(320, 200, 320, 200),
+                          _room_pixels(320, True), _PALETTE,
+                          goal_text=_text(puzzle.title))
+    return GameDocument(story.chapters[0].id + "Game", (start_room, goal_room))
+
+
 def compile_story_to_scumm(story: Story) -> GameDocument:
     """Compile bounded linear item-and-door puzzles, never story-authored scripts."""
     verify_story(story)
     if story.recipes:
-        raise ValueError("Inventory recipes are validated in the story solver but not yet supported by SCUMM export")
+        return _compile_recipe_story(story)
     if (len(story.chapters) != 1 or not 1 <= len(story.puzzles) <= 2
             or len(story.scenes) != len(story.puzzles) + 1 or story.characters):
         raise ValueError("Exporter supports one chapter, one or two sequential door puzzles, and no custom actors")

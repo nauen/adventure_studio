@@ -17,7 +17,7 @@ RECIPE = EXAMPLE.with_name("recipe_story.json")
 
 
 class StoryDocumentTests(unittest.TestCase):
-    def test_recipe_story_v2_validates_without_claiming_scumm_export(self):
+    def test_recipe_story_v2_exports_bounded_inventory_combination(self):
         from adventure_studio.story import compile_story, verify_story
         from adventure_studio.core import execute
         from adventure_studio.story_to_scumm import compile_story_to_scumm
@@ -36,8 +36,19 @@ class StoryDocumentTests(unittest.TestCase):
         self.assertTrue(values["picked.Pineapple"])
         with self.assertRaisesRegex(ValueError, "unavailable"):
             execute(project, state, "take:Pineapple")
-        with self.assertRaisesRegex(ValueError, "not yet supported"):
-            compile_story_to_scumm(story)
+        game = compile_story_to_scumm(story)
+        self.assertEqual(game.rooms[0].combine_rules[0].result_id, "Mixture")
+        from adventure_studio.scumm_project import canonical_json, parse_document
+        self.assertEqual(parse_document(canonical_json(game)), game)
+        with tempfile.TemporaryDirectory() as tmp:
+            result = build_story_document(RECIPE.read_text(encoding="utf-8"), Path(tmp))
+            source = (result.resource_directory / "Kitchen.scc").read_text()
+            self.assertIn("setObjectOwner(Pineapple, 0)", source)
+            self.assertIn("setObjectOwner(Bottle, 0)", source)
+            self.assertIn("pickupObject(Mixture, VAR_ROOM)", source)
+            self.assertIn("combine_0();", source)
+            self.assertIn("state = 0;", source)
+            self.assertTrue((result.resource_directory / "Inv_Mixture.bmp").is_file())
 
     def test_recipe_that_consumes_a_required_key_creates_a_detected_softlock(self):
         from dataclasses import replace

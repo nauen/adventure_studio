@@ -63,6 +63,12 @@ class ScummLaunchTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "goal manifest"):
                 launch_smoke(path, path / "out")
 
+    def test_recipe_mode_requires_real_game_before_launch(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            with self.assertRaisesRegex(ValueError, "Missing isolated"):
+                launch_smoke(path, path / "out", verify_recipe=True)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -19,6 +19,7 @@ on:
       - 'examples/mini_story_two_items.json'
       - 'examples/mini_story_three_items.json'
       - 'examples/mini_story_chain.json'
+      - 'examples/recipe_story.json'
       - 'examples/PLAY_STORY_PREVIEW.txt'
       - 'tests/test_scumm_assets.py'
       - 'tests/test_scumm_bootstrap.py'
@@ -199,6 +200,20 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/chain-fixture /tmp/chain-smoke --chain-only
+      - name: Compile v2 recipe story and its inventory combination
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/recipe_story.json /tmp/recipe-story-build
+          python -m adventure_studio.scumm_toolchain /tmp/recipe-story-build /tmp/scummc-upstream /tmp/recipe-fixture
+          cp examples/PLAY_STORY_PREVIEW.txt /tmp/recipe-fixture/README.txt
+          test -s /tmp/recipe-fixture/tentacle.000
+          test -s /tmp/recipe-fixture/tentacle.001
+      - name: Combine inventory items and unlock door in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-fixture /tmp/recipe-smoke --recipe-only
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -265,6 +280,14 @@ jobs:
             else
               echo '- Full chained gameplay: **not produced**.'
             fi
+            if test -f /tmp/recipe-smoke/scummvm-recipe-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/recipe-smoke/scummvm-recipe-report.json")); print("- Inventory recipe consumed both ingredients and produced result: **{}**".format("PASS" if p["combined"] else "FAIL"))'
+            else
+              echo '- Recipe inventory gameplay: **not produced**.'
+            fi
+            if test -f /tmp/recipe-smoke/scummvm-use-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/recipe-smoke/scummvm-use-report.json")); print("- Crafted recipe item unlocked goal room: **{}**".format("PASS" if p["door_opened"] and p["goal_reached"] else "FAIL"))'
+            fi
             echo
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload compiler outputs for inspection
@@ -305,6 +328,9 @@ jobs:
             /tmp/chain-story-build/project.json
             /tmp/chain-story-build/resources/*
             /tmp/chain-smoke/*
+            /tmp/recipe-story-build/project.json
+            /tmp/recipe-story-build/resources/*
+            /tmp/recipe-smoke/*
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
             /tmp/studio-fixture/*.000
@@ -358,3 +384,14 @@ jobs:
             /tmp/chain-fixture/tentacle.000
             /tmp/chain-fixture/tentacle.001
             /tmp/chain-fixture/game-goal.json
+      - name: Upload recipe story preview for manual testing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: story-recipe-playable-preview
+          if-no-files-found: ignore
+          path: |
+            /tmp/recipe-fixture/tentacle.000
+            /tmp/recipe-fixture/tentacle.001
+            /tmp/recipe-fixture/game-goal.json
+            /tmp/recipe-fixture/README.txt

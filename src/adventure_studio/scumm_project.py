@@ -13,7 +13,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-from .scumm_assets import RoomAsset, RoomHotspot, UseRule, _validate, write_game_sources
+from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, UseRule, _validate, write_game_sources
 from .targets import RoomGeometry
 
 
@@ -66,6 +66,9 @@ def document_dict(document: GameDocument) -> dict:
                           for r in room.use_rules],
             "demo_walk_to_x": room.demo_walk_to_x,
             "goal_text": room.goal_text,
+            **({"combine_rules": [{"first_id": rule.first_id, "second_id": rule.second_id,
+                                    "result_id": rule.result_id, "response": rule.response}
+                                   for rule in room.combine_rules]} if room.combine_rules else {}),
         } for room in document.rooms],
     }
 
@@ -105,7 +108,7 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Too many rooms")
     rooms = []
     for raw in data["rooms"]:
-        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules",
+        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules",
                            "demo_walk_to_x", "goal_text"},
                      {"name", "geometry", "pixels", "palette", "hotspots", "use_rules",
                       "demo_walk_to_x", "goal_text"})
@@ -115,6 +118,16 @@ def parse_document(source: str) -> GameDocument:
             raise ValueError("Room geometry must use integers")
         if not isinstance(room["hotspots"], list) or not isinstance(room["use_rules"], list):
             raise ValueError("Hotspots and rules must be lists")
+        raw_combinations = room.get("combine_rules", [])
+        if not isinstance(raw_combinations, list) or len(raw_combinations) > 3:
+            raise ValueError("Invalid combine rules")
+        combinations = []
+        for raw_rule in raw_combinations:
+            rule = _only(raw_rule, {"first_id", "second_id", "result_id", "response"},
+                         {"first_id", "second_id", "result_id", "response"})
+            if any(not isinstance(v, str) for v in rule.values()):
+                raise ValueError("Combination fields must be strings")
+            combinations.append(CombineRule(**rule))
         hotspots = []
         for item in room["hotspots"]:
             h = _only(item, {"id", "label", "description", "x", "y", "width", "height", "pickup",
@@ -147,7 +160,7 @@ def parse_document(source: str) -> GameDocument:
         rooms.append(RoomAsset(
             room["name"], RoomGeometry(g["width"], g["height"], g["viewport_width"], g["viewport_height"]),
             _decode_pixels(room["pixels"]), tuple(tuple(rgb) for rgb in room["palette"]),
-            tuple(hotspots), room["demo_walk_to_x"], tuple(rules), room["goal_text"],
+            tuple(hotspots), room["demo_walk_to_x"], tuple(rules), room["goal_text"], tuple(combinations),
         ))
     document = GameDocument(data["id"], tuple(rooms))
     _validate_document(document)

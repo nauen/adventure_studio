@@ -258,7 +258,7 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500) ->
 
 def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0,
                  scene_only: bool = False, verify_return: bool = True,
-                 verify_chain: bool = False) -> None:
+                 verify_chain: bool = False, verify_recipe: bool = False) -> None:
     if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
@@ -294,6 +294,20 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     if verify_chain and (len(route) != 2 or route[0]["next_room_id"] != route[1]["room_id"]
                          or route[1]["next_room_id"] != goal["room_id"] or gates):
         raise ValueError("Chain smoke requires exactly two sequential single-item doors")
+    combinations = goal.get("fixture_combinations", [])
+    if not isinstance(combinations, list) or len(combinations) > 1:
+        raise ValueError("Invalid fixture combination manifest")
+    if verify_recipe:
+        if len(combinations) != 1 or gates or len(route) != 1:
+            raise ValueError("Recipe smoke requires exactly one combination and one exit")
+        recipe = combinations[0]
+        if (not isinstance(recipe, dict) or set(recipe) != {"room_id", "ingredients", "result"}
+                or not isinstance(recipe["ingredients"], list) or len(recipe["ingredients"]) != 2
+                or not all(isinstance(item, dict) and set(item) == {"item_id", "rgb"}
+                           and isinstance(item["rgb"], list) and len(item["rgb"]) == 3
+                           and all(type(c) is int and 0 <= c <= 255 for c in item["rgb"])
+                           for item in [*recipe["ingredients"], recipe["result"]])):
+            raise ValueError("Invalid recipe color probes")
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("A virtual X display is required")
 
@@ -490,13 +504,70 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                indent=2) + "\n", encoding="utf-8",
                 )
                 capture_frame("pickup")
+            recipe_item_center = None
+            if verify_recipe:
+                ingredients = combinations[0]["ingredients"]
+                result_rgb = tuple(combinations[0]["result"]["rgb"])
+                second_rgb = tuple(ingredients[1]["rgb"])
+                command = subprocess.run(["xdotool", "mousemove", "328", "506", "click", "1"],
+                                         capture_output=True, text=True, timeout=5, check=False)
+                if command.returncode:
+                    raise RuntimeError(f"Recipe pickup verb failed: {command.stderr}")
+                time.sleep(0.3)
+                capture_frame("recipe-before")
+                second_x, second_y = colored_item_center(output_directory, "recipe-before", second_rgb)
+                command = subprocess.run(["xdotool", "mousemove", str(second_x), str(second_y), "click", "1"],
+                                         capture_output=True, text=True, timeout=5, check=False)
+                if command.returncode:
+                    raise RuntimeError(f"Recipe second ingredient click failed: {command.stderr}")
+                ingredient_owned = False
+                deadline = time.monotonic() + 15
+                while time.monotonic() < deadline:
+                    capture_frame("recipe-second")
+                    if (colored_item_pixels(output_directory, "recipe-second", second_rgb) < 10
+                            and colored_item_pixels(output_directory, "recipe-second", second_rgb, inventory=True) >= 40):
+                        ingredient_owned = True
+                        break
+                    time.sleep(0.4)
+                if not ingredient_owned:
+                    raise RuntimeError("Second ingredient not in inventory")
+                first_center = colored_item_center(output_directory, "recipe-second",
+                                                   tuple(ingredients[0]["rgb"]), inventory=True)
+                second_center = colored_item_center(output_directory, "recipe-second", second_rgb, inventory=True)
+                for x, y in ((408, 506), first_center, second_center):
+                    command = subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                                             capture_output=True, text=True, timeout=5, check=False)
+                    if command.returncode:
+                        raise RuntimeError(f"Recipe combination input failed: {command.stderr}")
+                    time.sleep(0.3)
+                combined = False
+                deadline = time.monotonic() + 15
+                while time.monotonic() < deadline:
+                    capture_frame("recipe-combined")
+                    result_pixels = colored_item_pixels(output_directory, "recipe-combined", result_rgb, inventory=True)
+                    first_pixels = colored_item_pixels(output_directory, "recipe-combined", tuple(ingredients[0]["rgb"]), inventory=True)
+                    second_pixels = colored_item_pixels(output_directory, "recipe-combined", second_rgb, inventory=True)
+                    if result_pixels >= 40 and first_pixels < 10 and second_pixels < 10:
+                        combined = True
+                        break
+                    time.sleep(0.4)
+                (output_directory / "scummvm-recipe-report.json").write_text(
+                    json.dumps({"recipe": combinations[0], "ingredient_pickup": ingredient_owned,
+                                "ingredients_consumed": first_pixels < 10 and second_pixels < 10,
+                                "result_inventory_pixels": result_pixels,
+                                "combined": combined}, indent=2) + "\n", encoding="utf-8")
+                if not combined:
+                    raise RuntimeError("Recipe combination did not consume ingredients and produce result")
+                recipe_item_center = colored_item_center(output_directory, "recipe-combined", result_rgb,
+                                                         inventory=True)
+                capture_frame("pickup")
             initial_door_pixels = door_pixels(output_directory, "pickup")
             if initial_door_pixels < 40:
                 raise RuntimeError(f"Door not visible before using key: {initial_door_pixels} green pixels")
             door_x, door_y = door_center(output_directory)
             # Use -> inventory slot -> target. The example UI has its first
             # inventory slot at x536..568,y504..536 on our 1024x768 Xvfb.
-            for click_x, click_y in ((408, 506), (552, 520), (door_x, door_y)):
+            for click_x, click_y in ((408, 506), recipe_item_center or (552, 520), (door_x, door_y)):
                 click = subprocess.run(
                     ["xdotool", "mousemove", str(click_x), str(click_y), "click", "1"],
                     capture_output=True, text=True, timeout=5, check=False,
@@ -706,7 +777,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             if not goal_reached:
                 raise RuntimeError(f"Opened door did not lead to {goal['room_id']}")
             if not verify_return:
-                print(f"Story-built puzzle succeeded: picked up Key, unlocked Door, entered {goal['room_id']}")
+                print(f"Story-built puzzle succeeded: {'combined recipe, ' if verify_recipe else ''}unlocked Door, entered {goal['room_id']}")
                 return
             # Return from the goal room and verify that the engine preserved
             # both object states (opened door and already collected key).
@@ -751,13 +822,13 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only")):
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--recipe-only")):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--recipe-only]")
         return 2
     mode = sys.argv[3] if len(sys.argv) == 4 else ""
     launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]),
-                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only"),
-                 verify_chain=mode == "--chain-only")
+                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--recipe-only"),
+                 verify_chain=mode == "--chain-only", verify_recipe=mode == "--recipe-only")
     return 0
 
 

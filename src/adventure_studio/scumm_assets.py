@@ -42,6 +42,15 @@ class UseRule:
 
 
 @dataclass(frozen=True)
+class CombineRule:
+    """Consume two owned pickups to create one initially hidden inventory item."""
+    first_id: str
+    second_id: str
+    result_id: str
+    response: str
+
+
+@dataclass(frozen=True)
 class RoomAsset:
     name: str
     geometry: RoomGeometry
@@ -51,6 +60,7 @@ class RoomAsset:
     demo_walk_to_x: int | None = None
     use_rules: tuple[UseRule, ...] = ()
     goal_text: str | None = None
+    combine_rules: tuple[CombineRule, ...] = ()
 
 
 def _scumm_string(value: str) -> str:
@@ -136,6 +146,17 @@ def _validate(room: RoomAsset) -> None:
             raise ValueError("Duplicate inventory requirements")
         if rule.item_id in rule.requires_inventory or any(item not in pickups for item in rule.requires_inventory):
             raise ValueError("Use rule inventory requirements must reference distinct pickup items")
+    results: set[str] = set()
+    for rule in room.combine_rules:
+        if (len({rule.first_id, rule.second_id, rule.result_id}) != 3
+                or any(item not in pickups for item in (rule.first_id, rule.second_id, rule.result_id))):
+            raise ValueError("Combination must reference three distinct room inventory objects")
+        if rule.result_id in results or rule.second_id in targets:
+            raise ValueError("Ambiguous combination result or target")
+        results.add(rule.result_id)
+        _scumm_string(rule.response)
+    if any(rule.first_id in results or rule.second_id in results for rule in room.combine_rules):
+        raise ValueError("Chained combinations are not supported by the bounded SCUMM adapter")
 
 
 def _indexed_bmp(width: int, height: int, pixels: bytes, palette: tuple[tuple[int, int, int], ...]) -> bytes:
@@ -168,6 +189,17 @@ def scummc_room_source(room: RoomAsset) -> str:
     for destination in sorted(destinations):
         parts.append(f"room {destination};\n")
     parts.append(f'\nroom {room.name} {{\n    image = "{room.name}.bmp";\n')
+    hidden = {rule.result_id for rule in room.combine_rules}
+    for index, rule in enumerate(room.combine_rules):
+        parts.extend([
+            f"    script combine_{index}() {{\n",
+            f"        egoSay({_scumm_string(rule.response)});\n",
+            f"        setObjectOwner({rule.first_id}, 0);\n",
+            f"        setObjectOwner({rule.second_id}, 0);\n",
+            f"        pickupObject({rule.result_id}, VAR_ROOM);\n",
+            f"        setObjectState({rule.result_id}, 1);\n",
+            "    }\n",
+        ])
     for hotspot in room.hotspots:
         parts.extend([
             f"    object {hotspot.id} {{\n",
@@ -180,7 +212,7 @@ def scummc_room_source(room: RoomAsset) -> str:
                 parts.append(f'        states = {{ {{ 0, 0, "{hotspot.id}.bmp" }} }};\n')
             else:
                 parts.append(f'        states = {{ {{ 0, 0, "{hotspot.id}.bmp" }}, {{ 0, 0, "{hotspot.id}Open.bmp" }} }};\n')
-            parts.append("        state = 1;\n")
+            parts.append("        state = 0;\n" if hotspot.id in hidden else "        state = 1;\n")
         if hotspot.pickup:
             parts.append("        class = { Pickable };\n")
         parts.extend([
@@ -199,7 +231,8 @@ def scummc_room_source(room: RoomAsset) -> str:
                 parts.append(f"            startRoom({hotspot.exit_destination});\n")
             parts.append("            return;\n")
         if hotspot.pickup:
-            if any(rule.item_id == hotspot.id for rule in room.use_rules):
+            if (any(rule.item_id == hotspot.id for rule in room.use_rules)
+                    or any(rule.first_id == hotspot.id for rule in room.combine_rules)):
                 parts.extend(["        case Preposition:\n",
                               '            sntcPrepo[0] = "with";\n',
                               "            return;\n"])
@@ -227,6 +260,16 @@ def scummc_room_source(room: RoomAsset) -> str:
                 if rule.destination_room:
                     parts.append(f"                startRoom({rule.destination_room});\n")
                 parts.extend(["                return;\n", "            }\n", "            return;\n"])
+        for index, rule in enumerate(room.combine_rules):
+            if rule.second_id == hotspot.id:
+                parts.extend([
+                    "        case Use:\n",
+                    f"            if(objB == {rule.first_id} && getObjectOwner({rule.first_id}) == VAR_EGO",
+                    f" && getObjectOwner({rule.second_id}) == VAR_EGO) {{\n",
+                    f"                combine_{index}();\n",
+                    "                return;\n",
+                    "            }\n            return;\n",
+                ])
         parts.append("        }\n    }\n")
     parts.extend([
         "    local script entry() {\n",
@@ -309,9 +352,16 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
     # must be acquired before the use rule can open its target. The palette
     # colors identify sprites in screenshots without knowing story item names.
     gates = []
+    fixture_combinations = []
     fixture_route = []
     for room in rooms:
         pickups = {hotspot.id: hotspot for hotspot in room.hotspots if hotspot.pickup}
+        for rule in room.combine_rules:
+            fixture_combinations.append({"room_id": room.name,
+                "ingredients": [{"item_id": item_id, "rgb": list(room.palette[pickups[item_id].sprite_pixels[0]])}
+                                for item_id in (rule.first_id, rule.second_id)],
+                "result": {"item_id": rule.result_id,
+                           "rgb": list(room.palette[pickups[rule.result_id].sprite_pixels[0]])}})
         for rule in room.use_rules:
             source = pickups[rule.item_id]
             assert source.sprite_pixels is not None
@@ -329,6 +379,7 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
                     "description": goal_room.goal_text,
                     "fixture_probe_rgb": probe_rgb,
                     "fixture_inventory_gates": gates,
+                    "fixture_combinations": fixture_combinations,
                     "fixture_route": fixture_route}, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
