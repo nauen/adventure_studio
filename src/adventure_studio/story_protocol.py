@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 from dataclasses import MISSING, fields
 
-from .story import Chapter, Character, Item, Puzzle, Scene
+from .story import Chapter, Character, Item, Puzzle, Recipe, Scene
 from .story_changes import DeleteEntity, PutEntity
 
 _TYPES = {"chapter": Chapter, "scene": Scene, "character": Character,
-          "item": Item, "puzzle": Puzzle}
+          "item": Item, "puzzle": Puzzle, "recipe": Recipe}
 
 
 def _string(value: object) -> bool:
@@ -45,7 +45,8 @@ def parse_operations(raw: str) -> tuple[PutEntity | DeleteEntity, ...]:
             if not required <= values.keys() or not values.keys() <= expected:
                 raise ValueError("Unexpected or missing entity field")
             for name, value in values.items():
-                if cls is Puzzle and name == "requires":
+                if (cls is Puzzle and name == "requires"
+                        or cls is Recipe and name == "ingredients"):
                     if not isinstance(value, list) or len(value) > 50 or not all(_string(x) for x in value):
                         raise ValueError("Invalid requirements")
                 elif cls is Puzzle and name == "opens_scene_id" and value is None:
@@ -54,6 +55,8 @@ def parse_operations(raw: str) -> tuple[PutEntity | DeleteEntity, ...]:
                     raise ValueError(f"Invalid text field: {name}")
             if cls is Puzzle:
                 values = {**values, "requires": tuple(values["requires"])}
+            if cls is Recipe:
+                values = {**values, "ingredients": tuple(values["ingredients"])}
             parsed.append(PutEntity(kind, cls(**values)))
         else:
             raise ValueError("Unknown operation shape")

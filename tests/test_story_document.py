@@ -13,9 +13,43 @@ from adventure_studio.story_document import (
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 THREE_ITEMS = EXAMPLE.with_name("mini_story_three_items.json")
 CHAIN = EXAMPLE.with_name("mini_story_chain.json")
+RECIPE = EXAMPLE.with_name("recipe_story.json")
 
 
 class StoryDocumentTests(unittest.TestCase):
+    def test_recipe_story_v2_validates_without_claiming_scumm_export(self):
+        from adventure_studio.story import compile_story, verify_story
+        from adventure_studio.core import execute
+        from adventure_studio.story_to_scumm import compile_story_to_scumm
+        story = parse_story_document(RECIPE.read_text(encoding="utf-8"))
+        self.assertEqual(verify_story(story),
+                         ("take:Pineapple", "take:Bottle", "combine:MakeMixture", "solve:OpenLaboratory"))
+        self.assertEqual(parse_story_document(canonical_story_json(story)), story)
+        project = compile_story(story)
+        state = project.initial
+        for action in ("take:Pineapple", "take:Bottle", "combine:MakeMixture"):
+            state = execute(project, state, action)
+        values = dict(state)
+        self.assertFalse(values["item.Pineapple"])
+        self.assertFalse(values["item.Bottle"])
+        self.assertTrue(values["item.Mixture"])
+        self.assertTrue(values["picked.Pineapple"])
+        with self.assertRaisesRegex(ValueError, "unavailable"):
+            execute(project, state, "take:Pineapple")
+        with self.assertRaisesRegex(ValueError, "not yet supported"):
+            compile_story_to_scumm(story)
+
+    def test_recipe_that_consumes_a_required_key_creates_a_detected_softlock(self):
+        from dataclasses import replace
+        from adventure_studio.story import Puzzle, verify_story
+        story = parse_story_document(RECIPE.read_text(encoding="utf-8"))
+        unsafe = replace(story,
+                         puzzles=(Puzzle("OpenLab", "Oeffne Labor", "Kitchen", ("Pineapple",), "Laboratory"),
+                                  Puzzle("Finish", "Fertig", "Laboratory", ("Mixture",))),
+                         final_puzzle_id="Finish")
+        with self.assertRaisesRegex(ValueError, "dead_ends"):
+            verify_story(unsafe)
+
     def test_two_puzzles_form_three_sequential_rooms(self):
         with tempfile.TemporaryDirectory() as tmp:
             result = build_story_document(CHAIN.read_text(encoding="utf-8"), Path(tmp))

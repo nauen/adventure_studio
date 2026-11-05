@@ -7,6 +7,17 @@ from test_story import pirate_story
 
 
 class StoryProtocolTests(unittest.TestCase):
+    def test_recipe_operations_are_declarative_and_strict(self):
+        raw = json.dumps({"operations": [{"op": "put", "kind": "recipe", "entity": {
+            "id": "Mix", "title": "Mischen", "ingredients": ["Pineapple", "Bottle"],
+            "result_item_id": "Mixture"}}]})
+        operations = parse_operations(raw)
+        self.assertEqual(operations[0].entity.ingredients, ("Pineapple", "Bottle"))
+        illegal = json.loads(raw)
+        illegal["operations"][0]["entity"]["source_code"] = "eval('payload')"
+        with self.assertRaisesRegex(ValueError, "Unexpected or missing"):
+            parse_operations(json.dumps(illegal))
+
     def test_model_json_edits_story(self):
         raw = json.dumps({"operations": [
             {"op": "put", "kind": "item", "entity": {

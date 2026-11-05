@@ -51,6 +51,8 @@ def _room_pixels(width: int, goal: bool) -> bytes:
 def compile_story_to_scumm(story: Story) -> GameDocument:
     """Compile bounded linear item-and-door puzzles, never story-authored scripts."""
     verify_story(story)
+    if story.recipes:
+        raise ValueError("Inventory recipes are validated in the story solver but not yet supported by SCUMM export")
     if (len(story.chapters) != 1 or not 1 <= len(story.puzzles) <= 2
             or len(story.scenes) != len(story.puzzles) + 1 or story.characters):
         raise ValueError("Exporter supports one chapter, one or two sequential door puzzles, and no custom actors")

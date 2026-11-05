@@ -115,6 +115,13 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       in stock ScummVM geprüft: Archiv → Keller → Hafenhaus; beide Türen
       bleiben geöffnet, beide Gegenstände bleiben im Inventar und erscheinen
       nicht erneut in den Räumen (CI-Lauf #42029750897).
+- [x] Deklaratives Story-Rezeptmodell v2: exakt zwei Zutaten, ein hergestelltes
+      Ergebnis, einmalige Entnahme vom Boden, atomare KI-Änderungen,
+      deterministische Spielbarkeitsprüfung auch bei Verbrauchs-Softlocks und
+      Bereinigung nicht mehr referenzierter Pickups mit Änderungsbericht
+      (ohne SCUMM-Laufzeitexport).
+- [ ] Inventar-zu-Inventar-Kombinationen in SCUMM v6 kompilieren und den
+      kompletten Spielablauf bis zum Ziel in ScummVM nachweisen.
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.

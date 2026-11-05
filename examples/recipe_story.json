@@ -1,0 +1,21 @@
+{
+  "format_version": 2,
+  "story": {
+    "chapters": [{"id": "intro", "title": "Das alte Labor", "synopsis": "Eine verlassene Kueche birgt ein Rezept."}],
+    "scenes": [
+      {"id": "Kitchen", "chapter_id": "intro", "title": "Kueche", "description": "Im kaputten Kuehlschrank liegt eine verschimmelte Ananas."},
+      {"id": "Laboratory", "chapter_id": "intro", "title": "Labor", "description": "Das Ziel der Suche."}
+    ],
+    "characters": [],
+    "items": [
+      {"id": "Pineapple", "name": "Verschimmelte Ananas", "description": "Eine alte Ananas aus dem kaputten Kuehlschrank.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Bottle", "name": "Leere Flasche", "description": "Eine Glasflasche.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Mixture", "name": "Raetseltrank", "description": "Eine Mischung aus den beiden Fundstuecken.", "scene_id": "Kitchen", "role": "crafted"},
+      {"id": "Fridge", "name": "Kaputter Kuehlschrank", "description": "Er kuehlt schon lange nicht mehr.", "scene_id": "Kitchen", "role": "decoration"}
+    ],
+    "recipes": [{"id": "MakeMixture", "title": "Mische Ananas und Flasche.", "ingredients": ["Pineapple", "Bottle"], "result_item_id": "Mixture"}],
+    "puzzles": [{"id": "OpenLaboratory", "title": "Das Labor ist offen.", "scene_id": "Kitchen", "requires": ["Mixture"], "opens_scene_id": "Laboratory"}],
+    "starting_scene_id": "Kitchen",
+    "final_puzzle_id": "OpenLaboratory"
+  }
+}

@@ -12,13 +12,14 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
 from .scumm_project import canonical_json, export_document
-from .story import Chapter, Character, Item, Puzzle, Scene, Story, validate_story
+from .story import Chapter, Character, Item, Puzzle, Recipe, Scene, Story, validate_story, verify_story
 from .story_to_scumm import compile_story_to_scumm
 
 
 _ENTITY_TYPES = {
     "chapters": Chapter, "scenes": Scene, "characters": Character,
     "items": Item, "puzzles": Puzzle,
+    "recipes": Recipe,
 }
 _STORY_FIELDS = {f.name for f in fields(Story)}
 
@@ -43,12 +44,14 @@ def parse_story_document(raw: str) -> Story:
     except json.JSONDecodeError as error:
         raise ValueError("Invalid story JSON") from error
     root = _object(envelope, {"format_version", "story"}, "story document")
-    if type(root["format_version"]) is not int or root["format_version"] != 1:
+    version = root["format_version"]
+    if type(version) is not int or version not in (1, 2):
         raise ValueError("Unsupported story document version")
-    story_data = _object(root["story"], _STORY_FIELDS, "story")
+    expected_story_fields = _STORY_FIELDS if version == 2 else _STORY_FIELDS - {"recipes"}
+    story_data = _object(root["story"], expected_story_fields, "story")
     entities: dict[str, tuple] = {}
     for key, entity_type in _ENTITY_TYPES.items():
-        entries = story_data[key]
+        entries = story_data[key] if key in story_data else []
         if not isinstance(entries, list) or len(entries) > 128:
             raise ValueError(f"Invalid {key} collection")
         expected = {field.name for field in fields(entity_type)}
@@ -56,17 +59,20 @@ def parse_story_document(raw: str) -> Story:
         for entry in entries:
             values = _object(entry, expected, entity_type.__name__)
             for field_name, value in values.items():
-                if entity_type is Puzzle and field_name == "requires":
+                if (entity_type is Puzzle and field_name == "requires"
+                        or entity_type is Recipe and field_name == "ingredients"):
                     if not isinstance(value, list) or len(value) > 32:
-                        raise ValueError("Invalid puzzle requirements")
+                        raise ValueError("Invalid item requirements")
                     for item_id in value:
-                        _text(item_id, "requires")
+                        _text(item_id, field_name)
                 elif entity_type is Puzzle and field_name == "opens_scene_id" and value is None:
                     continue
                 else:
                     _text(value, field_name)
             if entity_type is Puzzle:
                 values = {**values, "requires": tuple(values["requires"])}
+            if entity_type is Recipe:
+                values = {**values, "ingredients": tuple(values["ingredients"])}
             parsed.append(entity_type(**values))
         entities[key] = tuple(parsed)
     story = Story(
@@ -80,7 +86,11 @@ def parse_story_document(raw: str) -> Story:
 
 def canonical_story_json(story: Story) -> str:
     validate_story(story)
-    return json.dumps({"format_version": 1, "story": asdict(story)},
+    data = asdict(story)
+    version = 2 if story.recipes else 1
+    if version == 1:
+        del data["recipes"]
+    return json.dumps({"format_version": version, "story": data},
                       sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n"
 
 
@@ -103,8 +113,12 @@ def build_story_document(raw: str, directory: Path) -> StoryBuildResult:
 
 
 def main() -> int:
+    if len(sys.argv) == 3 and sys.argv[2] == "--validate-only":
+        story = parse_story_document(Path(sys.argv[1]).read_text(encoding="utf-8"))
+        print(json.dumps({"playable_path": verify_story(story)}, sort_keys=True))
+        return 0
     if len(sys.argv) != 3:
-        print("Usage: python -m adventure_studio.story_document STORY.json OUTPUT_DIRECTORY")
+        print("Usage: python -m adventure_studio.story_document STORY.json OUTPUT_DIRECTORY|--validate-only")
         return 2
     result = build_story_document(Path(sys.argv[1]).read_text(encoding="utf-8"), Path(sys.argv[2]))
     print(result.project_json)

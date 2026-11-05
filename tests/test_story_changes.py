@@ -1,12 +1,38 @@
 import unittest
 from dataclasses import replace
 
-from adventure_studio.story import Item, Puzzle
+from adventure_studio.story import Item, Puzzle, Recipe
 from adventure_studio.story_changes import DeleteEntity, PutEntity, edit_story
 from test_story import pirate_story
 
 
 class StoryChangeTests(unittest.TestCase):
+    def test_orphan_pickup_is_removed_and_shown_in_consolidation_report(self):
+        original = pirate_story()
+        changed, report = edit_story(original, (
+            PutEntity("item", Item("old_pineapple", "Ananas", "Alt", "tavern")),
+        ))
+        self.assertEqual(changed, original)
+        self.assertEqual(report.consolidated, ("old_pineapple",))
+        self.assertEqual(report.changes, ())
+        self.assertEqual(original.items[1].id, "pineapple")  # Decorations are retained.
+
+    def test_recipe_addition_and_removal_requires_consistent_atomic_edits(self):
+        original = pirate_story()
+        with self.assertRaisesRegex(ValueError, "Recipe"):
+            edit_story(original, (PutEntity("recipe", Recipe("Mix", "Mischen", ("key", "bottle"), "mixture")),))
+        revised, report = edit_story(original, (
+            PutEntity("item", Item("bottle", "Flasche", "Leer", "tavern")),
+            PutEntity("item", Item("mixture", "Trank", "Gemischt", "tavern", "crafted")),
+            PutEntity("recipe", Recipe("Mix", "Mischen", ("key", "bottle"), "mixture")),
+            PutEntity("puzzle", replace(original.puzzles[0], requires=("mixture",))),
+        ))
+        self.assertEqual(report.playable_path,
+                         ("take:key", "take:bottle", "combine:Mix", "solve:unlock", "solve:escape"))
+        self.assertIn(("recipe", "Mix"), [(change.kind, change.id) for change in report.changes])
+        with self.assertRaisesRegex(ValueError, "Missing pickup requirement"):
+            edit_story(revised, (DeleteEntity("item", "mixture"),))
+
     def test_add_and_remove_unneeded_story_detail(self):
         original = pirate_story()
         added, report = edit_story(original, (PutEntity("item", Item("cup", "Tasse", "Zerbrochen", "tavern", "decoration")),))

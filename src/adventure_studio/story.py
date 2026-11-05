@@ -6,7 +6,7 @@ assets. It can be proposed by a language model and validated without trusting it
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .core import Action, Condition, Effect, Object, Project, analyze
 
@@ -54,6 +54,14 @@ class Puzzle:
 
 
 @dataclass(frozen=True)
+class Recipe:
+    id: str
+    title: str
+    ingredients: tuple[str, str]
+    result_item_id: str
+
+
+@dataclass(frozen=True)
 class Story:
     chapters: tuple[Chapter, ...]
     scenes: tuple[Scene, ...]
@@ -62,6 +70,7 @@ class Story:
     puzzles: tuple[Puzzle, ...]
     starting_scene_id: str
     final_puzzle_id: str
+    recipes: tuple[Recipe, ...] = ()
 
 
 def _indexed(items: tuple) -> dict:
@@ -77,6 +86,7 @@ def validate_story(story: Story) -> None:
     _indexed(story.characters)
     items = _indexed(story.items)
     puzzles = _indexed(story.puzzles)
+    recipes = _indexed(story.recipes)
     if story.starting_scene_id not in scenes:
         raise ValueError("Missing starting scene")
     if story.final_puzzle_id not in puzzles:
@@ -90,7 +100,7 @@ def validate_story(story: Story) -> None:
     for item in story.items:
         if item.scene_id not in scenes:
             raise ValueError(f"Unknown item scene: {item.scene_id}")
-        if item.role not in ("pickup", "decoration"):
+        if item.role not in ("pickup", "decoration", "crafted"):
             raise ValueError(f"Unknown item role: {item.role}")
     for puzzle in story.puzzles:
         if puzzle.scene_id not in scenes:
@@ -100,8 +110,27 @@ def validate_story(story: Story) -> None:
         if len(set(puzzle.requires)) != len(puzzle.requires):
             raise ValueError(f"Duplicate requirements: {puzzle.id}")
         for item_id in puzzle.requires:
-            if item_id not in items or items[item_id].role != "pickup":
+            if item_id not in items or items[item_id].role not in ("pickup", "crafted"):
                 raise ValueError(f"Missing pickup requirement: {item_id}")
+    produced = set()
+    for recipe in recipes.values():
+        if len(recipe.ingredients) != 2 or len(set(recipe.ingredients)) != 2:
+            raise ValueError(f"Recipe needs two distinct ingredients: {recipe.id}")
+        if recipe.result_item_id not in items or items[recipe.result_item_id].role != "crafted":
+            raise ValueError(f"Recipe result must be a crafted item: {recipe.result_item_id}")
+        if recipe.result_item_id in produced or recipe.result_item_id in recipe.ingredients:
+            raise ValueError(f"Duplicate or self-referential recipe result: {recipe.id}")
+        produced.add(recipe.result_item_id)
+        for ingredient in recipe.ingredients:
+            if ingredient not in items or items[ingredient].role == "decoration":
+                raise ValueError(f"Unknown or non-inventory recipe ingredient: {ingredient}")
+    crafted = {item.id for item in items.values() if item.role == "crafted"}
+    if crafted != produced:
+        raise ValueError(f"Every crafted item needs exactly one producing recipe: {sorted(crafted ^ produced)}")
+    used = {item_id for puzzle in puzzles.values() for item_id in puzzle.requires}
+    used.update(ingredient for recipe in recipes.values() for ingredient in recipe.ingredients)
+    if produced - used:
+        raise ValueError(f"Unused crafted item: {sorted(produced - used)}")
 
 
 def compile_story(story: Story) -> Project:
@@ -112,14 +141,25 @@ def compile_story(story: Story) -> Project:
     """
     validate_story(story)
     state: dict[str, bool] = {f"scene.{s.id}": s.id == story.starting_scene_id for s in story.scenes}
-    state.update({f"item.{i.id}": False for i in story.items if i.role == "pickup"})
+    state.update({f"item.{i.id}": False for i in story.items if i.role in ("pickup", "crafted")})
+    state.update({f"picked.{i.id}": False for i in story.items if i.role == "pickup"})
     state.update({f"puzzle.{p.id}": False for p in story.puzzles})
+    state.update({f"recipe.{r.id}": False for r in story.recipes})
     actions = []
     for item in story.items:
         if item.role == "pickup":
             actions.append(Action(f"take:{item.id}", f"Nimm {item.name}",
-                                  (Condition(f"scene.{item.scene_id}"), Condition(f"item.{item.id}", False)),
-                                  (Effect(f"item.{item.id}", True),)))
+                                  (Condition(f"scene.{item.scene_id}"), Condition(f"picked.{item.id}", False)),
+                                  (Effect(f"item.{item.id}", True), Effect(f"picked.{item.id}", True))))
+    for recipe in story.recipes:
+        actions.append(Action(f"combine:{recipe.id}", recipe.title,
+                              (Condition(f"item.{recipe.ingredients[0]}"),
+                               Condition(f"item.{recipe.ingredients[1]}"),
+                               Condition(f"recipe.{recipe.id}", False)),
+                              (Effect(f"item.{recipe.ingredients[0]}", False),
+                               Effect(f"item.{recipe.ingredients[1]}", False),
+                               Effect(f"item.{recipe.result_item_id}", True),
+                               Effect(f"recipe.{recipe.id}", True))))
     for puzzle in story.puzzles:
         effects = [Effect(f"puzzle.{puzzle.id}", True)]
         if puzzle.opens_scene_id is not None:
@@ -140,3 +180,18 @@ def verify_story(story: Story) -> tuple[str, ...]:
     if not result.solvable or result.dead_ends:
         raise ValueError(f"Unplayable story: solvable={result.solvable}, dead_ends={result.dead_ends}")
     return result.winning_path or ()
+
+
+def consolidate_story(story: Story) -> tuple[Story, tuple[str, ...]]:
+    """Prune unused mechanical pickups; keep authored decorative details.
+
+    This is explicit and deterministic, never performed during plain parsing.
+    In the current bounded model a pickup not referenced by any puzzle or
+    recipe cannot affect gameplay; intentional flavor belongs to decoration.
+    """
+    validate_story(story)
+    required = {item for puzzle in story.puzzles for item in puzzle.requires}
+    required.update(item for recipe in story.recipes for item in recipe.ingredients)
+    removed = tuple(sorted(item.id for item in story.items
+                           if item.role == "pickup" and item.id not in required))
+    return replace(story, items=tuple(item for item in story.items if item.id not in removed)), removed

@@ -1,7 +1,7 @@
 import unittest
 from dataclasses import replace
 
-from adventure_studio.story import Chapter, Character, Item, Puzzle, Scene, Story, compile_story, validate_story, verify_story
+from adventure_studio.story import Chapter, Character, Item, Puzzle, Recipe, Scene, Story, compile_story, validate_story, verify_story
 
 
 def pirate_story() -> Story:
@@ -53,6 +53,16 @@ class StoryTests(unittest.TestCase):
         story = pirate_story()
         with self.assertRaisesRegex(ValueError, "duplicated"):
             validate_story(replace(story, items=(story.items[0], story.items[0])))
+
+    def test_recipe_cycle_and_unused_product_rejected(self):
+        base = pirate_story()
+        with self.assertRaisesRegex(ValueError, "result must be a crafted item"):
+            validate_story(replace(base, recipes=(Recipe("bad", "Make", ("key", "pineapple"), "key"),)))
+        crafted = Item("medicine", "Trank", "Ein Ergebnis", "tavern", "crafted")
+        bottle = Item("bottle", "Flasche", "Leer", "tavern")
+        with self.assertRaisesRegex(ValueError, "Unused crafted item"):
+            validate_story(replace(base, items=base.items + (crafted, bottle),
+                                   recipes=(Recipe("combine", "Make", ("key", "bottle"), "medicine"),)))
 
 
 if __name__ == "__main__":

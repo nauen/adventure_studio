@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from .story import Chapter, Character, Item, Puzzle, Scene, Story, validate_story, verify_story
+from .story import Chapter, Character, Item, Puzzle, Recipe, Scene, Story, consolidate_story, validate_story, verify_story
 
 
-StoryEntity = Chapter | Scene | Character | Item | Puzzle
-EntityKind = Literal["chapter", "scene", "character", "item", "puzzle"]
+StoryEntity = Chapter | Scene | Character | Item | Puzzle | Recipe
+EntityKind = Literal["chapter", "scene", "character", "item", "puzzle", "recipe"]
 
 _COLLECTIONS: dict[str, tuple[str, type]] = {
     "chapter": ("chapters", Chapter),
@@ -17,6 +17,7 @@ _COLLECTIONS: dict[str, tuple[str, type]] = {
     "character": ("characters", Character),
     "item": ("items", Item),
     "puzzle": ("puzzles", Puzzle),
+    "recipe": ("recipes", Recipe),
 }
 
 
@@ -44,6 +45,7 @@ class StoryDiff:
 class StoryChangeReport:
     changes: tuple[StoryDiff, ...]
     playable_path: tuple[str, ...]
+    consolidated: tuple[str, ...] = ()
 
 
 def edit_story(story: Story, operations: tuple[PutEntity | DeleteEntity, ...]) -> tuple[Story, StoryChangeReport]:
@@ -78,6 +80,8 @@ def edit_story(story: Story, operations: tuple[PutEntity | DeleteEntity, ...]) -
             raise TypeError(f"Unsupported story operation: {type(op).__name__}")
     candidate = replace(story, **{attr: tuple(collections[kind].values())
                                   for kind, (attr, _) in _COLLECTIONS.items()})
+    candidate, removed = consolidate_story(candidate)
+    collections["item"] = {item.id: item for item in candidate.items}
     playable_path = verify_story(candidate)
     diffs = []
     for kind, (attr, _) in _COLLECTIONS.items():
@@ -86,4 +90,4 @@ def edit_story(story: Story, operations: tuple[PutEntity | DeleteEntity, ...]) -
         for id_ in sorted(before.keys() | after.keys()):
             if before.get(id_) != after.get(id_):
                 diffs.append(StoryDiff(kind, id_, before.get(id_), after.get(id_)))
-    return candidate, StoryChangeReport(tuple(diffs), playable_path)
+    return candidate, StoryChangeReport(tuple(diffs), playable_path, removed)

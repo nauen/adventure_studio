@@ -39,16 +39,17 @@ konfigurieren, damit Autoren keine Base64-Daten sehen müssen.
 
 ## Erste Story-Übersetzung
 
-`adventure_studio.story_to_scumm.compile_story_to_scumm(story)` übersetzt nun
-einen bewusst begrenzten Teil des erzählerischen `Story`-Modells direkt in ein
-`GameDocument`: ein Kapitel, zwei Szenen, ein bis drei aufnehmbare Gegenstände,
-ein Inventar-Tür-Rätsel und ein Zielraum. Bei mehreren benötigten Gegenständen
-wird die erste Voraussetzung als Werkzeug verwendet; die übrigen müssen bereits
-im Inventar sein. Dekorative Gegenstände bleiben als Hotspots erhalten.
+`adventure_studio.story_to_scumm.compile_story_to_scumm(story)` übersetzt einen
+bewusst begrenzten Teil des erzählerischen `Story`-Modells direkt in ein
+`GameDocument`: ein Kapitel, zwei bis drei linear verbundene Szenen, ein bis
+drei Gegenstände insgesamt, eine oder zwei aufeinanderfolgende Türen und ein
+Zielraum. Bei mehreren benötigten Gegenständen wird die erste Voraussetzung
+als Werkzeug verwendet; die übrigen müssen bereits im Inventar sein.
+Dekorative Gegenstände bleiben als Hotspots erhalten.
 Die grafische Darstellung ist vorerst eine klar erkennbare,
 deterministisch erzeugte Platzhaltergrafik; keine KI-Bildgenerierung.
 
-Weitere Figuren, mehrere unabhängige Puzzles oder komplexe Szenenfolgen werden
+Weitere Figuren, verzweigte Puzzles oder komplexe Szenenfolgen werden
 explizit abgewiesen. Sie werden **nicht** stillschweigend aus der Geschichte
 entfernt. Story-Referenzen und Softlocks werden bereits vor dem SCUMM-Export
 mit dem deterministischen Rätsellöser überprüft.
@@ -71,6 +72,36 @@ Die externe Compiler-/Linker-Anbindung ist in `scumm_toolchain.py` gekapselt.
 Sie liest Raumliste und Inventar-IDs aus dem validierten Projekt, statt
 Raumnamen oder Spielgegenstände im GitHub-Workflow fest einzutragen.
 Das bleibt ein experimenteller DOTT-Kompatibilitäts-Build, kein eigenständiger
-ScummVM-Spielidentifikator. Für die Story-Variante ist damit ein vollständiges
-Ein-Schlüssel-Rätsel nachgewiesen; die Mehr-Gegenstand-Bedingungen sind bisher
-deterministisch getestet, aber noch nicht im ScummVM-Gameplay durchgespielt.
+ScummVM-Spielidentifikator. Auch ein, zwei und drei Inventarvoraussetzungen
+sowie die lineare Drei-Raum-Kette inklusive Rückweg wurden inzwischen in der
+echten ScummVM gespielt und visuell geprüft (zuletzt CI #42029750897).
+
+### Story-Rezepte (Format v2, zunächst nur Modell und Solver)
+
+`format_version: 2` ergänzt das Pflichtfeld `story.recipes`. Ein Rezept ist
+reine deklarative Datenstruktur mit `id`, `title`, zwei `ingredients` und
+`result_item_id`. Zutaten sind `pickup`- oder bereits hergestellte `crafted`-
+Gegenstände; das Ergebnis ist ein `crafted`-Gegenstand. Beim Kombinieren
+werden beide Zutaten aus dem Inventar entfernt, das Ergebnis wird hinzugefügt.
+Einmal eingesammelte Zutaten erscheinen danach nicht wieder am Boden.
+
+`examples/recipe_story.json` enthält eine kaputte Küche, eine verschimmelte
+Ananas, eine Flasche und ein daraus herstellbares Rätselobjekt. Der reine
+Rätsellöser prüft Erreichbarkeit und Sackgassen:
+
+```bash
+PYTHONPATH=src python -m adventure_studio.story_document examples/recipe_story.json --validate-only
+```
+
+Bestehende Story-Dateien ohne Rezepte bleiben im strikten Format v1 und
+behalten ihren unveränderten kanonischen JSON-Aufbau. Rezept-Dateien werden
+als v2 serialisiert. **Wichtig:** Der SCUMM-Exporter unterstützt die neue
+Rezeptmechanik noch nicht. Er bricht explizit mit einer Fehlermeldung ab,
+anstatt einen unvollständigen spielbaren Build auszugeben. Der nächste Schritt
+ist die Implementierung samt nachgewiesenem Inventar-zu-Inventar-Gameplay.
+
+Die Konsolidierung von KI-Änderungen entfernt jetzt unreferenzierte technische
+`pickup`-Gegenstände aus dem vorgeschlagenen Story-Modell und meldet ihre IDs
+im Feld `consolidated` des Änderungsberichts. Bewusst als `decoration`
+modellierte Erzähldetails bleiben erhalten. Ein loses Sammelobjekt ohne
+Mechanik wird im derzeitigen Modell nicht als `pickup` unterstützt.
