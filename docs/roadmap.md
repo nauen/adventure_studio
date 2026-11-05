@@ -96,7 +96,8 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       kompilierten Adventures in stock ScummVM erfolgreich (#42021639269).
 - [x] Dynamischer ScummC-Compiler-/Linker-Adapter liest Raum- und Inventarliste
       aus dem Projekt, statt projektspezifische Namen im CI-Workflow zu pflegen
-      (`scumm_toolchain.py`, lokale Boundary-Tests).
+      (`scumm_toolchain.py`, lokale Boundary-Tests und erfolgreicher ScummVM-
+      Gameplay-Lauf #42022413382).
 - [ ] Rätsel mit zwei oder drei erforderlichen Gegenständen ebenfalls als
       vollständigen ScummVM-Gameplay-Test nachweisen.
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
