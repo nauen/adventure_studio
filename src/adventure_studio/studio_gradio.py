@@ -12,8 +12,9 @@ import os
 from pathlib import Path
 
 from .studio_service import (accept_proposal, add_decoration, change_item,
-                             change_puzzle, change_scene, describe_story,
-                             prepare_proposal, report_text, scene_preview)
+                             change_position, change_puzzle, change_scene,
+                             describe_story, item_position, prepare_proposal,
+                             report_text, scene_preview)
 from .story_document import canonical_story_json, parse_story_document
 from .studio_export import export_playable
 
@@ -37,6 +38,16 @@ def puzzle_fields(raw: str, puzzle_id: str) -> tuple[str, str]:
     story = parse_story_document(raw)
     puzzle = next((p for p in story.puzzles if p.id == puzzle_id), None)
     return (puzzle.title, ", ".join(puzzle.requires)) if puzzle else ("", "")
+
+
+def room_items(raw: str, scene_id: str) -> tuple[tuple[str, str], ...]:
+    story = parse_story_document(raw)
+    return tuple((item.name, item.id) for item in story.items
+                 if item.scene_id == scene_id and item.role != "crafted")
+
+
+def position_fields(raw: str, item_id: str) -> tuple[int, int]:
+    return item_position(raw, item_id) if item_id else (0, 0)
 
 
 def render_scene(raw: str, scene_id: str):
@@ -66,14 +77,18 @@ def make_app():
         scene = view.scenes[0][0]
         item = view.items[0][0] if view.items else None
         puzzle = view.puzzles[0][0] if view.puzzles else None
+        objects = room_items(raw, scene)
+        selected_object = objects[0][1] if objects else None
         chapters = "\n".join(f"- {title} (`{id_}`)" for id_, title in view.chapters)
         path = " → ".join(view.playable_path)
         return (gr.update(choices=[(title, id_) for id_, title in view.scenes], value=scene),
                 gr.update(choices=[(f"{name} ({scene_id})", id_) for id_, name, scene_id in view.items], value=item),
                 gr.update(choices=[(title, id_) for id_, title in view.puzzles], value=puzzle),
+                gr.update(choices=objects, value=selected_object),
                 f"**Kapitel**\n{chapters}\n\n**Spielbarer Pfad:** {path}",
                 *scene_fields(raw, scene), *item_fields(raw, item or ""),
-                *puzzle_fields(raw, puzzle or ""), render_scene(raw, scene))
+                *puzzle_fields(raw, puzzle or ""), *position_fields(raw, selected_object or ""),
+                render_scene(raw, scene))
 
     def load_file(file_path):
         if not file_path:
@@ -95,6 +110,20 @@ def make_app():
     def propose_puzzle(raw, puzzle_id, title, required):
         ids = tuple(text.strip() for text in required.split(","))
         return propose(change_puzzle, raw, puzzle_id, title, ids)
+
+    def propose_position(raw, item_id, x, y):
+        if x is None or y is None or int(x) != x or int(y) != y:
+            raise gr.Error("Koordinaten müssen ganze Zahlen sein")
+        return propose(change_position, raw, item_id, int(x), int(y))
+
+    def choose_pixel(raw, scene_id, item_id, evt: gr.SelectData):
+        if not item_id or item_id not in {id_ for _, id_ in room_items(raw, scene_id)}:
+            raise gr.Error("Bitte zuerst ein sichtbares Objekt aus dieser Szene auswählen")
+        if not isinstance(evt.index, (tuple, list)) or len(evt.index) != 2:
+            raise gr.Error("Keine Pixelkoordinate ermittelt")
+        x, y = evt.index
+        width, height, *_ = scene_preview(raw, scene_id)
+        return max(0, min(int(x), width - 16)), max(0, min(int(y), height - 16))
 
     def confirm(raw, proposal):
         if proposal is None:
@@ -130,8 +159,9 @@ def make_app():
             export_button = gr.Button("Geprüfte Story exportieren", variant="primary")
             download = gr.File(label="Story herunterladen")
         with gr.Accordion("Spielbares SCUMM-ZIP erzeugen (experimentell)", open=False):
-            gr.Markdown("Benötigt eine **lokal bereits gebaute ScummC-Toolchain**. Keine automatische Installation oder Downloads. Die Toolchain wird vor dem Build in ein temporäres Verzeichnis kopiert.")
-            scummc_path = gr.Textbox(label="ScummC-Installationsordner", placeholder="/opt/scummc")
+            gr.Markdown("In Codespaces wird ScummC einmalig beim Einrichten installiert. Lokal kann alternativ ein vorhandener ScummC-Pfad angegeben werden. Der eigentliche Build benötigt keine Downloads und arbeitet auf einer temporären Kopie.")
+            scummc_path = gr.Textbox(label="ScummC-Installationsordner (in Codespaces automatisch)",
+                                     value=os.environ.get("ADVENTURE_STUDIO_SCUMMC", ""), placeholder="/opt/scummc")
             game_export_button = gr.Button("SCUMM-ZIP bauen")
             game_download = gr.File(label="Spielbares Adventure herunterladen")
         overview = gr.Markdown()
@@ -141,6 +171,12 @@ def make_app():
             scene_description = gr.Textbox(label="Beschreibung", lines=4)
             save_scene = gr.Button("Szenenänderung prüfen")
             preview = gr.Image(label="Raumvorschau (Hotspots markiert)", interactive=False)
+            gr.Markdown("**Objekt platzieren:** Gegenstand auswählen und auf die Raumvorschau klicken. Die Position wird erst nach der Prüfung übernommen.")
+            position_item = gr.Dropdown(label="Sichtbares Objekt in dieser Szene")
+            with gr.Row():
+                position_x = gr.Number(label="X (Pixel)", precision=0)
+                position_y = gr.Number(label="Y (Pixel)", precision=0)
+            save_position = gr.Button("Position prüfen")
         with gr.Tab("Gegenstände"):
             item_select = gr.Dropdown(label="Gegenstand")
             item_name = gr.Textbox(label="Name")
@@ -159,8 +195,9 @@ def make_app():
         report = gr.Textbox(label="Deterministischer Änderungs- und Prüfbericht", lines=7, interactive=False)
         confirm_button = gr.Button("Geprüfte Änderung jetzt übernehmen", variant="primary")
 
-        refreshed = [scene_select, item_select, puzzle_select, overview, scene_title,
-                     scene_description, item_name, item_description, puzzle_title, puzzle_items, preview]
+        refreshed = [scene_select, item_select, puzzle_select, position_item, overview, scene_title,
+                     scene_description, item_name, item_description, puzzle_title, puzzle_items,
+                     position_x, position_y, preview]
         app.load(selectors, inputs=[state], outputs=refreshed)
         def load_and_clear(file_path):
             raw, *rest = load_file(file_path)
@@ -169,6 +206,17 @@ def make_app():
         story_file.change(load_and_clear, inputs=[story_file], outputs=[state, pending, *refreshed, report])
         scene_select.change(scene_fields, inputs=[state, scene_select], outputs=[scene_title, scene_description])
         scene_select.change(render_scene, inputs=[state, scene_select], outputs=[preview])
+        def update_room_objects(raw, scene_id):
+            choices = room_items(raw, scene_id)
+            item_id = choices[0][1] if choices else None
+            return gr.update(choices=choices, value=item_id), *position_fields(raw, item_id or "")
+
+        scene_select.change(update_room_objects, inputs=[state, scene_select],
+                            outputs=[position_item, position_x, position_y])
+        position_item.change(position_fields, inputs=[state, position_item],
+                             outputs=[position_x, position_y])
+        preview.select(choose_pixel, inputs=[state, scene_select, position_item],
+                       outputs=[position_x, position_y])
         item_select.change(item_fields, inputs=[state, item_select], outputs=[item_name, item_description])
         puzzle_select.change(puzzle_fields, inputs=[state, puzzle_select], outputs=[puzzle_title, puzzle_items])
         save_scene.click(lambda *args: propose(change_scene, *args),
@@ -179,6 +227,8 @@ def make_app():
                        [state, scene_select, new_id, new_name, new_description], [pending, report])
         save_puzzle.click(propose_puzzle, [state, puzzle_select, puzzle_title, puzzle_items],
                           [pending, report])
+        save_position.click(propose_position, [state, position_item, position_x, position_y],
+                            [pending, report])
         confirm_button.click(confirm, [state, pending], [state, pending, *refreshed, report])
         export_button.click(export_story, inputs=[state], outputs=[download])
         game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])

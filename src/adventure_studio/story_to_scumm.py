@@ -42,6 +42,16 @@ def _sprite(index: int, interior: int) -> bytes:
                  for y in range(16) for x in range(16))
 
 
+def _item_xy(story: Story, item_id: str, default_x: int,
+             default_y: int, room_width: int) -> tuple[int, int]:
+    placement = next((p for p in story.placements if p.item_id == item_id), None)
+    if placement is None:
+        return default_x, default_y
+    if placement.x + 16 > room_width or placement.y + 16 > 200:
+        raise ValueError(f"Item placement exceeds room geometry: {item_id}")
+    return placement.x, placement.y
+
+
 def _room_pixels(width: int, goal: bool) -> bytes:
     if goal:
         return bytes([6]) * (width * 200)
@@ -99,12 +109,12 @@ def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument
     if len(decorations) > 4:
         raise ValueError("Too many decorations for automatic layout")
     hotspots = [RoomHotspot(i.id, _text(i.name), _text(i.description),
-                            160 + index * 40, 100, 16, 16, sprite_pixels=_sprite(1, 4))
+                            *_item_xy(story, i.id, 160 + index * 40, 100, 640), 16, 16, sprite_pixels=_sprite(1, 4))
                 for index, i in enumerate(decorations)]
     for index, item_id in enumerate((*recipe.ingredients, result.id)):
         item = by_id[item_id]
         hotspots.append(RoomHotspot(item.id, _text(item.name), _text(item.description),
-                                    355 + index * 26, 100, 16, 16, True,
+                                    *_item_xy(story, item.id, 355 + index * 26, 100, 640), 16, 16, True,
                                     _sprite(_PICKUP_COLORS[index], 2)))
     hotspots.append(RoomHotspot("Door", "the exit", _text(puzzle.title),
                                 450, 100, 16, 16, False, _sprite(4, 1),
@@ -177,7 +187,7 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
         width = 320 if goal else 640
         decorations = [i for i in story.items if i.role == "decoration" and i.scene_id == scene_id]
         hotspots = [RoomHotspot(i.id, _text(i.name), _text(i.description),
-                                160 + index * 40, 100, 16, 16,
+                                *_item_xy(story, i.id, 160 + index * 40, 100, width), 16, 16,
                                 sprite_pixels=_sprite(1, 4))
                     for index, i in enumerate(decorations)]
         if len(route) > 2 and scene_index > 0:
@@ -192,7 +202,7 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
                 if pickup_number >= len(_PICKUP_COLORS):
                     raise ValueError("Current visual fixture supports at most three pickups across the route")
                 hotspots.append(RoomHotspot(item.id, _text(item.name), _text(item.description),
-                                            355 + index * 26, 100, 16, 16, True,
+                                            *_item_xy(story, item.id, 355 + index * 26, 100, width), 16, 16, True,
                                             _sprite(_PICKUP_COLORS[pickup_number], 2)))
                 pickup_number += 1
             door_id = "Door" if scene_index == 0 else f"Door{scene_index + 1}"

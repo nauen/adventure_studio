@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from .story import Item, Story, verify_story
+from .story import Item, Placement, Story, verify_story
 from .story_changes import PutEntity, StoryChangeReport, edit_story
 from .story_document import canonical_story_json, parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -104,6 +104,28 @@ def change_puzzle(raw: str, puzzle_id: str, title: str,
         raise ValueError("Puzzle needs a title and at least one required item")
     return _commit(story, PutEntity("puzzle", replace(puzzle, title=title.strip(),
                                                       requires=required_item_ids)))
+
+
+def item_position(raw: str, item_id: str) -> tuple[int, int]:
+    story = parse_story_document(raw)
+    item = next((i for i in story.items if i.id == item_id), None)
+    if item is None or item.role == "crafted":
+        raise ValueError("Position requires a physical item")
+    game = compile_story_to_scumm(story)
+    room = next((r for r in game.rooms if r.name == item.scene_id), None)
+    hotspot = next((h for h in room.hotspots if h.id == item_id), None) if room else None
+    if hotspot is None:
+        raise ValueError("Item does not have a visible room hotspot")
+    return hotspot.x, hotspot.y
+
+
+def change_position(raw: str, item_id: str, x: int, y: int) -> StudioEdit:
+    story = parse_story_document(raw)
+    if type(x) is not int or type(y) is not int:
+        raise ValueError("Position requires integer coordinates")
+    if not any(item.id == item_id and item.role != "crafted" for item in story.items):
+        raise ValueError("Unknown physical item")
+    return _commit(story, PutEntity("placement", Placement(item_id, x, y)))
 
 
 def prepare_proposal(raw: str, edit: StudioEdit) -> StudioProposal:

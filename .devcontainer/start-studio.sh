@@ -9,5 +9,6 @@ fi
 
 STUDIO_LOG_DIR="${TMPDIR:-/tmp}/adventure-studio"
 mkdir -p "$STUDIO_LOG_DIR"
-nohup python -m adventure_studio.studio_gradio > "$STUDIO_LOG_DIR/gradio.log" 2>&1 < /dev/null &
+ADVENTURE_STUDIO_SCUMMC="${HOME}/.cache/adventure-studio/scummc" \
+  nohup python -m adventure_studio.studio_gradio > "$STUDIO_LOG_DIR/gradio.log" 2>&1 < /dev/null &
 echo "Adventure Studio starting on port 7860 (log: $STUDIO_LOG_DIR/gradio.log)"

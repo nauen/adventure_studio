@@ -7,23 +7,29 @@ on:
       - '.github/workflows/studio.yml'
       - '.devcontainer/devcontainer.json'
       - '.devcontainer/start-studio.sh'
+      - '.devcontainer/setup.sh'
+      - '.devcontainer/install-scummc.sh'
       - 'pyproject.toml'
       - 'src/adventure_studio/studio_service.py'
       - 'src/adventure_studio/studio_export.py'
       - 'src/adventure_studio/studio_gradio.py'
       - 'tests/test_studio_service.py'
       - 'tests/test_studio_export.py'
+      - 'tests/test_studio_position.py'
   pull_request:
     paths:
       - '.github/workflows/studio.yml'
       - '.devcontainer/devcontainer.json'
       - '.devcontainer/start-studio.sh'
+      - '.devcontainer/setup.sh'
+      - '.devcontainer/install-scummc.sh'
       - 'pyproject.toml'
       - 'src/adventure_studio/studio_service.py'
       - 'src/adventure_studio/studio_export.py'
       - 'src/adventure_studio/studio_gradio.py'
       - 'tests/test_studio_service.py'
       - 'tests/test_studio_export.py'
+      - 'tests/test_studio_position.py'
 
 jobs:
   smoke:
@@ -42,6 +48,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p test_studio_service.py -v
           python -m unittest discover -s tests -p test_studio_export.py -v
+          python -m unittest discover -s tests -p test_studio_position.py -v
       - name: Instantiate real Gradio Blocks and callbacks
         run: |
           python - <<'PY'

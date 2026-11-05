@@ -130,7 +130,10 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 
 - [ ] Einheitliche Stile, Figuren- und Raumvarianten, Paletten und Animationen.
 - [ ] KI-Bilder vor Verwendung deterministisch auf Format und Grenzen prüfen.
-- [ ] Objektpositionen sind editierbar; Hotspots folgen stabilen Objekt-IDs.
+- [x] Erste Objektpositionen sind editierbar; `Story`-Format v3 enthält
+      optionale `placements` mit stabilen Item-IDs, strikter Referenz-/
+      Geometrieprüfung, atomarem Änderungsbericht und abwärtskompatiblem
+      JSON. Der SCUMM-Exporter setzt die Objekt-Hotspots entsprechend.
 - [x] Provider-unabhängiger Vertrag für fertige 8-Bit-Indexbilder, inklusive
       Palette, Abmessungen, Herkunft und reproduzierbarem Content-Hash;
       Offline-Fixture-Provider mit Validierung und Tests (`image_pipeline.py`).
@@ -221,6 +224,11 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 - [ ] Compiler-Setup und Plattformfähigkeit für Endnutzer vereinfachen:
       Build-Service oder gekapselte Toolchain, ohne implizite Downloads im
       lokalen Editor und mit getrennten Lizenz-/Versionsgrenzen.
+- [x] Erste **gekapselte Codespaces-Toolchain**: gepinntes ScummC wird beim
+      erstmaligen Codespaces-Setup separat gebaut. Der Gradio-Editor erhält
+      den Pfad automatisch, während sein Export weiterhin ohne neue Downloads
+      in einer temporären Kopie arbeitet. Reale Codespaces-Installation und
+      SCUMM-Build daraus stehen als unabhängige Nachweise noch aus.
 - [ ] Story-Chat über validierte Änderungsvorschläge statt generierten Code.
 - [ ] API/MCP-Operationen greifen auf dieselben validierten Modelle zu.
 

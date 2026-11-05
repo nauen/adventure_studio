@@ -1,7 +1,8 @@
 """Author-facing story bible and deterministic story-to-game compilation.
 
-The story model contains no executable scripts, coordinates or engine-specific
-assets. It can be proposed by a language model and validated without trusting it.
+The story model contains no executable scripts or engine-specific assets.
+Optional versioned placements are semantic authoring data, validated before
+the SCUMM exporter converts them into room coordinates.
 """
 
 from __future__ import annotations
@@ -62,6 +63,17 @@ class Recipe:
 
 
 @dataclass(frozen=True)
+class Placement:
+    item_id: str
+    x: int
+    y: int
+
+    @property
+    def id(self) -> str:
+        return self.item_id
+
+
+@dataclass(frozen=True)
 class Story:
     chapters: tuple[Chapter, ...]
     scenes: tuple[Scene, ...]
@@ -71,6 +83,7 @@ class Story:
     starting_scene_id: str
     final_puzzle_id: str
     recipes: tuple[Recipe, ...] = ()
+    placements: tuple[Placement, ...] = ()
 
 
 def _indexed(items: tuple) -> dict:
@@ -87,6 +100,7 @@ def validate_story(story: Story) -> None:
     items = _indexed(story.items)
     puzzles = _indexed(story.puzzles)
     recipes = _indexed(story.recipes)
+    placements = _indexed(story.placements)
     if story.starting_scene_id not in scenes:
         raise ValueError("Missing starting scene")
     if story.final_puzzle_id not in puzzles:
@@ -102,6 +116,12 @@ def validate_story(story: Story) -> None:
             raise ValueError(f"Unknown item scene: {item.scene_id}")
         if item.role not in ("pickup", "decoration", "crafted"):
             raise ValueError(f"Unknown item role: {item.role}")
+    for placement in placements.values():
+        if placement.item_id not in items or items[placement.item_id].role == "crafted":
+            raise ValueError(f"Placement needs a physical item: {placement.item_id}")
+        if (type(placement.x) is not int or type(placement.y) is not int
+                or not 0 <= placement.x <= 624 or not 0 <= placement.y <= 184):
+            raise ValueError(f"Placement outside the SCUMM room: {placement.item_id}")
     for puzzle in story.puzzles:
         if puzzle.scene_id not in scenes:
             raise ValueError(f"Unknown puzzle scene: {puzzle.scene_id}")
@@ -194,4 +214,6 @@ def consolidate_story(story: Story) -> tuple[Story, tuple[str, ...]]:
     required.update(item for recipe in story.recipes for item in recipe.ingredients)
     removed = tuple(sorted(item.id for item in story.items
                            if item.role == "pickup" and item.id not in required))
-    return replace(story, items=tuple(item for item in story.items if item.id not in removed)), removed
+    return replace(story,
+                   items=tuple(item for item in story.items if item.id not in removed),
+                   placements=tuple(p for p in story.placements if p.item_id not in removed)), removed

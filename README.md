@@ -152,8 +152,11 @@ Der weitergeleitete Port bleibt standardmäßig **privat** und erfordert
 GitHub-Anmeldung. Bitte den Port nicht öffentlich freigeben, solange das
 Studio keine eigene Anmeldung implementiert hat. Codespaces hat ein separates
 monatliches Nutzungskontingent; aktiven Codespace bei Nichtgebrauch stoppen.
-Codespaces installiert nur den Editor. Ein spielbarer SCUMM-Build verlangt
-weiterhin eine gesondert vorbereitete ScummC-Toolchain.
+In neuen Codespaces wird die ScummC-Toolchain beim ersten Einrichten aus
+einem **festgelegten Upstream-Commit** kompiliert. Das kann einige Minuten
+dauern; danach ist der Compilerpfad bereits im Studio gesetzt. Bei einer
+lokalen Installation ohne Codespaces kannst du einen vorhandenen ScummC-Pfad
+weiterhin selbst angeben.
 
 Der erste Editor verwendet dasselbe validierte Storymodell wie der
 deterministische SCUMM-Exporter. In einem Python-3.11+-Environment:
@@ -167,7 +170,10 @@ Gradio öffnet eine lokale Oberfläche im Browser (kein ComfyUI, kein API-Key).
 Du kannst eine vorhandene Story-JSON laden, Kapitel und Szenen prüfen,
 Szenentitel und -texte bearbeiten, Gegenstände umbenennen, Dekorationen
 hinzufügen, Rätseltitel und benötigte Inventargegenstände bearbeiten und
-eine Raumvorschau mit Hotspots anzeigen. Jede Änderung läuft
+eine Raumvorschau mit Hotspots anzeigen. Du kannst physische Gegenstände
+per Klick in die Raumvorschau oder durch X/Y-Eingabe positionieren. Die
+Koordinaten werden mit stabilen IDs im **versionierten Story-JSON v3**
+gespeichert; vorhandene Storys v1/v2 bleiben kompatibel. Jede Änderung läuft
 durch den Story-Solver und den SCUMM-Adapter. Ungültige Änderungen werden
 abgewiesen. Erst **Änderung prüfen** zeigt den deterministischen Bericht,
 danach übernimmt **Geprüfte Änderung jetzt übernehmen** die geprüfte Version.
@@ -176,16 +182,17 @@ exportieren** lädst du die aktuelle JSON-Datei herunter. Änderungen bleiben
 bis dahin nur in der laufenden Sitzung und überschreiben keine Projektdateien.
 
 Unter **Spielbares SCUMM-ZIP erzeugen** kann der Editor außerdem die Story
-mit einer **vorhandenen, lokal kompilierten ScummC-Toolchain** in ein ZIP
-exportieren. Trage dafür deren Verzeichnis ein (mit `scc`, `sld`,
-`examples/road` und `include`). Es erfolgt **kein** automatischer Download.
+mit der **in Codespaces automatisch eingerichteten** oder einer lokal
+vorhandenen ScummC-Toolchain in ein ZIP exportieren. In Codespaces ist der
+Compilerpfad vorbelegt; lokal kannst du das Verzeichnis eingeben. Beim
+eigentlichen Export erfolgen **keine** Downloads.
 Die Tools und ihr GPL-Beispielprojekt werden in ein temporäres Arbeitsverzeichnis
 kopiert, bevor Ressourcen erzeugt werden; die Originalinstallation wird
 nicht geändert. Das ZIP enthält `tentacle.000`, `tentacle.001`, `story.json`
 und eine Startanleitung. Die verwendete DOTT-Identität ist weiterhin nur
 ein Forschungs-Kompatibilitätstrick, keine eigene ScummVM-Spielerkennung.
 
-Noch nicht enthalten: KI-Chat, Echtzeit-ScummVM-Spielvorschau, grafischer
-Drag-and-drop-Objekteditor und automatisches ComfyUI. Die Vorschau verwendet
+Noch nicht enthalten: KI-Chat, Echtzeit-ScummVM-Spielvorschau, frei ziehbare
+Objektsprites und automatisches ComfyUI. Die Vorschau verwendet
 bewusst die bisherigen technischen Platzhaltergrafiken.
 

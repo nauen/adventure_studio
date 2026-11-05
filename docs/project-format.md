@@ -95,13 +95,33 @@ PYTHONPATH=src python -m adventure_studio.story_document examples/recipe_story.j
 
 Bestehende Story-Dateien ohne Rezepte bleiben im strikten Format v1 und
 behalten ihren unveränderten kanonischen JSON-Aufbau. Rezept-Dateien werden
-als v2 serialisiert. **Wichtig:** Der SCUMM-Exporter unterstützt die neue
-Rezeptmechanik noch nicht. Er bricht explizit mit einer Fehlermeldung ab,
-anstatt einen unvollständigen spielbaren Build auszugeben. Der nächste Schritt
-ist die Implementierung samt nachgewiesenem Inventar-zu-Inventar-Gameplay.
+als v2 serialisiert. Der begrenzte Export mit zwei Zutaten, einem Ergebnis
+und einer Zieltür wurde inzwischen in ScummVM integriert und getestet.
 
 Die Konsolidierung von KI-Änderungen entfernt jetzt unreferenzierte technische
 `pickup`-Gegenstände aus dem vorgeschlagenen Story-Modell und meldet ihre IDs
 im Feld `consolidated` des Änderungsberichts. Bewusst als `decoration`
 modellierte Erzähldetails bleiben erhalten. Ein loses Sammelobjekt ohne
 Mechanik wird im derzeitigen Modell nicht als `pickup` unterstützt.
+
+### Objektpositionen (Story-Format v3)
+
+`format_version: 3` enthält zusätzlich `story.placements`, eine Liste mit
+stabilen Gegenstandsreferenzen und Ganzzahlkoordinaten. Beispiel:
+
+```json
+{"item_id":"Key","x":270,"y":130}
+```
+
+Die Position ist optional; ohne sie bleibt die bestehende automatische
+Platzierung unverändert. Einträge gelten nur für physische `pickup`- und
+`decoration`-Gegenstände, nicht für erzeugte Inventarergebnisse. Jedes Item
+darf höchstens eine Position besitzen. Modell und SCUMM-Exporter prüfen
+Referenzen sowie die tatsächlichen Raumgrenzen, einschließlich 320-Pixel-
+Zielräumen. Änderungen laufen als `PutEntity("placement", Placement(...))`
+durch dieselbe atomare Story- und Konsolidierungspipeline. Das Gradio Studio
+kann Positionen anhand von Klickkoordinaten oder X/Y-Feldern vorschlagen und
+erst nach Diff und Bestätigung übernehmen.
+
+Storys der Versionen 1 und 2 bleiben ohne Migration lesbar. Die kanonische
+Ausgabe verwendet erst dann v3, wenn mindestens eine Position definiert ist.

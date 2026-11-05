@@ -5,11 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from .story import Chapter, Character, Item, Puzzle, Recipe, Scene, Story, consolidate_story, validate_story, verify_story
+from .story import Chapter, Character, Item, Placement, Puzzle, Recipe, Scene, Story, consolidate_story, validate_story, verify_story
 
 
-StoryEntity = Chapter | Scene | Character | Item | Puzzle | Recipe
-EntityKind = Literal["chapter", "scene", "character", "item", "puzzle", "recipe"]
+StoryEntity = Chapter | Scene | Character | Item | Puzzle | Recipe | Placement
+EntityKind = Literal["chapter", "scene", "character", "item", "puzzle", "recipe", "placement"]
 
 _COLLECTIONS: dict[str, tuple[str, type]] = {
     "chapter": ("chapters", Chapter),
@@ -18,6 +18,7 @@ _COLLECTIONS: dict[str, tuple[str, type]] = {
     "item": ("items", Item),
     "puzzle": ("puzzles", Puzzle),
     "recipe": ("recipes", Recipe),
+    "placement": ("placements", Placement),
 }
 
 
@@ -82,6 +83,7 @@ def edit_story(story: Story, operations: tuple[PutEntity | DeleteEntity, ...]) -
                                   for kind, (attr, _) in _COLLECTIONS.items()})
     candidate, removed = consolidate_story(candidate)
     collections["item"] = {item.id: item for item in candidate.items}
+    collections["placement"] = {placement.id: placement for placement in candidate.placements}
     playable_path = verify_story(candidate)
     diffs = []
     for kind, (attr, _) in _COLLECTIONS.items():

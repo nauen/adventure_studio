@@ -1,7 +1,7 @@
 {
   "name": "Adventure Studio (Gradio)",
   "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
-  "postCreateCommand": "python -m pip install -e '.[studio]'",
+  "postCreateCommand": "bash .devcontainer/setup.sh",
   "postStartCommand": "bash .devcontainer/start-studio.sh",
   "forwardPorts": [7860],
   "portsAttributes": {
