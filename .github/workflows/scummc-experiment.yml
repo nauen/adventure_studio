@@ -17,6 +17,7 @@ on:
       - 'src/adventure_studio/story_to_scumm.py'
       - 'examples/mini_story.json'
       - 'examples/mini_story_two_items.json'
+      - 'examples/mini_story_three_items.json'
       - 'examples/PLAY_STORY_PREVIEW.txt'
       - 'tests/test_scumm_assets.py'
       - 'tests/test_scumm_bootstrap.py'
@@ -169,6 +170,20 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/two-item-fixture /tmp/two-item-smoke --puzzle-only
+      - name: Compile three-item inventory puzzle from story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/mini_story_three_items.json /tmp/three-item-story-build
+          python -m adventure_studio.scumm_toolchain /tmp/three-item-story-build /tmp/scummc-upstream /tmp/three-item-fixture
+          cp examples/PLAY_STORY_PREVIEW.txt /tmp/three-item-fixture/README.txt
+          test -s /tmp/three-item-fixture/tentacle.000
+          test -s /tmp/three-item-fixture/tentacle.001
+      - name: Reject two incomplete inventories then solve three-item puzzle in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/three-item-fixture /tmp/three-item-smoke --puzzle-only
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -218,6 +233,14 @@ jobs:
             if test -f /tmp/two-item-smoke/scummvm-use-report.json; then
               python -c 'import json; p=json.load(open("/tmp/two-item-smoke/scummvm-use-report.json")); print("- Two-item door opened and goal reached: **{}**".format("PASS" if p["door_opened"] and p["goal_reached"] else "FAIL"))'
             fi
+            if test -f /tmp/three-item-smoke/scummvm-gate-negative-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/three-item-smoke/scummvm-gate-negative-report.json")); print("- Three-item puzzle rejected both incomplete inventories: **{}** ({} checks)".format("PASS" if p["blocked"] and len(p["attempts"]) == 2 else "FAIL",len(p["attempts"])))'
+            else
+              echo '- Three-item prerequisite negative tests: **not produced**.'
+            fi
+            if test -f /tmp/three-item-smoke/scummvm-use-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/three-item-smoke/scummvm-use-report.json")); print("- Three-item puzzle opens door and reaches goal: **{}**".format("PASS" if p["door_opened"] and p["goal_reached"] else "FAIL"))'
+            fi
             echo
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload compiler outputs for inspection
@@ -252,6 +275,9 @@ jobs:
             /tmp/two-item-story-build/project.json
             /tmp/two-item-story-build/resources/*
             /tmp/two-item-smoke/*
+            /tmp/three-item-story-build/project.json
+            /tmp/three-item-story-build/resources/*
+            /tmp/three-item-smoke/*
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
             /tmp/studio-fixture/*.000
@@ -284,3 +310,14 @@ jobs:
             /tmp/two-item-fixture/tentacle.001
             /tmp/two-item-fixture/game-goal.json
             /tmp/two-item-fixture/README.txt
+      - name: Upload three-item story preview for manual testing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: story-three-item-playable-preview
+          if-no-files-found: ignore
+          path: |
+            /tmp/three-item-fixture/tentacle.000
+            /tmp/three-item-fixture/tentacle.001
+            /tmp/three-item-fixture/game-goal.json
+            /tmp/three-item-fixture/README.txt

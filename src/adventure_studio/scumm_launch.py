@@ -397,31 +397,37 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             if not picked_up:
                 raise RuntimeError(f"Pickup/inventory mismatch: room={remaining}, inventory={inventory_pixels} gold pixels")
             # Prove in the real engine that the key alone cannot bypass an
-            # inventory prerequisite. The fixture metadata supplies the colors.
+            # inventory prerequisite at *every* incomplete inventory state.
+            # The fixture metadata supplies colors and required item order.
             if gates:
-                blocked_door = door_center(output_directory, "pickup")
-                for click_x, click_y in ((408, 506), (552, 520), blocked_door):
-                    click = subprocess.run(
-                        ["xdotool", "mousemove", str(click_x), str(click_y), "click", "1"],
-                        capture_output=True, text=True, timeout=5, check=False,
-                    )
-                    if click.returncode:
-                        raise RuntimeError(f"Premature Use input failed: {click.stderr}")
-                    time.sleep(0.3)
-                time.sleep(3)
-                capture_frame("gated-use")
-                blocked = (door_pixels(output_directory, "gated-use") >= 40
-                           and door_pixels(output_directory, "gated-use", open_state=True) < 10
-                           and not close_rgb(scene_pixel(output_directory, "gated-use"), tuple(expected_color)))
-                (output_directory / "scummvm-gate-negative-report.json").write_text(
-                    json.dumps({"attempt": "Use Key with Door before other required items",
-                                "blocked": blocked, "missing_items": [gate["item_id"] for gate in gates]},
-                               indent=2) + "\n", encoding="utf-8",
-                )
-                if not blocked:
-                    raise RuntimeError("Door opened without the required inventory prerequisites")
                 acquired = []
+                blocked_attempts = []
                 for index, gate in enumerate(gates):
+                    capture_frame("pickup")
+                    blocked_door = door_center(output_directory, "pickup")
+                    for click_x, click_y in ((408, 506), (552, 520), blocked_door):
+                        click = subprocess.run(
+                            ["xdotool", "mousemove", str(click_x), str(click_y), "click", "1"],
+                            capture_output=True, text=True, timeout=5, check=False,
+                        )
+                        if click.returncode:
+                            raise RuntimeError(f"Premature Use input failed: {click.stderr}")
+                        time.sleep(0.3)
+                    time.sleep(3)
+                    capture_frame("gated-use")
+                    blocked = (door_pixels(output_directory, "gated-use") >= 40
+                               and door_pixels(output_directory, "gated-use", open_state=True) < 10
+                               and not close_rgb(scene_pixel(output_directory, "gated-use"), tuple(expected_color)))
+                    blocked_attempts.append({"owned": ["Key"] + [item["item_id"] for item in acquired],
+                                             "missing": [g["item_id"] for g in gates[index:]],
+                                             "blocked": blocked})
+                    (output_directory / "scummvm-gate-negative-report.json").write_text(
+                        json.dumps({"attempts": blocked_attempts,
+                                    "blocked": all(a["blocked"] for a in blocked_attempts)},
+                                   indent=2) + "\n", encoding="utf-8",
+                    )
+                    if not blocked:
+                        raise RuntimeError("Door opened without all required inventory prerequisites")
                     rgb = tuple(gate["rgb"])
                     verb_click = subprocess.run(
                         ["xdotool", "mousemove", "328", "506", "click", "1"],

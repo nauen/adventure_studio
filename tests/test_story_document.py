@@ -11,9 +11,24 @@ from adventure_studio.story_document import (
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
+THREE_ITEMS = EXAMPLE.with_name("mini_story_three_items.json")
 
 
 class StoryDocumentTests(unittest.TestCase):
+    def test_three_required_items_generate_distinct_verifiable_icons(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            result = build_story_document(THREE_ITEMS.read_text(encoding="utf-8"), Path(tmp))
+            source = (result.resource_directory / "Harbor.scc").read_text(encoding="utf-8")
+            self.assertIn("getObjectOwner(Badge) == VAR_EGO", source)
+            self.assertIn("getObjectOwner(Coin) == VAR_EGO", source)
+            manifest = json.loads((result.resource_directory / "game-goal.json").read_text())
+            self.assertEqual(manifest["fixture_inventory_gates"], [
+                {"item_id": "Badge", "rgb": [225, 80, 180]},
+                {"item_id": "Coin", "rgb": [160, 230, 55]},
+            ])
+            self.assertEqual((result.resource_directory / "inventory-ids.txt").read_text().strip(),
+                             "Badge,Coin,Key")
+
     def test_round_trip_and_complete_export(self):
         story = parse_story_document(EXAMPLE.read_text(encoding="utf-8"))
         self.assertEqual(parse_story_document(canonical_story_json(story)), story)
