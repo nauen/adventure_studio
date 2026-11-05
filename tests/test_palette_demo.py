@@ -23,6 +23,12 @@ class PaletteDemoTests(unittest.TestCase):
         self.assertEqual(original.rooms[0].palette_cycles, ())
         self.assertEqual(demo.rooms[0].demo_walk_to_x, None)
         self.assertEqual(demo.rooms[1], original.rooms[1])
+        self.assertEqual({hotspot.id: hotspot.x for hotspot in demo.rooms[0].hotspots
+                          if hotspot.pickup or hotspot.exit_destination is not None},
+                         {"Key": 220, "Door": 270})
+        self.assertEqual({hotspot.id: hotspot.x for hotspot in original.rooms[0].hotspots
+                          if hotspot.pickup or hotspot.exit_destination is not None},
+                         {"Key": 355, "Door": 450})
 
     def test_scumm_source_declares_cycle_and_roundtrips_json(self):
         demo = add_water_cycle(self.game())

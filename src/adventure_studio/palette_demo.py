@@ -34,8 +34,17 @@ def add_water_cycle(game: GameDocument, *, wide_water: bool = False) -> GameDocu
         for x in range(45, 300 if wide_water else 135):
             pixels[y * width + x] = first + (x // 4 + y // 3) % 4
     water = PaletteCycle("Water", first, first + 3, 2)
+    # Keep the camera fixed for the palette probe. Move the existing puzzle
+    # hotspots into its initial 320px viewport; otherwise the key and exit
+    # remain off-screen at their normal scrolling-room coordinates.
+    visible_hotspots = tuple(
+        replace(hotspot, x=220 if hotspot.pickup else 270)
+        if hotspot.pickup or hotspot.exit_destination is not None else hotspot
+        for hotspot in room.hotspots
+    )
     new_room = replace(room, pixels=bytes(pixels), palette=room.palette + WATER_PALETTE,
-                       palette_cycles=(water,), demo_walk_to_x=None)
+                       palette_cycles=(water,), demo_walk_to_x=None,
+                       hotspots=visible_hotspots)
     return replace(game, rooms=(new_room, *game.rooms[1:]))
 
 
