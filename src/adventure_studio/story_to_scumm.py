@@ -292,7 +292,7 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
         image = _room_image(provider, scene_id, width, goal)
         result.append(RoomAsset(
             scene_id, RoomGeometry(width, 200, 320, 200), image.pixels, image.palette,
-            hotspots=tuple(hotspots), demo_walk_to_x=540 if not goal else None,
+            hotspots=tuple(hotspots), demo_walk_to_x=540 if not goal and not actors else None,
             use_rules=(UseRule(pickups[0].id, door_id, _text(puzzle.title), open_target=True,
                                requires_inventory=tuple(item.id for item in pickups[1:])),) if not goal else (),
             goal_text=_text(ordered_puzzles[-1].title) if goal else None,

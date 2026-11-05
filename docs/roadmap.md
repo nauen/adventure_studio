@@ -239,8 +239,10 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 - [x] Erster begrenzter **Antwortauswahl-Compiler** als typisierter,
       datenbasierter `TalkRule`-/`TalkChoice`-Baustein. Bis zu drei temporär
       eingeblendete, anklickbare Antwortobjekte; Auswahl löst lineare
-      Folgezeilen aus. Quelltext-/JSON-Roundtrip-Tests grün; ScummC-Probe
-      und tatsächliche Klickinteraktion stehen noch aus.
+      Folgezeilen aus. Quelltext-/JSON-Roundtrip-Tests grün; ScummC hat die
+      Auswahl-Ressourcen kompiliert (#42103638725). Ein separater visueller
+      ScummVM-Klicktest prüft nun den Zustandswechsel von verborgenen zu
+      sichtbaren und wieder verborgenen Antworten; Ergebnis noch offen.
 - [ ] Echte NPC-Sprechblasen, klassisches SCUMM-Gesprächsmenü, Sprecherwechsel,
       Kostüm-/Animationsresourcen und Voice-Cues mit Stock ScummVM prüfen.
 - [ ] Dialogmodell als eigene versionierte Struktur: Sprechende,

@@ -180,7 +180,9 @@ als anklickbarer Platzhalter-Hotspot und über „Talk to“ wird zeilenweise
 Text angezeigt (noch als Ego-Text, keine echte NPC-Sprechblase). Bei einer
 Auswahl werden bis zu drei Antwortobjekte im Raum ein-/ausgeblendet.
 Die tatsächliche ScummVM-Bedienbarkeit dieser neuen Antworten muss noch
-getestet werden. Verschachtelte Dialoge und externe Bild-/Sprach-Assets melden eine explizite
+im neuen CI-Klicktest nachgewiesen werden. Dieser erzeugt ein
+`dialogue-interaction-evidence`-Artefakt mit Vorher-/Nachher-Screenshots,
+JSON-Bericht und Log. Verschachtelte Dialoge und externe Bild-/Sprach-Assets melden eine explizite
 Exportwarnung. Alte
 Story-Dateien v1/v2/v3 bleiben vollständig lesbar.
 Im Reiter **Dialogzeilen** lassen sich vorhandene Sprechtexte bearbeiten;
