@@ -16,7 +16,7 @@ from .story_ai import preview_ai_response, propose_story_change
 from .studio_service import (accept_proposal, add_decoration, change_item,
                              change_dialogue_line, change_position, change_puzzle, change_scene,
                              describe_story, item_position, prepare_proposal,
-                             report_text, scene_preview)
+                             report_text, scene_preview, translation_draft)
 from .story_document import canonical_story_json, parse_story_document
 from .studio_export import export_playable
 
@@ -204,6 +204,15 @@ def make_app():
         path.write_text(canonical, encoding="utf-8")
         return str(path)
 
+    def export_translations(raw):
+        try:
+            draft = translation_draft(raw)
+        except ValueError as error:
+            raise gr.Error(f"Übersetzungsentwurf nicht möglich: {error}") from error
+        path = Path(tempfile.mkdtemp(prefix="adventure-studio-i18n-")) / "translations-draft.json"
+        path.write_text(draft, encoding="utf-8")
+        return str(path)
+
     def export_scumm(raw, scummc_path):
         if not scummc_path.strip():
             raise gr.Error("Bitte den lokalen Pfad zur gebauten ScummC-Toolchain eingeben")
@@ -221,6 +230,10 @@ def make_app():
             story_file = gr.File(label="Story-JSON öffnen", file_types=[".json"], type="filepath")
             export_button = gr.Button("Geprüfte Story exportieren", variant="primary")
             download = gr.File(label="Story herunterladen")
+        with gr.Row():
+            translations_button = gr.Button("Übersetzungsentwurf für 5 Sprachen erzeugen")
+            translations_download = gr.File(label="Übersetzungsentwurf herunterladen")
+        gr.Markdown("Der Entwurf enthält fehlende Übersetzungen als `null` und ist noch kein spielbares Sprachpaket.")
         with gr.Accordion("Spielbares SCUMM-ZIP erzeugen (experimentell)", open=False):
             gr.Markdown("In Codespaces wird ScummC einmalig beim Einrichten installiert. Lokal kann alternativ ein vorhandener ScummC-Pfad angegeben werden. Der eigentliche Build benötigt keine Downloads und arbeitet auf einer temporären Kopie.")
             scummc_path = gr.Textbox(label="ScummC-Installationsordner (in Codespaces automatisch)",
@@ -342,6 +355,7 @@ def make_app():
         import_button.click(propose_imported, [state, imported_json], [pending, report])
         confirm_button.click(confirm, [state, pending], [state, pending, *refreshed, report])
         export_button.click(export_story, inputs=[state], outputs=[download])
+        translations_button.click(export_translations, inputs=[state], outputs=[translations_download])
         game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])
     return app
 
