@@ -74,6 +74,7 @@ def document_dict(document: GameDocument) -> dict:
                                      "last": cycle.last, "period_ticks": cycle.period_ticks,
                                      "reverse": cycle.reverse}
                                     for cycle in room.palette_cycles]} if room.palette_cycles else {}),
+            **({"music_id": room.music_id} if room.music_id is not None else {}),
         } for room in document.rooms],
     }
 
@@ -113,7 +114,7 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Too many rooms")
     rooms = []
     for raw in data["rooms"]:
-        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles",
+        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id",
                            "demo_walk_to_x", "goal_text"},
                      {"name", "geometry", "pixels", "palette", "hotspots", "use_rules",
                       "demo_walk_to_x", "goal_text"})
@@ -177,6 +178,7 @@ def parse_document(source: str) -> GameDocument:
             _decode_pixels(room["pixels"]), tuple(tuple(rgb) for rgb in room["palette"]),
             tuple(hotspots), room["demo_walk_to_x"], tuple(rules), room["goal_text"], tuple(combinations),
             tuple(cycles),
+            room.get("music_id"),
         ))
     document = GameDocument(data["id"], tuple(rooms))
     _validate_document(document)

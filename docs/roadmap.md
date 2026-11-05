@@ -176,6 +176,9 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
       unreferenzierte Tracks (`music_director.py` samt Tests).
 - [ ] Erstes originales MIDI-/ScummC-Soundresource-Fixture in stock ScummVM
       hörbar überprüfen; Ton- oder MIDI-Nachweis in CI, kein reiner Buildcheck.
+- [x] Originales MIDI-SMF-Teststück und optionales SCUMM-v6-Einstiegsmusik-
+      Fixture generieren (`music_demo.py`); `soun -gmd`- und
+      ScummVM-Audioerfassungsgates in CI vorbereitet. Runtime-Nachweis offen.
 - [ ] Spielereignisse steuern Start, Stop und musikalischen Zustandswechsel.
 - [ ] iMUSE-Beat-/Takt- und Hook-Übergänge als **eigene** Kompatibilitäts-Gates
       nachweisen; keine unbemerkte Herabstufung auf harte Schnitte.

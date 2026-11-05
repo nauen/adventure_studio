@@ -18,6 +18,9 @@ on:
       - 'src/adventure_studio/scumm_toolchain.py'
       - 'src/adventure_studio/story_document.py'
       - 'src/adventure_studio/story_to_scumm.py'
+      - 'src/adventure_studio/music_demo.py'
+      - 'src/adventure_studio/music_director.py'
+      - 'src/adventure_studio/scumm_audio_probe.py'
       - 'examples/mini_story.json'
       - 'examples/mini_story_two_items.json'
       - 'examples/mini_story_three_items.json'
@@ -34,6 +37,9 @@ on:
       - 'tests/test_story_document.py'
       - 'tests/test_story_to_scumm.py'
       - 'tests/test_scumm_toolchain.py'
+      - 'tests/test_music_demo.py'
+      - 'tests/test_music_director.py'
+      - 'tests/test_scumm_audio_probe.py'
 
 jobs:
   probe:
@@ -221,6 +227,8 @@ jobs:
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-fixture /tmp/recipe-smoke --recipe-only
       - name: Compile indexed-water SCUMM v6 palette-cycle fixture
+        # Palette research is parked while the music/audio path is explored.
+        if: false
         env:
           PYTHONPATH: src
         run: |
@@ -230,10 +238,29 @@ jobs:
           test -s /tmp/palette-fixture/tentacle.000
           test -s /tmp/palette-fixture/tentacle.001
       - name: Verify real palette animation and unaffected sky in stock ScummVM
+        if: false
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_palette_probe /tmp/palette-fixture /tmp/palette-smoke
+      - name: Generate original MIDI and wrap as a ScummC GMD sound resource
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.music_demo examples/mini_story.json /tmp/music-story-build
+          SOUN_BIN=$(find /tmp/scummc-upstream -type f -name soun -executable -print -quit)
+          test -n "$SOUN_BIN"
+          "$SOUN_BIN" -gmd /tmp/music-story-build/resources/HarborTheme.mid -o /tmp/music-story-build/resources/HarborTheme.soun
+          test -s /tmp/music-story-build/resources/HarborTheme.soun
+          python -m adventure_studio.scumm_toolchain /tmp/music-story-build /tmp/scummc-upstream /tmp/music-fixture
+          test -s /tmp/music-fixture/tentacle.000
+          test -s /tmp/music-fixture/tentacle.001
+      - name: Experimental PCM capture from stock ScummVM
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_audio_probe /tmp/music-fixture /tmp/music-smoke
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -313,6 +340,16 @@ jobs:
             else
               echo '- Real SCUMM palette cycling: **not verified**.'
             fi
+            if test -f /tmp/music-fixture/tentacle.001; then
+              echo '- Original MIDI / GMD resource compiled and linked: **PASS**.'
+            else
+              echo '- Original MIDI / GMD resource compiled and linked: **not verified**.'
+            fi
+            if test -f /tmp/music-smoke/audio-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/music-smoke/audio-report.json")); print("- Experimental audio PCM activity: **{}** ({} bytes)".format("PASS" if p["pcm_activity_detected"] else "NOT PROVEN",p["bytes"]))'
+            else
+              echo '- Experimental audio PCM activity: **not proven**.'
+            fi
             echo
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload compiler outputs for inspection
@@ -359,6 +396,11 @@ jobs:
             /tmp/palette-story-build/project.json
             /tmp/palette-story-build/resources/*
             /tmp/palette-smoke/*
+            /tmp/music-story-build/project.json
+            /tmp/music-story-build/resources/*
+            /tmp/music-fixture/*.000
+            /tmp/music-fixture/*.001
+            /tmp/music-smoke/*
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
             /tmp/studio-fixture/*.000

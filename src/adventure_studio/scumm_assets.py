@@ -63,6 +63,7 @@ class RoomAsset:
     goal_text: str | None = None
     combine_rules: tuple[CombineRule, ...] = ()
     palette_cycles: tuple[PaletteCycle, ...] = ()
+    music_id: str | None = None
 
 
 def _scumm_string(value: str) -> str:
@@ -139,6 +140,9 @@ def _validate(room: RoomAsset) -> None:
     if any(c.period_ticks > 16384 or not _IDENTIFIER.fullmatch(c.name)
            for c in room.palette_cycles):
         raise ValueError("SCUMM v6 palette cycle delay or name is invalid")
+    if room.music_id is not None and (not isinstance(room.music_id, str)
+                                      or not _IDENTIFIER.fullmatch(room.music_id)):
+        raise ValueError("Invalid SCUMM music resource ID")
     targets: set[str] = set()
     for rule in room.use_rules:
         if rule.item_id not in pickups or rule.target_id not in ids or rule.item_id == rule.target_id:
@@ -202,6 +206,8 @@ def scummc_room_source(room: RoomAsset) -> str:
     for destination in sorted(destinations):
         parts.append(f"room {destination};\n")
     parts.append(f'\nroom {room.name} {{\n    image = "{room.name}.bmp";\n')
+    if room.music_id is not None:
+        parts.append(f'    sound {room.music_id} = "{room.music_id}.soun";\n')
     for cycle in room.palette_cycles:
         # ScummC scc_parse.y: cycle name = {delay, flags, start, end};
         # flags bit 1 reverses the direction of palette cycling.
@@ -305,6 +311,8 @@ def scummc_room_source(room: RoomAsset) -> str:
         "        ResRoom::showVerbs(1);\n",
         "        ResRoom::showCursor();\n",
     ])
+    if room.music_id is not None:
+        parts.append(f"        startMusic({room.music_id});\n")
     if room.demo_walk_to_x is not None:
         parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, 100);\n")
     if room.goal_text is not None:

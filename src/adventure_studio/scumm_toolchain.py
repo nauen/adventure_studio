@@ -41,6 +41,8 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         for suffix in (".scc", ".bmp"):
             if not (resources / f"{room.name}{suffix}").is_file():
                 raise ValueError(f"Missing room resource: {room.name}{suffix}")
+        if room.music_id is not None and not (resources / f"{room.music_id}.soun").is_file():
+            raise ValueError(f"Missing music resource: {room.music_id}.soun")
     road = upstream / "examples" / "road"
     original = (road / "common.scc").read_text(encoding="utf-8")
     header = (road / "common.sch").read_text(encoding="utf-8")

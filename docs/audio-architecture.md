@@ -40,21 +40,32 @@ denselben Regeln wie in der Grafikpipeline.
 
 ## Nächste Kompatibilitäts-Gates
 
-1. Mit einem kleinen, frei nutzbaren MIDI-Stück einen ScummC-Sound-Baustein
-   erzeugen und `startMusic()` in stock ScummVM **hörbar** nachweisen.
-2. `stopSound()` und mindestens zwei Musikzustände durch ein Spielereignis
+1. Das originale MIDI-Teststück aus `music_demo.py` wird ohne Fremdassets als
+   SMF Typ 0 erzeugt. Im experimentellen CI-Workflow verpackt ScummCs
+   `soun -gmd` die Datei in `HarborTheme.soun`; der SCUMM-Exporter deklariert
+   `sound HarborTheme = "HarborTheme.soun";` und startet es in der
+   Raumeintrittsroutine mit `startMusic(HarborTheme)`. Die Datei muss vor dem
+   Spielbuild vorhanden sein. **Compiler/Linker-Erfolg ist noch kein Beweis
+   hörbarer Musik.**
+2. Ein separater Audio-Forschungsprobe versucht mit dem SDL-Disk-Audiotreiber
+   PCM-Samples aus stock ScummVM aufzunehmen und prüft auf Aktivität.
+   Der Test bleibt optional, bis das Audioformat und die mögliche
+   Verwechslung mit Systemsounds beziehungsweise Startgeräuschen ausgeschlossen
+   sind. Erst danach ist die Musikerzeugung in ScummVM hörbar nachgewiesen.
+3. `stopSound()` und mindestens zwei Musikzustände durch ein Spielereignis
    steuern. Tonaufzeichnung und MIDI-Event/Log-Inspektion als CI-Nachweis
    entwickeln; ein grüner Compile-Lauf alleine reicht nicht.
-3. iMUSE-Beat- oder Taktwechsel und Hook/SysEx-Strategien einzeln
+4. iMUSE-Beat- oder Taktwechsel und Hook/SysEx-Strategien einzeln
    implementieren und mit exakt definierten MIDI-Teststücken prüfen.
-4. Soundeffekte mit stabilen IDs und Wiederverwendung ergänzen.
-5. Digitalisierte Sprache: ScummC `voice`-Ressourcen aus klassischen VOC-Dateien
+5. Soundeffekte mit stabilen IDs und Wiederverwendung ergänzen.
+6. Digitalisierte Sprache: ScummC `voice`-Ressourcen aus klassischen VOC-Dateien
    und optionalen Synchronisationspunkten; Untertitel bleiben separat und
    immer spielbar. Späterer TTS-Provider erzeugt Audio **außerhalb** des
    reproduzierbaren SCUMM-Builds.
 
 ## Noch nicht unterstützt
 
-Keine Audioressourcen sind derzeit im aktuellen Storyprojekt exportiert;
-kein echtes iMUSE-Timing, kein MIDI-Erzeugungsprovider und kein TTS-Aufruf.
+Die normale Story-JSON-Ausgabe enthält weiterhin keine Musik. Die neue
+MIDI-Ressource ist eine **opt-in Forschungsvariante**, kein genereller
+MIDI-Erzeugungsprovider. Kein echtes iMUSE-Timing und kein TTS-Aufruf.
 DOS-/ScummVM-Unterstützung wird separat je Format und Ausgabeprofil geprüft.
