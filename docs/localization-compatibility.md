@@ -100,6 +100,13 @@ Engine-Log abgelegt. Der Test prüft zunächst, ob der Interpreter läuft
 und die Screenshots erzeugt. **Die Glyphen selbst werden noch nicht durch
 OCR oder Pixelreferenzen verifiziert**; diese Schranke bleibt offen.
 
+Die ersten tatsächlichen Screenshots zeigten überlappende UI-Zeilen mit der
+ursprünglichen 14-Pixel-Schrift. Daher verwendet der SCUMM-Font-Generator
+nun 9-Pixel-Glyphen mit 11×12 nutzbaren Pixeln und weiterhin einem
+getrennten Führungsrand für den ScummC-Importer. Auch diese Änderung wird
+erst durch einen neuen Lauf visuell bestätigt; ein grüner Prozess-Exit allein
+ist ausdrücklich kein Beweis für korrekt dargestellte Sonderzeichen.
+
 **Noch nicht abgeschlossen:** Der Story-Export liefert den Übersetzungskatalog
 und die CHAR-Datei noch nicht automatisch gemeinsam aus. Eine vollständige
 Sprachumschaltung für sämtliche Story-Texte und der Pixelnachweis für polnische

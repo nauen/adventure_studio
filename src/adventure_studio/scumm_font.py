@@ -39,13 +39,15 @@ def render_scumm_font_bitmap(catalog: LanguageCatalog, latin_font: Path,
             coverage[label] = set().union(*(set(t.cmap) for t in tt["cmap"].tables if t.isUnicode()))
         finally:
             tt.close()
-        fonts[label] = ImageFont.truetype(str(path), 14)
+        # The stock SCUMM v6 verb UI has tightly spaced text rows. A 14px
+        # bitmap overlaps its neighbours; 9px fits the original text grid.
+        fonts[label] = ImageFont.truetype(str(path), 9)
     missing = sorted({glyph for glyph in glyphs.values()
                       if ord(glyph) not in coverage["latin"] | coverage["cjk"]})
     if missing:
         raise ValueError("Font coverage missing: " + ", ".join(f"U+{ord(c):04X}" for c in missing))
 
-    cell_w, cell_h, columns = 24, 26, 16
+    cell_w, cell_h, columns = 14, 15, 16
     # ScummC's char importer scans contiguous palette-last border runs.
     # Leave one background pixel between frames in BOTH directions; otherwise
     # adjacent cells are incorrectly imported as a single giant glyph.
@@ -57,7 +59,7 @@ def render_scumm_font_bitmap(catalog: LanguageCatalog, latin_font: Path,
     draw = ImageDraw.Draw(canvas)
     for code in range(count):
         x, y = (code % columns) * cell_w, (code // columns) * cell_h + 1
-        # The imported glyph interior is 21x23 pixels.
+        # The imported glyph interior is 11x12 pixels.
         # Top and left guide lines are sufficient: a bottom guide line would
         # be mistaken for a new character by ScummC's row-wise importer.
         draw.line((x, y, x + frame_w - 1, y), fill=2)
