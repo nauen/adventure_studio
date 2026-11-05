@@ -2,10 +2,47 @@ import unittest
 import tempfile
 from pathlib import Path
 
-from adventure_studio.scumm_bootstrap import inject_inventory_declarations, inject_inventory_objects, read_icon_ids, retarget_upstream_bootstrap
+from adventure_studio.localization import LanguageCatalog, LocalizedLine
+from adventure_studio.scumm_bootstrap import (
+    inject_inventory_declarations, inject_inventory_objects, inject_language_keys,
+    read_icon_ids, retarget_upstream_bootstrap,
+)
 
 
 class BootstrapTests(unittest.TestCase):
+    def test_language_selector_uses_persistent_global_state_and_five_key_codes(self):
+        languages = ("de", "en", "fr", "ja", "pl")
+        catalog = LanguageCatalog("de", languages, (
+            LocalizedLine("probe", (
+                ("de", "Grüße"), ("en", "Hello"), ("fr", "Bonjour"),
+                ("ja", "こんにちは"), ("pl", "Cześć"),
+            )),
+        ))
+        source = (
+            "script keyboardHandler(int key) {\\n        switch(key) {\\n"
+            "        }\\n    }\\n"
+            "script gameStart() {\\n        setupActors();\\n    }\\n"
+        )
+        header = "// Dialog string list\\n"
+        result, result_header = inject_language_keys(source, header, catalog)
+        self.assertEqual(result_header.count("int GameLanguage;"), 1)
+        self.assertEqual(result.count("GameLanguage = "), 6)
+        self.assertIn("GameLanguage = 25701;\\n        setupActors();", result)
+        initialization = result.index("GameLanguage = 25701;")
+        self.assertGreater(initialization, result.index("script gameStart()"))
+        for index, language in enumerate(languages, 1):
+            code = int.from_bytes(language.encode("ascii"), "big")
+            self.assertIn(f"case '{index}':\\n            GameLanguage = {code};", result)
+        self.assertNotIn("GameLanguage = ", source)
+        self.assertIn(r"\\x", result)
+
+    def test_language_selector_rejects_missing_bootstrap_hooks(self):
+        catalog = LanguageCatalog("de", ("de",), (
+            LocalizedLine("probe", (("de", "Hallo"),)),
+        ))
+        with self.assertRaisesRegex(ValueError, "Unexpected upstream language selector layout"):
+            inject_language_keys("script unrelated() {}", "// Dialog string list", catalog)
+
     def test_inventory_ids_can_be_read_from_generated_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
             manifest = Path(tmp) / "inventory-ids.txt"
