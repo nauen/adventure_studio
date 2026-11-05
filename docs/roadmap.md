@@ -131,6 +131,25 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 - [ ] Einheitliche Stile, Figuren- und Raumvarianten, Paletten und Animationen.
 - [ ] KI-Bilder vor Verwendung deterministisch auf Format und Grenzen prüfen.
 - [ ] Objektpositionen sind editierbar; Hotspots folgen stabilen Objekt-IDs.
+- [x] Provider-unabhängiger Vertrag für fertige 8-Bit-Indexbilder, inklusive
+      Palette, Abmessungen, Herkunft und reproduzierbarem Content-Hash;
+      Offline-Fixture-Provider mit Validierung und Tests (`image_pipeline.py`).
+- [ ] Einen späteren ComfyUI-/RunComfy-Adapter für **vorhandene, vom Nutzer
+      bereitgestellte Workflows** ergänzen; aktuell keine Verbindung, keine
+      Modellwahl und keine Netzwerkaufrufe im Build.
+- [ ] Generierte Assets unveränderlich zwischenspeichern (Workflow-Version,
+      Modell, Seed, Quell-ID), damit Story- und SCUMM-Builds dieselben Bilder
+      wiederverwenden und keine stillschweigende Neugenerierung auslösen.
+- [ ] Palette-Cycling für geeignete Szeneneffekte als gesonderten,
+      deterministischen SCUMM-v6-Compilerbaustein entwickeln und in ScummVM
+      mit visuellen Prüfungen validieren.
+
+Die KI-Bildworkflows sind **selbst für Pixel-Art-Stil, Zielauflösung und
+Farbpalette zuständig**. Adventure Studio quantisiert oder skaliert ein
+gültiges Provider-Ergebnis nicht erneut. Die Engine prüft lediglich, ob
+die tatsächlich gelieferten Pixel die SCUMM-Grenzen erfüllen. Farbindizes
+für Palette-Cycling sind eine zusätzliche, explizit definierte Bearbeitung:
+ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 
 ### M5 – KI-Story-Regie
 
