@@ -19,20 +19,20 @@ class BootstrapTests(unittest.TestCase):
             )),
         ))
         source = (
-            "script keyboardHandler(int key) {\\n        switch(key) {\\n"
-            "        }\\n    }\\n"
-            "script gameStart() {\\n        setupActors();\\n    }\\n"
+            "script keyboardHandler(int key) {\n        switch(key) {\n"
+            "        }\n    }\n"
+            "script gameStart() {\n        setupActors();\n    }\n"
         )
-        header = "// Dialog string list\\n"
+        header = "// Dialog string list\n"
         result, result_header = inject_language_keys(source, header, catalog)
         self.assertEqual(result_header.count("int GameLanguage;"), 1)
         self.assertEqual(result.count("GameLanguage = "), 6)
-        self.assertIn("GameLanguage = 25701;\\n        setupActors();", result)
+        self.assertIn("GameLanguage = 25701;\n        setupActors();", result)
         initialization = result.index("GameLanguage = 25701;")
         self.assertGreater(initialization, result.index("script gameStart()"))
         for index, language in enumerate(languages, 1):
             code = int.from_bytes(language.encode("ascii"), "big")
-            self.assertIn(f"case '{index}':\\n            GameLanguage = {code};", result)
+            self.assertIn(f"case '{index}':\n            GameLanguage = {code};", result)
         self.assertNotIn("GameLanguage = ", source)
         self.assertIn(r"\\x", result)
 
