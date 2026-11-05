@@ -157,6 +157,16 @@ danach übernimmt **Geprüfte Änderung jetzt übernehmen** die geprüfte Versio
 exportieren** lädst du die aktuelle JSON-Datei herunter. Änderungen bleiben
 bis dahin nur in der laufenden Sitzung und überschreiben keine Projektdateien.
 
+Unter **Spielbares SCUMM-ZIP erzeugen** kann der Editor außerdem die Story
+mit einer **vorhandenen, lokal kompilierten ScummC-Toolchain** in ein ZIP
+exportieren. Trage dafür deren Verzeichnis ein (mit `scc`, `sld`,
+`examples/road` und `include`). Es erfolgt **kein** automatischer Download.
+Die Tools und ihr GPL-Beispielprojekt werden in ein temporäres Arbeitsverzeichnis
+kopiert, bevor Ressourcen erzeugt werden; die Originalinstallation wird
+nicht geändert. Das ZIP enthält `tentacle.000`, `tentacle.001`, `story.json`
+und eine Startanleitung. Die verwendete DOTT-Identität ist weiterhin nur
+ein Forschungs-Kompatibilitätstrick, keine eigene ScummVM-Spielerkennung.
+
 Noch nicht enthalten: KI-Chat, Echtzeit-ScummVM-Spielvorschau, grafischer
 Drag-and-drop-Objekteditor und automatisches ComfyUI. Die Vorschau verwendet
 bewusst die bisherigen technischen Platzhaltergrafiken.

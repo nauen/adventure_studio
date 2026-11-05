@@ -7,12 +7,14 @@ No network/API key is needed for this offline first iteration.
 from __future__ import annotations
 
 import tempfile
+import subprocess
 from pathlib import Path
 
 from .studio_service import (accept_proposal, add_decoration, change_item,
                              change_puzzle, change_scene, describe_story,
                              prepare_proposal, report_text, scene_preview)
 from .story_document import canonical_story_json, parse_story_document
+from .studio_export import export_playable
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
@@ -109,6 +111,15 @@ def make_app():
         path.write_text(canonical, encoding="utf-8")
         return str(path)
 
+    def export_scumm(raw, scummc_path):
+        if not scummc_path.strip():
+            raise gr.Error("Bitte den lokalen Pfad zur gebauten ScummC-Toolchain eingeben")
+        folder = Path(tempfile.mkdtemp(prefix="adventure-studio-game-"))
+        try:
+            return str(export_playable(raw, Path(scummc_path.strip()), folder / "adventure.zip"))
+        except (ValueError, OSError, RuntimeError, subprocess.CalledProcessError) as error:
+            raise gr.Error(f"SCUMM-Export fehlgeschlagen: {error}") from error
+
     with gr.Blocks(title="Adventure Studio") as app:
         gr.Markdown("# Adventure Studio\nStory schreiben, prüfen und als SCUMM-fähige Daten speichern. Noch ohne KI-Anbindung.")
         state = gr.State(initial)
@@ -117,6 +128,11 @@ def make_app():
             story_file = gr.File(label="Story-JSON öffnen", file_types=[".json"], type="filepath")
             export_button = gr.Button("Geprüfte Story exportieren", variant="primary")
             download = gr.File(label="Story herunterladen")
+        with gr.Accordion("Spielbares SCUMM-ZIP erzeugen (experimentell)", open=False):
+            gr.Markdown("Benötigt eine **lokal bereits gebaute ScummC-Toolchain**. Keine automatische Installation oder Downloads. Die Toolchain wird vor dem Build in ein temporäres Verzeichnis kopiert.")
+            scummc_path = gr.Textbox(label="ScummC-Installationsordner", placeholder="/opt/scummc")
+            game_export_button = gr.Button("SCUMM-ZIP bauen")
+            game_download = gr.File(label="Spielbares Adventure herunterladen")
         overview = gr.Markdown()
         with gr.Tab("Szenen"):
             scene_select = gr.Dropdown(label="Szene")
@@ -164,6 +180,7 @@ def make_app():
                           [pending, report])
         confirm_button.click(confirm, [state, pending], [state, pending, *refreshed, report])
         export_button.click(export_story, inputs=[state], outputs=[download])
+        game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])
     return app
 
 

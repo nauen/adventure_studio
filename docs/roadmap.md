@@ -213,6 +213,14 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 - [ ] Browser-UI nach dem ersten Gradio-CI-Smoke interaktiv evaluieren;
       separate `.github/workflows/studio.yml` installiert das optionale
       Studio-Profil und baut die echten Gradio-Blocks samt Callback-Graph auf.
+- [x] Experimenteller SCUMM-ZIP-Export aus Gradio mit einer **vorhandenen
+      lokalen ScummC-Toolchain**. Validierte Story und spielbare Dateien
+      werden in einem ZIP ausgeliefert; der Compiler arbeitet auf einer
+      temporären Kopie der Toolchain, um Nutzerdateien nicht zu verändern.
+      Deterministischer ZIP-Inhalt und Fehlerfall sind lokal getestet.
+- [ ] Compiler-Setup und Plattformfähigkeit für Endnutzer vereinfachen:
+      Build-Service oder gekapselte Toolchain, ohne implizite Downloads im
+      lokalen Editor und mit getrennten Lizenz-/Versionsgrenzen.
 - [ ] Story-Chat über validierte Änderungsvorschläge statt generierten Code.
 - [ ] API/MCP-Operationen greifen auf dieselben validierten Modelle zu.
 
