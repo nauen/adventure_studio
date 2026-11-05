@@ -1,9 +1,10 @@
+import json
 import unittest
 from pathlib import Path
 
 from adventure_studio.studio_service import (
     accept_proposal, add_decoration, change_item, change_puzzle, change_scene,
-    describe_story, prepare_proposal, report_text, scene_preview,
+    describe_story, prepare_proposal, report_text, scene_preview, translation_draft,
 )
 from adventure_studio.story_document import parse_story_document
 
@@ -12,6 +13,16 @@ SAMPLE = (Path(__file__).resolve().parents[1] / "examples/mini_story_chain.json"
 
 
 class StudioServiceTests(unittest.TestCase):
+    def test_export_five_language_translation_draft_from_story(self):
+        draft = json.loads(translation_draft(SAMPLE))
+        self.assertEqual(draft["languages"], ["de", "en", "fr", "ja", "pl"])
+        self.assertGreater(len(draft["lines"]), 0)
+        self.assertTrue(any(line["id"].endswith(".label") for line in draft["lines"]))
+        for line in draft["lines"]:
+            self.assertIsInstance(line["translations"]["en"], str)
+            self.assertIsNone(line["translations"]["de"])
+        self.assertEqual(translation_draft(SAMPLE), translation_draft(SAMPLE))
+
     def test_scene_edit_is_validated_and_reports_exact_change(self):
         original = parse_story_document(SAMPLE)
         result = change_scene(SAMPLE, "Harbor", "Neuer Hafen", "Ein unruhiger Ort")
