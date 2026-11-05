@@ -55,6 +55,11 @@ jobs:
           cd /tmp/scummc-upstream
           ./configure
           make -j2
+      - name: Prepare upstream road assets required by the compiler
+        working-directory: /tmp/scummc-upstream/examples/road
+        run: |
+          make
+          test -s vera-gui.char
       - name: Build bounded branching dialogue as SCUMM v6 game files
         env:
           PYTHONPATH: src
