@@ -1,4 +1,5 @@
 import unittest
+import importlib.util
 from pathlib import Path
 
 from adventure_studio.studio_catalog import relationship_svg, story_catalog
@@ -41,8 +42,8 @@ class StudioCatalogTests(unittest.TestCase):
 
     def test_room_gallery_contains_images(self):
         view = catalog_view(SAMPLE)
-        self.assertEqual(len(view), 9)
-        self.assertEqual(len(view[7]), 3)
+        self.assertEqual(len(view), 12)
+        self.assertEqual(len(view[10]), 3 if importlib.util.find_spec("PIL") else 0)
         self.assertIn("Figuren", view[0])
 
 

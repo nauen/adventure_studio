@@ -125,3 +125,34 @@ erst nach Diff und Bestätigung übernehmen.
 
 Storys der Versionen 1 und 2 bleiben ohne Migration lesbar. Die kanonische
 Ausgabe verwendet erst dann v3, wenn mindestens eine Position definiert ist.
+
+### Dialoge und Asset-Referenzen (Story-Format v4)
+
+`format_version: 4` ergänzt vier streng validierte Sammlungen:
+
+| Sammlung | Felder | Bedeutung |
+| --- | --- | --- |
+| `dialogues` | `id`, `scene_id`, `entry_node_id` | Gespräch mit Einstieg |
+| `dialogue_nodes` | `id`, `dialogue_id`, `speaker_id`, `text`, `next_node_id` | gesprochener Text und direkter Folgeeintrag |
+| `dialogue_choices` | `id`, `node_id`, `text`, `next_node_id` | auswählbare Antwort mit optionaler Fortsetzung |
+| `assets` | `id`, `target_kind`, `target_id`, `asset_kind`, `source_id`, `digest` | referenzierte externe Asset-Datei |
+
+`next_node_id: null` beendet einen Gesprächsweg. Knoten besitzen entweder
+einen direkten Nachfolger oder Auswahlantworten. Alle Knoten müssen vom
+Einstieg erreichbar sein, und von jedem Knoten muss mindestens ein Ende
+erreichbar sein. Sprecher müssen als Charakter in der gleichen Szene
+existieren. Die Asset-Arten sind `scene/background`, `character/portrait`,
+`character/walk_sprite`, `item/object_sprite` und `dialogue_node/voice`.
+Jede Ziel-/Art-Kombination ist eindeutig. `digest` enthält einen 64-stelligen
+SHA-256-Hexwert, nicht die Binärdaten. Bilddateien werden noch nicht geladen.
+
+Die Storyformat-Version steigt nur bei vorhandenen v4-Einträgen auf v4.
+Die älteren Versionen bleiben ohne Migration lesbar. Beim Konsolidieren
+werden Asset-Referenzen auf automatisch entfernte, nicht mehr benötigte
+`pickup`-Gegenstände ebenfalls entfernt und im Änderungsbericht gezeigt.
+
+**Exportgrenze:** Das ist zunächst ein Autoren-/Story-Bibel-Format.
+Der SCUMM-v6-Adapter weist unimplementierte Figuren, Dialoge und Asset-
+Referenzen ausdrücklich zurück. Gradio darf diese Daten trotzdem bearbeiten,
+validieren, vergleichen und als Story-JSON exportieren; der Änderungsbericht
+zeigt die noch fehlende SCUMM-Unterstützung an.

@@ -136,6 +136,8 @@ def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument
 def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = None) -> GameDocument:
     """Compile bounded linear item-and-door puzzles, never story-authored scripts."""
     verify_story(story)
+    if story.dialogues or story.dialogue_nodes or story.dialogue_choices or story.assets:
+        raise ValueError("SCUMM exporter does not yet support dialogue or versioned asset references")
     provider = image_provider if image_provider is not None else DeterministicStoryImageProvider()
     if story.recipes:
         return _compile_recipe_story(story, provider)

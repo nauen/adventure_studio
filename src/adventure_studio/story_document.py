@@ -12,7 +12,9 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
 from .scumm_project import canonical_json, export_document
-from .story import Chapter, Character, Item, Placement, Puzzle, Recipe, Scene, Story, validate_story, verify_story
+from .story import (AssetRef, Chapter, Character, Dialogue, DialogueChoice,
+                    DialogueNode, Item, Placement, Puzzle, Recipe, Scene,
+                    Story, validate_story, verify_story)
 from .story_to_scumm import compile_story_to_scumm
 
 
@@ -21,6 +23,8 @@ _ENTITY_TYPES = {
     "items": Item, "puzzles": Puzzle,
     "recipes": Recipe,
     "placements": Placement,
+    "dialogues": Dialogue, "dialogue_nodes": DialogueNode,
+    "dialogue_choices": DialogueChoice, "assets": AssetRef,
 }
 _STORY_FIELDS = {f.name for f in fields(Story)}
 
@@ -46,11 +50,13 @@ def parse_story_document(raw: str) -> Story:
         raise ValueError("Invalid story JSON") from error
     root = _object(envelope, {"format_version", "story"}, "story document")
     version = root["format_version"]
-    if type(version) is not int or version not in (1, 2, 3):
+    if type(version) is not int or version not in (1, 2, 3, 4):
         raise ValueError("Unsupported story document version")
-    expected_story_fields = (_STORY_FIELDS if version == 3
-                             else _STORY_FIELDS - {"placements"} if version == 2
-                             else _STORY_FIELDS - {"recipes", "placements"})
+    optional_v4 = {"dialogues", "dialogue_nodes", "dialogue_choices", "assets"}
+    expected_story_fields = (_STORY_FIELDS if version == 4
+                             else _STORY_FIELDS - optional_v4 if version == 3
+                             else _STORY_FIELDS - optional_v4 - {"placements"} if version == 2
+                             else _STORY_FIELDS - optional_v4 - {"recipes", "placements"})
     story_data = _object(root["story"], expected_story_fields, "story")
     entities: dict[str, tuple] = {}
     for key, entity_type in _ENTITY_TYPES.items():
@@ -68,7 +74,8 @@ def parse_story_document(raw: str) -> Story:
                         raise ValueError("Invalid item requirements")
                     for item_id in value:
                         _text(item_id, field_name)
-                elif entity_type is Puzzle and field_name == "opens_scene_id" and value is None:
+                elif ((entity_type is Puzzle and field_name == "opens_scene_id")
+                      or (entity_type in (DialogueNode, DialogueChoice) and field_name == "next_node_id")) and value is None:
                     continue
                 elif entity_type is Placement and field_name in ("x", "y"):
                     if type(value) is not int or not 0 <= value <= 640:
@@ -93,11 +100,15 @@ def parse_story_document(raw: str) -> Story:
 def canonical_story_json(story: Story) -> str:
     validate_story(story)
     data = asdict(story)
-    version = 3 if story.placements else 2 if story.recipes else 1
+    version = (4 if story.dialogues or story.dialogue_nodes or story.dialogue_choices or story.assets
+               else 3 if story.placements else 2 if story.recipes else 1)
     if version == 1:
         del data["recipes"]
     if version < 3:
         del data["placements"]
+    if version < 4:
+        for field in ("dialogues", "dialogue_nodes", "dialogue_choices", "assets"):
+            del data[field]
     return json.dumps({"format_version": version, "story": data},
                       sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n"
 

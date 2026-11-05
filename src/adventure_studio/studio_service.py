@@ -14,6 +14,14 @@ from .story_document import canonical_story_json, parse_story_document
 from .story_to_scumm import compile_story_to_scumm
 
 
+def export_warning(story: Story) -> str:
+    """Allow new authoring concepts while never silently dropping them on export."""
+    if story.characters or story.dialogues or story.dialogue_nodes or story.dialogue_choices or story.assets:
+        return "SCUMM-Export noch nicht möglich: eigene Figuren, Dialoge und Asset-Referenzen werden noch nicht kompiliert"
+    compile_story_to_scumm(story)
+    return ""
+
+
 @dataclass(frozen=True)
 class StudioView:
     chapters: tuple[tuple[str, str], ...]
@@ -50,11 +58,11 @@ def _commit(story: Story, operation: PutEntity) -> StudioEdit:
     changed, report = edit_story(story, (operation,))
     # Prevent accepting a locally valid story which the bounded SCUMM adapter
     # cannot yet export (e.g. more than four decorations in one room).
-    compile_story_to_scumm(changed)
+    warning = export_warning(changed)
     # UI output is again parsed by the same strict format boundary.
     canonical = canonical_story_json(changed)
     parse_story_document(canonical)
-    return StudioEdit(canonical, report)
+    return StudioEdit(canonical, replace(report, export_warning=warning))
 
 
 def change_scene(raw: str, scene_id: str, title: str, description: str) -> StudioEdit:
@@ -104,6 +112,16 @@ def change_puzzle(raw: str, puzzle_id: str, title: str,
         raise ValueError("Puzzle needs a title and at least one required item")
     return _commit(story, PutEntity("puzzle", replace(puzzle, title=title.strip(),
                                                       requires=required_item_ids)))
+
+
+def change_dialogue_line(raw: str, node_id: str, text: str) -> StudioEdit:
+    story = parse_story_document(raw)
+    node = next((node for node in story.dialogue_nodes if node.id == node_id), None)
+    if node is None:
+        raise ValueError("Unknown dialogue node ID")
+    if not text.strip() or len(text) > 4096:
+        raise ValueError("Dialogue text must be 1..4096 characters")
+    return _commit(story, PutEntity("dialogue_node", replace(node, text=text.strip())))
 
 
 def item_position(raw: str, item_id: str) -> tuple[int, int]:
@@ -161,4 +179,6 @@ def report_text(report: StoryChangeReport) -> str:
     for removed in report.consolidated:
         labels.append(f"konsolidiert: {removed}")
     labels.append("Spielbarer Pfad: " + " → ".join(report.playable_path))
+    if report.export_warning:
+        labels.append("Hinweis: " + report.export_warning)
     return "\n".join(labels)

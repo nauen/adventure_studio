@@ -220,6 +220,17 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
       Animationen und Raumhintergründe über **stabile Asset-Referenzen**
       im versionierten Datenmodell verknüpfen; den Bildstatus inklusive
       Erzeugungs-/Versionsinformation je Figur und Szene anzeigen.
+- [x] **Storyformat v4:** Überprüfbare Referenzen für Hintergründe,
+      Porträts, Lauf- und Objektsprites sowie Sprache mit Asset-ID,
+      Zielobjekt, Quell-ID und SHA-256. Die Dateien selbst werden noch
+      nicht geladen oder neu generiert.
+- [x] **Dialog-Datenmodell v4:** Gespräche, Sprechende, Dialogknoten und
+      Antwortverzweigungen mit deterministischer Erreichbarkeits- und
+      Sackgassenprüfung. Die Übersicht zeigt Texte, Referenzen und Graph;
+      bestehende Dialogzeilen sind im Gradio-Editor änderbar.
+- [x] **Export-Grenze:** Dialoge/Assets können gespeichert werden;
+      unimplementierte Inhalte werden beim SCUMM-Build ausdrücklich
+      abgewiesen und im Änderungsbericht als Exportwarnung angezeigt.
 - [ ] Dialogmodell als eigene versionierte Struktur: Sprechende,
       Dialogknoten, Antwortoptionen, Bedingungen, Effekte, Untertitel
       und optionale Sprach-Assets. Dialoggraph und Verzweigungen

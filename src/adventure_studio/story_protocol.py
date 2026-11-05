@@ -5,11 +5,14 @@ from __future__ import annotations
 import json
 from dataclasses import MISSING, fields
 
-from .story import Chapter, Character, Item, Placement, Puzzle, Recipe, Scene
+from .story import (AssetRef, Chapter, Character, Dialogue, DialogueChoice,
+                    DialogueNode, Item, Placement, Puzzle, Recipe, Scene)
 from .story_changes import DeleteEntity, PutEntity
 
 _TYPES = {"chapter": Chapter, "scene": Scene, "character": Character,
-          "item": Item, "puzzle": Puzzle, "recipe": Recipe, "placement": Placement}
+          "item": Item, "puzzle": Puzzle, "recipe": Recipe, "placement": Placement,
+          "dialogue": Dialogue, "dialogue_node": DialogueNode,
+          "dialogue_choice": DialogueChoice, "asset": AssetRef}
 
 
 def _string(value: object) -> bool:
@@ -49,7 +52,8 @@ def parse_operations(raw: str) -> tuple[PutEntity | DeleteEntity, ...]:
                         or cls is Recipe and name == "ingredients"):
                     if not isinstance(value, list) or len(value) > 50 or not all(_string(x) for x in value):
                         raise ValueError("Invalid requirements")
-                elif cls is Puzzle and name == "opens_scene_id" and value is None:
+                elif ((cls is Puzzle and name == "opens_scene_id")
+                      or (cls in (DialogueNode, DialogueChoice) and name == "next_node_id")) and value is None:
                     continue
                 elif cls is Placement and name in ("x", "y"):
                     if type(value) is not int:

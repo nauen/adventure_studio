@@ -172,8 +172,14 @@ Inventarbedingungen und Rezeptkombinationen. Eine Galerie zeigt die
 momentan deterministisch erzeugten Raumhintergründe. Nach der Bestätigung
 eines Edits wird die gesamte Übersicht aus dem neuen Storymodell
 aktualisiert. Das ist eine reine Lesesicht; sie fügt keine zweite Datenhaltung
-hinzu. Charakterbilder, Dialogbäume, Sprachclips und echte Bildzuordnungen
-sind **noch nicht** Teil des versionierten Story- und SCUMM-Exportmodells.
+hinzu. Das Storyformat v4 enthält jetzt Dialogknoten, Antwortverzweigungen
+und referenzierte Bilder und Sprachclips. Die Übersicht zeigt diese Daten,
+aber die Binärbilder werden noch nicht geladen. Der eigentliche SCUMM-Export
+unterstützt v4 noch nicht und meldet die Einschränkung explizit. Alte
+Story-Dateien v1/v2/v3 bleiben vollständig lesbar.
+Im Reiter **Dialogzeilen** lassen sich vorhandene Sprechtexte bearbeiten;
+neue Gespräche und Antwortverzweigungen entstehen als geprüfte
+KI-Operationsvorschläge.
 
 Gradio öffnet eine lokale Oberfläche im Browser. Die Offline-Bearbeitung
 braucht weiterhin weder ComfyUI noch einen API-Key.

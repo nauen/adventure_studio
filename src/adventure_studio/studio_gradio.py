@@ -14,7 +14,7 @@ from pathlib import Path
 from .studio_catalog import relationship_svg, story_catalog
 from .story_ai import preview_ai_response, propose_story_change
 from .studio_service import (accept_proposal, add_decoration, change_item,
-                             change_position, change_puzzle, change_scene,
+                             change_dialogue_line, change_position, change_puzzle, change_scene,
                              describe_story, item_position, prepare_proposal,
                              report_text, scene_preview)
 from .story_document import canonical_story_json, parse_story_document
@@ -42,6 +42,11 @@ def puzzle_fields(raw: str, puzzle_id: str) -> tuple[str, str]:
     return (puzzle.title, ", ".join(puzzle.requires)) if puzzle else ("", "")
 
 
+def dialogue_line_fields(raw: str, node_id: str) -> str:
+    node = next((n for n in parse_story_document(raw).dialogue_nodes if n.id == node_id), None)
+    return node.text if node else ""
+
+
 def room_items(raw: str, scene_id: str) -> tuple[tuple[str, str], ...]:
     story = parse_story_document(raw)
     return tuple((item.name, item.id) for item in story.items
@@ -49,7 +54,13 @@ def room_items(raw: str, scene_id: str) -> tuple[tuple[str, str], ...]:
 
 
 def position_fields(raw: str, item_id: str) -> tuple[int, int]:
-    return item_position(raw, item_id) if item_id else (0, 0)
+    if not item_id:
+        return 0, 0
+    try:
+        return item_position(raw, item_id)
+    except ValueError:
+        position = next((p for p in parse_story_document(raw).placements if p.item_id == item_id), None)
+        return (position.x, position.y) if position else (0, 0)
 
 
 def render_scene(raw: str, scene_id: str):
@@ -67,6 +78,13 @@ def render_scene(raw: str, scene_id: str):
     return image
 
 
+def safe_render_scene(raw: str, scene_id: str):
+    try:
+        return render_scene(raw, scene_id)
+    except ValueError:
+        return None  # Authoring data is valid, but SCUMM preview is unavailable.
+
+
 def catalog_view(raw: str):
     """Shared overview after load and after each confirmed edit."""
     catalog = story_catalog(raw)
@@ -74,18 +92,20 @@ def catalog_view(raw: str):
     for scene_id, title, _chapter, _description in catalog.scenes:
         try:
             gallery.append((render_scene(raw, scene_id), f"{title} ({scene_id})"))
-        except ValueError:
+        except (ValueError, ImportError):
             # The story bible may contain scenes not yet supported by the
-            # deliberately bounded SCUMM adapter.
+            # deliberately bounded SCUMM adapter. Core installs also omit PIL.
             pass
     summary = (f"**{len(catalog.chapters)} Kapitel · {len(catalog.scenes)} Szenen · "
                f"{len(catalog.characters)} Figuren · {len(catalog.items)} Objekte · "
-               f"{len(catalog.puzzles)} Rätsel · {len(catalog.recipes)} Rezepte**\n\n"
-               "Raumbilder sind derzeit technische Vorschauen. Charakterbilder und "
-               "Dialogbäume haben noch keine eigenen Projekt-Assets.")
+               f"{len(catalog.puzzles)} Rätsel · {len(catalog.recipes)} Rezepte · "
+               f"{len(catalog.dialogues)} Dialoge · {len(catalog.assets)} Asset-Referenzen**\n\n"
+               "Raumbilder sind derzeit technische Vorschauen. Referenzierte "
+               "Charakterbilder und Sprachdateien werden noch nicht gerendert.")
     return (summary, list(catalog.chapters), list(catalog.scenes),
             list(catalog.characters), list(catalog.items), list(catalog.puzzles),
-            list(catalog.recipes), gallery, relationship_svg(raw))
+            list(catalog.recipes), list(catalog.dialogues), list(catalog.dialogue_nodes),
+            list(catalog.assets), gallery, relationship_svg(raw))
 
 
 def make_app():
@@ -100,6 +120,8 @@ def make_app():
         scene = view.scenes[0][0]
         item = view.items[0][0] if view.items else None
         puzzle = view.puzzles[0][0] if view.puzzles else None
+        dialogue_nodes = parse_story_document(raw).dialogue_nodes
+        node_id = dialogue_nodes[0].id if dialogue_nodes else None
         objects = room_items(raw, scene)
         selected_object = objects[0][1] if objects else None
         chapters = "\n".join(f"- {title} (`{id_}`)" for id_, title in view.chapters)
@@ -111,7 +133,10 @@ def make_app():
                 f"**Kapitel**\n{chapters}\n\n**Spielbarer Pfad:** {path}",
                 *scene_fields(raw, scene), *item_fields(raw, item or ""),
                 *puzzle_fields(raw, puzzle or ""), *position_fields(raw, selected_object or ""),
-                render_scene(raw, scene), *catalog_view(raw))
+                safe_render_scene(raw, scene),
+                gr.update(choices=[(f"{n.speaker_id}: {n.text[:48]}", n.id) for n in dialogue_nodes],
+                          value=node_id),
+                dialogue_line_fields(raw, node_id or ""), *catalog_view(raw))
 
     def load_file(file_path):
         if not file_path:
@@ -213,13 +238,20 @@ def make_app():
                                           object_fit="contain", height=270)
             with gr.Accordion("Charaktere", open=False):
                 character_grid = gr.Dataframe(headers=["ID", "Name", "Szene", "Bildstatus"], interactive=False)
-                gr.Markdown("Charakterporträts, Laufanimationen und Sprite-Referenzen sind geplant; aktuell werden keine Bilder vorgetäuscht.")
+                gr.Markdown("Porträt- und Laufanimations-Referenzen sind im Storyformat v4 vorgesehen. Bilder werden erst dargestellt, sobald eine überprüfte Asset-Datei geladen werden kann.")
             with gr.Accordion("Gegenstände und Positionen", open=False):
                 item_grid = gr.Dataframe(headers=["ID", "Name", "Szene", "Rolle", "Position X,Y"], interactive=False)
             with gr.Accordion("Aktionen, Rätsel und Rezepte", open=False):
                 puzzle_grid = gr.Dataframe(headers=["ID", "Titel", "Szene", "Benötigt", "Öffnet"], interactive=False)
                 recipe_grid = gr.Dataframe(headers=["ID", "Titel", "Zutaten", "Ergebnis"], interactive=False)
                 gr.Markdown("Die Aktionsübersicht zeigt zurzeit deklarative Tür-Rätsel und Kombinationsrezepte. Dialoge und frei definierte Aktionen folgen in einer späteren Modellversion.")
+            with gr.Accordion("Dialoge und Antworten", open=False):
+                dialogue_grid = gr.Dataframe(headers=["ID", "Szene", "Startknoten"], interactive=False)
+                dialogue_node_grid = gr.Dataframe(headers=["ID", "Dialog", "Sprecher", "Text", "Weiter"], interactive=False)
+                gr.Markdown("Antwortverzweigungen sind im Graph enthalten. Dialoge werden im Storyformat v4 geprüft, aber noch **nicht** in SCUMM exportiert.")
+            with gr.Accordion("Asset-Referenzen", open=False):
+                asset_grid = gr.Dataframe(headers=["ID", "Zieltyp", "Ziel-ID", "Art", "Quelle"], interactive=False)
+                gr.Markdown("Asset-IDs und SHA-256-Hashes sind versionierte Metadaten. Die Bilddateien selbst werden noch nicht aus externen Providern geladen.")
             with gr.Accordion("Beziehungsgraph", open=True):
                 graph_view = gr.HTML(label="Story-Beziehungen")
         with gr.Tab("Szenen"):
@@ -249,6 +281,11 @@ def make_app():
             puzzle_title = gr.Textbox(label="Rätseltitel")
             puzzle_items = gr.Textbox(label="Benötigte Gegenstands-IDs, mit Komma getrennt")
             save_puzzle = gr.Button("Rätseländerung prüfen")
+        with gr.Tab("Dialogzeilen"):
+            gr.Markdown("Vorhandene Gesprächszeilen bearbeiten. Neue Dialoge und Verzweigungen können über die KI-Story-Regie als geprüfte Datenoperationen entstehen.")
+            dialogue_node_select = gr.Dropdown(label="Dialogzeile")
+            dialogue_text = gr.Textbox(label="Sprechtext", lines=4)
+            save_dialogue = gr.Button("Dialogänderung prüfen")
         with gr.Tab("KI-Story-Regie"):
             gr.Markdown("Beschreibe die gewünschte Änderung. Die KI erzeugt nur Datenoperationen; Story-Solver und SCUMM-Compiler prüfen sie. **Erst der Button unten übernimmt Änderungen.** Für den kostenpflichtigen API-Aufruf müssen `OPENAI_API_KEY` und `pip install -e '.[studio,ai]'` konfiguriert sein.")
             ai_request = gr.Textbox(label="Was soll sich in der Story ändern?", lines=5,
@@ -262,8 +299,10 @@ def make_app():
 
         refreshed = [scene_select, item_select, puzzle_select, position_item, overview, scene_title,
                      scene_description, item_name, item_description, puzzle_title, puzzle_items,
-                     position_x, position_y, preview, catalog_summary, chapter_grid, scene_grid,
-                     character_grid, item_grid, puzzle_grid, recipe_grid, room_gallery, graph_view]
+                     position_x, position_y, preview, dialogue_node_select, dialogue_text,
+                     catalog_summary, chapter_grid, scene_grid,
+                     character_grid, item_grid, puzzle_grid, recipe_grid, dialogue_grid,
+                     dialogue_node_grid, asset_grid, room_gallery, graph_view]
         app.load(selectors, inputs=[state], outputs=refreshed)
         def load_and_clear(file_path):
             raw, *rest = load_file(file_path)
@@ -271,7 +310,7 @@ def make_app():
 
         story_file.change(load_and_clear, inputs=[story_file], outputs=[state, pending, *refreshed, report])
         scene_select.change(scene_fields, inputs=[state, scene_select], outputs=[scene_title, scene_description])
-        scene_select.change(render_scene, inputs=[state, scene_select], outputs=[preview])
+        scene_select.change(safe_render_scene, inputs=[state, scene_select], outputs=[preview])
         def update_room_objects(raw, scene_id):
             choices = room_items(raw, scene_id)
             item_id = choices[0][1] if choices else None
@@ -285,6 +324,7 @@ def make_app():
                        outputs=[position_x, position_y])
         item_select.change(item_fields, inputs=[state, item_select], outputs=[item_name, item_description])
         puzzle_select.change(puzzle_fields, inputs=[state, puzzle_select], outputs=[puzzle_title, puzzle_items])
+        dialogue_node_select.change(dialogue_line_fields, inputs=[state, dialogue_node_select], outputs=[dialogue_text])
         save_scene.click(lambda *args: propose(change_scene, *args),
                          [state, scene_select, scene_title, scene_description], [pending, report])
         save_item.click(lambda *args: propose(change_item, *args),
@@ -293,6 +333,8 @@ def make_app():
                        [state, scene_select, new_id, new_name, new_description], [pending, report])
         save_puzzle.click(propose_puzzle, [state, puzzle_select, puzzle_title, puzzle_items],
                           [pending, report])
+        save_dialogue.click(lambda *args: propose(change_dialogue_line, *args),
+                            [state, dialogue_node_select, dialogue_text], [pending, report])
         save_position.click(propose_position, [state, position_item, position_x, position_y],
                             [pending, report])
         ai_button.click(propose_ai, [state, ai_request], [pending, report])

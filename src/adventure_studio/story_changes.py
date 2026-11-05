@@ -5,11 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from .story import Chapter, Character, Item, Placement, Puzzle, Recipe, Scene, Story, consolidate_story, validate_story, verify_story
+from .story import (AssetRef, Chapter, Character, Dialogue, DialogueChoice,
+                    DialogueNode, Item, Placement, Puzzle, Recipe, Scene,
+                    Story, consolidate_story, validate_story, verify_story)
 
 
-StoryEntity = Chapter | Scene | Character | Item | Puzzle | Recipe | Placement
-EntityKind = Literal["chapter", "scene", "character", "item", "puzzle", "recipe", "placement"]
+StoryEntity = Chapter | Scene | Character | Item | Puzzle | Recipe | Placement | Dialogue | DialogueNode | DialogueChoice | AssetRef
+EntityKind = Literal["chapter", "scene", "character", "item", "puzzle", "recipe", "placement", "dialogue", "dialogue_node", "dialogue_choice", "asset"]
 
 _COLLECTIONS: dict[str, tuple[str, type]] = {
     "chapter": ("chapters", Chapter),
@@ -19,6 +21,10 @@ _COLLECTIONS: dict[str, tuple[str, type]] = {
     "puzzle": ("puzzles", Puzzle),
     "recipe": ("recipes", Recipe),
     "placement": ("placements", Placement),
+    "dialogue": ("dialogues", Dialogue),
+    "dialogue_node": ("dialogue_nodes", DialogueNode),
+    "dialogue_choice": ("dialogue_choices", DialogueChoice),
+    "asset": ("assets", AssetRef),
 }
 
 
@@ -47,6 +53,7 @@ class StoryChangeReport:
     changes: tuple[StoryDiff, ...]
     playable_path: tuple[str, ...]
     consolidated: tuple[str, ...] = ()
+    export_warning: str = ""
 
 
 def edit_story(story: Story, operations: tuple[PutEntity | DeleteEntity, ...]) -> tuple[Story, StoryChangeReport]:
@@ -82,8 +89,8 @@ def edit_story(story: Story, operations: tuple[PutEntity | DeleteEntity, ...]) -
     candidate = replace(story, **{attr: tuple(collections[kind].values())
                                   for kind, (attr, _) in _COLLECTIONS.items()})
     candidate, removed = consolidate_story(candidate)
-    collections["item"] = {item.id: item for item in candidate.items}
-    collections["placement"] = {placement.id: placement for placement in candidate.placements}
+    for kind, (attr, _) in _COLLECTIONS.items():
+        collections[kind] = {entity.id: entity for entity in getattr(candidate, attr)}
     playable_path = verify_story(candidate)
     diffs = []
     for kind, (attr, _) in _COLLECTIONS.items():

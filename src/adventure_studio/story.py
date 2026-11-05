@@ -8,6 +8,7 @@ the SCUMM exporter converts them into room coordinates.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import re
 
 from .core import Action, Condition, Effect, Object, Project, analyze
 
@@ -74,6 +75,40 @@ class Placement:
 
 
 @dataclass(frozen=True)
+class Dialogue:
+    id: str
+    scene_id: str
+    entry_node_id: str
+
+
+@dataclass(frozen=True)
+class DialogueNode:
+    id: str
+    dialogue_id: str
+    speaker_id: str
+    text: str
+    next_node_id: str | None = None
+
+
+@dataclass(frozen=True)
+class DialogueChoice:
+    id: str
+    node_id: str
+    text: str
+    next_node_id: str | None = None
+
+
+@dataclass(frozen=True)
+class AssetRef:
+    id: str
+    target_kind: str
+    target_id: str
+    asset_kind: str
+    source_id: str
+    digest: str
+
+
+@dataclass(frozen=True)
 class Story:
     chapters: tuple[Chapter, ...]
     scenes: tuple[Scene, ...]
@@ -84,6 +119,10 @@ class Story:
     final_puzzle_id: str
     recipes: tuple[Recipe, ...] = ()
     placements: tuple[Placement, ...] = ()
+    dialogues: tuple[Dialogue, ...] = ()
+    dialogue_nodes: tuple[DialogueNode, ...] = ()
+    dialogue_choices: tuple[DialogueChoice, ...] = ()
+    assets: tuple[AssetRef, ...] = ()
 
 
 def _indexed(items: tuple) -> dict:
@@ -101,6 +140,10 @@ def validate_story(story: Story) -> None:
     puzzles = _indexed(story.puzzles)
     recipes = _indexed(story.recipes)
     placements = _indexed(story.placements)
+    dialogues = _indexed(story.dialogues)
+    dialogue_nodes = _indexed(story.dialogue_nodes)
+    dialogue_choices = _indexed(story.dialogue_choices)
+    assets = _indexed(story.assets)
     if story.starting_scene_id not in scenes:
         raise ValueError("Missing starting scene")
     if story.final_puzzle_id not in puzzles:
@@ -151,6 +194,80 @@ def validate_story(story: Story) -> None:
     used.update(ingredient for recipe in recipes.values() for ingredient in recipe.ingredients)
     if produced - used:
         raise ValueError(f"Unused crafted item: {sorted(produced - used)}")
+
+    characters = {c.id: c for c in story.characters}
+    for dialogue in dialogues.values():
+        if dialogue.scene_id not in scenes:
+            raise ValueError(f"Unknown dialogue scene: {dialogue.id}")
+        if dialogue.entry_node_id not in dialogue_nodes:
+            raise ValueError(f"Unknown dialogue entry: {dialogue.id}")
+    for node in dialogue_nodes.values():
+        dialogue = dialogues.get(node.dialogue_id)
+        if dialogue is None:
+            raise ValueError(f"Unknown dialogue for node: {node.id}")
+        speaker = characters.get(node.speaker_id)
+        if speaker is None or speaker.scene_id != dialogue.scene_id:
+            raise ValueError(f"Invalid dialogue speaker: {node.id}")
+        if node.next_node_id is not None and (node.next_node_id not in dialogue_nodes
+                or dialogue_nodes[node.next_node_id].dialogue_id != node.dialogue_id):
+            raise ValueError(f"Unknown dialogue successor: {node.id}")
+    by_node: dict[str, list[DialogueChoice]] = {}
+    for choice in dialogue_choices.values():
+        parent = dialogue_nodes.get(choice.node_id)
+        if parent is None:
+            raise ValueError(f"Unknown dialogue choice node: {choice.id}")
+        if choice.next_node_id is not None and (choice.next_node_id not in dialogue_nodes
+                or dialogue_nodes[choice.next_node_id].dialogue_id != parent.dialogue_id):
+            raise ValueError(f"Invalid dialogue choice target: {choice.id}")
+        by_node.setdefault(choice.node_id, []).append(choice)
+    for node in dialogue_nodes.values():
+        if node.next_node_id is not None and node.id in by_node:
+            raise ValueError(f"Dialogue node cannot have both automatic next and choices: {node.id}")
+    for dialogue in dialogues.values():
+        if dialogue_nodes[dialogue.entry_node_id].dialogue_id != dialogue.id:
+            raise ValueError(f"Dialogue entry belongs to another dialogue: {dialogue.id}")
+        group = {node.id for node in dialogue_nodes.values() if node.dialogue_id == dialogue.id}
+        outgoing = {id_: (([dialogue_nodes[id_].next_node_id]
+                            if dialogue_nodes[id_].next_node_id is not None else
+                            [choice.next_node_id for choice in by_node.get(id_, [])]))
+                    for id_ in group}
+        reachable = {dialogue.entry_node_id}
+        frontier = [dialogue.entry_node_id]
+        while frontier:
+            for target in outgoing[frontier.pop()]:
+                if target is not None and target not in reachable:
+                    reachable.add(target)
+                    frontier.append(target)
+        if reachable != group:
+            raise ValueError(f"Unreachable dialogue nodes: {dialogue.id}")
+        endings = {id_ for id_, transitions in outgoing.items() if not transitions or None in transitions}
+        can_end = set(endings)
+        while True:
+            extra = {id_ for id_, transitions in outgoing.items() if any(t in can_end for t in transitions)}
+            if extra <= can_end:
+                break
+            can_end.update(extra)
+        if can_end != group:
+            raise ValueError(f"Dialogue dead end: {dialogue.id}")
+
+    asset_targets = {"scene": scenes, "character": characters, "item": items,
+                     "dialogue_node": dialogue_nodes}
+    asset_kinds = {"scene": {"background"},
+                   "character": {"portrait", "walk_sprite"},
+                   "item": {"object_sprite"},
+                   "dialogue_node": {"voice"}}
+    slots = set()
+    for asset in assets.values():
+        if (asset.target_kind not in asset_targets
+                or asset.target_id not in asset_targets[asset.target_kind]
+                or asset.asset_kind not in asset_kinds[asset.target_kind]):
+            raise ValueError(f"Invalid asset target or role: {asset.id}")
+        slot = (asset.target_kind, asset.target_id, asset.asset_kind)
+        if slot in slots:
+            raise ValueError(f"Duplicate asset assignment: {slot}")
+        slots.add(slot)
+        if not re.fullmatch(r"[0-9a-f]{64}", asset.digest):
+            raise ValueError(f"Invalid asset digest: {asset.id}")
 
 
 def compile_story(story: Story) -> Project:
@@ -216,4 +333,6 @@ def consolidate_story(story: Story) -> tuple[Story, tuple[str, ...]]:
                            if item.role == "pickup" and item.id not in required))
     return replace(story,
                    items=tuple(item for item in story.items if item.id not in removed),
-                   placements=tuple(p for p in story.placements if p.item_id not in removed)), removed
+                   placements=tuple(p for p in story.placements if p.item_id not in removed),
+                   assets=tuple(a for a in story.assets if not (
+                       a.target_kind == "item" and a.target_id in removed))), removed
