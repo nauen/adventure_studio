@@ -92,9 +92,13 @@ class StoryToScummTests(unittest.TestCase):
 
     def test_unsupported_story_mechanics_fail_closed(self):
         story = small_story()
-        with self.assertRaisesRegex(ValueError, "no custom actors"):
-            from adventure_studio.story import Character
-            compile_story_to_scumm(replace(story, characters=(Character("hero", "Held", "", "Tavern"),)))
+        from adventure_studio.story import Character
+        game = compile_story_to_scumm(replace(
+            story, characters=(Character("hero", "Held", "Steht im Raum", "Tavern"),)))
+        self.assertEqual(next(h.id for h in game.rooms[0].hotspots if h.id == "hero"), "hero")
+        with self.assertRaisesRegex(ValueError, "Story text"):
+            compile_story_to_scumm(replace(
+                story, characters=(Character("hero", "Held", "", "Tavern"),)))
         with self.assertRaisesRegex(ValueError, "Unreferenced pickup"):
             compile_story_to_scumm(replace(story, items=story.items +
                                            (Item("Coin", "Münze", "Gold", "Tavern"),)))

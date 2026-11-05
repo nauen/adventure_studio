@@ -18,6 +18,8 @@ on:
       - 'src/adventure_studio/scumm_toolchain.py'
       - 'src/adventure_studio/story_document.py'
       - 'src/adventure_studio/story_to_scumm.py'
+      - 'src/adventure_studio/dialogue_demo.py'
+      - 'tests/test_story_v4.py'
       - 'src/adventure_studio/music_demo.py'
       - 'src/adventure_studio/music_transition_demo.py'
       - 'src/adventure_studio/music_director.py'
@@ -171,6 +173,15 @@ jobs:
           cp "$GITHUB_WORKSPACE/examples/PLAY_STORY_PREVIEW.txt" /tmp/story-fixture/README.txt
           test -s /tmp/story-fixture/tentacle.000
           test -s /tmp/story-fixture/tentacle.001
+      - name: Compile experimental linear SCUMM v6 dialogue fixture
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-story-build
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-story-build /tmp/scummc-upstream /tmp/dialogue-fixture
+          cp /tmp/dialogue-story-build/story.json /tmp/dialogue-fixture/story.json
+          test -s /tmp/dialogue-fixture/tentacle.000
+          test -s /tmp/dialogue-fixture/tentacle.001
       # Independent media gates run before the longer gameplay interaction suite.
       # A flaky UI click in a puzzle must not prevent palette/audio evidence.
       - name: Compile indexed-water SCUMM v6 palette-cycle fixture
@@ -456,6 +467,16 @@ jobs:
             /tmp/story-fixture/tentacle.001
             /tmp/story-fixture/game-goal.json
             /tmp/story-fixture/README.txt
+      - name: Upload experimental talkable-character preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: story-dialogue-playable-preview
+          if-no-files-found: ignore
+          path: |
+            /tmp/dialogue-fixture/tentacle.000
+            /tmp/dialogue-fixture/tentacle.001
+            /tmp/dialogue-fixture/story.json
       - name: Upload two-item story preview for manual testing
         if: always()
         uses: actions/upload-artifact@v4

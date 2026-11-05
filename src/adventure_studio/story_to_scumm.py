@@ -79,6 +79,44 @@ def _room_image(provider: ImageProvider, scene_id: str, width: int, goal: bool) 
     return image
 
 
+def _simple_character_hotspots(story: Story, scene_id: str, room_width: int) -> tuple[RoomHotspot, ...]:
+    """Bounded first dialogue runtime: one linear conversation per character.
+
+    Full dialogue branching, NPC actor costumes and speech voice resources
+    remain separate compiler tasks. Unsupported cases fail closed.
+    """
+    result = []
+    for index, actor in enumerate(c for c in story.characters if c.scene_id == scene_id):
+        if not _ID.fullmatch(actor.id):
+            raise ValueError("Character ID is not a valid SCUMM identifier")
+        dialogues = [d for d in story.dialogues if d.scene_id == scene_id and any(
+            n.dialogue_id == d.id and n.speaker_id == actor.id for n in story.dialogue_nodes)]
+        if len(dialogues) > 1:
+            raise ValueError(f"Only one linear dialogue per character is supported: {actor.id}")
+        lines = []
+        if dialogues:
+            dialogue = dialogues[0]
+            nodes = {n.id: n for n in story.dialogue_nodes if n.dialogue_id == dialogue.id}
+            current = dialogue.entry_node_id
+            while current is not None:
+                node = nodes[current]
+                if node.speaker_id != actor.id:
+                    raise ValueError("Current SCUMM prototype requires one speaker per dialogue")
+                if any(choice.node_id == current for choice in story.dialogue_choices):
+                    raise ValueError("SCUMM answer choices are not compiled yet")
+                lines.append(_text(node.text))
+                current = node.next_node_id
+                if len(lines) > 16:
+                    raise ValueError("Current SCUMM prototype supports at most sixteen dialogue lines")
+        x = 185 + index * 35
+        if x + 16 > room_width:
+            raise ValueError("Too many characters for automatic room layout")
+        result.append(RoomHotspot(actor.id, _text(actor.name), _text(actor.description),
+                                  x, 110, 16, 16, sprite_pixels=_sprite(6, 3),
+                                  talk_lines=tuple(lines)))
+    return tuple(result)
+
+
 def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument:
     """Bounded v2 fixture: one two-ingredient recipe unlocks one visible exit."""
     if (len(story.chapters) != 1 or len(story.scenes) != 2 or len(story.puzzles) != 1
@@ -136,14 +174,16 @@ def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument
 def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = None) -> GameDocument:
     """Compile bounded linear item-and-door puzzles, never story-authored scripts."""
     verify_story(story)
-    if story.dialogues or story.dialogue_nodes or story.dialogue_choices or story.assets:
-        raise ValueError("SCUMM exporter does not yet support dialogue or versioned asset references")
+    if story.assets:
+        raise ValueError("SCUMM exporter does not yet support versioned asset references")
+    if story.dialogue_choices:
+        raise ValueError("SCUMM answer choices are not compiled yet")
     provider = image_provider if image_provider is not None else DeterministicStoryImageProvider()
     if story.recipes:
         return _compile_recipe_story(story, provider)
     if (len(story.chapters) != 1 or not 1 <= len(story.puzzles) <= 2
-            or len(story.scenes) != len(story.puzzles) + 1 or story.characters):
-        raise ValueError("Exporter supports one chapter, one or two sequential door puzzles, and no custom actors")
+            or len(story.scenes) != len(story.puzzles) + 1):
+        raise ValueError("Exporter supports one chapter and one or two sequential door puzzles")
     # Follow scene transitions, never incidental input ordering. Acyclic,
     # complete use of all puzzles and scenes is a strict export precondition.
     route = [story.starting_scene_id]
@@ -164,7 +204,8 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
         raise ValueError("Final puzzle must unlock the last scene in the route")
     if any(not _ID.fullmatch(id_) for id_ in
            [*(c.id for c in story.chapters), *(s.id for s in story.scenes),
-            *(i.id for i in story.items), *(p.id for p in story.puzzles)]):
+            *(i.id for i in story.items), *(p.id for p in story.puzzles),
+            *(c.id for c in story.characters)]):
         raise ValueError("Story identifiers must be valid SCUMM identifiers")
     if {"Door", "Door2", "Back2", "Back3"} & {i.id for i in story.items}:
         raise ValueError("Story item conflicts with generated exit identifier")
@@ -192,6 +233,7 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
                                 *_item_xy(story, i.id, 160 + index * 40, 100, width), 16, 16,
                                 sprite_pixels=_sprite(1, 4))
                     for index, i in enumerate(decorations)]
+        hotspots.extend(_simple_character_hotspots(story, scene_id, width))
         if len(route) > 2 and scene_index > 0:
             # Visible, unconditional passage back to the previous story scene.
             # Object ownership and door states belong to the SCUMM engine;

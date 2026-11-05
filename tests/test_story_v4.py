@@ -9,6 +9,7 @@ from adventure_studio.story_changes import PutEntity, edit_story
 from adventure_studio.story_document import canonical_story_json, parse_story_document
 from adventure_studio.story_protocol import parse_operations
 from adventure_studio.story_to_scumm import compile_story_to_scumm
+from adventure_studio.dialogue_demo import dialogue_fixture
 from adventure_studio.studio_gradio import catalog_view, safe_render_scene
 from adventure_studio.story_ai import preview_ai_response
 from adventure_studio.studio_service import change_dialogue_line, change_scene, report_text
@@ -33,6 +34,16 @@ def dialogue_story():
 
 
 class StoryV4Tests(unittest.TestCase):
+    def test_dialogue_fixture_is_reproducible_and_compilable(self):
+        sample = (Path(__file__).resolve().parents[1] / "examples/mini_story.json").read_text()
+        raw = dialogue_fixture(sample)
+        self.assertEqual(dialogue_fixture(sample), raw)
+        story = parse_story_document(raw)
+        self.assertEqual(json.loads(raw)["format_version"], 4)
+        self.assertEqual(len(story.characters), 1)
+        self.assertTrue(any(h.id == "HarborKeeper" and len(h.talk_lines) == 2
+                            for h in compile_story_to_scumm(story).rooms[0].hotspots))
+
     def test_v4_roundtrip_preserves_dialogue_and_provenance(self):
         story = dialogue_story()
         raw = canonical_story_json(story)
@@ -81,9 +92,30 @@ class StoryV4Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "dead end"):
             validate_story(stuck)
 
-    def test_scumm_export_fails_closed_for_new_unimplemented_content(self):
-        with self.assertRaisesRegex(ValueError, "dialogue or versioned asset"):
+    def test_scumm_export_fails_closed_for_new_unimplemented_assets(self):
+        with self.assertRaisesRegex(ValueError, "asset references"):
             compile_story_to_scumm(dialogue_story())
+
+    def test_linear_dialogue_compiles_as_talkable_hotspot(self):
+        story = replace(dialogue_story(), assets=(),
+                        dialogue_choices=(),
+                        dialogue_nodes=(replace(dialogue_story().dialogue_nodes[0], next_node_id="Response"),
+                                        dialogue_story().dialogue_nodes[1]))
+        game = compile_story_to_scumm(story)
+        self.assertEqual(next(h for h in game.rooms[0].hotspots if h.id == "Keeper").talk_lines,
+                         ("Wer bist du?", "Na dann."))
+        from adventure_studio.scumm_assets import scummc_room_source
+        source = scummc_room_source(game.rooms[0])
+        self.assertIn("case TalkTo:", source)
+        self.assertIn('egoSay("Wer bist du?");', source)
+        self.assertEqual(source.count("waitForMessage();"), 2)
+        from adventure_studio.scumm_project import canonical_json, parse_document
+        self.assertEqual(parse_document(canonical_json(game)), game)
+
+    def test_branching_dialogue_is_explicitly_rejected_by_compiler(self):
+        story = replace(dialogue_story(), assets=())
+        with self.assertRaisesRegex(ValueError, "answer choices"):
+            compile_story_to_scumm(story)
 
     def test_authoring_remains_possible_with_explicit_export_warning(self):
         raw = canonical_story_json(dialogue_story())
@@ -110,7 +142,7 @@ class StoryV4Tests(unittest.TestCase):
         # Existing compiler rejects custom characters: preview still allows
         # authoring the versioned model while reporting the export gate.
         proposal = preview_ai_response(canonical_story_json(base), json.dumps(ops))
-        self.assertIn("SCUMM-Export noch nicht möglich", report_text(proposal.edit.report))
+        self.assertNotIn("SCUMM-Export noch nicht möglich", report_text(proposal.edit.report))
         self.assertEqual(len(parse_story_document(proposal.edit.story_json).dialogues), 1)
 
     def test_direct_dialogue_text_edit_is_atomic_and_bounded(self):

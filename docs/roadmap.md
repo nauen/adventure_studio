@@ -231,6 +231,12 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 - [x] **Export-Grenze:** Dialoge/Assets können gespeichert werden;
       unimplementierte Inhalte werden beim SCUMM-Build ausdrücklich
       abgewiesen und im Änderungsbericht als Exportwarnung angezeigt.
+- [x] **Erster SCUMM-Dialog-Compiler:** Figuren als Platzhalter-Hotspots,
+      je Figur ein einfacher linearer Dialog (bis zu 16 Zeilen), `TalkTo`,
+      `egoSay` und `waitForMessage`; Quellen und Projekt-JSON sind getestet.
+      ScummC-/ScummVM-Integration läuft als separates CI-Gate.
+- [ ] Echte NPC-Sprechblasen, spielbare Antwortauswahl, Sprecherwechsel,
+      Kostüm-/Animationsresourcen und Voice-Cues mit Stock ScummVM prüfen.
 - [ ] Dialogmodell als eigene versionierte Struktur: Sprechende,
       Dialogknoten, Antwortoptionen, Bedingungen, Effekte, Untertitel
       und optionale Sprach-Assets. Dialoggraph und Verzweigungen

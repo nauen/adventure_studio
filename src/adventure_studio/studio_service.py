@@ -16,9 +16,12 @@ from .story_to_scumm import compile_story_to_scumm
 
 def export_warning(story: Story) -> str:
     """Allow new authoring concepts while never silently dropping them on export."""
-    if story.characters or story.dialogues or story.dialogue_nodes or story.dialogue_choices or story.assets:
-        return "SCUMM-Export noch nicht möglich: eigene Figuren, Dialoge und Asset-Referenzen werden noch nicht kompiliert"
-    compile_story_to_scumm(story)
+    try:
+        compile_story_to_scumm(story)
+    except ValueError as error:
+        if story.characters or story.dialogues or story.dialogue_nodes or story.dialogue_choices or story.assets:
+            return f"SCUMM-Export noch nicht möglich: {error}"
+        raise
     return ""
 
 

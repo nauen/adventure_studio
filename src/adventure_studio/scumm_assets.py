@@ -28,6 +28,7 @@ class RoomHotspot:
     sprite_pixels: bytes | None = None
     open_sprite_pixels: bytes | None = None
     exit_destination: str | None = None
+    talk_lines: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -107,6 +108,10 @@ def _validate(room: RoomAsset) -> None:
             pickups.add(hotspot.id)
         _scumm_string(hotspot.label)
         _scumm_string(hotspot.description)
+        if len(hotspot.talk_lines) > 16:
+            raise ValueError("Dialogue exceeds sixteen lines per actor hotspot")
+        for line in hotspot.talk_lines:
+            _scumm_string(line)
         if any(type(v) is not int for v in (hotspot.x, hotspot.y, hotspot.width, hotspot.height)):
             raise ValueError("Hotspot coordinates must be integers")
         if (hotspot.x < 0 or hotspot.y < 0 or hotspot.width <= 0 or hotspot.height <= 0
@@ -249,6 +254,12 @@ def scummc_room_source(room: RoomAsset) -> str:
             "        verb(int vrb, int objA, int objB) {\n",
             f"        case LookAt:\n            egoSay({_scumm_string(hotspot.description)});\n            return;\n",
         ])
+        if hotspot.talk_lines:
+            parts.append("        case TalkTo:\n")
+            for line in hotspot.talk_lines:
+                parts.append(f"            egoSay({_scumm_string(line)});\n")
+                parts.append("            waitForMessage();\n")
+            parts.append("            return;\n")
         if hotspot.exit_destination is not None:
             parts.append("        case WalkTo:\n")
             if hotspot.open_sprite_pixels is not None:

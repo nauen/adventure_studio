@@ -59,7 +59,8 @@ def document_dict(document: GameDocument) -> dict:
                           "x": h.x, "y": h.y, "width": h.width, "height": h.height,
                           "pickup": h.pickup, "sprite_pixels": _encode_pixels(h.sprite_pixels),
                           "open_sprite_pixels": _encode_pixels(h.open_sprite_pixels),
-                          "exit_destination": h.exit_destination} for h in room.hotspots],
+                          "exit_destination": h.exit_destination,
+                          **({"talk_lines": list(h.talk_lines)} if h.talk_lines else {})} for h in room.hotspots],
             "use_rules": [{"item_id": r.item_id, "target_id": r.target_id,
                            "response": r.response, "hide_target": r.hide_target,
                            "destination_room": r.destination_room, "open_target": r.open_target,
@@ -147,16 +148,19 @@ def parse_document(source: str) -> GameDocument:
         hotspots = []
         for item in room["hotspots"]:
             h = _only(item, {"id", "label", "description", "x", "y", "width", "height", "pickup",
-                             "sprite_pixels", "open_sprite_pixels", "exit_destination"},
+                             "sprite_pixels", "open_sprite_pixels", "exit_destination", "talk_lines"},
                       {"id", "label", "description", "x", "y", "width", "height", "pickup",
                        "sprite_pixels", "open_sprite_pixels", "exit_destination"})
             if type(h["pickup"]) is not bool:
                 raise ValueError("Pickup must be a Boolean")
+            talk_lines = h.get("talk_lines", [])
+            if not isinstance(talk_lines, list) or not all(isinstance(x, str) for x in talk_lines):
+                raise ValueError("Invalid dialogue lines")
             hotspots.append(RoomHotspot(
                 h["id"], h["label"], h["description"], h["x"], h["y"], h["width"], h["height"],
                 h["pickup"], _decode_pixels(h["sprite_pixels"]) if h["sprite_pixels"] is not None else None,
                 _decode_pixels(h["open_sprite_pixels"]) if h["open_sprite_pixels"] is not None else None,
-                h["exit_destination"],
+                h["exit_destination"], tuple(talk_lines),
             ))
         rules = []
         for item in room["use_rules"]:

@@ -151,8 +151,11 @@ Die älteren Versionen bleiben ohne Migration lesbar. Beim Konsolidieren
 werden Asset-Referenzen auf automatisch entfernte, nicht mehr benötigte
 `pickup`-Gegenstände ebenfalls entfernt und im Änderungsbericht gezeigt.
 
-**Exportgrenze:** Das ist zunächst ein Autoren-/Story-Bibel-Format.
-Der SCUMM-v6-Adapter weist unimplementierte Figuren, Dialoge und Asset-
-Referenzen ausdrücklich zurück. Gradio darf diese Daten trotzdem bearbeiten,
-validieren, vergleichen und als Story-JSON exportieren; der Änderungsbericht
-zeigt die noch fehlende SCUMM-Unterstützung an.
+**Exportgrenze:** Der erste begrenzte SCUMM-v6-Adapter kann nun Figuren als
+sichtbare Platzhalter-Hotspots und je Figur höchstens einen **linearen**
+Dialog mit bis zu 16 Zeilen über `TalkTo`, `egoSay` und `waitForMessage`
+generieren. Die Darstellung ist noch keine animierte SCUMM-Figur und keine
+Sprechblase am NPC. Antwortverzweigungen, mehrere Sprecher pro Gespräch und
+externe Asset-Referenzen werden ausdrücklich zurückgewiesen. Gradio kann
+diese weitergehenden Daten trotzdem validieren, vergleichen und als
+Story-JSON exportieren; der Änderungsbericht zeigt die Einschränkung.
