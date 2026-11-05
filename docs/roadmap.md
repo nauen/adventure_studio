@@ -111,8 +111,10 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 - [x] Vollständigen Spielweg durch beide Türen der Rätselkette in ScummVM
       nachgewiesen: Hafenhaus-Schlüssel, erster Raumwechsel, Keller-Abzeichen,
       zweite Tür und finaler Archivraum (CI-Lauf #42028572233).
-- [ ] Persistente Zustände und Rückwege über mehrere verknüpfte Räume hinweg
-      unabhängig im laufenden Spiel prüfen.
+- [x] Persistente Zustände und Rückwege über mehrere verknüpfte Räume hinweg
+      in stock ScummVM geprüft: Archiv → Keller → Hafenhaus; beide Türen
+      bleiben geöffnet, beide Gegenstände bleiben im Inventar und erscheinen
+      nicht erneut in den Räumen (CI-Lauf #42029750897).
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.
