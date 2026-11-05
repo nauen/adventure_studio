@@ -29,7 +29,10 @@ def language_runtime_probe(game: Path, output: Path) -> dict:
             time.sleep(5)
             if process.poll() is not None:
                 raise RuntimeError("ScummVM exited before language input")
-            for key, code in (("1", "de"), ("4", "ja"), ("5", "pl")):
+            # Keep Polish selected while changing rooms, then repeat the
+            # translated line without changing GameLanguage.
+            for key, code in (("1", "de"), ("4", "ja"), ("5", "pl"),
+                              ("0", "room_after_pl"), ("6", "pl_after_room")):
                 subprocess.run(["xdotool", "key", key], check=True, timeout=10)
                 time.sleep(2)
                 if process.poll() is not None:
@@ -50,6 +53,8 @@ def language_runtime_probe(game: Path, output: Path) -> dict:
                 process.kill()
                 process.wait(timeout=5)
     report = {"engine_survived_key_selection": True,
+              "room_transition_probe_attempted": True,
+              "language_persistence_visually_verified": False,
               "screenshots": results,
               "glyph_rendering_verified": False}
     (output / "language-runtime-report.json").write_text(
