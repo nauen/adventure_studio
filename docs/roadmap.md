@@ -204,8 +204,15 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
       `studio_service.py` als testbare, UI-unabhängige Grenze.
 - [x] Manuelle Textkorrekturen ohne Änderungen am generierten SCUMM-Quelltext;
       atomare Modelländerung mit `edit_story` und zusätzlichem SCUMM-Adaptercheck.
-- [ ] Rätsel-, Kapitel- und Dialogeditor, Drag-and-drop-Positionierung und
+- [x] Erste Rätselbearbeitung: Titel und notwendige Inventar-IDs ändern;
+      Änderungen werden vor dem Übernehmen mit Diff, Story-Solver und
+      SCUMM-Adapter geprüft. Stale Vorschläge dürfen nicht stillschweigend
+      gegen einen neueren Storyzustand übernommen werden.
+- [ ] Vollständiger Rätsel-, Kapitel- und Dialogeditor, Drag-and-drop-Positionierung und
       eine tatsächlich live gestartete ScummVM-Spielvorschau.
+- [ ] Browser-UI nach dem ersten Gradio-CI-Smoke interaktiv evaluieren;
+      separate `.github/workflows/studio.yml` installiert das optionale
+      Studio-Profil und baut die echten Gradio-Blocks samt Callback-Graph auf.
 - [ ] Story-Chat über validierte Änderungsvorschläge statt generierten Code.
 - [ ] API/MCP-Operationen greifen auf dieselben validierten Modelle zu.
 

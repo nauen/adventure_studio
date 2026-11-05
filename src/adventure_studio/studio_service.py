@@ -19,6 +19,7 @@ class StudioView:
     chapters: tuple[tuple[str, str], ...]
     scenes: tuple[tuple[str, str], ...]
     items: tuple[tuple[str, str, str], ...]
+    puzzles: tuple[tuple[str, str], ...]
     playable_path: tuple[str, ...]
 
 
@@ -28,12 +29,19 @@ class StudioEdit:
     report: StoryChangeReport
 
 
+@dataclass(frozen=True)
+class StudioProposal:
+    base_json: str
+    edit: StudioEdit
+
+
 def describe_story(raw: str) -> StudioView:
     story = parse_story_document(raw)
     return StudioView(
         chapters=tuple((chapter.id, chapter.title) for chapter in story.chapters),
         scenes=tuple((scene.id, scene.title) for scene in story.scenes),
         items=tuple((item.id, item.name, item.scene_id) for item in story.items),
+        puzzles=tuple((puzzle.id, puzzle.title) for puzzle in story.puzzles),
         playable_path=verify_story(story),
     )
 
@@ -84,6 +92,31 @@ def add_decoration(raw: str, scene_id: str, item_id: str,
         raise ValueError("Object name and description cannot be empty")
     item = Item(item_id, name.strip(), description.strip(), scene_id, "decoration")
     return _commit(story, PutEntity("item", item))
+
+
+def change_puzzle(raw: str, puzzle_id: str, title: str,
+                  required_item_ids: tuple[str, ...]) -> StudioEdit:
+    story = parse_story_document(raw)
+    puzzle = next((puzzle for puzzle in story.puzzles if puzzle.id == puzzle_id), None)
+    if puzzle is None:
+        raise ValueError("Unknown puzzle ID")
+    if not title.strip() or not required_item_ids or any(not item_id.strip() for item_id in required_item_ids):
+        raise ValueError("Puzzle needs a title and at least one required item")
+    return _commit(story, PutEntity("puzzle", replace(puzzle, title=title.strip(),
+                                                      requires=required_item_ids)))
+
+
+def prepare_proposal(raw: str, edit: StudioEdit) -> StudioProposal:
+    """Pin the exact version against which an author reviewed the diff."""
+    return StudioProposal(canonical_story_json(parse_story_document(raw)), edit)
+
+
+def accept_proposal(raw: str, proposal: StudioProposal) -> str:
+    """Reject stale previews; only the explicitly reviewed bytes are committed."""
+    if canonical_story_json(parse_story_document(raw)) != proposal.base_json:
+        raise ValueError("Story changed since preview; please review the edit again")
+    parse_story_document(proposal.edit.story_json)
+    return proposal.edit.story_json
 
 
 def scene_preview(raw: str, scene_id: str) -> tuple[int, int, bytes, tuple[tuple[int, int, int], ...], tuple[tuple[str, int, int, int, int], ...]]:

@@ -1,0 +1,44 @@
+name: Gradio Studio UI smoke
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/studio.yml'
+      - 'pyproject.toml'
+      - 'src/adventure_studio/studio_service.py'
+      - 'src/adventure_studio/studio_gradio.py'
+      - 'tests/test_studio_service.py'
+  pull_request:
+    paths:
+      - '.github/workflows/studio.yml'
+      - 'pyproject.toml'
+      - 'src/adventure_studio/studio_service.py'
+      - 'src/adventure_studio/studio_gradio.py'
+      - 'tests/test_studio_service.py'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install optional UI dependencies
+        run: python -m pip install -e '.[studio]'
+      - name: Verify deterministic editor service
+        run: python -m unittest discover -s tests -p test_studio_service.py -v
+      - name: Instantiate real Gradio Blocks and callbacks
+        run: |
+          python - <<'PY'
+          from adventure_studio.studio_gradio import make_app
+
+          app = make_app()
+          assert app is not None
+          assert len(app.fns) >= 10, 'Expected scene/item/puzzle editing and export handlers'
+          print('Gradio Blocks and editing callbacks initialized successfully')
+          PY

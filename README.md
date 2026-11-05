@@ -148,9 +148,12 @@ python -m adventure_studio.studio_gradio
 Gradio öffnet eine lokale Oberfläche im Browser (kein ComfyUI, kein API-Key).
 Du kannst eine vorhandene Story-JSON laden, Kapitel und Szenen prüfen,
 Szenentitel und -texte bearbeiten, Gegenstände umbenennen, Dekorationen
-hinzufügen und eine Raumvorschau mit Hotspots anzeigen. Jede Änderung läuft
+hinzufügen, Rätseltitel und benötigte Inventargegenstände bearbeiten und
+eine Raumvorschau mit Hotspots anzeigen. Jede Änderung läuft
 durch den Story-Solver und den SCUMM-Adapter. Ungültige Änderungen werden
-abgewiesen; der Änderungsbericht ist direkt sichtbar. Über **Geprüfte Story
+abgewiesen. Erst **Änderung prüfen** zeigt den deterministischen Bericht,
+danach übernimmt **Geprüfte Änderung jetzt übernehmen** die geprüfte Version.
+Über **Geprüfte Story
 exportieren** lädst du die aktuelle JSON-Datei herunter. Änderungen bleiben
 bis dahin nur in der laufenden Sitzung und überschreiben keine Projektdateien.
 

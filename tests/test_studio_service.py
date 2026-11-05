@@ -2,7 +2,8 @@ import unittest
 from pathlib import Path
 
 from adventure_studio.studio_service import (
-    add_decoration, change_item, change_scene, describe_story, report_text, scene_preview,
+    accept_proposal, add_decoration, change_item, change_puzzle, change_scene,
+    describe_story, prepare_proposal, report_text, scene_preview,
 )
 from adventure_studio.story_document import parse_story_document
 
@@ -44,6 +45,23 @@ class StudioServiceTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             add_decoration(SAMPLE, "Harbor", "Key", "X", "Y")
         self.assertTrue(describe_story(SAMPLE).playable_path)
+
+    def test_puzzle_requirements_are_checked_against_story_solver(self):
+        original = parse_story_document(SAMPLE)
+        original_puzzle = original.puzzles[0]
+        result = change_puzzle(SAMPLE, original_puzzle.id, "Tür mit Schlüssel", ("Key",))
+        self.assertEqual(parse_story_document(result.story_json).puzzles[0].requires, ("Key",))
+        self.assertEqual(describe_story(SAMPLE).puzzles[0][0], original_puzzle.id)
+        with self.assertRaises(ValueError):
+            change_puzzle(SAMPLE, original_puzzle.id, "Falsche Forderung", ("Missing",))
+
+    def test_preview_must_be_confirmed_against_unchanged_base(self):
+        edit = change_scene(SAMPLE, "Harbor", "Neuer Hafen", "Ein stilles Haus")
+        proposal = prepare_proposal(SAMPLE, edit)
+        self.assertEqual(accept_proposal(SAMPLE, proposal), edit.story_json)
+        concurrent = change_item(SAMPLE, "Key", "Schlüssel", "Ein anderer Schlüssel")
+        with self.assertRaisesRegex(ValueError, "changed since preview"):
+            accept_proposal(concurrent.story_json, proposal)
 
 
 if __name__ == "__main__":
