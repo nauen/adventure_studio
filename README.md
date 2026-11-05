@@ -175,10 +175,12 @@ aktualisiert. Das ist eine reine Lesesicht; sie fügt keine zweite Datenhaltung
 hinzu. Das Storyformat v4 enthält jetzt Dialogknoten, Antwortverzweigungen
 und referenzierte Bilder und Sprachclips. Die Übersicht zeigt diese Daten,
 aber die Binärbilder werden noch nicht geladen. Der eigentliche SCUMM-Export
-unterstützt **erste lineare Gespräche ohne Antwortauswahl**: Die Figur erscheint
+unterstützt **erste lineare Gespräche und experimentelle Antwortauswahl**: Die Figur erscheint
 als anklickbarer Platzhalter-Hotspot und über „Talk to“ wird zeilenweise
-Text angezeigt (noch als Ego-Text, keine echte NPC-Sprechblase). Verzweigte
-Dialoge und externe Bild-/Sprach-Assets melden weiterhin eine explizite
+Text angezeigt (noch als Ego-Text, keine echte NPC-Sprechblase). Bei einer
+Auswahl werden bis zu drei Antwortobjekte im Raum ein-/ausgeblendet.
+Die tatsächliche ScummVM-Bedienbarkeit dieser neuen Antworten muss noch
+getestet werden. Verschachtelte Dialoge und externe Bild-/Sprach-Assets melden eine explizite
 Exportwarnung. Alte
 Story-Dateien v1/v2/v3 bleiben vollständig lesbar.
 Im Reiter **Dialogzeilen** lassen sich vorhandene Sprechtexte bearbeiten;

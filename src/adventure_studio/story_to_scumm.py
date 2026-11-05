@@ -11,7 +11,7 @@ import re
 import unicodedata
 
 from .image_pipeline import ImageProvider, ImageRequest, IndexedImage
-from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, UseRule
+from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, TalkChoice, TalkRule, UseRule
 from .scumm_project import GameDocument
 from .story import Story, verify_story
 from .targets import RoomGeometry
@@ -79,13 +79,15 @@ def _room_image(provider: ImageProvider, scene_id: str, width: int, goal: bool) 
     return image
 
 
-def _simple_character_hotspots(story: Story, scene_id: str, room_width: int) -> tuple[RoomHotspot, ...]:
-    """Bounded first dialogue runtime: one linear conversation per character.
+def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
+                                ) -> tuple[tuple[RoomHotspot, ...], tuple[TalkRule, ...]]:
+    """One conversation per character; bounded terminal answer selection.
 
     Full dialogue branching, NPC actor costumes and speech voice resources
     remain separate compiler tasks. Unsupported cases fail closed.
     """
     result = []
+    rules = []
     for index, actor in enumerate(c for c in story.characters if c.scene_id == scene_id):
         if not _ID.fullmatch(actor.id):
             raise ValueError("Character ID is not a valid SCUMM identifier")
@@ -98,13 +100,47 @@ def _simple_character_hotspots(story: Story, scene_id: str, room_width: int) -> 
             dialogue = dialogues[0]
             nodes = {n.id: n for n in story.dialogue_nodes if n.dialogue_id == dialogue.id}
             current = dialogue.entry_node_id
+            seen = set()
             while current is not None:
+                if current in seen:
+                    raise ValueError("Cyclic SCUMM dialogue runtime is not supported")
+                seen.add(current)
                 node = nodes[current]
                 if node.speaker_id != actor.id:
                     raise ValueError("Current SCUMM prototype requires one speaker per dialogue")
-                if any(choice.node_id == current for choice in story.dialogue_choices):
-                    raise ValueError("SCUMM answer choices are not compiled yet")
                 lines.append(_text(node.text))
+                choices = [c for c in story.dialogue_choices if c.node_id == current]
+                if choices:
+                    if len(choices) > 3:
+                        raise ValueError("SCUMM dialogue supports at most three answers")
+                    compiled_choices = []
+                    for choice_index, choice in enumerate(choices):
+                        response = []
+                        next_id = choice.next_node_id
+                        answer_seen = set(seen)
+                        while next_id is not None:
+                            if next_id in answer_seen:
+                                raise ValueError("Cyclic dialogue answer is not supported")
+                            answer_seen.add(next_id)
+                            reply = nodes[next_id]
+                            if reply.speaker_id != actor.id or any(
+                                    c.node_id == next_id for c in story.dialogue_choices):
+                                raise ValueError("Nested answer or speaker change is not supported by SCUMM")
+                            response.append(_text(reply.text))
+                            if len(response) > 16:
+                                raise ValueError("Dialogue answer exceeds sixteen lines")
+                            next_id = reply.next_node_id
+                        answer_id = f"Answer{actor.id}{choice_index + 1}"
+                        answer_x = 240 + choice_index * 24
+                        if answer_x + 16 > room_width or not _ID.fullmatch(answer_id):
+                            raise ValueError("Dialogue choice hotspot exceeds room limits")
+                        result.append(RoomHotspot(answer_id, _text(choice.text),
+                                                  _text(choice.text), answer_x, 130,
+                                                  16, 16, sprite_pixels=_sprite(7, 3)))
+                        compiled_choices.append(TalkChoice(answer_id, _text(choice.text),
+                                                           tuple(response)))
+                    rules.append(TalkRule(actor.id, tuple(lines), tuple(compiled_choices)))
+                    break
                 current = node.next_node_id
                 if len(lines) > 16:
                     raise ValueError("Current SCUMM prototype supports at most sixteen dialogue lines")
@@ -113,8 +149,8 @@ def _simple_character_hotspots(story: Story, scene_id: str, room_width: int) -> 
             raise ValueError("Too many characters for automatic room layout")
         result.append(RoomHotspot(actor.id, _text(actor.name), _text(actor.description),
                                   x, 110, 16, 16, sprite_pixels=_sprite(6, 3),
-                                  talk_lines=tuple(lines)))
-    return tuple(result)
+                                  talk_lines=tuple(lines) if not rules or rules[-1].speaker_id != actor.id else ()))
+    return tuple(result), tuple(rules)
 
 
 def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument:
@@ -176,8 +212,6 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
     verify_story(story)
     if story.assets:
         raise ValueError("SCUMM exporter does not yet support versioned asset references")
-    if story.dialogue_choices:
-        raise ValueError("SCUMM answer choices are not compiled yet")
     provider = image_provider if image_provider is not None else DeterministicStoryImageProvider()
     if story.recipes:
         return _compile_recipe_story(story, provider)
@@ -233,7 +267,8 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
                                 *_item_xy(story, i.id, 160 + index * 40, 100, width), 16, 16,
                                 sprite_pixels=_sprite(1, 4))
                     for index, i in enumerate(decorations)]
-        hotspots.extend(_simple_character_hotspots(story, scene_id, width))
+        actors, talk_rules = _character_dialogue_objects(story, scene_id, width)
+        hotspots.extend(actors)
         if len(route) > 2 and scene_index > 0:
             # Visible, unconditional passage back to the previous story scene.
             # Object ownership and door states belong to the SCUMM engine;
@@ -261,5 +296,6 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
             use_rules=(UseRule(pickups[0].id, door_id, _text(puzzle.title), open_target=True,
                                requires_inventory=tuple(item.id for item in pickups[1:])),) if not goal else (),
             goal_text=_text(ordered_puzzles[-1].title) if goal else None,
+            talk_rules=talk_rules,
         ))
     return GameDocument(story.chapters[0].id + "Game", tuple(result))

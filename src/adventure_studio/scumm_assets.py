@@ -53,6 +53,21 @@ class CombineRule:
 
 
 @dataclass(frozen=True)
+class TalkChoice:
+    """A clickable in-room answer marker, controlled by a dialogue rule."""
+    object_id: str
+    caption: str
+    reply_lines: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class TalkRule:
+    speaker_id: str
+    opening_lines: tuple[str, ...]
+    choices: tuple[TalkChoice, ...]
+
+
+@dataclass(frozen=True)
 class RoomAsset:
     name: str
     geometry: RoomGeometry
@@ -65,6 +80,7 @@ class RoomAsset:
     combine_rules: tuple[CombineRule, ...] = ()
     palette_cycles: tuple[PaletteCycle, ...] = ()
     music_id: str | None = None
+    talk_rules: tuple[TalkRule, ...] = ()
 
 
 def _scumm_string(value: str) -> str:
@@ -134,6 +150,30 @@ def _validate(room: RoomAsset) -> None:
         if hotspot.exit_destination is not None:
             if not _IDENTIFIER.fullmatch(hotspot.exit_destination) or hotspot.exit_destination == room.name:
                 raise ValueError("Invalid exit destination room")
+    used_choices: set[str] = set()
+    used_speakers: set[str] = set()
+    for dialogue in room.talk_rules:
+        if dialogue.speaker_id not in ids or dialogue.speaker_id in used_speakers:
+            raise ValueError("Invalid or duplicate dialogue speaker hotspot")
+        used_speakers.add(dialogue.speaker_id)
+        if not 1 <= len(dialogue.choices) <= 3 or len(dialogue.opening_lines) > 16:
+            raise ValueError("Dialogue must offer one to three choices")
+        for line in dialogue.opening_lines:
+            _scumm_string(line)
+        for choice in dialogue.choices:
+            if choice.object_id not in ids or choice.object_id in used_choices or choice.object_id == dialogue.speaker_id:
+                raise ValueError("Invalid or reused answer hotspot")
+            used_choices.add(choice.object_id)
+            _scumm_string(choice.caption)
+            if len(choice.reply_lines) > 16:
+                raise ValueError("Dialogue answer exceeds sixteen lines")
+            for line in choice.reply_lines:
+                _scumm_string(line)
+            answer = next(h for h in room.hotspots if h.id == choice.object_id)
+            if answer.pickup or answer.exit_destination is not None:
+                raise ValueError("Answer hotspot cannot be a pickup or an exit")
+    if any(h.id in used_speakers and h.talk_lines for h in room.hotspots):
+        raise ValueError("A character cannot have both linear and branching dialogue")
     # Check cycles after hotspot validation so malformed sprite indices receive
     # their canonical asset error instead of a misleading cycle error.
     protected = {0}
@@ -219,11 +259,14 @@ def scummc_room_source(room: RoomAsset) -> str:
         parts.append(f"    cycle {cycle.name} = {{{cycle.period_ticks},"
                      f"{2 if cycle.reverse else 0},{cycle.first},{cycle.last}}};\n")
     hidden = {rule.result_id for rule in room.combine_rules}
+    hidden.update(choice.object_id for rule in room.talk_rules for choice in rule.choices)
     # ScummC resolves object symbols as it parses each script body. Explicit
     # forward declarations keep the generated helper independent of object
     # layout order (the complete object definitions follow below).
     for item_id in sorted({item for rule in room.combine_rules
                            for item in (rule.first_id, rule.second_id, rule.result_id)}):
+        parts.append(f"    object {item_id};\n")
+    for item_id in sorted({choice.object_id for rule in room.talk_rules for choice in rule.choices}):
         parts.append(f"    object {item_id};\n")
     for index, rule in enumerate(room.combine_rules):
         parts.extend([
@@ -236,6 +279,9 @@ def scummc_room_source(room: RoomAsset) -> str:
             "    }\n",
         ])
     for hotspot in room.hotspots:
+        speaker_rule = next((r for r in room.talk_rules if r.speaker_id == hotspot.id), None)
+        answer_pair = next(((r, c) for r in room.talk_rules for c in r.choices
+                            if c.object_id == hotspot.id), None)
         parts.extend([
             f"    object {hotspot.id} {{\n",
             f"        x = {hotspot.x};\n        y = {hotspot.y};\n",
@@ -259,6 +305,25 @@ def scummc_room_source(room: RoomAsset) -> str:
             for line in hotspot.talk_lines:
                 parts.append(f"            egoSay({_scumm_string(line)});\n")
                 parts.append("            waitForMessage();\n")
+            parts.append("            return;\n")
+        if speaker_rule:
+            parts.append("        case TalkTo:\n")
+            for line in speaker_rule.opening_lines:
+                parts.extend([f"            egoSay({_scumm_string(line)});\n",
+                              "            waitForMessage();\n"])
+            for choice in speaker_rule.choices:
+                parts.append(f"            setObjectState({choice.object_id},1);\n")
+            parts.append("            return;\n")
+        if answer_pair:
+            rule, selected = answer_pair
+            parts.append("        case TalkTo:\n")
+            for choice in rule.choices:
+                parts.append(f"            setObjectState({choice.object_id},0);\n")
+            parts.extend([f"            egoSay({_scumm_string(selected.caption)});\n",
+                          "            waitForMessage();\n"])
+            for line in selected.reply_lines:
+                parts.extend([f"            egoSay({_scumm_string(line)});\n",
+                              "            waitForMessage();\n"])
             parts.append("            return;\n")
         if hotspot.exit_destination is not None:
             parts.append("        case WalkTo:\n")

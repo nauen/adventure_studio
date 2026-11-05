@@ -44,6 +44,12 @@ class StoryV4Tests(unittest.TestCase):
         self.assertTrue(any(h.id == "HarborKeeper" and len(h.talk_lines) == 2
                             for h in compile_story_to_scumm(story).rooms[0].hotspots))
 
+        branched = dialogue_fixture(sample, choices=True)
+        self.assertEqual(dialogue_fixture(sample, choices=True), branched)
+        branched_story = parse_story_document(branched)
+        self.assertEqual(len(branched_story.dialogue_choices), 2)
+        self.assertEqual(len(compile_story_to_scumm(branched_story).rooms[0].talk_rules), 1)
+
     def test_v4_roundtrip_preserves_dialogue_and_provenance(self):
         story = dialogue_story()
         raw = canonical_story_json(story)
@@ -112,10 +118,44 @@ class StoryV4Tests(unittest.TestCase):
         from adventure_studio.scumm_project import canonical_json, parse_document
         self.assertEqual(parse_document(canonical_json(game)), game)
 
-    def test_branching_dialogue_is_explicitly_rejected_by_compiler(self):
+    def test_simple_branching_dialogue_generates_clickable_answer_objects(self):
         story = replace(dialogue_story(), assets=())
-        with self.assertRaisesRegex(ValueError, "answer choices"):
+        game = compile_story_to_scumm(story)
+        rule = game.rooms[0].talk_rules[0]
+        self.assertEqual(rule.speaker_id, "Keeper")
+        self.assertEqual(tuple(choice.caption for choice in rule.choices),
+                         ("Ich suche den Schlussel.", "Auf Wiedersehen."))
+        self.assertEqual(rule.choices[0].reply_lines, ("Na dann.",))
+        from adventure_studio.scumm_assets import scummc_room_source
+        source = scummc_room_source(game.rooms[0])
+        self.assertIn("setObjectState(AnswerKeeper1,1);", source)
+        self.assertIn("setObjectState(AnswerKeeper2,0);", source)
+        self.assertIn("case TalkTo:", source)
+        from adventure_studio.scumm_project import canonical_json, parse_document
+        self.assertEqual(parse_document(canonical_json(game)), game)
+
+    def test_nested_answer_is_explicitly_rejected(self):
+        story = replace(dialogue_story(), assets=(),
+                        dialogue_choices=(DialogueChoice("Ask", "Hello", "Frage", "Response"),
+                                          DialogueChoice("Next", "Response", "Weitere Frage", None)))
+        with self.assertRaisesRegex(ValueError, "Nested answer"):
             compile_story_to_scumm(story)
+
+    def test_answer_compiler_rejects_forged_script_and_over_limit_menu(self):
+        from adventure_studio.scumm_assets import TalkChoice, scummc_room_source
+        story = replace(dialogue_story(), assets=())
+        game = compile_story_to_scumm(story)
+        room = game.rooms[0]
+        bad = replace(room, talk_rules=(replace(room.talk_rules[0], choices=(
+            replace(room.talk_rules[0].choices[0], caption='Say "evil";'),
+            room.talk_rules[0].choices[1])),))
+        with self.assertRaisesRegex(ValueError, "Unsupported SCUMM text"):
+            scummc_room_source(bad)
+        bad = replace(room, talk_rules=(replace(room.talk_rules[0], choices=(
+            *room.talk_rules[0].choices,
+            TalkChoice("UnknownAnswer", "Third", ("Line",)))),))
+        with self.assertRaisesRegex(ValueError, "answer hotspot"):
+            scummc_room_source(bad)
 
     def test_authoring_remains_possible_with_explicit_export_warning(self):
         raw = canonical_story_json(dialogue_story())

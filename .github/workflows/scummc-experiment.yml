@@ -182,6 +182,15 @@ jobs:
           cp /tmp/dialogue-story-build/story.json /tmp/dialogue-fixture/story.json
           test -s /tmp/dialogue-fixture/tentacle.000
           test -s /tmp/dialogue-fixture/tentacle.001
+      - name: Compile experimental clickable-answer dialogue fixture
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-choices-build --choices
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-choices-build /tmp/scummc-upstream /tmp/dialogue-choices-fixture
+          cp /tmp/dialogue-choices-build/story.json /tmp/dialogue-choices-fixture/story.json
+          test -s /tmp/dialogue-choices-fixture/tentacle.000
+          test -s /tmp/dialogue-choices-fixture/tentacle.001
       # Independent media gates run before the longer gameplay interaction suite.
       # A flaky UI click in a puzzle must not prevent palette/audio evidence.
       - name: Compile indexed-water SCUMM v6 palette-cycle fixture
@@ -477,6 +486,16 @@ jobs:
             /tmp/dialogue-fixture/tentacle.000
             /tmp/dialogue-fixture/tentacle.001
             /tmp/dialogue-fixture/story.json
+      - name: Upload experimental clickable-answer preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: story-dialogue-choices-preview
+          if-no-files-found: ignore
+          path: |
+            /tmp/dialogue-choices-fixture/tentacle.000
+            /tmp/dialogue-choices-fixture/tentacle.001
+            /tmp/dialogue-choices-fixture/story.json
       - name: Upload two-item story preview for manual testing
         if: always()
         uses: actions/upload-artifact@v4

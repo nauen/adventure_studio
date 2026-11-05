@@ -151,11 +151,22 @@ Die älteren Versionen bleiben ohne Migration lesbar. Beim Konsolidieren
 werden Asset-Referenzen auf automatisch entfernte, nicht mehr benötigte
 `pickup`-Gegenstände ebenfalls entfernt und im Änderungsbericht gezeigt.
 
-**Exportgrenze:** Der erste begrenzte SCUMM-v6-Adapter kann nun Figuren als
-sichtbare Platzhalter-Hotspots und je Figur höchstens einen **linearen**
-Dialog mit bis zu 16 Zeilen über `TalkTo`, `egoSay` und `waitForMessage`
-generieren. Die Darstellung ist noch keine animierte SCUMM-Figur und keine
-Sprechblase am NPC. Antwortverzweigungen, mehrere Sprecher pro Gespräch und
-externe Asset-Referenzen werden ausdrücklich zurückgewiesen. Gradio kann
-diese weitergehenden Daten trotzdem validieren, vergleichen und als
-Story-JSON exportieren; der Änderungsbericht zeigt die Einschränkung.
+**Exportgrenze:** Der erste begrenzte SCUMM-v6-Adapter kann Figuren als
+sichtbare Platzhalter-Hotspots und je Figur ein Gespräch mit bis zu 16
+einleitenden Zeilen erzeugen. Lineare Gespräche verwenden `TalkTo`, `egoSay`
+und `waitForMessage` und haben ScummC erfolgreich passiert.
+
+Eine erste **experimentelle Antwortauswahl** erweitert den generischen
+`RoomAsset`-Baustein um typisierte `TalkRule`/`TalkChoice`-Einträge. Bis zu
+drei Antworten erscheinen nach `TalkTo` als verborgene/anschließend
+eingeblendete, anklickbare Raumobjekte. Ausgewählte Antworten schließen
+das Menü und geben höchstens 16 weitere lineare Zeilen aus.
+Verschachtelte Antworten und Sprecherwechsel werden weiterhin abgewiesen.
+Diese UI ist noch kein klassisches SCUMM-Dialogmenü, und ein eigener
+ScummC-/ScummVM-Nachweis für die neue Auswahl steht aus.
+
+Die dargestellten Texte kommen bisher aus `egoSay` – es gibt noch keine
+animierte SCUMM-Figur und keine NPC-Sprechblase. Externe Asset-Referenzen
+werden weiterhin ausdrücklich zurückgewiesen. Gradio kann diese Daten
+trotzdem validieren, vergleichen und als Story-JSON exportieren; der
+Änderungsbericht zeigt die Einschränkung.

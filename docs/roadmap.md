@@ -234,8 +234,14 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 - [x] **Erster SCUMM-Dialog-Compiler:** Figuren als Platzhalter-Hotspots,
       je Figur ein einfacher linearer Dialog (bis zu 16 Zeilen), `TalkTo`,
       `egoSay` und `waitForMessage`; Quellen und Projekt-JSON sind getestet.
-      ScummC-/ScummVM-Integration läuft als separates CI-Gate.
-- [ ] Echte NPC-Sprechblasen, spielbare Antwortauswahl, Sprecherwechsel,
+      ScummC-Kompilierung bestätigt (#42101258027), vollständiger manueller
+      ScummVM-Dialogklick steht noch aus.
+- [x] Erster begrenzter **Antwortauswahl-Compiler** als typisierter,
+      datenbasierter `TalkRule`-/`TalkChoice`-Baustein. Bis zu drei temporär
+      eingeblendete, anklickbare Antwortobjekte; Auswahl löst lineare
+      Folgezeilen aus. Quelltext-/JSON-Roundtrip-Tests grün; ScummC-Probe
+      und tatsächliche Klickinteraktion stehen noch aus.
+- [ ] Echte NPC-Sprechblasen, klassisches SCUMM-Gesprächsmenü, Sprecherwechsel,
       Kostüm-/Animationsresourcen und Voice-Cues mit Stock ScummVM prüfen.
 - [ ] Dialogmodell als eigene versionierte Struktur: Sprechende,
       Dialogknoten, Antwortoptionen, Bedingungen, Effekte, Untertitel

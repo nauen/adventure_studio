@@ -14,7 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .palette_animation import PaletteCycle
-from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, UseRule, _validate, write_game_sources
+from .scumm_assets import (CombineRule, RoomAsset, RoomHotspot, TalkChoice,
+                           TalkRule, UseRule, _validate, write_game_sources)
 from .targets import RoomGeometry
 
 
@@ -76,6 +77,13 @@ def document_dict(document: GameDocument) -> dict:
                                      "reverse": cycle.reverse}
                                     for cycle in room.palette_cycles]} if room.palette_cycles else {}),
             **({"music_id": room.music_id} if room.music_id is not None else {}),
+            **({"talk_rules": [{"speaker_id": rule.speaker_id,
+                                 "opening_lines": list(rule.opening_lines),
+                                 "choices": [{"object_id": c.object_id,
+                                              "caption": c.caption,
+                                              "reply_lines": list(c.reply_lines)}
+                                             for c in rule.choices]}
+                                for rule in room.talk_rules]} if room.talk_rules else {}),
         } for room in document.rooms],
     }
 
@@ -115,7 +123,7 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Too many rooms")
     rooms = []
     for raw in data["rooms"]:
-        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id",
+        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules",
                            "demo_walk_to_x", "goal_text"},
                      {"name", "geometry", "pixels", "palette", "hotspots", "use_rules",
                       "demo_walk_to_x", "goal_text"})
@@ -129,6 +137,28 @@ def parse_document(source: str) -> GameDocument:
         if not isinstance(raw_combinations, list) or len(raw_combinations) > 3:
             raise ValueError("Invalid combine rules")
         combinations = []
+        raw_talk_rules = room.get("talk_rules", [])
+        if not isinstance(raw_talk_rules, list) or len(raw_talk_rules) > 16:
+            raise ValueError("Invalid dialogue rules")
+        talk_rules = []
+        for raw_talk in raw_talk_rules:
+            talk = _only(raw_talk, {"speaker_id", "opening_lines", "choices"},
+                         {"speaker_id", "opening_lines", "choices"})
+            if (not isinstance(talk["speaker_id"], str)
+                    or not isinstance(talk["opening_lines"], list)
+                    or not all(isinstance(x, str) for x in talk["opening_lines"])
+                    or not isinstance(talk["choices"], list)):
+                raise ValueError("Invalid dialogue rule content")
+            choices = []
+            for raw_choice in talk["choices"]:
+                choice = _only(raw_choice, {"object_id", "caption", "reply_lines"},
+                               {"object_id", "caption", "reply_lines"})
+                if (not isinstance(choice["object_id"], str) or not isinstance(choice["caption"], str)
+                        or not isinstance(choice["reply_lines"], list)
+                        or not all(isinstance(x, str) for x in choice["reply_lines"])):
+                    raise ValueError("Invalid dialogue choice content")
+                choices.append(TalkChoice(choice["object_id"], choice["caption"], tuple(choice["reply_lines"])))
+            talk_rules.append(TalkRule(talk["speaker_id"], tuple(talk["opening_lines"]), tuple(choices)))
         raw_cycles = room.get("palette_cycles", [])
         if not isinstance(raw_cycles, list) or len(raw_cycles) > 16:
             raise ValueError("Invalid palette cycles")
@@ -183,6 +213,7 @@ def parse_document(source: str) -> GameDocument:
             tuple(hotspots), room["demo_walk_to_x"], tuple(rules), room["goal_text"], tuple(combinations),
             tuple(cycles),
             room.get("music_id"),
+            tuple(talk_rules),
         ))
     document = GameDocument(data["id"], tuple(rooms))
     _validate_document(document)
