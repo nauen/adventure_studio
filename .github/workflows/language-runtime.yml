@@ -25,17 +25,23 @@ on:
 jobs:
   language:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Cache downloaded Ubuntu packages
+        uses: actions/cache@v4
+        with:
+          path: /tmp/scumm-language-apt
+          key: ubuntu-24.04-scumm-language-apt-v1
       - name: Install ScummC, ScummVM and multilingual font dependencies
-        timeout-minutes: 18
+        timeout-minutes: 35
         run: |
+          sudo mkdir -p /tmp/scumm-language-apt/partial
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 update
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core fonts-ipafont-gothic
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Dir::Cache::archives=/tmp/scumm-language-apt -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core fonts-ipafont-gothic
           python -m pip install 'Pillow>=10,<13' 'fonttools>=4,<6'
       - name: Build upstream ScummC and original room assets
         run: |
@@ -59,10 +65,10 @@ jobs:
           CJK_FONT=$(find /usr/share/fonts -type f \( -iname 'ipag.ttf' -o -iname 'ipagp.ttf' \) -print -quit)
           test -n "$CHAR_BIN" && test -n "$LATIN_FONT" && test -n "$CJK_FONT"
           python -m adventure_studio.scumm_language_package examples/language_probe.json "$LATIN_FONT" "$CJK_FONT" "$CHAR_BIN" /tmp/language-story/resources
-          python -m adventure_studio.scumm_toolchain /tmp/language-story /tmp/scummc-language /tmp/language-game
+          python -m adventure_studio.scumm_toolchain /tmp/language-story /tmp/scummc-language /tmp/language-game --language-room-probe
           test -s /tmp/language-game/tentacle.000
           test -s /tmp/language-game/tentacle.001
-      - name: Select German, Japanese and Polish in stock ScummVM
+      - name: Select languages and test Polish persistence across room transition
         env:
           PYTHONPATH: src
         run: |
