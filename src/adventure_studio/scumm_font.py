@@ -46,6 +46,10 @@ def render_scumm_font_bitmap(catalog: LanguageCatalog, latin_font: Path,
         raise ValueError("Font coverage missing: " + ", ".join(f"U+{ord(c):04X}" for c in missing))
 
     cell_w, cell_h, columns = 24, 26, 16
+    # ScummC's char importer scans contiguous palette-last border runs.
+    # Leave one background pixel between frames in BOTH directions; otherwise
+    # adjacent cells are incorrectly imported as a single giant glyph.
+    frame_w, frame_h = cell_w - 1, cell_h - 1
     count = max(glyphs, default=126) + 1
     rows = (count + columns - 1) // columns
     canvas = Image.new("P", (columns * cell_w, rows * cell_h + 2), color=0)
@@ -53,8 +57,11 @@ def render_scumm_font_bitmap(catalog: LanguageCatalog, latin_font: Path,
     draw = ImageDraw.Draw(canvas)
     for code in range(count):
         x, y = (code % columns) * cell_w, (code // columns) * cell_h + 1
-        # ScummC detects this palette-last border, then imports the 22x24 cell.
-        draw.rectangle((x, y, x + cell_w - 1, y + cell_h - 1), outline=2)
+        # The imported glyph interior is 21x23 pixels.
+        # Top and left guide lines are sufficient: a bottom guide line would
+        # be mistaken for a new character by ScummC's row-wise importer.
+        draw.line((x, y, x + frame_w - 1, y), fill=2)
+        draw.line((x, y, x, y + frame_h - 1), fill=2)
         glyph = glyphs.get(code)
         if glyph is None or glyph == " ":
             continue
@@ -62,7 +69,7 @@ def render_scumm_font_bitmap(catalog: LanguageCatalog, latin_font: Path,
         font = fonts[label]
         box = draw.textbbox((0, 0), glyph, font=font)
         width, height = box[2] - box[0], box[3] - box[1]
-        if width > cell_w - 2 or height > cell_h - 2:
+        if width > frame_w - 2 or height > frame_h - 2:
             raise ValueError(f"Glyph exceeds SCUMM bitmap cell: U+{ord(glyph):04X}")
         draw.text((x + 1 - box[0], y + 1 - box[1]), glyph, font=font, fill=1)
     output.parent.mkdir(parents=True, exist_ok=True)

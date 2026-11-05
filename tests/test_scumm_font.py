@@ -32,6 +32,26 @@ class ScummFontTests(unittest.TestCase):
             bmp = path.read_bytes()
             self.assertEqual(int.from_bytes(bmp[46:50], "little"), 3)
             self.assertEqual(image.getpixel((0, 1)), 2)
+            self.assertEqual(image.getpixel((22, 1)), 2)
+            self.assertEqual(image.getpixel((23, 1)), 0)
+            self.assertEqual(image.getpixel((24, 1)), 2)
+            self.assertEqual(image.getpixel((0, 25)), 2)
+            self.assertNotEqual(image.getpixel((1, 25)), 2)
+            self.assertEqual(image.getpixel((0, 26)), 0)
+            self.assertEqual(image.getpixel((0, 27)), 2)
+            # Emulate ScummC's top-border scanner: one run per glyph slot,
+            # including empty positions required for byte-index stability.
+            starts = []
+            for y in range(1, image.height):
+                x = 0
+                while x < image.width:
+                    if image.getpixel((x, y)) != 2 or image.getpixel((x, y - 1)) == 2:
+                        x += 1
+                        continue
+                    starts.append((x, y))
+                    while x < image.width and image.getpixel((x, y)) == 2:
+                        x += 1
+            self.assertEqual(len(starts), max(mapping) + 1)
             self.assertEqual(mapping[ord("A")], "A")
             self.assertIn("ż", mapping.values())
             self.assertGreater(path.stat().st_size, 200)
