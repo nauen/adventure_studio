@@ -12,6 +12,7 @@ from .story import Item, Placement, Story, verify_story
 from .story_changes import PutEntity, StoryChangeReport, edit_story
 from .story_document import canonical_story_json, parse_story_document
 from .story_to_scumm import compile_story_to_scumm
+from .story_localization import story_translation_template_json
 
 
 def export_warning(story: Story) -> str:
@@ -171,6 +172,14 @@ def scene_preview(raw: str, scene_id: str) -> tuple[int, int, bytes, tuple[tuple
         raise ValueError("Unknown or unsupported scene ID")
     hotspots = tuple((h.label, h.x, h.y, h.width, h.height) for h in room.hotspots)
     return room.geometry.room_width, room.geometry.room_height, room.pixels, room.palette, hotspots
+
+
+
+def translation_draft(raw: str) -> str:
+    """Generate an incomplete, validated-source translation draft for Studio."""
+    story = parse_story_document(raw)
+    game = compile_story_to_scumm(story)
+    return story_translation_template_json(game)
 
 
 def report_text(report: StoryChangeReport) -> str:
