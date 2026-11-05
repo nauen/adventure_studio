@@ -84,7 +84,9 @@ def count_cyan_pixels(histogram: str) -> int:
 def colored_item_pixels(output_directory: Path, frame: str,
                         rgb: tuple[int, int, int], inventory: bool = False) -> int:
     screenshot = output_directory / f"scummvm-{frame}.png"
-    crop = "640x112+192+472" if inventory else "640x288+192+184"
+    # Inventory icons occupy a fixed strip on the right; the verb and
+    # sentence labels have similar colors and must not affect item detection.
+    crop = "304x40+528+500" if inventory else "640x288+192+184"
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", crop, "+repage", "-format", "%c", "histogram:info:"],
         capture_output=True, text=True, timeout=10, check=False,
@@ -98,7 +100,7 @@ def colored_item_center(output_directory: Path, frame: str,
                         rgb: tuple[int, int, int], inventory: bool = False) -> tuple[int, int]:
     screenshot = output_directory / f"scummvm-{frame}.png"
     color_hex = "#" + "".join(f"{channel:02X}" for channel in rgb)
-    crop = "640x112+192+472" if inventory else "640x288+192+184"
+    crop = "304x40+528+500" if inventory else "640x288+192+184"
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", crop, "+repage",
          "-fuzz", "8%", "-fill", "white", "-opaque", color_hex,
@@ -107,8 +109,15 @@ def colored_item_center(output_directory: Path, frame: str,
     )
     if result.returncode:
         raise RuntimeError(f"Could not locate colored inventory item: {result.stderr}")
-    x, y = parse_key_bounds(result.stdout)
-    return (x, y + 288) if inventory else (x, y)
+    if inventory:
+        match = re.fullmatch(r"(\d+)x(\d+)\+(\d+)\+(\d+)", result.stdout.strip())
+        if not match:
+            raise ValueError(f"Invalid inventory icon bounds: {result.stdout[:100]!r}")
+        width, height, x, y = map(int, match.groups())
+        if not (1 <= width <= 304 and 1 <= height <= 40 and x + width <= 304 and y + height <= 40):
+            raise ValueError("Inventory icon outside fixed strip")
+        return 528 + x + width // 2, 500 + y + height // 2
+    return parse_key_bounds(result.stdout)
 
 
 def door_pixels(output_directory: Path, frame: str, open_state: bool = False) -> int:

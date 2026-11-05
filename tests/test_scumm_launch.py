@@ -2,12 +2,21 @@
 
 import tempfile
 import unittest
+from unittest.mock import patch
+from subprocess import CompletedProcess
 from pathlib import Path
 
-from adventure_studio.scumm_launch import close_rgb, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
+from adventure_studio.scumm_launch import close_rgb, colored_item_center, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
 
 
 class ScummLaunchTests(unittest.TestCase):
+    def test_inventory_icon_locator_excludes_verbs_and_sentence_text(self):
+        with patch("adventure_studio.scumm_launch.subprocess.run",
+                   return_value=CompletedProcess([], 0, stdout="32x32+104+4", stderr="")) as run:
+            self.assertEqual(colored_item_center(Path("/tmp"), "recipe-second", (225, 80, 180),
+                                                 inventory=True), (648, 520))
+            self.assertEqual(run.call_args.args[0][3], "304x40+528+500")
+
     def test_key_click_geometry(self):
         self.assertEqual(parse_key_bounds("28x8+338+204"), (544, 392))
         for invalid in ("", "1x1-1+2", "20x20+630+0", "0x1+1+1"):
