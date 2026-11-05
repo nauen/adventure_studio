@@ -190,6 +190,12 @@ def scummc_room_source(room: RoomAsset) -> str:
         parts.append(f"room {destination};\n")
     parts.append(f'\nroom {room.name} {{\n    image = "{room.name}.bmp";\n')
     hidden = {rule.result_id for rule in room.combine_rules}
+    # ScummC resolves object symbols as it parses each script body. Explicit
+    # forward declarations keep the generated helper independent of object
+    # layout order (the complete object definitions follow below).
+    for item_id in sorted({item for rule in room.combine_rules
+                           for item in (rule.first_id, rule.second_id, rule.result_id)}):
+        parts.append(f"    object {item_id};\n")
     for index, rule in enumerate(room.combine_rules):
         parts.extend([
             f"    script combine_{index}() {{\n",

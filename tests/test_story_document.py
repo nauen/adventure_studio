@@ -44,6 +44,7 @@ class StoryDocumentTests(unittest.TestCase):
             result = build_story_document(RECIPE.read_text(encoding="utf-8"), Path(tmp))
             source = (result.resource_directory / "Kitchen.scc").read_text()
             self.assertIn("setObjectOwner(Pineapple, 0)", source)
+            self.assertLess(source.index("object Pineapple;"), source.index("script combine_0()"))
             self.assertIn("setObjectOwner(Bottle, 0)", source)
             self.assertIn("pickupObject(Mixture, VAR_ROOM)", source)
             self.assertIn("combine_0();", source)
