@@ -98,8 +98,11 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       aus dem Projekt, statt projektspezifische Namen im CI-Workflow zu pflegen
       (`scumm_toolchain.py`, lokale Boundary-Tests und erfolgreicher ScummVM-
       Gameplay-Lauf #42022413382).
-- [ ] Rätsel mit zwei oder drei erforderlichen Gegenständen ebenfalls als
-      vollständigen ScummVM-Gameplay-Test nachweisen.
+- [x] Zwei erforderliche Gegenstände als vollständigen Story-JSON-zu-ScummVM-
+      Gameplay-Test nachgewiesen: Schlüssel allein öffnet die Tür nicht,
+      zusätzlicher Gegenstand wird in das Inventar übernommen, danach öffnet
+      die Tür und der Zielraum wird betreten (CI-Lauf #42023767043).
+- [ ] Dieselbe Runtime-Prüfung für drei erforderliche Gegenstände nachweisen.
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.
