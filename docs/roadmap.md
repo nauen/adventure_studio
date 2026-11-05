@@ -148,16 +148,15 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
       mit visuellen Prüfungen validieren.
 - [x] Erste deterministische, providerunabhängige Palettenzyklus-Vorschau
       (`palette_animation.py`): Bereichs-/Timingprüfung, geschützte Indizes,
-      disjunkte Zyklen, Vorwärts-/Rückwärtsrotation und Tests. Noch **kein**
-      ScummVM-Effekt-Nachweis.
+      disjunkte Zyklen, Vorwärts-/Rückwärtsrotation und Tests.
 - [x] Deklarative Palettenzyklen werden als SCUMM-v6-`CYCL`-Ressourcen
       aus `RoomAsset` erzeugt und in das kanonische Projekt-JSON übernommen;
       reservierte Transparenz- und Sprite-Indizes dürfen nicht rotieren.
 - [x] Separates opt-in-Wasserfixture und ScummVM-Screenshot-Probe in CI
       integriert, inklusive JSON-Auswertung von animiertem Wasser und
       unveränderter Himmelsfarbe (`palette_demo.py`, `scumm_palette_probe.py`).
-- [ ] **CI-Gate:** echtes ScummVM bestätigt wechselnde Wasserfarben und
-      statischen Himmel; bis zum grünen Workflow bleibt Laufzeitverhalten offen.
+- [x] **CI-Gate:** Stock ScummVM bestätigt vier wechselnde Wasserfarben bei
+      statischem Himmel (CI #42047861523, erneut #42048814497).
 
 Die KI-Bildworkflows sind **selbst für Pixel-Art-Stil, Zielauflösung und
 Farbpalette zuständig**. Adventure Studio quantisiert oder skaliert ein
@@ -178,7 +177,10 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
       hörbar überprüfen; Ton- oder MIDI-Nachweis in CI, kein reiner Buildcheck.
 - [x] Originales MIDI-SMF-Teststück und optionales SCUMM-v6-Einstiegsmusik-
       Fixture generieren (`music_demo.py`); `soun -gmd`- und
-      ScummVM-Audioerfassungsgates in CI vorbereitet. Runtime-Nachweis offen.
+      ScummVM-Audioerfassungsgates in CI vorbereitet.
+- [x] Originale MIDI-Ressource und reale nicht-stumme PCM-Ausgabe in ScummVM
+      gemessen (CI #42048814497). Kontrollspiel ohne Musik als nächstes
+      Nachweis-Gate ergänzt; Ergebnis noch offen.
 - [ ] Spielereignisse steuern Start, Stop und musikalischen Zustandswechsel.
 - [ ] iMUSE-Beat-/Takt- und Hook-Übergänge als **eigene** Kompatibilitäts-Gates
       nachweisen; keine unbemerkte Herabstufung auf harte Schnitte.

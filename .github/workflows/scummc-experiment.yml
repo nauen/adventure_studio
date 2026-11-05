@@ -260,7 +260,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_audio_probe /tmp/music-fixture /tmp/music-smoke
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_audio_probe /tmp/music-fixture /tmp/music-smoke /tmp/story-fixture
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -347,6 +347,7 @@ jobs:
             fi
             if test -f /tmp/music-smoke/audio-report.json; then
               python -c 'import json; p=json.load(open("/tmp/music-smoke/audio-report.json")); print("- Experimental audio PCM activity: **{}** ({} bytes)".format("PASS" if p["pcm_activity_detected"] else "NOT PROVEN",p["bytes"]))'
+              python -c 'import json; p=json.load(open("/tmp/music-smoke/audio-report.json")); print("- Music audio exceeds no-music control: **{}**".format("PASS" if p.get("music_signal_above_control") else "NOT PROVEN"))'
             else
               echo '- Experimental audio PCM activity: **not proven**.'
             fi

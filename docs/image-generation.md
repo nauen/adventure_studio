@@ -72,5 +72,10 @@ Laufzeitkompatibilität; bis dahin ist diese Stufe experimentell.
 4. Palettenanimation als eigenen deklarativen Asset-Typ einführen, nach
    Browser-Vorschau und anschließend echtem SCUMM-Laufzeittest.
 
+Die opt-in-Wasserprobe ist in stock ScummVM erfolgreich gelaufen (CI
+#42047861523 und #42048814497): vier Wasserfarben wechselten, der Himmel
+blieb unverändert. Das bestätigt diesen begrenzten CYCL-Anwendungsfall,
+nicht automatisch weitere Paletteneffekte oder DOS-Interpreter.
+
 SCUMM-Kompatibilität und Ausführung in DOS bleiben separat zu prüfende
 Gates; ein erfolgreicher ComfyUI-Aufruf ist kein Spielbarkeitsnachweis.

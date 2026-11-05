@@ -1,6 +1,6 @@
 import unittest
 
-from adventure_studio.scumm_audio_probe import summarize_audio_bytes
+from adventure_studio.scumm_audio_probe import compare_audio_activity, summarize_audio_bytes
 
 
 class AudioProbeTests(unittest.TestCase):
@@ -14,6 +14,13 @@ class AudioProbeTests(unittest.TestCase):
         report = summarize_audio_bytes(sample)
         self.assertTrue(report["pcm_activity_detected"])
         self.assertEqual(report["bytes"], 16384)
+
+    def test_music_must_exceed_silent_control(self):
+        music = summarize_audio_bytes(bytes((0, 20, 255, 10)) * 4096)
+        control = summarize_audio_bytes(bytes(16384))
+        self.assertTrue(compare_audio_activity(music, control))
+        self.assertFalse(compare_audio_activity(control, music))
+        self.assertFalse(compare_audio_activity(music, music))
 
 
 if __name__ == "__main__":

@@ -55,6 +55,11 @@ denselben Regeln wie in der Grafikpipeline.
    gewählten FluidSynth-General-MIDI-Treiber mit lokalem SoundFont, statt
    ScummVM automatisch einen möglicherweise inkompatiblen AdLib-Treiber
    auswählen zu lassen.
+   Damit entstanden im CI-Lauf #42048814497 etwa 1,4 MB nicht-stumme
+   Audiodaten. Das belegt eine echte PCM-Ausgabe, aber für den Nachweis, dass
+   **unser Musikstück** die Ursache ist, führt der nachfolgende Test zusätzlich
+   ein sonst identisches Spiel **ohne** Musik aus. Die aktive Sample-Fraktion
+   des Musiklaufs muss signifikant über der Kontrollaufnahme liegen.
    Der Test bleibt optional, bis das Audioformat und die mögliche
    Verwechslung mit Systemsounds beziehungsweise Startgeräuschen ausgeschlossen
    sind. Erst danach ist die Musikerzeugung in ScummVM hörbar nachgewiesen.
