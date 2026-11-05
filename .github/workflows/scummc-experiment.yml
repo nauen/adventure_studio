@@ -19,6 +19,7 @@ on:
       - 'src/adventure_studio/story_document.py'
       - 'src/adventure_studio/story_to_scumm.py'
       - 'src/adventure_studio/music_demo.py'
+      - 'src/adventure_studio/music_transition_demo.py'
       - 'src/adventure_studio/music_director.py'
       - 'src/adventure_studio/scumm_audio_probe.py'
       - 'examples/mini_story.json'
@@ -38,6 +39,7 @@ on:
       - 'tests/test_story_to_scumm.py'
       - 'tests/test_scumm_toolchain.py'
       - 'tests/test_music_demo.py'
+      - 'tests/test_music_transition_demo.py'
       - 'tests/test_music_director.py'
       - 'tests/test_scumm_audio_probe.py'
 
@@ -202,6 +204,25 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_audio_probe /tmp/music-fixture /tmp/music-smoke /tmp/story-fixture
+      - name: Compile two distinct MIDI themes for a room-entry music transition
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.music_transition_demo examples/mini_story_chain.json /tmp/music-transition-build
+          SOUN_BIN=$(find /tmp/scummc-upstream -type f -name soun -executable -print -quit)
+          test -n "$SOUN_BIN"
+          for TRACK in HarborTheme CellarTheme; do
+            "$SOUN_BIN" -gmd "/tmp/music-transition-build/resources/${TRACK}.mid" -o "/tmp/music-transition-build/resources/${TRACK}.soun"
+            test -s "/tmp/music-transition-build/resources/${TRACK}.soun"
+          done
+          python -m adventure_studio.scumm_toolchain /tmp/music-transition-build /tmp/scummc-upstream /tmp/music-transition-fixture
+          test -s /tmp/music-transition-fixture/tentacle.000
+          test -s /tmp/music-transition-fixture/tentacle.001
+      - name: Play music-transition adventure through both rooms in ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/music-transition-fixture /tmp/music-transition-smoke --chain-only
       - name: Launch story-built adventure in stock ScummVM
         env:
           PYTHONPATH: src

@@ -28,8 +28,10 @@ def _vlq(value: int) -> bytes:
     return bytes(data)
 
 
-def original_midi_theme() -> bytes:
+def original_midi_theme(transpose: int = 0) -> bytes:
     """Create a short 8-second single-track GM melody, no copyrighted samples."""
+    if type(transpose) is not int or not -24 <= transpose <= 24:
+        raise ValueError("MIDI transposition outside supported range")
     track = bytearray()
 
     def event(delta: int, message: bytes) -> None:
@@ -39,6 +41,7 @@ def original_midi_theme() -> bytes:
     event(0, b"\xff\x51\x03\x07\xa1\x20")  # 120 BPM
     event(0, b"\xc0\x0a")  # GM Music Box (zero-based program 10)
     for note in (60, 64, 67, 72, 67, 64, 62, 60, 60, 64, 67, 72, 74, 72, 67, 64):
+        note += transpose
         event(0, bytes((0x90, note, 100)))
         event(480, bytes((0x80, note, 0)))
     event(0, b"\xff\x2f\x00")

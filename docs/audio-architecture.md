@@ -73,8 +73,14 @@ denselben Regeln wie in der Grafikpipeline.
 3. Zwei Musikzustände durch ein echtes Spielereignis in SCUMM wechseln lassen,
    dabei `stopSound()` bzw. den passenden iMUSE-Befehl in der Zielengine
    prüfen. Die deklarative, rein funktionale Kommandovorbereitung ist bereits
-   implementiert; die Ausführung im SCUMM-Backend und A/B-Audioübergangskontrolle
-   stehen noch aus.
+   implementiert. Als erster **opt-in Kompatibilitätsversuch** erzeugt
+   `music_transition_demo.py` zwei unterschiedliche originale MIDI-Stücke
+   für die Räume `Harbor` und `Cellar` der verketteten Story. Das Betreten des
+   Kellers nach dem Schlüsselrätsel löst dort `startMusic(CellarTheme)` aus.
+   Die CI kompiliert beide `.soun`-Ressourcen und spielt den Raumwechsel in
+   ScummVM durch. **Die tatsächlich hörbare Umschaltung muss noch separat per
+   A/B-Aufnahme am Übergang bewiesen werden**; der bisherige Audiovergleich
+   belegt nur die Startmusik. Noch keine Beat-/Takt-Synchronisierung.
 4. iMUSE-Beat- oder Taktwechsel und Hook/SysEx-Strategien einzeln
    implementieren und mit exakt definierten MIDI-Teststücken prüfen.
 5. Soundeffekte mit stabilen IDs und Wiederverwendung ergänzen.
