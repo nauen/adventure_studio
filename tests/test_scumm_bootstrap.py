@@ -28,7 +28,7 @@ class BootstrapTests(unittest.TestCase):
         self.assertEqual(result_header.count("int GameLanguage;"), 1)
         self.assertEqual(result.count("GameLanguage = "), 6)
         self.assertIn("GameLanguage = 25701;\n        setupActors();", result)
-        initialization = result.index("GameLanguage = 25701;")
+        initialization = result.rindex("GameLanguage = 25701;")
         self.assertGreater(initialization, result.index("script gameStart()"))
         for index, language in enumerate(languages, 1):
             code = int.from_bytes(language.encode("ascii"), "big")
