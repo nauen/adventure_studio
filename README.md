@@ -182,7 +182,10 @@ Auswahl werden bis zu drei Antwortobjekte im Raum ein-/ausgeblendet.
 Die tatsächliche ScummVM-Bedienbarkeit dieser neuen Antworten muss noch
 im neuen CI-Klicktest nachgewiesen werden. Dieser erzeugt ein
 `dialogue-interaction-evidence`-Artefakt mit Vorher-/Nachher-Screenshots,
-JSON-Bericht und Log. Verschachtelte Dialoge und externe Bild-/Sprach-Assets melden eine explizite
+JSON-Bericht und Log. Ein separater Workflow **SCUMM dialogue gameplay smoke**
+führt den gleichen Test unabhängig von der großen Forschungsprobe aus und
+liefert `dialogue-game-preview` und `dialogue-evidence`. Verschachtelte Dialoge
+und externe Bild-/Sprach-Assets melden eine explizite
 Exportwarnung. Alte
 Story-Dateien v1/v2/v3 bleiben vollständig lesbar.
 Im Reiter **Dialogzeilen** lassen sich vorhandene Sprechtexte bearbeiten;

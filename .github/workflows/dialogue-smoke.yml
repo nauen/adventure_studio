@@ -1,0 +1,91 @@
+name: SCUMM dialogue gameplay smoke
+
+# Dialogue interaction is an independent compatibility gate. A music, palette
+# or unrelated puzzle failure must not hide a successful answer click test.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/dialogue-smoke.yml'
+      - 'src/adventure_studio/dialogue_demo.py'
+      - 'src/adventure_studio/scumm_dialogue_probe.py'
+      - 'src/adventure_studio/scumm_assets.py'
+      - 'src/adventure_studio/scumm_project.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'tests/test_scumm_dialogue_probe.py'
+      - 'tests/test_story_v4.py'
+  pull_request:
+    paths:
+      - '.github/workflows/dialogue-smoke.yml'
+      - 'src/adventure_studio/dialogue_demo.py'
+      - 'src/adventure_studio/scumm_dialogue_probe.py'
+      - 'src/adventure_studio/scumm_assets.py'
+      - 'src/adventure_studio/scumm_project.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'tests/test_scumm_dialogue_probe.py'
+      - 'tests/test_story_v4.py'
+
+jobs:
+  dialogue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify deterministic compiler and probe contracts
+        run: |
+          PYTHONPATH=src:tests python -m unittest discover -s tests -p test_story_v4.py -v
+          PYTHONPATH=src:tests python -m unittest discover -s tests -p test_scumm_dialogue_probe.py -v
+      - name: Install ScummC build tools and ScummVM interaction dependencies
+        timeout-minutes: 18
+        run: |
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick
+      - name: Build compatible upstream ScummC tools
+        run: |
+          git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
+          test -f /tmp/scummc-upstream/man/tools/scc.xml
+          test -f /tmp/scummc-upstream/man/tools/header.xslt
+          grep -Fq '$(SRCDIR)/man/%.xml' /tmp/scummc-upstream/Makefile.target
+          sed -i 's@$(SRCDIR)/man/%.xml@$(SRCDIR)/man/tools/%.xml@g; s@$(SRCDIR)/man/header.xslt@$(SRCDIR)/man/tools/header.xslt@g' /tmp/scummc-upstream/Makefile.target
+          cd /tmp/scummc-upstream
+          ./configure
+          make -j2
+      - name: Build bounded branching dialogue as SCUMM v6 game files
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-story --choices
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-story /tmp/scummc-upstream /tmp/dialogue-game
+          cp /tmp/dialogue-story/story.json /tmp/dialogue-game/story.json
+          test -s /tmp/dialogue-game/tentacle.000
+          test -s /tmp/dialogue-game/tentacle.001
+      - name: Click character and verify answer-object transitions in real ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe /tmp/dialogue-game /tmp/dialogue-evidence
+      - name: Upload playable dialogue game
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dialogue-game-preview
+          if-no-files-found: ignore
+          path: |
+            /tmp/dialogue-game/tentacle.000
+            /tmp/dialogue-game/tentacle.001
+            /tmp/dialogue-game/story.json
+      - name: Upload screenshots, state report and engine log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dialogue-evidence
+          if-no-files-found: ignore
+          path: |
+            /tmp/dialogue-evidence/*.png
+            /tmp/dialogue-evidence/*.json
+            /tmp/dialogue-evidence/scummvm.log

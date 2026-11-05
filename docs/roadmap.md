@@ -243,6 +243,10 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
       Auswahl-Ressourcen kompiliert (#42103638725). Ein separater visueller
       ScummVM-Klicktest prüft nun den Zustandswechsel von verborgenen zu
       sichtbaren und wieder verborgenen Antworten; Ergebnis noch offen.
+- [x] **Isolierter Dialog-CI-Workflow:** `.github/workflows/dialogue-smoke.yml`
+      kompiliert ausschließlich das versionierte Dialogfixture und prüft
+      die ScummVM-Eingabe mit Screenshots und JSON-Report. Unabhängig von
+      den längeren Musik-/Palette-/Raumwechseltests; Laufzeitergebnis offen.
 - [ ] Echte NPC-Sprechblasen, klassisches SCUMM-Gesprächsmenü, Sprecherwechsel,
       Kostüm-/Animationsresourcen und Voice-Cues mit Stock ScummVM prüfen.
 - [ ] Dialogmodell als eigene versionierte Struktur: Sprechende,
