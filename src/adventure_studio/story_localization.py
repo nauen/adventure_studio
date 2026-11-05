@@ -6,6 +6,9 @@ into SCUMM source until the interpreter charset tests have been approved.
 
 from __future__ import annotations
 
+import json
+import re
+
 from .localization import LanguageCatalog, validate_catalog
 from .scumm_project import GameDocument, _validate_document
 
@@ -48,6 +51,41 @@ def story_text_inventory(document: GameDocument) -> dict[str, str]:
                 for line_index, line in enumerate(choice.reply_lines):
                     add(f"{choice_base}.reply.{line_index}", line)
     return dict(sorted(result.items()))
+
+
+
+def story_translation_template(
+    document: GameDocument,
+    source_language: str = "en",
+    languages: tuple[str, ...] = ("de", "en", "fr", "ja", "pl"),
+) -> dict:
+    """Create an incomplete, editable v1 catalogue draft, never a valid package.
+
+    None marks untranslated text explicitly. parse_catalog intentionally
+    rejects this draft until every target language has been supplied.
+    """
+    if (not re.fullmatch(r"[a-z]{2}", source_language)
+            or not languages or tuple(sorted(set(languages))) != languages
+            or source_language not in languages
+            or any(not re.fullmatch(r"[a-z]{2}", language) for language in languages)):
+        raise ValueError("Invalid translation template languages")
+    return {
+        "format_version": 1,
+        "source_language": source_language,
+        "languages": list(languages),
+        "lines": [
+            {"id": key,
+             "translations": {language: text if language == source_language else None
+                              for language in languages}}
+            for key, text in story_text_inventory(document).items()
+        ],
+    }
+
+
+def story_translation_template_json(document: GameDocument) -> str:
+    """Return a byte-stable UTF-8 translation draft for an editor/export."""
+    return json.dumps(story_translation_template(document), ensure_ascii=False,
+                      sort_keys=True, separators=(",", ":")) + "\n"
 
 
 def validate_story_catalog(document: GameDocument, catalog: LanguageCatalog) -> None:
