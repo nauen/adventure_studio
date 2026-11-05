@@ -5,6 +5,7 @@ from pathlib import Path
 from adventure_studio.localization import LanguageCatalog, LocalizedLine
 from adventure_studio.scumm_bootstrap import (
     inject_inventory_declarations, inject_inventory_objects, inject_language_keys,
+    inject_language_room_probe,
     read_icon_ids, retarget_upstream_bootstrap,
 )
 
@@ -35,6 +36,28 @@ class BootstrapTests(unittest.TestCase):
             self.assertIn(f"case '{index}':\n            GameLanguage = {code};", result)
         self.assertNotIn("GameLanguage = ", source)
         self.assertIn(r"\x", result)
+
+    def test_opt_in_room_probe_keeps_language_and_repeats_selected_text(self):
+        catalog = LanguageCatalog("de", ("de", "pl"), (
+            LocalizedLine("probe", (("de", "Grüße"), ("pl", "Cześć"))),
+        ))
+        source = (
+            "script keyboardHandler(int key) {\n        switch(key) {\n"
+            "        }\n    }\n"
+            "script gameStart() {\n        setupActors();\n    }\n"
+        )
+        selected, header = inject_language_keys(source, "// Dialog string list\n", catalog)
+        changed = inject_language_room_probe(selected, "Cellar", catalog)
+        self.assertTrue(changed.startswith("room Cellar;\n"))
+        self.assertIn("case '0':\n            startRoom(Cellar);", changed)
+        self.assertIn("case '6':\n            if (GameLanguage ==", changed)
+        self.assertIn("/* pl */", changed)
+        self.assertEqual(changed.count("GameLanguage = "), selected.count("GameLanguage = "))
+        self.assertEqual(header.count("int GameLanguage;"), 1)
+        with self.assertRaisesRegex(ValueError, "already reserved"):
+            inject_language_room_probe(changed, "Cellar", catalog)
+        with self.assertRaisesRegex(ValueError, "Invalid language probe destination"):
+            inject_language_room_probe(selected, "Bad;code", catalog)
 
     def test_language_selector_rejects_missing_bootstrap_hooks(self):
         catalog = LanguageCatalog("de", ("de",), (
