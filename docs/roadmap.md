@@ -31,6 +31,25 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 7. **Grenzflächen statt Spaghetti:** UI, KI-Adapter, Modell, Validierung,
    Ressourcen-Generator und SCUMM-Exporter bleiben voneinander getrennt.
 
+## Mehrsprachigkeit (SCUMM-v6-Kompatibilitätsblock)
+
+Ein verlinktes Spiel soll die Sprachen Deutsch, Englisch, Französisch,
+Polnisch und Japanisch zur Laufzeit anbieten. Text-IDs bleiben unabhängig
+von der Sprache und referenzieren dieselbe Spielmechanik. Die technische
+Analyse und die offenen Nachweispunkte stehen in
+[`docs/localization-compatibility.md`](localization-compatibility.md).
+
+- [x] Strikter, versionierter Unicode-Übersetzungskatalog mit vollständigen
+      Sprachvarianten und deterministischer Zeichensatzbedarfsanalyse.
+- [x] Stabile Sprach-IDs und ScummC-Quelltextfragment mit fünf bedingten
+      Textzweigen; Polnisch und Japanisch mit eigenen Testfällen.
+- [ ] Font-Glyphen für die benötigten Bytecodes als SCUMM-CHAR-Ressource
+      erzeugen und im Interpreter nachweisen.
+- [ ] Laufzeit-Sprachwahl, Raumwechsel und Save/Load in stock ScummVM prüfen.
+- [ ] Sprachausgabe (VOC) je Sprachvariante unabhängig verifizieren.
+- [ ] Erst nach grünen Interpretertests ins normale Story-/SCUMM-Exportmodell
+      integrieren; bis dahin keine scheinbar spielbare Unicode-Ausgabe.
+
 ## Meilensteine und Akzeptanzkriterien
 
 ### M0 – Technisches Fundament (teilweise abgeschlossen)
@@ -279,37 +298,3 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
       werden in einem ZIP ausgeliefert; der Compiler arbeitet auf einer
       temporären Kopie der Toolchain, um Nutzerdateien nicht zu verändern.
       Deterministischer ZIP-Inhalt und Fehlerfall sind lokal getestet.
-- [ ] Compiler-Setup und Plattformfähigkeit für Endnutzer vereinfachen:
-      Build-Service oder gekapselte Toolchain, ohne implizite Downloads im
-      lokalen Editor und mit getrennten Lizenz-/Versionsgrenzen.
-- [x] Erste **gekapselte Codespaces-Toolchain**: gepinntes ScummC wird beim
-      erstmaligen Codespaces-Setup separat gebaut. Der Gradio-Editor erhält
-      den Pfad automatisch, während sein Export weiterhin ohne neue Downloads
-      in einer temporären Kopie arbeitet. Reale Codespaces-Installation und
-      SCUMM-Build daraus stehen als unabhängige Nachweise noch aus.
-- [x] Erster Story-Änderungswunsch über validierte Änderungsvorschläge statt
-      generiertem Code; mehrstufiger Chat und Konfliktklärung bleiben offen.
-- [ ] API/MCP-Operationen greifen auf dieselben validierten Modelle zu.
-
-### M7 – Freigabefähiger Export
-
-- [ ] Spielstart, Interaktion, Save/Load und Kompatibilität für dokumentierte
-      ScummVM-Versionen getestet.
-- [ ] Originale Erkennung oder offen dokumentierte erforderliche Integration,
-      ohne fremde Spielidentitäten als reguläre Lösung zu verkaufen.
-- [ ] DOS-Export nur bei unabhängig nachgewiesener Laufzeitunterstützung.
-- [ ] Lizenzen der ScummC-Beispiele und Abhängigkeiten geklärt.
-
-## Arbeitsrhythmus
-
-Jeder Meilenstein wird anhand seiner Akzeptanzkriterien umgesetzt. Innerhalb
-des laufenden Arbeitsauftrags werden technische Unteraufgaben und Fehlerkorrekturen
-ohne wiederholte Freigabe erledigt. Produktentscheidungen, fehlende Rechte und
-grundlegende Kompatibilitätskonflikte sind explizite Stoppsignale. Status wird
-mit konkreten Commits, Testresultaten und verbleibenden Blockern berichtet.
-
-## Aktuelle Priorität
-
-M2: Nachgewiesene Aufnahme und Verwendung des Schlüssels erweitern um eine
-persistente Türöffnung, einen Raumwechsel und ein explizites Spielziel.
-M1 bleibt offen für Steuerung, Walkboxes und die Überprüfung flüssigen Scrollings.
