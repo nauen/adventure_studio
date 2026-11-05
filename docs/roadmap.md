@@ -166,6 +166,22 @@ die tatsächlich gelieferten Pixel die SCUMM-Grenzen erfüllen. Farbindizes
 für Palette-Cycling sind eine zusätzliche, explizit definierte Bearbeitung:
 ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 
+### M4b – Musik, Soundeffekte und Sprachausgabe
+
+- [x] Architekturentscheidung: ereignisgesteuerte, iMUSE-orientierte Musikregie
+      statt bloß einer starren Hintergrundmusik je Raum
+      (`docs/audio-architecture.md`).
+- [x] Typisierter, deterministischer Musikplan mit Tracks, Ereignissen,
+      Übergangsanforderungen (`immediate`/`beat`/`bar`) und Bericht über
+      unreferenzierte Tracks (`music_director.py` samt Tests).
+- [ ] Erstes originales MIDI-/ScummC-Soundresource-Fixture in stock ScummVM
+      hörbar überprüfen; Ton- oder MIDI-Nachweis in CI, kein reiner Buildcheck.
+- [ ] Spielereignisse steuern Start, Stop und musikalischen Zustandswechsel.
+- [ ] iMUSE-Beat-/Takt- und Hook-Übergänge als **eigene** Kompatibilitäts-Gates
+      nachweisen; keine unbemerkte Herabstufung auf harte Schnitte.
+- [ ] Wiederverwendbare Soundeffekte und klassische VOC-Sprache mit
+      Untertiteln, später optionalen Generator-Providern und Provenienz.
+
 ### M5 – KI-Story-Regie
 
 - [ ] Plot-, Kapitel- und Szenenentwürfe als validierte Operationen.
