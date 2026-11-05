@@ -1,7 +1,7 @@
 """Optional Gradio authoring UI over the validated story-service boundary.
 
 Run: python -m adventure_studio.studio_gradio
-No network/API key is needed for this offline first iteration.
+Offline editing works without API credentials; AI is explicit opt-in.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import subprocess
 import os
 from pathlib import Path
 
+from .story_ai import preview_ai_response, propose_story_change
 from .studio_service import (accept_proposal, add_decoration, change_item,
                              change_position, change_puzzle, change_scene,
                              describe_story, item_position, prepare_proposal,
@@ -116,6 +117,21 @@ def make_app():
             raise gr.Error("Koordinaten müssen ganze Zahlen sein")
         return propose(change_position, raw, item_id, int(x), int(y))
 
+    def propose_ai(raw, request):
+        from .ai_provider import generate_openai_operations
+        try:
+            proposal = propose_story_change(raw, request, generate_openai_operations)
+            return proposal, "KI-VORSCHAU – noch nicht übernommen:\n" + report_text(proposal.edit.report)
+        except ValueError as error:
+            raise gr.Error(str(error)) from error
+
+    def propose_imported(raw, response_json):
+        try:
+            proposal = preview_ai_response(raw, response_json)
+            return proposal, "IMPORTIERTE VORSCHAU – noch nicht übernommen:\n" + report_text(proposal.edit.report)
+        except (ValueError, TypeError) as error:
+            raise gr.Error(str(error)) from error
+
     def choose_pixel(raw, scene_id, item_id, evt: gr.SelectData):
         if not item_id or item_id not in {id_ for _, id_ in room_items(raw, scene_id)}:
             raise gr.Error("Bitte zuerst ein sichtbares Objekt aus dieser Szene auswählen")
@@ -151,7 +167,7 @@ def make_app():
             raise gr.Error(f"SCUMM-Export fehlgeschlagen: {error}") from error
 
     with gr.Blocks(title="Adventure Studio") as app:
-        gr.Markdown("# Adventure Studio\nStory schreiben, prüfen und als SCUMM-fähige Daten speichern. Noch ohne KI-Anbindung.")
+        gr.Markdown("# Adventure Studio\nStory schreiben, KI-Änderungen prüfen und als SCUMM-fähige Daten speichern.")
         state = gr.State(initial)
         pending = gr.State(None)
         with gr.Row():
@@ -192,6 +208,14 @@ def make_app():
             puzzle_title = gr.Textbox(label="Rätseltitel")
             puzzle_items = gr.Textbox(label="Benötigte Gegenstands-IDs, mit Komma getrennt")
             save_puzzle = gr.Button("Rätseländerung prüfen")
+        with gr.Tab("KI-Story-Regie"):
+            gr.Markdown("Beschreibe die gewünschte Änderung. Die KI erzeugt nur Datenoperationen; Story-Solver und SCUMM-Compiler prüfen sie. **Erst der Button unten übernimmt Änderungen.** Für den kostenpflichtigen API-Aufruf müssen `OPENAI_API_KEY` und `pip install -e '.[studio,ai]'` konfiguriert sein.")
+            ai_request = gr.Textbox(label="Was soll sich in der Story ändern?", lines=5,
+                                    placeholder="Im Hafen steht ein kaputter Kühlschrank mit einer verschimmelten Ananas. Stelle ihn links neben die Tür.")
+            ai_button = gr.Button("Mit KI Vorschlag erstellen")
+            with gr.Accordion("Für andere KI-Anbieter: JSON-Operationen importieren", open=False):
+                imported_json = gr.Textbox(label="Deklarative Operations-JSON", lines=5)
+                import_button = gr.Button("JSON-Vorschlag deterministisch prüfen")
         report = gr.Textbox(label="Deterministischer Änderungs- und Prüfbericht", lines=7, interactive=False)
         confirm_button = gr.Button("Geprüfte Änderung jetzt übernehmen", variant="primary")
 
@@ -229,6 +253,8 @@ def make_app():
                           [pending, report])
         save_position.click(propose_position, [state, position_item, position_x, position_y],
                             [pending, report])
+        ai_button.click(propose_ai, [state, ai_request], [pending, report])
+        import_button.click(propose_imported, [state, imported_json], [pending, report])
         confirm_button.click(confirm, [state, pending], [state, pending, *refreshed, report])
         export_button.click(export_story, inputs=[state], outputs=[download])
         game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])

@@ -166,7 +166,8 @@ python -m pip install -e '.[studio]'
 python -m adventure_studio.studio_gradio
 ```
 
-Gradio öffnet eine lokale Oberfläche im Browser (kein ComfyUI, kein API-Key).
+Gradio öffnet eine lokale Oberfläche im Browser. Die Offline-Bearbeitung
+braucht weiterhin weder ComfyUI noch einen API-Key.
 Du kannst eine vorhandene Story-JSON laden, Kapitel und Szenen prüfen,
 Szenentitel und -texte bearbeiten, Gegenstände umbenennen, Dekorationen
 hinzufügen, Rätseltitel und benötigte Inventargegenstände bearbeiten und
@@ -181,6 +182,32 @@ danach übernimmt **Geprüfte Änderung jetzt übernehmen** die geprüfte Versio
 exportieren** lädst du die aktuelle JSON-Datei herunter. Änderungen bleiben
 bis dahin nur in der laufenden Sitzung und überschreiben keine Projektdateien.
 
+Im Reiter **KI-Story-Regie** lassen sich Änderungswünsche frei formulieren.
+Optional kann das Studio daraus über die OpenAI Responses API strukturierte
+Story-Operationen erzeugen. Die KI schreibt **keinen** SCUMM-/Python-Code und
+verändert die Story nicht direkt: Ein typisierter JSON-Parser, der Story-Solver,
+die Konsolidierung und der SCUMM-Adapter prüfen den *gesamten* Vorschlag.
+Der Änderungsbericht zeigt alle hinzugefügten, entfernten und geänderten
+Elemente. Erst die ausdrückliche Bestätigung übernimmt ihn. Gegen einen
+inzwischen geänderten Story-Stand lässt sich eine alte Vorschau nicht anwenden.
+
+KI-Zugriff ist opt-in und kann API-Kosten verursachen. Für diese Funktion:
+
+```bash
+python -m pip install -e '.[studio,ai]'
+export OPENAI_API_KEY='DEIN_EIGENER_SCHLUESSEL'
+python -m adventure_studio.studio_gradio
+```
+
+Den Schlüssel als Umgebungsvariable bzw. Secret einrichten, **niemals ins
+Repository committen**. Über `ADVENTURE_STUDIO_AI_MODEL` lässt sich das
+Modell konfigurieren (Standard `gpt-4.1-mini`). Der Story-Text wird nur bei
+Betätigung des KI-Buttons an den Anbieter übertragen; die API-Anfrage setzt
+`store=false`. Andere Generatoren können ihre deklarativen JSON-Operationen
+über den Importbereich derselben UI zur Prüfung einreichen. Ohne API-Schlüssel
+bleiben alle bisherigen lokalen Editierfunktionen nutzbar. Die Anbindung an
+ComfyUI bleibt weiterhin ausdrücklich aus.
+
 Unter **Spielbares SCUMM-ZIP erzeugen** kann der Editor außerdem die Story
 mit der **in Codespaces automatisch eingerichteten** oder einer lokal
 vorhandenen ScummC-Toolchain in ein ZIP exportieren. In Codespaces ist der
@@ -192,7 +219,7 @@ nicht geändert. Das ZIP enthält `tentacle.000`, `tentacle.001`, `story.json`
 und eine Startanleitung. Die verwendete DOTT-Identität ist weiterhin nur
 ein Forschungs-Kompatibilitätstrick, keine eigene ScummVM-Spielerkennung.
 
-Noch nicht enthalten: KI-Chat, Echtzeit-ScummVM-Spielvorschau, frei ziehbare
+Noch nicht enthalten: mehrstufiger KI-Chat, Echtzeit-ScummVM-Spielvorschau, frei ziehbare
 Objektsprites und automatisches ComfyUI. Die Vorschau verwendet
 bewusst die bisherigen technischen Platzhaltergrafiken.
 

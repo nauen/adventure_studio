@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 from dataclasses import MISSING, fields
 
-from .story import Chapter, Character, Item, Puzzle, Recipe, Scene
+from .story import Chapter, Character, Item, Placement, Puzzle, Recipe, Scene
 from .story_changes import DeleteEntity, PutEntity
 
 _TYPES = {"chapter": Chapter, "scene": Scene, "character": Character,
-          "item": Item, "puzzle": Puzzle, "recipe": Recipe}
+          "item": Item, "puzzle": Puzzle, "recipe": Recipe, "placement": Placement}
 
 
 def _string(value: object) -> bool:
@@ -51,6 +51,9 @@ def parse_operations(raw: str) -> tuple[PutEntity | DeleteEntity, ...]:
                         raise ValueError("Invalid requirements")
                 elif cls is Puzzle and name == "opens_scene_id" and value is None:
                     continue
+                elif cls is Placement and name in ("x", "y"):
+                    if type(value) is not int:
+                        raise ValueError("Invalid placement coordinate")
                 elif not _string(value):
                     raise ValueError(f"Invalid text field: {name}")
             if cls is Puzzle:

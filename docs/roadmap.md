@@ -192,6 +192,17 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 
 ### M5 – KI-Story-Regie
 
+- [x] Erste **providerunabhängige Story-Regie**: natürlichsprachlicher
+      Änderungswunsch plus kanonischer Projektstand als Eingabe, untrusted
+      JSON-Operationen als Ausgabe. Die deterministische Pipeline prüft
+      sämtliche Änderungen atomar, konsolidiert, verifiziert die Spielbarkeit,
+      testet die SCUMM-Exportgrenze und zeigt den Diff vor Bestätigung.
+      Keine KI-Ausführung oder generierten Skripte.
+- [x] Optionaler OpenAI-Responses-Adapter mit explizitem Opt-in über
+      `OPENAI_API_KEY`, ohne Server-Speicherung (`store=false`) und ohne
+      Abhängigkeit des Kerns vom Anbieter. Offline-Import fremder
+      Operations-JSON bleibt möglich; echte API-Integration ist noch nicht
+      mit Zugangsdaten end-to-end geprüft.
 - [ ] Plot-, Kapitel- und Szenenentwürfe als validierte Operationen.
 - [ ] Änderungswünsche zu Gegenständen, Rezepten, Dialogen und Rätseln.
 - [ ] Ergebnisbericht: hinzugefügt, geändert, entfernt, Konflikte und Tests.
@@ -229,7 +240,8 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
       den Pfad automatisch, während sein Export weiterhin ohne neue Downloads
       in einer temporären Kopie arbeitet. Reale Codespaces-Installation und
       SCUMM-Build daraus stehen als unabhängige Nachweise noch aus.
-- [ ] Story-Chat über validierte Änderungsvorschläge statt generierten Code.
+- [x] Erster Story-Änderungswunsch über validierte Änderungsvorschläge statt
+      generiertem Code; mehrstufiger Chat und Konfliktklärung bleiben offen.
 - [ ] API/MCP-Operationen greifen auf dieselben validierten Modelle zu.
 
 ### M7 – Freigabefähiger Export

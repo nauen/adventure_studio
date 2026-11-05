@@ -41,6 +41,13 @@ class StoryProtocolTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "too large"):
             parse_operations(" " * 200001)
 
+    def test_placement_coordinates_require_json_integers(self):
+        for invalid in (True, 4.2, "18", None):
+            raw = json.dumps({"operations": [{"op": "put", "kind": "placement",
+                "entity": {"item_id": "key", "x": invalid, "y": 12}}]})
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(ValueError, "coordinate"):
+                parse_operations(raw)
+
 
 if __name__ == "__main__":
     unittest.main()
