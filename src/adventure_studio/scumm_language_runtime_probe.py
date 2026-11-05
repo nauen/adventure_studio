@@ -13,6 +13,30 @@ import time
 from pathlib import Path
 
 
+
+def verify_room_transition(before: Path, after: Path) -> dict:
+    """Reject a mere surviving key press without a substantial scene change."""
+    try:
+        from PIL import Image, ImageChops
+    except ImportError as error:
+        raise RuntimeError("Room image comparison requires Pillow") from error
+
+    with Image.open(before) as old, Image.open(after) as new:
+        if old.size != new.size:
+            raise ValueError("Room screenshots have different dimensions")
+        old_rgb = old.convert("RGB")
+        new_rgb = new.convert("RGB")
+        difference = ImageChops.difference(old_rgb, new_rgb)
+        changed = sum(1 for pixel in difference.getdata() if max(pixel) >= 24)
+        total = old_rgb.width * old_rgb.height
+    ratio = changed / total
+    if ratio < 0.05:
+        raise ValueError(f"Room transition not visually confirmed: {ratio:.3%} changed pixels")
+    return {"room_transition_changed_pixels": changed,
+            "room_transition_changed_ratio": round(ratio, 6),
+            "room_transition_visually_confirmed": True}
+
+
 def language_runtime_probe(game: Path, output: Path) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Language probe requires Xvfb DISPLAY")
@@ -52,7 +76,9 @@ def language_runtime_probe(game: Path, output: Path) -> dict:
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
+    room_evidence = verify_room_transition(output / "pl.png", output / "room_after_pl.png")
     report = {"engine_survived_key_selection": True,
+              **room_evidence,
               "room_transition_probe_attempted": True,
               "language_persistence_visually_verified": False,
               "screenshots": results,
