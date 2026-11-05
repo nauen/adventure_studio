@@ -5,6 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from adventure_studio.scumm_project import canonical_json, export_document, parse_document
+from adventure_studio.image_pipeline import FixtureImageProvider, IndexedImage
 from adventure_studio.story import Chapter, Item, Puzzle, Scene, Story
 from adventure_studio.story_to_scumm import compile_story_to_scumm
 
@@ -23,6 +24,30 @@ def small_story() -> Story:
 
 
 class StoryToScummTests(unittest.TestCase):
+    def test_default_provider_preserves_fixture_pixels_and_palette(self):
+        game = compile_story_to_scumm(small_story())
+        self.assertEqual(game.rooms[0].pixels[:2], bytes((0, 0)))
+        self.assertEqual(game.rooms[0].pixels[320], 2)
+        self.assertEqual(game.rooms[1].pixels[:2], bytes((6, 6)))
+        self.assertEqual(game.rooms[0].palette[0], (70, 130, 190))
+
+    def test_custom_provider_can_supply_room_images_without_new_build_path(self):
+        current = compile_story_to_scumm(small_story())
+        provider = FixtureImageProvider({
+            f"scene-{room.name.lower()}-{'goal' if room.goal_text else 'main'}":
+                IndexedImage(room.pixels, room.palette, room.geometry.room_width,
+                             room.geometry.room_height, "cache:fixture-v1")
+            for room in current.rooms
+        })
+        self.assertEqual(canonical_json(current),
+                         canonical_json(compile_story_to_scumm(small_story(), provider)))
+
+    def test_invalid_external_provider_dimensions_fail_before_scumm_export(self):
+        sample = IndexedImage(b"\x00", ((0, 0, 0),), 1, 1, "cache:test")
+        provider = FixtureImageProvider({"scene-tavern-main": sample})
+        with self.assertRaisesRegex(ValueError, "dimensions disagree"):
+            compile_story_to_scumm(small_story(), provider)
+
     def test_story_generates_complete_room_resources_and_goal(self):
         game = compile_story_to_scumm(small_story())
         self.assertEqual(tuple(r.name for r in game.rooms), ("Tavern", "Shed"))

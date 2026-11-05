@@ -134,6 +134,9 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 - [x] Provider-unabhängiger Vertrag für fertige 8-Bit-Indexbilder, inklusive
       Palette, Abmessungen, Herkunft und reproduzierbarem Content-Hash;
       Offline-Fixture-Provider mit Validierung und Tests (`image_pipeline.py`).
+- [x] Story-zu-SCUMM-Compiler liest Raumhintergründe über die Provider-Grenze;
+      Standard bleibt der bisherige byteidentische Offline-Generator. Externe
+      Fixture-Provider werden ohne Änderung der SCUMM-Exportkette unterstützt.
 - [ ] Einen späteren ComfyUI-/RunComfy-Adapter für **vorhandene, vom Nutzer
       bereitgestellte Workflows** ergänzen; aktuell keine Verbindung, keine
       Modellwahl und keine Netzwerkaufrufe im Build.
@@ -143,6 +146,10 @@ gesondert geprüft. AGS ist kein Ausgabeformat.
 - [ ] Palette-Cycling für geeignete Szeneneffekte als gesonderten,
       deterministischen SCUMM-v6-Compilerbaustein entwickeln und in ScummVM
       mit visuellen Prüfungen validieren.
+- [x] Erste deterministische, providerunabhängige Palettenzyklus-Vorschau
+      (`palette_animation.py`): Bereichs-/Timingprüfung, geschützte Indizes,
+      disjunkte Zyklen, Vorwärts-/Rückwärtsrotation und Tests. Noch **kein**
+      SCUMM-Runtime-Export und daher noch kein ScummVM-Effekt-Nachweis.
 
 Die KI-Bildworkflows sind **selbst für Pixel-Art-Stil, Zielauflösung und
 Farbpalette zuständig**. Adventure Studio quantisiert oder skaliert ein

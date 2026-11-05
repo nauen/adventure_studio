@@ -15,6 +15,10 @@ Es gibt **noch keine** ComfyUI- oder RunComfy-Verbindung.
 2. Ein austauschbarer `ImageProvider` liefert `IndexedImage` mit Pixelindizes,
    Palette, Abmessungen und `source_id`. Der vorhandene
    `FixtureImageProvider` ist offline und benötigt keine Credentials.
+   Der Story-Compiler verwendet als Standard `DeterministicStoryImageProvider`,
+   damit seine bisherigen Raumhintergründe byteidentisch bleiben. Mit
+   `compile_story_to_scumm(story, image_provider=...)` können geprüfte
+   Alternativbilder über denselben Compilerpfad eingesetzt werden.
 3. Die Validierung kontrolliert Anzahl und Werte der Paletteneinträge,
    Bufferlänge, Pixelindex-Grenzen und Abmessungen. Der Content-Hash deckt
    Pixelindizes und RGB-Palette inklusive deren Reihenfolge ab.
@@ -42,6 +46,13 @@ Cycle-Animation. Zunächst müssen passende Farbindex-Muster und reservierte
 Palettenbereiche **gezielt konstruiert** werden. Geplante Tests: disjunkte
 Farbindexbereiche, unveränderte UI-/Figurenfarben, reproduzierbare
 Animationsschritte, sichtbare Bildunterschiede im echten ScummVM.
+
+`palette_animation.py` implementiert dafür bereits eine **reine Vorschau**:
+`PaletteCycle` beschreibt Bereich und Tick-Intervall, `palette_at_tick` liefert
+aus der Originalpalette ein deterministisches Ergebnis. Überlappungen und
+Zugriffe auf explizit geschützte Farbindizes werden abgewiesen. Das beweist
+noch keine Laufzeitunterstützung: SCUMM-Skripterzeugung und Screenshot-Tests
+sind ein eigenständiger nächster Schritt.
 
 ## Schrittweise Einführung
 

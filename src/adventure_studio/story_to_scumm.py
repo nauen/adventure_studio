@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from .image_pipeline import ImageProvider, ImageRequest, IndexedImage
 from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, UseRule
 from .scumm_project import GameDocument
 from .story import Story, verify_story
@@ -48,7 +49,27 @@ def _room_pixels(width: int, goal: bool) -> bytes:
                  for y in range(200) for x in range(width))
 
 
-def _compile_recipe_story(story: Story) -> GameDocument:
+class DeterministicStoryImageProvider:
+    """Default offline source, preserving existing visual fixtures byte-for-byte."""
+
+    def generate(self, request: ImageRequest) -> IndexedImage:
+        if request.height != 200 or request.width not in (320, 640):
+            raise ValueError("Unsupported fixture room geometry")
+        is_goal = request.asset_id.endswith("-goal")
+        return IndexedImage(_room_pixels(request.width, is_goal), _PALETTE,
+                            request.width, request.height, "story-fixture:v1")
+
+
+def _room_image(provider: ImageProvider, scene_id: str, width: int, goal: bool) -> IndexedImage:
+    request = ImageRequest(f"scene-{scene_id.lower()}-{'goal' if goal else 'main'}",
+                           f"Story scene {scene_id}", width, 200)
+    image = provider.generate(request)
+    if (image.width, image.height) != (width, 200):
+        raise ValueError(f"Wrong generated scene dimensions: {scene_id}")
+    return image
+
+
+def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument:
     """Bounded v2 fixture: one two-ingredient recipe unlocks one visible exit."""
     if (len(story.chapters) != 1 or len(story.scenes) != 2 or len(story.puzzles) != 1
             or len(story.recipes) != 1 or story.characters):
@@ -89,22 +110,25 @@ def _compile_recipe_story(story: Story) -> GameDocument:
                                 450, 100, 16, 16, False, _sprite(4, 1),
                                 open_sprite_pixels=_sprite(5, 2),
                                 exit_destination=puzzle.opens_scene_id))
+    start_image = _room_image(provider, story.starting_scene_id, 640, False)
+    goal_image = _room_image(provider, puzzle.opens_scene_id, 320, True)
     start_room = RoomAsset(story.starting_scene_id, RoomGeometry(640, 200, 320, 200),
-                           _room_pixels(640, False), _PALETTE, tuple(hotspots), 540,
+                           start_image.pixels, start_image.palette, tuple(hotspots), 540,
                            (UseRule(result.id, "Door", _text(puzzle.title), open_target=True),),
                            combine_rules=(CombineRule(recipe.ingredients[0], recipe.ingredients[1],
                                                       result.id, _text(recipe.title)),))
     goal_room = RoomAsset(puzzle.opens_scene_id, RoomGeometry(320, 200, 320, 200),
-                          _room_pixels(320, True), _PALETTE,
+                          goal_image.pixels, goal_image.palette,
                           goal_text=_text(puzzle.title))
     return GameDocument(story.chapters[0].id + "Game", (start_room, goal_room))
 
 
-def compile_story_to_scumm(story: Story) -> GameDocument:
+def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = None) -> GameDocument:
     """Compile bounded linear item-and-door puzzles, never story-authored scripts."""
     verify_story(story)
+    provider = image_provider if image_provider is not None else DeterministicStoryImageProvider()
     if story.recipes:
-        return _compile_recipe_story(story)
+        return _compile_recipe_story(story, provider)
     if (len(story.chapters) != 1 or not 1 <= len(story.puzzles) <= 2
             or len(story.scenes) != len(story.puzzles) + 1 or story.characters):
         raise ValueError("Exporter supports one chapter, one or two sequential door puzzles, and no custom actors")
@@ -176,8 +200,9 @@ def compile_story_to_scumm(story: Story) -> GameDocument:
                                         450, 100, 16, 16, False, _sprite(4, 1),
                                         open_sprite_pixels=_sprite(5, 2),
                                         exit_destination=puzzle.opens_scene_id))
+        image = _room_image(provider, scene_id, width, goal)
         result.append(RoomAsset(
-            scene_id, RoomGeometry(width, 200, 320, 200), _room_pixels(width, goal), _PALETTE,
+            scene_id, RoomGeometry(width, 200, 320, 200), image.pixels, image.palette,
             hotspots=tuple(hotspots), demo_walk_to_x=540 if not goal else None,
             use_rules=(UseRule(pickups[0].id, door_id, _text(puzzle.title), open_target=True,
                                requires_inventory=tuple(item.id for item in pickups[1:])),) if not goal else (),
