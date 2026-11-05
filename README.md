@@ -166,6 +166,15 @@ python -m pip install -e '.[studio]'
 python -m adventure_studio.studio_gradio
 ```
 
+Die **Projektübersicht** zeigt die Story als Katalog und Beziehungsgraph:
+Kapitel, Szenen, Charaktere, Gegenstände samt Positionen, Rätsel,
+Inventarbedingungen und Rezeptkombinationen. Eine Galerie zeigt die
+momentan deterministisch erzeugten Raumhintergründe. Nach der Bestätigung
+eines Edits wird die gesamte Übersicht aus dem neuen Storymodell
+aktualisiert. Das ist eine reine Lesesicht; sie fügt keine zweite Datenhaltung
+hinzu. Charakterbilder, Dialogbäume, Sprachclips und echte Bildzuordnungen
+sind **noch nicht** Teil des versionierten Story- und SCUMM-Exportmodells.
+
 Gradio öffnet eine lokale Oberfläche im Browser. Die Offline-Bearbeitung
 braucht weiterhin weder ComfyUI noch einen API-Key.
 Du kannst eine vorhandene Story-JSON laden, Kapitel und Szenen prüfen,

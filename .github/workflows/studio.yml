@@ -12,12 +12,14 @@ on:
       - 'pyproject.toml'
       - 'src/adventure_studio/studio_service.py'
       - 'src/adventure_studio/story_ai.py'
+      - 'src/adventure_studio/studio_catalog.py'
       - 'src/adventure_studio/ai_provider.py'
       - 'src/adventure_studio/story_protocol.py'
       - 'src/adventure_studio/studio_export.py'
       - 'src/adventure_studio/studio_gradio.py'
       - 'tests/test_studio_service.py'
       - 'tests/test_story_ai.py'
+      - 'tests/test_studio_catalog.py'
       - 'tests/test_story_protocol.py'
       - 'tests/test_studio_export.py'
       - 'tests/test_studio_position.py'
@@ -31,12 +33,14 @@ on:
       - 'pyproject.toml'
       - 'src/adventure_studio/studio_service.py'
       - 'src/adventure_studio/story_ai.py'
+      - 'src/adventure_studio/studio_catalog.py'
       - 'src/adventure_studio/ai_provider.py'
       - 'src/adventure_studio/story_protocol.py'
       - 'src/adventure_studio/studio_export.py'
       - 'src/adventure_studio/studio_gradio.py'
       - 'tests/test_studio_service.py'
       - 'tests/test_story_ai.py'
+      - 'tests/test_studio_catalog.py'
       - 'tests/test_story_protocol.py'
       - 'tests/test_studio_export.py'
       - 'tests/test_studio_position.py'
@@ -60,6 +64,7 @@ jobs:
           python -m unittest discover -s tests -p test_studio_export.py -v
           python -m unittest discover -s tests -p test_studio_position.py -v
           python -m unittest discover -s tests -p test_story_ai.py -v
+          python -m unittest discover -s tests -p test_studio_catalog.py -v
           python -m unittest discover -s tests -p test_story_protocol.py -v
       - name: Instantiate real Gradio Blocks and callbacks
         run: |

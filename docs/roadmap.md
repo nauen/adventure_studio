@@ -210,6 +210,24 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
 
 ### M6 – Gradio Studio und MCP
 
+- [x] Erste **Projektübersicht** als deterministisches, UI-unabhängiges
+      Inventar (`studio_catalog.py`): Kapitel, Szenen, Charaktere samt
+      Bildstatus, Gegenstände/Positionen, Rätsel, Rezeptkombinationen,
+      Hintergrundvorschau-Galerie und ein direkt aus dem Storymodell
+      abgeleiteter Beziehungsgraph mit Referenzen und Raumübergängen.
+      Die Ansicht aktualisiert sich nach jedem bestätigten Edit.
+- [ ] Visuelle Story-Bibel: Charakterporträts, Sprite-Sheets,
+      Animationen und Raumhintergründe über **stabile Asset-Referenzen**
+      im versionierten Datenmodell verknüpfen; den Bildstatus inklusive
+      Erzeugungs-/Versionsinformation je Figur und Szene anzeigen.
+- [ ] Dialogmodell als eigene versionierte Struktur: Sprechende,
+      Dialogknoten, Antwortoptionen, Bedingungen, Effekte, Untertitel
+      und optionale Sprach-Assets. Dialoggraph und Verzweigungen
+      deterministisch auf fehlende Referenzen, unerreichbare Knoten
+      und Sackgassen prüfen. Erst danach SCUMM-v6-Ausgabe erweitern.
+- [ ] Interaktiver Graph mit Filtern (Kapitel, Szenen, Charaktere,
+      Gegenstände, Aktionen/Dialoge), Detailauswahl und Navigation
+      zum jeweiligen Editorfeld; zum Start ist der SVG-Graph lesbar.
 - [x] Erste **optionale lokale Gradio-Oberfläche** mit Story-JSON-Import,
       Kapitel-/Szenenübersicht, Raumvorschau samt Hotspot-Markierungen,
       Szenen- und Gegenstandseditor, neuen Dekorationsobjekten,

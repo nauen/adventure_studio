@@ -11,6 +11,7 @@ import subprocess
 import os
 from pathlib import Path
 
+from .studio_catalog import relationship_svg, story_catalog
 from .story_ai import preview_ai_response, propose_story_change
 from .studio_service import (accept_proposal, add_decoration, change_item,
                              change_position, change_puzzle, change_scene,
@@ -66,6 +67,27 @@ def render_scene(raw: str, scene_id: str):
     return image
 
 
+def catalog_view(raw: str):
+    """Shared overview after load and after each confirmed edit."""
+    catalog = story_catalog(raw)
+    gallery = []
+    for scene_id, title, _chapter, _description in catalog.scenes:
+        try:
+            gallery.append((render_scene(raw, scene_id), f"{title} ({scene_id})"))
+        except ValueError:
+            # The story bible may contain scenes not yet supported by the
+            # deliberately bounded SCUMM adapter.
+            pass
+    summary = (f"**{len(catalog.chapters)} Kapitel · {len(catalog.scenes)} Szenen · "
+               f"{len(catalog.characters)} Figuren · {len(catalog.items)} Objekte · "
+               f"{len(catalog.puzzles)} Rätsel · {len(catalog.recipes)} Rezepte**\n\n"
+               "Raumbilder sind derzeit technische Vorschauen. Charakterbilder und "
+               "Dialogbäume haben noch keine eigenen Projekt-Assets.")
+    return (summary, list(catalog.chapters), list(catalog.scenes),
+            list(catalog.characters), list(catalog.items), list(catalog.puzzles),
+            list(catalog.recipes), gallery, relationship_svg(raw))
+
+
 def make_app():
     try:
         import gradio as gr
@@ -89,7 +111,7 @@ def make_app():
                 f"**Kapitel**\n{chapters}\n\n**Spielbarer Pfad:** {path}",
                 *scene_fields(raw, scene), *item_fields(raw, item or ""),
                 *puzzle_fields(raw, puzzle or ""), *position_fields(raw, selected_object or ""),
-                render_scene(raw, scene))
+                render_scene(raw, scene), *catalog_view(raw))
 
     def load_file(file_path):
         if not file_path:
@@ -181,6 +203,25 @@ def make_app():
             game_export_button = gr.Button("SCUMM-ZIP bauen")
             game_download = gr.File(label="Spielbares Adventure herunterladen")
         overview = gr.Markdown()
+        with gr.Tab("Projektübersicht"):
+            catalog_summary = gr.Markdown()
+            with gr.Accordion("Kapitel", open=False):
+                chapter_grid = gr.Dataframe(headers=["ID", "Titel", "Inhalt"], interactive=False)
+            with gr.Accordion("Szenen", open=True):
+                scene_grid = gr.Dataframe(headers=["ID", "Titel", "Kapitel", "Beschreibung"], interactive=False)
+                room_gallery = gr.Gallery(label="Hintergrundbilder / Raumvorschauen", columns=2,
+                                          object_fit="contain", height=270)
+            with gr.Accordion("Charaktere", open=False):
+                character_grid = gr.Dataframe(headers=["ID", "Name", "Szene", "Bildstatus"], interactive=False)
+                gr.Markdown("Charakterporträts, Laufanimationen und Sprite-Referenzen sind geplant; aktuell werden keine Bilder vorgetäuscht.")
+            with gr.Accordion("Gegenstände und Positionen", open=False):
+                item_grid = gr.Dataframe(headers=["ID", "Name", "Szene", "Rolle", "Position X,Y"], interactive=False)
+            with gr.Accordion("Aktionen, Rätsel und Rezepte", open=False):
+                puzzle_grid = gr.Dataframe(headers=["ID", "Titel", "Szene", "Benötigt", "Öffnet"], interactive=False)
+                recipe_grid = gr.Dataframe(headers=["ID", "Titel", "Zutaten", "Ergebnis"], interactive=False)
+                gr.Markdown("Die Aktionsübersicht zeigt zurzeit deklarative Tür-Rätsel und Kombinationsrezepte. Dialoge und frei definierte Aktionen folgen in einer späteren Modellversion.")
+            with gr.Accordion("Beziehungsgraph", open=True):
+                graph_view = gr.HTML(label="Story-Beziehungen")
         with gr.Tab("Szenen"):
             scene_select = gr.Dropdown(label="Szene")
             scene_title = gr.Textbox(label="Titel")
@@ -221,7 +262,8 @@ def make_app():
 
         refreshed = [scene_select, item_select, puzzle_select, position_item, overview, scene_title,
                      scene_description, item_name, item_description, puzzle_title, puzzle_items,
-                     position_x, position_y, preview]
+                     position_x, position_y, preview, catalog_summary, chapter_grid, scene_grid,
+                     character_grid, item_grid, puzzle_grid, recipe_grid, room_gallery, graph_view]
         app.load(selectors, inputs=[state], outputs=refreshed)
         def load_and_clear(file_path):
             raw, *rest = load_file(file_path)
