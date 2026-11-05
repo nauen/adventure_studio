@@ -34,7 +34,7 @@ class BootstrapTests(unittest.TestCase):
             code = int.from_bytes(language.encode("ascii"), "big")
             self.assertIn(f"case '{index}':\n            GameLanguage = {code};", result)
         self.assertNotIn("GameLanguage = ", source)
-        self.assertIn(r"\\x", result)
+        self.assertIn(r"\x", result)
 
     def test_language_selector_rejects_missing_bootstrap_hooks(self):
         catalog = LanguageCatalog("de", ("de",), (
