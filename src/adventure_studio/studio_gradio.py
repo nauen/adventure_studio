@@ -204,9 +204,9 @@ def make_app():
         path.write_text(canonical, encoding="utf-8")
         return str(path)
 
-    def export_translations(raw):
+    def export_translations(raw, source_language):
         try:
-            draft = translation_draft(raw)
+            draft = translation_draft(raw, source_language)
         except ValueError as error:
             raise gr.Error(f"Übersetzungsentwurf nicht möglich: {error}") from error
         path = Path(tempfile.mkdtemp(prefix="adventure-studio-i18n-")) / "translations-draft.json"
@@ -242,9 +242,13 @@ def make_app():
             export_button = gr.Button("Geprüfte Story exportieren", variant="primary")
             download = gr.File(label="Story herunterladen")
         with gr.Row():
+            source_language = gr.Dropdown(label="Quellsprache der Story",
+                                          choices=[("Deutsch", "de"), ("Englisch", "en"),
+                                                   ("Französisch", "fr"), ("Japanisch", "ja"),
+                                                   ("Polnisch", "pl")], value="de")
             translations_button = gr.Button("Übersetzungsentwurf für 5 Sprachen erzeugen")
             translations_download = gr.File(label="Übersetzungsentwurf herunterladen")
-        gr.Markdown("Der Entwurf enthält fehlende Übersetzungen als `null` und ist noch kein spielbares Sprachpaket.")
+        gr.Markdown("Der Entwurf enthält fehlende Übersetzungen als `null` und ist noch kein spielbares Sprachpaket. Autorisierte Story-Texte bleiben soweit eindeutig zuordenbar in Unicode erhalten; synthetische Compilertexte und mehrdeutig normalisierte Texte können weiterhin ASCII sein.")
         with gr.Accordion("Vollständige Übersetzungen prüfen", open=False):
             translation_file = gr.File(label="Ausgefüllten Übersetzungskatalog öffnen", file_types=[".json"], type="filepath")
             translation_validate_button = gr.Button("Übersetzungen gegen aktuelle Story prüfen")
@@ -370,7 +374,7 @@ def make_app():
         import_button.click(propose_imported, [state, imported_json], [pending, report])
         confirm_button.click(confirm, [state, pending], [state, pending, *refreshed, report])
         export_button.click(export_story, inputs=[state], outputs=[download])
-        translations_button.click(export_translations, inputs=[state], outputs=[translations_download])
+        translations_button.click(export_translations, inputs=[state, source_language], outputs=[translations_download])
         translation_validate_button.click(validate_translations, inputs=[state, translation_file],
                                           outputs=[translation_validated_download])
         game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])

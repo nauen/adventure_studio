@@ -35,7 +35,8 @@ def _tool(upstream: Path, name: str) -> Path:
 
 def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                        runner: Callable = subprocess.run,
-                       language_room_probe: bool = False) -> Path:
+                       language_room_probe: bool = False,
+                       localize_story: bool = False) -> Path:
     """Compile and link all validated rooms; return a loadable research fixture."""
     document = parse_document((build_directory / "project.json").read_text(encoding="utf-8"))
     resources = build_directory / "resources"
@@ -80,6 +81,15 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
             language_catalog = catalog
         bootstrap = inject_multilingual_charset(bootstrap)
         shutil.copyfile(custom_font, road / custom_font.name)
+    if localize_story:
+        if language_catalog is None:
+            raise ValueError("Localized story export requires a verified language package")
+        from .story_localization import validate_story_catalog
+        from .scumm_assets import scummc_room_source
+        validate_story_catalog(document, language_catalog)
+        for room in document.rooms:
+            (resources / f"{room.name}.scc").write_text(
+                scummc_room_source(room, language_catalog), encoding="utf-8")
     if language_room_probe and (language_catalog is None or len(document.rooms) < 2):
         raise ValueError("Room language probe needs a language package and two rooms")
     if language_catalog is not None:
@@ -126,11 +136,14 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
 
 
 def main() -> int:
-    if len(sys.argv) not in (4, 5) or (len(sys.argv) == 5 and sys.argv[4] != "--language-room-probe"):
-        print("Usage: python -m adventure_studio.scumm_toolchain STORY_BUILD_DIRECTORY SCUMMC_DIRECTORY GAME_OUTPUT_DIRECTORY [--language-room-probe]")
+    options = sys.argv[4:]
+    allowed = {"--language-room-probe", "--localize-story"}
+    if len(sys.argv) < 4 or len(options) != len(set(options)) or set(options) - allowed:
+        print("Usage: python -m adventure_studio.scumm_toolchain STORY_BUILD_DIRECTORY SCUMMC_DIRECTORY GAME_OUTPUT_DIRECTORY [--language-room-probe] [--localize-story]")
         return 2
     print(compile_story_game(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]),
-                             language_room_probe=len(sys.argv) == 5))
+                             language_room_probe="--language-room-probe" in options,
+                             localize_story="--localize-story" in options))
     return 0
 
 

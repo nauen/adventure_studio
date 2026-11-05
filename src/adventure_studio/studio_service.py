@@ -12,7 +12,7 @@ from .story import Item, Placement, Story, verify_story
 from .story_changes import PutEntity, StoryChangeReport, edit_story
 from .story_document import canonical_story_json, parse_story_document
 from .story_to_scumm import compile_story_to_scumm
-from .story_localization import story_translation_template_json, validate_story_catalog
+from .story_localization import story_authoring_template_json, validate_story_catalog
 from .localization import canonical_catalog_json, charset_plan, parse_catalog
 
 
@@ -176,11 +176,10 @@ def scene_preview(raw: str, scene_id: str) -> tuple[int, int, bytes, tuple[tuple
 
 
 
-def translation_draft(raw: str) -> str:
+def translation_draft(raw: str, source_language: str = "en") -> str:
     """Generate an incomplete, validated-source translation draft for Studio."""
     story = parse_story_document(raw)
-    game = compile_story_to_scumm(story)
-    return story_translation_template_json(game)
+    return story_authoring_template_json(story, source_language)
 
 
 

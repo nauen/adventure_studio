@@ -112,6 +112,38 @@ und die CHAR-Datei noch nicht automatisch gemeinsam aus. Eine vollständige
 Sprachumschaltung für sämtliche Story-Texte und der Pixelnachweis für polnische
 bzw. japanische Glyphen fehlen noch.
 
+## Optionaler Story-Text-Compiler (vor Runtime-Abnahme)
+
+`story_localization.py` inventarisiert stabile Text-IDs für Objektbezeichnungen,
+Beschreibungen, Dialoge, Auswahltexte, Rätselantworten und Zieltexte. Das
+Gradio-Studio kann eine fünfsprachige, bewusst unvollständige Vorlage als JSON
+ausgeben und einen ausgefüllten Katalog gegen die aktuelle Story prüfen.
+Der Übersetzungsentwurf übernimmt eindeutig zuordenbare Originaltexte aus dem
+Unicode-Storymodell (etwa Gegenstandsnamen und Dialogzeilen). Synthetische
+Compilertexte und mehrdeutige ASCII-Normalisierungen bleiben in der aktuellen
+Adaptergrenze als technische Texte erhalten. Die ursprüngliche Story selbst
+wird dabei nicht verändert.
+Fehlende Sprachfelder bleiben `null`; ein unvollständiger Katalog besteht
+weder die strikte Validierung noch die Zeichensatzbedarfsprüfung.
+
+Mit dem expliziten Compiler-Schalter `--localize-story` werden
+`egoSay`-Zeilen als bedingte SCUMM-v6-Sprachzweige erzeugt. Voraussetzung
+ist ein vollständiger Katalog mit exakt passenden Originaltexten und einem
+bereits geprüften CHAR-Paket. Der normale Export bleibt unverändert.
+Objektnamen werden beim Betreten eines Raums über `setObjectName` an den
+Sprachzustand angepasst. Ein Sprachwechsel im bereits geladenen Raum
+aktualisiert diese Namen noch nicht sofort. Die bislang fest codierte
+Tür-Fehlermeldung hat nun eine eigene stabile Übersetzungs-ID. Die Darstellung
+bleibt gesondert im Interpreter zu verifizieren.
+
+`story_language_fixture.py` erzeugt einen begrenzten Integrationskatalog,
+in dem Ziel- und Türtext tatsächlich in fünf Sprachen vorliegen. Übrige
+Texte bleiben absichtlich englisch. Dieser Katalog ist ein technisches
+Fixture und keine vollständige Spielübersetzung. Der isolierte
+`language-runtime.yml`-Workflow soll damit den echten ScummC-Compiler,
+ScummVM und Raumwechsel prüfen; ein grüner Python-Test ersetzt diesen
+Engine-Nachweis nicht.
+
 ## Verbindliche Kompatibilitäts-Gates vor Aktivierung im Spiel-Export
 
 1. ScummC kompilieren und einen minimalen Raum mit `GameLanguage` und fünf

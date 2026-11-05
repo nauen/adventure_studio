@@ -241,8 +241,43 @@ def indexed_bmp(room: RoomAsset) -> bytes:
     return _indexed_bmp(room.geometry.room_width, room.geometry.room_height, room.pixels, room.palette)
 
 
-def scummc_room_source(room: RoomAsset) -> str:
+def scummc_room_source(room: RoomAsset, catalog=None) -> str:
     _validate(room)
+    if catalog is not None:
+        from .localization import scumm_language_dispatch, validate_catalog
+        validate_catalog(catalog)
+        translations = {line.id: dict(line.translations) for line in catalog.lines}
+
+    def say(key: str, original: str, indent: int) -> str:
+        if catalog is None:
+            return " " * indent + f"egoSay({_scumm_string(original)});\n"
+        entry = translations.get(key)
+        from .story_localization import source_matches_compiled
+        if entry is None or not source_matches_compiled(entry.get(catalog.source_language, ""), original):
+            raise ValueError(f"Missing or stale SCUMM translation: {key}")
+        return "".join(" " * indent + line + "\n"
+                       for line in scumm_language_dispatch(catalog, key).splitlines())
+    def localized_name(hotspot: RoomHotspot) -> str:
+        if catalog is None:
+            return ""
+        from .localization import charset_plan, encode_scumm_literal
+        key = f"room.{room.name.lower()}.object.{hotspot.id.lower()}.label"
+        entry = translations.get(key)
+        from .story_localization import source_matches_compiled
+        if entry is None or not source_matches_compiled(entry.get(catalog.source_language, ""), hotspot.label):
+            raise ValueError(f"Missing or stale SCUMM translation: {key}")
+        plan = charset_plan(catalog)
+        branches = []
+        for index, language in enumerate(catalog.languages):
+            code = int.from_bytes(language.encode("ascii"), "big")
+            keyword = "if" if index == 0 else "else if"
+            literal = encode_scumm_literal(entry[language], plan)
+            branches.append(f"        {keyword} (GameLanguage == {code}) "
+                            f"setObjectName({hotspot.id},{literal});\n")
+        fallback = encode_scumm_literal(entry[catalog.source_language], plan)
+        branches.append(f"        else setObjectName({hotspot.id},{fallback});\n")
+        return "".join(branches)
+
     # The external test bootstrap provides verbs, actor and UI. A generated
     # room always owns its own entry script, even when it has no hotspots.
     parts = ["#include <scummVars6.s>\n", '#include "common.sch"\n']
@@ -271,7 +306,7 @@ def scummc_room_source(room: RoomAsset) -> str:
     for index, rule in enumerate(room.combine_rules):
         parts.extend([
             f"    script combine_{index}() {{\n",
-            f"        egoSay({_scumm_string(rule.response)});\n",
+            say(f"room.{room.name.lower()}.combine.{index}.response", rule.response, 8),
             f"        setObjectOwner({rule.first_id}, 0);\n",
             f"        setObjectOwner({rule.second_id}, 0);\n",
             f"        pickupObject({rule.result_id}, VAR_ROOM);\n",
@@ -298,18 +333,18 @@ def scummc_room_source(room: RoomAsset) -> str:
             parts.append("        class = { Pickable };\n")
         parts.extend([
             "        verb(int vrb, int objA, int objB) {\n",
-            f"        case LookAt:\n            egoSay({_scumm_string(hotspot.description)});\n            return;\n",
+            "        case LookAt:\n" + say(f"room.{room.name.lower()}.object.{hotspot.id.lower()}.description", hotspot.description, 12) + "            return;\n",
         ])
         if hotspot.talk_lines:
             parts.append("        case TalkTo:\n")
-            for line in hotspot.talk_lines:
-                parts.append(f"            egoSay({_scumm_string(line)});\n")
+            for line_index, line in enumerate(hotspot.talk_lines):
+                parts.append(say(f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{line_index}", line, 12))
                 parts.append("            waitForMessage();\n")
             parts.append("            return;\n")
         if speaker_rule:
             parts.append("        case TalkTo:\n")
-            for line in speaker_rule.opening_lines:
-                parts.extend([f"            egoSay({_scumm_string(line)});\n",
+            for line_index, line in enumerate(speaker_rule.opening_lines):
+                parts.extend([say(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(speaker_rule)}.opening.{line_index}", line, 12),
                               "            waitForMessage();\n"])
             for choice in speaker_rule.choices:
                 parts.append(f"            setObjectState({choice.object_id},1);\n")
@@ -319,10 +354,10 @@ def scummc_room_source(room: RoomAsset) -> str:
             parts.append("        case TalkTo:\n")
             for choice in rule.choices:
                 parts.append(f"            setObjectState({choice.object_id},0);\n")
-            parts.extend([f"            egoSay({_scumm_string(selected.caption)});\n",
+            parts.extend([say(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(rule)}.choice.{rule.choices.index(selected)}.caption", selected.caption, 12),
                           "            waitForMessage();\n"])
-            for line in selected.reply_lines:
-                parts.extend([f"            egoSay({_scumm_string(line)});\n",
+            for line_index, line in enumerate(selected.reply_lines):
+                parts.extend([say(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(rule)}.choice.{rule.choices.index(selected)}.reply.{line_index}", line, 12),
                               "            waitForMessage();\n"])
             parts.append("            return;\n")
         if hotspot.exit_destination is not None:
@@ -331,7 +366,7 @@ def scummc_room_source(room: RoomAsset) -> str:
                 parts.extend(["            if(getObjectState(objA) == 2) {\n",
                               f"                startRoom({hotspot.exit_destination});\n",
                               "            } else {\n",
-                              '                egoSay("The door is locked.");\n',
+                              say(f"room.{room.name.lower()}.object.{hotspot.id.lower()}.locked", "The door is locked.", 16),
                               "            }\n"])
             else:
                 parts.append(f"            startRoom({hotspot.exit_destination});\n")
@@ -357,7 +392,7 @@ def scummc_room_source(room: RoomAsset) -> str:
                 parts.extend([
                     "        case Use:\n",
                     f"            if(objB == {rule.item_id}{requirements}) {{\n",
-                    f"                egoSay({_scumm_string(rule.response)});\n",
+                    say(f"room.{room.name.lower()}.use.{room.use_rules.index(rule)}.response", rule.response, 16),
                 ])
                 if rule.hide_target:
                     parts.append("                setObjectState(objA,0);\n")
@@ -384,6 +419,7 @@ def scummc_room_source(room: RoomAsset) -> str:
         "        setActorIgnoreBoxes();\n",
         "        setActorStanding();\n",
         "        cameraFollowActor(VAR_EGO);\n",
+        *[localized_name(hotspot) for hotspot in room.hotspots],
         "        ResRoom::showVerbs(1);\n",
         "        ResRoom::showCursor();\n",
     ])
@@ -392,7 +428,7 @@ def scummc_room_source(room: RoomAsset) -> str:
     if room.demo_walk_to_x is not None:
         parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, 100);\n")
     if room.goal_text is not None:
-        parts.append(f"        egoSay({_scumm_string(room.goal_text)});\n")
+        parts.append(say(f"room.{room.name.lower()}.goal", room.goal_text, 8))
     parts.append("    }\n")
     parts.append("}\n")
     return "".join(parts)
