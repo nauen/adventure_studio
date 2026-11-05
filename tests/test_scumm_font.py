@@ -32,7 +32,8 @@ class ScummFontTests(unittest.TestCase):
             bmp = path.read_bytes()
             self.assertEqual(int.from_bytes(bmp[46:50], "little"), 3)
             self.assertEqual(image.getpixel((0, 1)), 2)
-            self.assertEqual(image.getpixel((12, 1)), 2)
+            self.assertEqual(image.getpixel((2, 1)), 2)
+            self.assertEqual(image.getpixel((3, 1)), 0)
             self.assertEqual(image.getpixel((13, 1)), 0)
             self.assertEqual(image.getpixel((14, 1)), 2)
             self.assertEqual(image.getpixel((0, 14)), 2)
@@ -52,6 +53,17 @@ class ScummFontTests(unittest.TestCase):
                     while x < image.width and image.getpixel((x, y)) == 2:
                         x += 1
             self.assertEqual(len(starts), max(mapping) + 1)
+            # Frames must encode proportional advances, not a fixed cell width.
+            def frame_width(code):
+                x = (code % 16) * 14
+                y = (code // 16) * 15 + 1
+                width = 0
+                while image.getpixel((x + width, y)) == 2:
+                    width += 1
+                return width
+
+            self.assertLess(frame_width(ord("i")), frame_width(ord("W")))
+            self.assertLess(frame_width(ord(" ")), frame_width(ord("W")))
             self.assertEqual(mapping[ord("A")], "A")
             self.assertIn("ż", mapping.values())
             self.assertGreater(path.stat().st_size, 200)
