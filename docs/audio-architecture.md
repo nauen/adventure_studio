@@ -49,6 +49,12 @@ denselben Regeln wie in der Grafikpipeline.
    hörbarer Musik.**
 2. Ein separater Audio-Forschungsprobe versucht mit dem SDL-Disk-Audiotreiber
    PCM-Samples aus stock ScummVM aufzunehmen und prüft auf Aktivität.
+   Der erste reale Test produzierte 1,4 MB **Stille**, obwohl ScummC die
+   GMD-Ressource erfolgreich eingebunden hatte (CI #42047861523). Das
+   Testsetup erzwingt deshalb für den nächsten Lauf einen ausdrücklich
+   gewählten FluidSynth-General-MIDI-Treiber mit lokalem SoundFont, statt
+   ScummVM automatisch einen möglicherweise inkompatiblen AdLib-Treiber
+   auswählen zu lassen.
    Der Test bleibt optional, bis das Audioformat und die mögliche
    Verwechslung mit Systemsounds beziehungsweise Startgeräuschen ausgeschlossen
    sind. Erst danach ist die Musikerzeugung in ScummVM hörbar nachgewiesen.

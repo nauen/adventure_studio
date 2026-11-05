@@ -30,10 +30,17 @@ def run(game_directory: Path, output_directory: Path, seconds: float = 8.0) -> N
     if not all((game_directory / f"tentacle.{part}").is_file() for part in ("000", "001")):
         raise ValueError("Linked SCUMM fixture is missing")
     output_directory.mkdir(parents=True, exist_ok=True)
+    # A GM-only resource must not be tested with ScummVM's automatic driver
+    # selection: older DOTT-compatible games may default to an AdLib driver.
+    soundfonts = sorted(Path("/usr/share/sounds").rglob("*.sf2"))
+    if not soundfonts:
+        raise RuntimeError("No system SoundFont available for General MIDI playback")
     raw = output_directory / "scummvm-audio.raw"
     environment = {**os.environ, "SDL_AUDIODRIVER": "disk", "SDL_DISKAUDIOFILE": str(raw)}
     with (output_directory / "scummvm.log").open("w", encoding="utf-8") as log:
-        process = subprocess.Popen(["scummvm", f"--path={game_directory.resolve()}", "tentacle"],
+        process = subprocess.Popen(["scummvm", f"--path={game_directory.resolve()}",
+                                    "--music-driver=fluidsynth", f"--soundfont={soundfonts[0]}",
+                                    "--music-volume=255", "tentacle"],
                                    stdout=log, stderr=subprocess.STDOUT, env=environment)
         try:
             deadline = time.monotonic() + seconds
@@ -51,6 +58,8 @@ def run(game_directory: Path, output_directory: Path, seconds: float = 8.0) -> N
                     process.wait(timeout=3)
     report = summarize_audio_bytes(raw.read_bytes() if raw.exists() else b"")
     report["capture_backend"] = "SDL_DISK"
+    report["music_driver"] = "fluidsynth"
+    report["soundfont"] = str(soundfonts[0])
     (output_directory / "audio-report.json").write_text(json.dumps(report, indent=2) + "\n",
                                                          encoding="utf-8")
     if not report["pcm_activity_detected"]:
