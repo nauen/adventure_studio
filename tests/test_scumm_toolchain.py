@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 
 from adventure_studio.scumm_toolchain import compile_story_game
+from adventure_studio.scumm_bootstrap import inject_multilingual_charset
 from adventure_studio.story_document import build_story_document
 
 
@@ -26,6 +27,59 @@ def fake_upstream(path: Path):
 
 
 class ToolchainTests(unittest.TestCase):
+    def test_custom_font_replaces_both_dialogue_fonts_not_gui(self):
+        example = ('chset chset1 @ 1 = "vera-gui.char";\n'
+                   'chset chtest = "vera.char";\n'
+                   'chset dialogCharset = "vera-small.char";\n')
+        changed = inject_multilingual_charset(example)
+        self.assertIn('chset chset1 @ 1 = "vera-gui.char";', changed)
+        self.assertEqual(changed.count('"multilingual-font.char"'), 2)
+        self.assertNotIn('"vera-small.char"', changed)
+        self.assertEqual(inject_multilingual_charset(example), changed)
+        with self.assertRaisesRegex(ValueError, "Unexpected upstream charset layout"):
+            inject_multilingual_charset('chset chtest = "vera.char";')
+
+    def test_custom_font_is_validated_and_copied_before_compilation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            build_story_document(EXAMPLE.read_text(encoding="utf-8"), root / "build")
+            fake_upstream(root / "scummc")
+            road = root / "scummc" / "examples" / "road"
+            source = (road / "common.scc").read_text(encoding="utf-8")
+            (road / "common.scc").write_text(source.replace(
+                "room ResRoom {", 'chset chtest = "vera.char";\n'
+                'chset dialogCharset = "vera-small.char";\nroom ResRoom {'), encoding="utf-8")
+            font = root / "build" / "resources" / "multilingual-font.char"
+            font.write_bytes(b"not a CHAR")
+            with self.assertRaisesRegex(ValueError, "valid CHAR block"):
+                compile_story_game(root / "build", root / "scummc", root / "game")
+            self.assertFalse((road / "multilingual-font.char").exists())
+
+            slots = 127
+            data = bytearray(33 + 4 * slots + 1)
+            data[:4] = b"CHAR"
+            data[4:8] = len(data).to_bytes(4, "big")
+            data[31:33] = slots.to_bytes(2, "little")
+            for code in range(32, 127):
+                data[33 + 4 * code:37 + 4 * code] = (33 + 4 * slots).to_bytes(4, "little")
+            font.write_bytes(data)
+            calls = []
+
+            def fake_run(args, **kwargs):
+                calls.append(args)
+                target = Path(args[args.index("-o") + 1])
+                if args[0].endswith("/sld"):
+                    target.with_suffix(".000").write_bytes(b"index")
+                    target.with_suffix(".001").write_bytes(b"data")
+                else:
+                    target.write_bytes(b"compiled")
+
+            compile_story_game(root / "build", root / "scummc", root / "game", runner=fake_run)
+            self.assertEqual((road / "multilingual-font.char").read_bytes(), data)
+            bootstrap = (root / "build" / "resources" / "bootstrap.scc").read_text(encoding="utf-8")
+            self.assertEqual(bootstrap.count('"multilingual-font.char"'), 2)
+            self.assertEqual(len(calls), 4)
+
     def test_story_names_determine_compiler_inputs_and_linker_order(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

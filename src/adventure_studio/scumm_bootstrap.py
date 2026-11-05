@@ -49,6 +49,21 @@ def inject_inventory_objects(source: str, icon_ids: tuple[str, ...]) -> str:
     return source.replace(marker, marker + definitions, 1)
 
 
+def inject_multilingual_charset(source: str) -> str:
+    """Use a verified custom CHAR for dialogue; preserve GUI font slot one.
+
+    The upstream Road example has two text fonts and switches between them
+    with initCharset(). Both must use the same byte-to-glyph mapping.
+    """
+    for original in ('chset chtest = "vera.char";',
+                     'chset dialogCharset = "vera-small.char";'):
+        if source.count(original) != 1:
+            raise ValueError(f"Unexpected upstream charset layout: {original}")
+        source = source.replace(original,
+                                original.split(' = ')[0] + ' = "multilingual-font.char";', 1)
+    return source
+
+
 def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str:
     marker = "    // Inventory objects\n"
     if header.count(marker) != 1:

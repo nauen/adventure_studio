@@ -59,6 +59,22 @@ ist **noch kein Nachweis für korrekte Darstellung in ScummVM**. Dieser
 folgt erst, wenn die Ressourcen auch ins verlinkte Spiel eingebunden und
 Pixel-/Texterkennungsprüfungen durchgeführt wurden.
 
+## Opt-in für den tatsächlichen Spiel-Link (vorbereiteter Adapter)
+
+Wenn die bereits geprüfte `multilingual-font.char` im Build-Verzeichnis unter
+`resources/multilingual-font.char` vorhanden ist, prüft `scumm_toolchain`
+den CHAR-Header und alle ASCII-Glyph-Slots **vor** dem Kompilieren. Danach
+ersetzt der Adapter beide Text-Zeichensatzreferenzen (`chtest` und
+`dialogCharset`) des externen ScummC-Demobootstraps durch diese Datei.
+Der GUI-Zeichensatz an festem Slot 1 bleibt unangetastet. Ohne die optionale
+Datei wird das bisherige Bootstrap unverändert verwendet. Ein defekter CHAR
+führt zum Abbruch statt zu einem stillen Rückfall auf die Demo-Schrift.
+
+**Noch nicht abgeschlossen:** Der Story-Export liefert den Übersetzungskatalog
+und die CHAR-Datei noch nicht automatisch gemeinsam aus. Auch die laufende
+Sprachauswahl und der Screenshot-Nachweis für polnische bzw. japanische Glyphen
+fehlen noch. Der Adapter ist ausdrücklich nur die geprüfte Einbaustufe.
+
 ## Verbindliche Kompatibilitäts-Gates vor Aktivierung im Spiel-Export
 
 1. ScummC kompilieren und einen minimalen Raum mit `GameLanguage` und fünf

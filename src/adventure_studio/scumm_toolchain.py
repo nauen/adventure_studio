@@ -14,7 +14,9 @@ import sys
 from pathlib import Path
 from typing import Callable
 
-from .scumm_bootstrap import inject_inventory_declarations, inject_inventory_objects, retarget_upstream_bootstrap
+from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_objects,
+                              inject_multilingual_charset, retarget_upstream_bootstrap)
+from .scumm_font_probe import verify_char_resource
 from .scumm_project import parse_document
 
 
@@ -48,6 +50,13 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
     header = (road / "common.sch").read_text(encoding="utf-8")
     start = document.rooms[0].name
     bootstrap = retarget_upstream_bootstrap(original, start)
+    custom_font = resources / "multilingual-font.char"
+    if custom_font.exists():
+        # Glyphs needed by the stock 7-bit UI and story text must be present.
+        # This rejects truncated or malformed resources before the linker runs.
+        verify_char_resource(custom_font, set(range(32, 127)))
+        bootstrap = inject_multilingual_charset(bootstrap)
+        shutil.copyfile(custom_font, road / custom_font.name)
     (resources / "bootstrap.scc").write_text(inject_inventory_objects(bootstrap, icon_ids), encoding="utf-8")
     (resources / "common.sch").write_text(inject_inventory_declarations(header, icon_ids), encoding="utf-8")
     for name in icon_ids:
