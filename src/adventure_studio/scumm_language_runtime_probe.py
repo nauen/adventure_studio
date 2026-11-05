@@ -63,11 +63,17 @@ def language_runtime_probe(game: Path, output: Path) -> dict:
                     raise RuntimeError(f"ScummVM exited after selecting {code}")
                 raw = output / f"{code}.xwd"
                 png = output / f"{code}.png"
-                subprocess.run(["xwd", "-root", "-silent", "-out", str(raw)],
-                               check=True, timeout=10)
-                subprocess.run(["convert", str(raw), str(png)], check=True, timeout=10)
-                if png.stat().st_size < 1000:
-                    raise RuntimeError(f"Invalid {code} screenshot")
+                for attempt in range(4):
+                    subprocess.run(["xwd", "-root", "-silent", "-out", str(raw)],
+                                   check=True, timeout=10)
+                    subprocess.run(["convert", str(raw), str(png)], check=True, timeout=10)
+                    if png.stat().st_size >= 1000:
+                        break
+                    if process.poll() is not None:
+                        raise RuntimeError(f"ScummVM exited while capturing {code}")
+                    time.sleep(2)
+                else:
+                    raise RuntimeError(f"Invalid {code} screenshot after four captures")
                 results[code] = png.name
         finally:
             process.terminate()
