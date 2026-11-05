@@ -261,6 +261,7 @@ jobs:
             fi
             if test -f /tmp/chain-smoke/scummvm-chain-report.json; then
               python -c 'import json; p=json.load(open("/tmp/chain-smoke/scummvm-chain-report.json")); print("- Chained two-door story reached final scene: **{}**".format("PASS" if p["first_door_opened"] and p["intermediate_room_visible"] and p["second_item_acquired"] and p["second_door_opened"] and p["goal_reached"] else "FAIL"))'
+              python -c 'import json; p=json.load(open("/tmp/chain-smoke/scummvm-chain-report.json")); print("- Return through two rooms preserves inventory and open doors: **{}**".format("PASS" if p["returns_preserved"] else "FAIL"))'
             else
               echo '- Full chained gameplay: **not produced**.'
             fi

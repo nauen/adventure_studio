@@ -113,7 +113,8 @@ def colored_item_center(output_directory: Path, frame: str,
 
 def door_pixels(output_directory: Path, frame: str, open_state: bool = False) -> int:
     if frame not in ("pickup", "door", "exit", "return", "locked-before", "locked-after",
-                     "gated-use", "chain-second", "chain-second-open", "chain-arrival"):
+                     "gated-use", "chain-second", "chain-second-open", "chain-arrival",
+                     "chain-middle-state", "chain-first-return"):
         raise ValueError("Invalid door frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -609,11 +610,74 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                         reached = True
                         break
                     time.sleep(0.4)
+                return_checks = {}
+                if reached:
+                    back_rgb = (160, 230, 55)
+
+                    def back_to_previous(source_frame: str, target_frame: str) -> None:
+                        capture_frame(source_frame)
+                        if colored_item_pixels(output_directory, source_frame, back_rgb) < 40:
+                            raise RuntimeError(f"Back passage not visible: {source_frame}")
+                        back_x, back_y = colored_item_center(output_directory, source_frame, back_rgb)
+                        click_back = subprocess.run(
+                            ["xdotool", "mousemove", str(back_x), str(back_y), "click", "1"],
+                            capture_output=True, text=True, timeout=5, check=False,
+                        )
+                        if click_back.returncode:
+                            raise RuntimeError(f"Back passage input failed: {click_back.stderr}")
+                        # Wait for the new room's back passage to render.
+                        limit = time.monotonic() + 12
+                        while time.monotonic() < limit:
+                            capture_frame(target_frame)
+                            if (not close_rgb(scene_pixel(output_directory, target_frame), tuple(expected_color))
+                                    and colored_item_pixels(output_directory, target_frame, back_rgb) >= 40):
+                                return
+                            time.sleep(0.25)
+                        raise RuntimeError(f"Back passage did not reach {target_frame}")
+
+                    back_to_previous("chain-goal", "chain-middle-return")
+                    # After return, the opened second door must still be cyan
+                    # and the second pickup must not respawn in the room.
+                    time.sleep(7)
+                    capture_frame("chain-middle-state")
+                    return_checks["middle_door_open"] = door_pixels(output_directory, "chain-middle-state", open_state=True) >= 40
+                    return_checks["middle_pickup_gone"] = colored_item_pixels(output_directory, "chain-middle-state", rgb) < 10
+                    return_checks["middle_item_owned"] = colored_item_pixels(output_directory, "chain-middle-state", rgb, inventory=True) >= 40
+                    if not all(return_checks.values()):
+                        raise RuntimeError(f"Middle room state was not preserved: {return_checks}")
+                    # The camera may be scrolled to the right. Move ego left
+                    # until the uniquely colored back passage is visible.
+                    for _ in range(4):
+                        capture_frame("chain-middle-back")
+                        if colored_item_pixels(output_directory, "chain-middle-back", back_rgb) >= 40:
+                            break
+                        turn = subprocess.run(["xdotool", "mousemove", "220", "355", "click", "1"],
+                                              capture_output=True, text=True, timeout=5, check=False)
+                        if turn.returncode:
+                            raise RuntimeError(f"Could not walk back to previous room: {turn.stderr}")
+                        time.sleep(2.5)
+                    capture_frame("chain-middle-back")
+                    if colored_item_pixels(output_directory, "chain-middle-back", back_rgb) < 40:
+                        raise RuntimeError("Could not find middle-room back passage")
+                    back_x, back_y = colored_item_center(output_directory, "chain-middle-back", back_rgb)
+                    back = subprocess.run(["xdotool", "mousemove", str(back_x), str(back_y), "click", "1"],
+                                          capture_output=True, text=True, timeout=5, check=False)
+                    if back.returncode:
+                        raise RuntimeError(f"Return to first room failed: {back.stderr}")
+                    time.sleep(7)
+                    capture_frame("chain-first-return")
+                    return_checks["first_door_open"] = door_pixels(output_directory, "chain-first-return", open_state=True) >= 40
+                    return_checks["first_pickup_gone"] = colored_item_pixels(output_directory, "chain-first-return", tuple(route[0]["rgb"])) < 10
+                    return_checks["first_item_owned"] = colored_item_pixels(output_directory, "chain-first-return", tuple(route[0]["rgb"]), inventory=True) >= 40
+                    if not all(return_checks.values()):
+                        raise RuntimeError(f"Return-to-start state was not preserved: {return_checks}")
                 (output_directory / "scummvm-chain-report.json").write_text(
                     json.dumps({"room_route": [step["room_id"] for step in route] + [goal["room_id"]],
                                 "first_door_opened": door_opened, "intermediate_room_visible": arrived,
                                 "second_item_acquired": acquired, "second_door_opened": opened,
-                                "goal_reached": reached}, indent=2) + "\n", encoding="utf-8",
+                                "goal_reached": reached, "return_checks": return_checks,
+                                "returns_preserved": reached and len(return_checks) == 6 and all(return_checks.values())},
+                               indent=2) + "\n", encoding="utf-8",
                 )
                 if not reached:
                     raise RuntimeError("Chain did not reach its final story room")

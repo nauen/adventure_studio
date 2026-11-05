@@ -24,6 +24,10 @@ class StoryDocumentTests(unittest.TestCase):
             self.assertIn("startRoom(Cellar)", (rooms / "Harbor.scc").read_text())
             self.assertIn("startRoom(Archive)", (rooms / "Cellar.scc").read_text())
             self.assertIn("object Door2", (rooms / "Cellar.scc").read_text())
+            self.assertIn("object Back2", (rooms / "Cellar.scc").read_text())
+            self.assertIn("startRoom(Harbor)", (rooms / "Cellar.scc").read_text())
+            self.assertIn("object Back3", (rooms / "Archive.scc").read_text())
+            self.assertIn("startRoom(Cellar)", (rooms / "Archive.scc").read_text())
             self.assertTrue((rooms / "Inv_Badge.bmp").is_file())
             goal = json.loads((rooms / "game-goal.json").read_text())
             self.assertEqual(goal["fixture_route"], [

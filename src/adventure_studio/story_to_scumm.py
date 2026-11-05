@@ -76,7 +76,7 @@ def compile_story_to_scumm(story: Story) -> GameDocument:
            [*(c.id for c in story.chapters), *(s.id for s in story.scenes),
             *(i.id for i in story.items), *(p.id for p in story.puzzles)]):
         raise ValueError("Story identifiers must be valid SCUMM identifiers")
-    if {"Door", "Door2"} & {i.id for i in story.items}:
+    if {"Door", "Door2", "Back2", "Back3"} & {i.id for i in story.items}:
         raise ValueError("Story item conflicts with generated exit identifier")
     pickups_by_puzzle = [tuple(next(i for i in story.items if i.id == required)
                                for required in puzzle.requires) for puzzle in ordered_puzzles]
@@ -102,6 +102,13 @@ def compile_story_to_scumm(story: Story) -> GameDocument:
                                 160 + index * 40, 100, 16, 16,
                                 sprite_pixels=_sprite(1, 4))
                     for index, i in enumerate(decorations)]
+        if len(route) > 2 and scene_index > 0:
+            # Visible, unconditional passage back to the previous story scene.
+            # Object ownership and door states belong to the SCUMM engine;
+            # revisit tests must prove that they survive these transitions.
+            hotspots.append(RoomHotspot(f"Back{scene_index + 1}", "back", "Back to previous room.",
+                                        120, 100, 16, 16, False, _sprite(8, 1),
+                                        exit_destination=route[scene_index - 1]))
         if not goal:
             for index, item in enumerate(pickups):
                 if pickup_number >= len(_PICKUP_COLORS):
