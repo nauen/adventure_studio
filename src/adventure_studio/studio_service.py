@@ -12,7 +12,8 @@ from .story import Item, Placement, Story, verify_story
 from .story_changes import PutEntity, StoryChangeReport, edit_story
 from .story_document import canonical_story_json, parse_story_document
 from .story_to_scumm import compile_story_to_scumm
-from .story_localization import story_translation_template_json
+from .story_localization import story_translation_template_json, validate_story_catalog
+from .localization import canonical_catalog_json, charset_plan, parse_catalog
 
 
 def export_warning(story: Story) -> str:
@@ -180,6 +181,17 @@ def translation_draft(raw: str) -> str:
     story = parse_story_document(raw)
     game = compile_story_to_scumm(story)
     return story_translation_template_json(game)
+
+
+
+def validate_translation_draft(raw: str, translated_json: str) -> str:
+    """Validate complete translations against the current story and charset."""
+    story = parse_story_document(raw)
+    game = compile_story_to_scumm(story)
+    catalog = parse_catalog(translated_json)
+    validate_story_catalog(game, catalog)
+    charset_plan(catalog)
+    return canonical_catalog_json(catalog)
 
 
 def report_text(report: StoryChangeReport) -> str:
