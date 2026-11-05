@@ -137,6 +137,24 @@ cannot reach a goal are classified as dead ends too. The current model remains
 deliberately small: Boolean flags and predefined actions only.
 # Gradio Studio (erste lokale Vorschau)
 
+**Direkt im Browser über GitHub Codespaces:**
+
+1. Repository auf GitHub öffnen, `Code` → `Codespaces` →
+   `Create codespace on main` auswählen.
+2. Beim ersten Start installiert die `.devcontainer/devcontainer.json`
+   die optionalen Gradio-Abhängigkeiten. Danach startet das Studio auf
+   **Port 7860** automatisch.
+3. GitHub öffnet den weitergeleiteten Port im Browser. Falls das nicht
+   automatisch passiert: in Codespaces den Reiter **Ports** öffnen und bei
+   **Adventure Studio (7860)** auf die Webadresse klicken.
+
+Der weitergeleitete Port bleibt standardmäßig **privat** und erfordert
+GitHub-Anmeldung. Bitte den Port nicht öffentlich freigeben, solange das
+Studio keine eigene Anmeldung implementiert hat. Codespaces hat ein separates
+monatliches Nutzungskontingent; aktiven Codespace bei Nichtgebrauch stoppen.
+Codespaces installiert nur den Editor. Ein spielbarer SCUMM-Build verlangt
+weiterhin eine gesondert vorbereitete ScummC-Toolchain.
+
 Der erste Editor verwendet dasselbe validierte Storymodell wie der
 deterministische SCUMM-Exporter. In einem Python-3.11+-Environment:
 

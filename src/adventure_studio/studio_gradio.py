@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import tempfile
 import subprocess
+import os
 from pathlib import Path
 
 from .studio_service import (accept_proposal, add_decoration, change_item,
@@ -185,7 +186,9 @@ def make_app():
 
 
 def main() -> None:
-    make_app().launch(inbrowser=True)
+    codespaces = os.environ.get("CODESPACES", "").lower() == "true"
+    make_app().launch(server_name="0.0.0.0" if codespaces else "127.0.0.1",
+                      server_port=7860, share=False, inbrowser=not codespaces)
 
 
 if __name__ == "__main__":

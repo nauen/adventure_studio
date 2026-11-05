@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - '.github/workflows/studio.yml'
+      - '.devcontainer/devcontainer.json'
+      - '.devcontainer/start-studio.sh'
       - 'pyproject.toml'
       - 'src/adventure_studio/studio_service.py'
       - 'src/adventure_studio/studio_export.py'
@@ -14,6 +16,8 @@ on:
   pull_request:
     paths:
       - '.github/workflows/studio.yml'
+      - '.devcontainer/devcontainer.json'
+      - '.devcontainer/start-studio.sh'
       - 'pyproject.toml'
       - 'src/adventure_studio/studio_service.py'
       - 'src/adventure_studio/studio_export.py'
@@ -48,3 +52,17 @@ jobs:
           assert len(app.fns) >= 10, 'Expected scene/item/puzzle editing and export handlers'
           print('Gradio Blocks and editing callbacks initialized successfully')
           PY
+      - name: Start Codespaces-style Gradio server and probe HTTP
+        env:
+          CODESPACES: 'true'
+        run: |
+          bash .devcontainer/start-studio.sh
+          for ATTEMPT in $(seq 1 40); do
+            if curl --silent --show-error --fail http://127.0.0.1:7860/config > /dev/null 2>&1; then
+              echo 'Adventure Studio Gradio HTTP endpoint is reachable'
+              exit 0
+            fi
+            sleep 1
+          done
+          sed -n '1,120p' /tmp/adventure-studio/gradio.log
+          exit 1
