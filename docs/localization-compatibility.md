@@ -41,6 +41,24 @@ eine Anforderung an den späteren Font-Compiler, nicht der Beweis, dass
 ScummVM die Zeichen richtig zeichnet. Insbesondere für Japanisch sind
 Zeichenbreite und die Zahl verschiedener Schriftzeichen offene Grenzen.
 
+## Erste echte CHAR-Ressource (experimentell)
+
+`scumm_font.py` erzeugt ein 3-Farben-BMP mit Rahmen um jeden Byte-Slot,
+wie es der ursprüngliche ScummC-`char -ibmp`-Importer erwartet. Jeder Glyph
+wird aus einer vorhandenen Latin- bzw. japanischen TrueType/OpenType-Schrift
+gerendert; die `cmap`-Tabelle wird vorher geprüft. Nicht vorhandene Glyphen
+werden niemals durch ein Ersatzkästchen ersetzt. Über den unabhängigen
+Workflow `font-smoke.yml` wird ScummC gebaut und dieses BMP mit dem echten
+`char`-Konverter in eine `.char`-Datei umgewandelt. Der Test prüft danach
+die Ressourcensignatur und die Slot-Belegung, legt Quell-BMP, CHAR-Datei
+und Glyphenliste als GitHub-Artefakte ab.
+
+Die Probe umfasst explizit Deutsch, Englisch, Französisch, Polnisch und
+Japanisch (`examples/language_probe.json`). Eine bestandene CHAR-Konvertierung
+ist **noch kein Nachweis für korrekte Darstellung in ScummVM**. Dieser
+folgt erst, wenn die Ressourcen auch ins verlinkte Spiel eingebunden und
+Pixel-/Texterkennungsprüfungen durchgeführt wurden.
+
 ## Verbindliche Kompatibilitäts-Gates vor Aktivierung im Spiel-Export
 
 1. ScummC kompilieren und einen minimalen Raum mit `GameLanguage` und fünf

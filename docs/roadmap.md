@@ -43,8 +43,12 @@ Analyse und die offenen Nachweispunkte stehen in
       Sprachvarianten und deterministischer Zeichensatzbedarfsanalyse.
 - [x] Stabile Sprach-IDs und ScummC-Quelltextfragment mit fünf bedingten
       Textzweigen; Polnisch und Japanisch mit eigenen Testfällen.
+- [x] Deterministische CHAR-Bitmap-Vorbereitung mit überprüfter Font-Cmap,
+      ScummC-Konverter-Aufruf und Ressourcenslot-Prüfung; unabhängiger
+      `font-smoke.yml`-Workflow für alle fünf Sprachen vorbereitet.
 - [ ] Font-Glyphen für die benötigten Bytecodes als SCUMM-CHAR-Ressource
-      erzeugen und im Interpreter nachweisen.
+      erzeugen und **im Interpreter** nachweisen; erfolgreiches Konvertieren
+      allein genügt nicht.
 - [ ] Laufzeit-Sprachwahl, Raumwechsel und Save/Load in stock ScummVM prüfen.
 - [ ] Sprachausgabe (VOC) je Sprachvariante unabhängig verifizieren.
 - [ ] Erst nach grünen Interpretertests ins normale Story-/SCUMM-Exportmodell
@@ -298,3 +302,9 @@ ein hübsches Pixel-Art-Bild ist nicht automatisch farbzyklusfähig.
       werden in einem ZIP ausgeliefert; der Compiler arbeitet auf einer
       temporären Kopie der Toolchain, um Nutzerdateien nicht zu verändern.
       Deterministischer ZIP-Inhalt und Fehlerfall sind lokal getestet.
+- [ ] Compiler-Setup und Plattformfähigkeit für Endnutzer vereinfachen:
+      Build-Service oder gekapselte Toolchain, ohne implizite Downloads im
+      lokalen Editor und mit getrennten Lizenz-/Versionsgrenzen.
+- [x] Erste **gekapselte Codespaces-Toolchain**: gepinntes ScummC wird beim
+      erstmaligen Codespaces-Setup separat gebaut. Der Gradio-Editor erhält
+      den Pfad automatisch, während sein Export weiterhin ohne neue Downloads
