@@ -57,41 +57,60 @@ def close_rgb(actual: tuple[int, int, int], expected: tuple[int, int, int], tole
 
 def count_gold_pixels(histogram: str) -> int:
     """Count the fixture's key pixels in ImageMagick RGB histogram output."""
+    return count_color_pixels(histogram, (255, 220, 75))
+
+
+def count_color_pixels(histogram: str, expected: tuple[int, int, int]) -> int:
+    """Count a unique inventory color in ImageMagick histogram output."""
     total = 0
     for line in histogram.splitlines():
         match = re.match(r"^\s*(\d+):\s*\((\d+),(\d+),(\d+)\)", line)
         if match:
             count, red, green, blue = map(int, match.groups())
-            if close_rgb((red, green, blue), (255, 220, 75), tolerance=15):
+            if close_rgb((red, green, blue), expected, tolerance=15):
                 total += count
     return total
 
 
 def count_green_pixels(histogram: str) -> int:
     """Detect the uniquely green door frame (not the room or inventory)."""
-    total = 0
-    for line in histogram.splitlines():
-        match = re.match(r"^\s*(\d+):\s*\((\d+),(\d+),(\d+)\)", line)
-        if match:
-            count, red, green, blue = map(int, match.groups())
-            if close_rgb((red, green, blue), (60, 220, 90), tolerance=15):
-                total += count
-    return total
+    return count_color_pixels(histogram, (60, 220, 90))
 
 
 def count_cyan_pixels(histogram: str) -> int:
-    total = 0
-    for line in histogram.splitlines():
-        match = re.match(r"^\s*(\d+):\s*\((\d+),(\d+),(\d+)\)", line)
-        if match:
-            count, red, green, blue = map(int, match.groups())
-            if close_rgb((red, green, blue), (50, 220, 220), tolerance=15):
-                total += count
-    return total
+    return count_color_pixels(histogram, (50, 220, 220))
+
+
+def colored_item_pixels(output_directory: Path, frame: str,
+                        rgb: tuple[int, int, int], inventory: bool = False) -> int:
+    screenshot = output_directory / f"scummvm-{frame}.png"
+    crop = "640x112+192+472" if inventory else "640x288+192+184"
+    result = subprocess.run(
+        ["convert", str(screenshot), "-crop", crop, "+repage", "-format", "%c", "histogram:info:"],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not inspect colored inventory item: {result.stderr}")
+    return count_color_pixels(result.stdout, rgb)
+
+
+def colored_item_center(output_directory: Path, frame: str,
+                        rgb: tuple[int, int, int]) -> tuple[int, int]:
+    screenshot = output_directory / f"scummvm-{frame}.png"
+    color_hex = "#" + "".join(f"{channel:02X}" for channel in rgb)
+    result = subprocess.run(
+        ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
+         "-fuzz", "8%", "-fill", "white", "-opaque", color_hex,
+         "-fill", "black", "+opaque", "white", "-trim", "-format", "%wx%h%O", "info:"],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if result.returncode:
+        raise RuntimeError(f"Could not locate colored inventory item: {result.stderr}")
+    return parse_key_bounds(result.stdout)
 
 
 def door_pixels(output_directory: Path, frame: str, open_state: bool = False) -> int:
-    if frame not in ("pickup", "door", "exit", "return", "locked-before", "locked-after"):
+    if frame not in ("pickup", "door", "exit", "return", "locked-before", "locked-after", "gated-use"):
         raise ValueError("Invalid door frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -248,6 +267,14 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         type(channel) is not int or channel < 0 or channel > 255 for channel in expected_color
     ):
         raise ValueError("Invalid goal room color probe")
+    gates = goal.get("fixture_inventory_gates", [])
+    if not isinstance(gates, list) or len(gates) > 2 or any(
+        not isinstance(gate, dict) or not isinstance(gate.get("item_id"), str)
+        or not gate["item_id"] or not isinstance(gate.get("rgb"), list)
+        or len(gate["rgb"]) != 3 or any(type(c) is not int or not 0 <= c <= 255 for c in gate["rgb"])
+        for gate in gates
+    ):
+        raise ValueError("Invalid fixture inventory gates")
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("A virtual X display is required")
 
@@ -369,6 +396,75 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             )
             if not picked_up:
                 raise RuntimeError(f"Pickup/inventory mismatch: room={remaining}, inventory={inventory_pixels} gold pixels")
+            # Prove in the real engine that the key alone cannot bypass an
+            # inventory prerequisite. The fixture metadata supplies the colors.
+            if gates:
+                blocked_door = door_center(output_directory, "pickup")
+                for click_x, click_y in ((408, 506), (552, 520), blocked_door):
+                    click = subprocess.run(
+                        ["xdotool", "mousemove", str(click_x), str(click_y), "click", "1"],
+                        capture_output=True, text=True, timeout=5, check=False,
+                    )
+                    if click.returncode:
+                        raise RuntimeError(f"Premature Use input failed: {click.stderr}")
+                    time.sleep(0.3)
+                time.sleep(3)
+                capture_frame("gated-use")
+                blocked = (door_pixels(output_directory, "gated-use") >= 40
+                           and door_pixels(output_directory, "gated-use", open_state=True) < 10
+                           and not close_rgb(scene_pixel(output_directory, "gated-use"), tuple(expected_color)))
+                (output_directory / "scummvm-gate-negative-report.json").write_text(
+                    json.dumps({"attempt": "Use Key with Door before other required items",
+                                "blocked": blocked, "missing_items": [gate["item_id"] for gate in gates]},
+                               indent=2) + "\n", encoding="utf-8",
+                )
+                if not blocked:
+                    raise RuntimeError("Door opened without the required inventory prerequisites")
+                acquired = []
+                for index, gate in enumerate(gates):
+                    rgb = tuple(gate["rgb"])
+                    verb_click = subprocess.run(
+                        ["xdotool", "mousemove", "328", "506", "click", "1"],
+                        capture_output=True, text=True, timeout=5, check=False,
+                    )
+                    if verb_click.returncode:
+                        raise RuntimeError(f"PickUp verb input failed: {verb_click.stderr}")
+                    time.sleep(0.3)
+                    frame = f"gate-before-{index}"
+                    capture_frame(frame)
+                    if colored_item_pixels(output_directory, frame, rgb) < 40:
+                        raise RuntimeError(f"Required pickup not visible: {gate['item_id']}")
+                    x, y = colored_item_center(output_directory, frame, rgb)
+                    click = subprocess.run(
+                        ["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                        capture_output=True, text=True, timeout=5, check=False,
+                    )
+                    if click.returncode:
+                        raise RuntimeError(f"Required item pickup failed: {click.stderr}")
+                    acquired_item = False
+                    observed_room = observed_inventory = 0
+                    item_deadline = time.monotonic() + 15
+                    while time.monotonic() < item_deadline:
+                        if process.poll() is not None:
+                            raise RuntimeError("ScummVM quit while collecting inventory prerequisite")
+                        frame = f"gate-picked-{index}"
+                        capture_frame(frame)
+                        observed_room = colored_item_pixels(output_directory, frame, rgb)
+                        observed_inventory = colored_item_pixels(output_directory, frame, rgb, inventory=True)
+                        if observed_room < 10 and observed_inventory >= 40:
+                            acquired_item = True
+                            break
+                        time.sleep(0.4)
+                    acquired.append({"item_id": gate["item_id"], "click": [x, y],
+                                     "room_pixels": observed_room, "inventory_pixels": observed_inventory,
+                                     "acquired": acquired_item})
+                    if not acquired_item:
+                        raise RuntimeError(f"Required item {gate['item_id']} not transferred to inventory")
+                (output_directory / "scummvm-gate-pickup-report.json").write_text(
+                    json.dumps({"items": acquired, "all_acquired": all(x["acquired"] for x in acquired)},
+                               indent=2) + "\n", encoding="utf-8",
+                )
+                capture_frame("pickup")
             initial_door_pixels = door_pixels(output_directory, "pickup")
             if initial_door_pixels < 40:
                 raise RuntimeError(f"Door not visible before using key: {initial_door_pixels} green pixels")

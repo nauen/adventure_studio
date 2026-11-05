@@ -1,4 +1,5 @@
 import tempfile
+import json
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -58,6 +59,11 @@ class StoryToScummTests(unittest.TestCase):
             self.assertIn("if(objB == Key && getObjectOwner(Badge) == VAR_EGO)", room_source)
             self.assertEqual((Path(tmp) / "inventory-ids.txt").read_text().strip(), "Badge,Key")
             self.assertTrue((Path(tmp) / "Inv_Badge.bmp").is_file())
+            goal = json.loads((Path(tmp) / "game-goal.json").read_text())
+            self.assertEqual(goal["fixture_inventory_gates"],
+                             [{"item_id": "Badge", "rgb": [225, 80, 180]}])
+            self.assertNotEqual(game.rooms[0].hotspots[1].sprite_pixels,
+                                game.rooms[0].hotspots[2].sprite_pixels)
 
     def test_unsupported_story_mechanics_fail_closed(self):
         story = small_story()

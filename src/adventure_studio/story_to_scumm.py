@@ -18,7 +18,9 @@ from .targets import RoomGeometry
 
 _ID = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 _PALETTE = ((70, 130, 190), (95, 60, 35), (240, 175, 95),
-            (255, 220, 75), (60, 220, 90), (50, 220, 220), (120, 70, 180))
+            (255, 220, 75), (60, 220, 90), (50, 220, 220), (120, 70, 180),
+            (225, 80, 180), (160, 230, 55))
+_PICKUP_COLORS = (3, 7, 8)
 
 
 def _text(value: str) -> str:
@@ -47,7 +49,7 @@ def _room_pixels(width: int, goal: bool) -> bytes:
 
 
 def compile_story_to_scumm(story: Story) -> GameDocument:
-    """Compile the supported one-item, one-lock, two-scene story subset."""
+    """Compile the supported one-to-three-item, one-lock, two-scene story subset."""
     verify_story(story)
     if (len(story.chapters) != 1 or len(story.scenes) != 2 or len(story.puzzles) != 1
             or story.characters):
@@ -87,7 +89,8 @@ def compile_story_to_scumm(story: Story) -> GameDocument:
                     for index, i in enumerate(decorations)]
         if not goal:
             hotspots.extend(RoomHotspot(item.id, _text(item.name), _text(item.description),
-                                        355 + index * 26, 100, 16, 16, True, _sprite(3, 2))
+                                        355 + index * 26, 100, 16, 16, True,
+                                        _sprite(_PICKUP_COLORS[index], 2))
                             for index, item in enumerate(pickups))
             hotspots.append(RoomHotspot("Door", "the exit", _text(puzzle.title),
                                         450, 100, 16, 16, False, _sprite(4, 1),

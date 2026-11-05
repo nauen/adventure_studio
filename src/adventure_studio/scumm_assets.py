@@ -305,10 +305,23 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
     # Synthetic CI fixture only: the goal room fills its background uniformly,
     # so the known screen probe color demonstrates the actual destination.
     probe_rgb = goal_room.palette[goal_room.pixels[0]]
+    # Fixture-only runtime assertions: every additional inventory prerequisite
+    # must be acquired before the use rule can open its target. The palette
+    # colors identify sprites in screenshots without knowing story item names.
+    gates = []
+    for room in rooms:
+        pickups = {hotspot.id: hotspot for hotspot in room.hotspots if hotspot.pickup}
+        for rule in room.use_rules:
+            for item_id in rule.requires_inventory:
+                hotspot = pickups[item_id]
+                assert hotspot.sprite_pixels is not None
+                color_index = hotspot.sprite_pixels[0]
+                gates.append({"item_id": item_id, "rgb": list(room.palette[color_index])})
     (directory / "game-goal.json").write_text(
         json.dumps({"condition": "enter_room", "room_id": goal_room.name,
                     "description": goal_room.goal_text,
-                    "fixture_probe_rgb": probe_rgb}, sort_keys=True, indent=2) + "\n",
+                    "fixture_probe_rgb": probe_rgb,
+                    "fixture_inventory_gates": gates}, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
     (directory / "inventory-ids.txt").write_text(",".join(sorted(pickup_ids)) + "\n", encoding="ascii")

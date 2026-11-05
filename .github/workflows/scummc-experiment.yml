@@ -16,6 +16,7 @@ on:
       - 'src/adventure_studio/story_document.py'
       - 'src/adventure_studio/story_to_scumm.py'
       - 'examples/mini_story.json'
+      - 'examples/mini_story_two_items.json'
       - 'examples/PLAY_STORY_PREVIEW.txt'
       - 'tests/test_scumm_assets.py'
       - 'tests/test_scumm_bootstrap.py'
@@ -154,6 +155,20 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/story-fixture /tmp/story-smoke --puzzle-only
+      - name: Compile two-item inventory puzzle from independent story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/mini_story_two_items.json /tmp/two-item-story-build
+          python -m adventure_studio.scumm_toolchain /tmp/two-item-story-build /tmp/scummc-upstream /tmp/two-item-fixture
+          cp examples/PLAY_STORY_PREVIEW.txt /tmp/two-item-fixture/README.txt
+          test -s /tmp/two-item-fixture/tentacle.000
+          test -s /tmp/two-item-fixture/tentacle.001
+      - name: Reject premature unlock then solve two-item puzzle in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/two-item-fixture /tmp/two-item-smoke --puzzle-only
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -192,6 +207,17 @@ jobs:
             else
               echo '- Story-derived gameplay test: **not produced**.'
             fi
+            if test -f /tmp/two-item-smoke/scummvm-gate-negative-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/two-item-smoke/scummvm-gate-negative-report.json")); print("- Two-item prerequisite rejected early unlock: **{}**".format("PASS" if p["blocked"] else "FAIL"))'
+            else
+              echo '- Two-item prerequisite negative test: **not produced**.'
+            fi
+            if test -f /tmp/two-item-smoke/scummvm-gate-pickup-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/two-item-smoke/scummvm-gate-pickup-report.json")); print("- Additional story-derived pickups transferred into inventory: **{}**".format("PASS" if p["all_acquired"] else "FAIL"))'
+            fi
+            if test -f /tmp/two-item-smoke/scummvm-use-report.json; then
+              python -c 'import json; p=json.load(open("/tmp/two-item-smoke/scummvm-use-report.json")); print("- Two-item door opened and goal reached: **{}**".format("PASS" if p["door_opened"] and p["goal_reached"] else "FAIL"))'
+            fi
             echo
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload compiler outputs for inspection
@@ -223,6 +249,9 @@ jobs:
             /tmp/story-fixture/*.000
             /tmp/story-fixture/*.001
             /tmp/story-smoke/*
+            /tmp/two-item-story-build/project.json
+            /tmp/two-item-story-build/resources/*
+            /tmp/two-item-smoke/*
             /tmp/generated-room/studio.000
             /tmp/generated-room/studio.001
             /tmp/studio-fixture/*.000
@@ -244,3 +273,14 @@ jobs:
             /tmp/story-fixture/tentacle.001
             /tmp/story-fixture/game-goal.json
             /tmp/story-fixture/README.txt
+      - name: Upload two-item story preview for manual testing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: story-two-item-playable-preview
+          if-no-files-found: ignore
+          path: |
+            /tmp/two-item-fixture/tentacle.000
+            /tmp/two-item-fixture/tentacle.001
+            /tmp/two-item-fixture/game-goal.json
+            /tmp/two-item-fixture/README.txt
