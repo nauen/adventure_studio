@@ -1,7 +1,8 @@
 import unittest
 
 from adventure_studio.music_director import (
-    MusicPlan, MusicTrack, MusicTransition, orphan_music_tracks,
+    MusicCommand, MusicPlan, MusicTrack, MusicTransition,
+    compile_immediate_music_event, consolidate_music_plan, orphan_music_tracks,
     resolve_music_event, validate_music_plan,
 )
 
@@ -49,6 +50,34 @@ class MusicDirectorTests(unittest.TestCase):
     def test_resolving_unknown_current_track_fails_closed(self):
         with self.assertRaisesRegex(ValueError, "Unknown current"):
             resolve_music_event(self.plan, "Missing", "EnterHarbor")
+
+    def test_immediate_commands_are_idempotent_and_resolve_asset_identity(self):
+        self.assertEqual(compile_immediate_music_event(self.plan, "DangerTheme", "MonsterGone"),
+                         ("HarborTheme", MusicCommand("play", "HarborMidi")))
+        self.assertEqual(compile_immediate_music_event(self.plan, "HarborTheme", "MonsterGone"),
+                         ("HarborTheme", None))
+        self.assertEqual(compile_immediate_music_event(self.plan, "HarborTheme", "Ending"),
+                         (None, MusicCommand("stop")))
+        self.assertEqual(compile_immediate_music_event(self.plan, "HarborTheme", "Other"),
+                         ("HarborTheme", None))
+
+    def test_unproven_quantized_transitions_fail_closed(self):
+        with self.assertRaisesRegex(ValueError, "unverified beat"):
+            compile_immediate_music_event(self.plan, "HarborTheme", "MonsterSeen")
+        with self.assertRaisesRegex(ValueError, "unverified bar"):
+            compile_immediate_music_event(self.plan, "DangerTheme", "EnterHarbor")
+        self.assertEqual(compile_immediate_music_event(self.plan, "HarborTheme", "EnterHarbor"),
+                         ("HarborTheme", None))
+
+    def test_consolidation_returns_explicit_removal_report(self):
+        result = consolidate_music_plan(self.plan)
+        self.assertEqual(result.removed_track_ids, ("UnusedTheme",))
+        self.assertEqual(result.removed_asset_ids, ("UnusedMidi",))
+        self.assertEqual(len(result.plan.tracks), 2)
+        self.assertEqual(len(self.plan.tracks), 3)
+        self.assertEqual(consolidate_music_plan(result.plan).removed_track_ids, ())
+        self.assertEqual(compile_immediate_music_event(result.plan, "DangerTheme", "MonsterGone"),
+                         ("HarborTheme", MusicCommand("play", "HarborMidi")))
 
 
 if __name__ == "__main__":

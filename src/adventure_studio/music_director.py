@@ -39,6 +39,21 @@ class MusicPlan:
     initial_track_id: str | None = None
 
 
+@dataclass(frozen=True)
+class MusicCommand:
+    """A backend-neutral command, never an unverified SCUMM opcode."""
+
+    operation: str
+    asset_id: str | None = None
+
+
+@dataclass(frozen=True)
+class MusicConsolidation:
+    plan: MusicPlan
+    removed_track_ids: tuple[str, ...]
+    removed_asset_ids: tuple[str, ...]
+
+
 def validate_music_plan(plan: MusicPlan) -> None:
     if len(plan.tracks) > 64 or len(plan.transitions) > 256:
         raise ValueError("Music plan exceeds bounded resource limits")
@@ -87,3 +102,35 @@ def orphan_music_tracks(plan: MusicPlan) -> tuple[str, ...]:
     validate_music_plan(plan)
     used = {plan.initial_track_id} | {t.target_track_id for t in plan.transitions}
     return tuple(sorted(track.id for track in plan.tracks if track.id not in used))
+
+
+def compile_immediate_music_event(plan: MusicPlan, current_track_id: str | None,
+                                  event_id: str) -> tuple[str | None, MusicCommand | None]:
+    """Lower supported events to explicit actions; reject unproven sync modes.
+
+    This prepares a backend adapter without pretending to implement iMUSE's
+    beat/bar synchronisation.  An unchanged track emits no redundant command.
+    """
+    target, mode = resolve_music_event(plan, current_track_id, event_id)
+    if mode in ("beat", "bar") and target != current_track_id:
+        raise ValueError(f"Music transition {event_id} needs unverified {mode} synchronisation")
+    if target == current_track_id:
+        return target, None
+    if target is None:
+        return None, MusicCommand("stop")
+    track = next(track for track in plan.tracks if track.id == target)
+    return target, MusicCommand("play", track.asset_id)
+
+
+def consolidate_music_plan(plan: MusicPlan) -> MusicConsolidation:
+    """Return a cleaned copy and an exact removal report; never mutate input."""
+    dead = set(orphan_music_tracks(plan))
+    removed = tuple(track for track in plan.tracks if track.id in dead)
+    cleaned = MusicPlan(
+        tracks=tuple(track for track in plan.tracks if track.id not in dead),
+        transitions=plan.transitions,
+        initial_track_id=plan.initial_track_id,
+    )
+    validate_music_plan(cleaned)
+    return MusicConsolidation(cleaned, tuple(sorted(dead)),
+                              tuple(sorted(track.asset_id for track in removed)))

@@ -31,6 +31,13 @@ Quellen:
 - `MusicPlan`: Tracks, Übergänge, initialer Musikzustand.
 - `resolve_music_event`: reine Zustandsauswertung ohne Seiteneffekte.
 - `orphan_music_tracks`: Meldung unreferenzierter Musik ohne stilles Löschen.
+- `compile_immediate_music_event`: übersetzt einfache Story-Ereignisse in
+  `MusicCommand("play", asset_id)` oder `MusicCommand("stop")`; bei unverändertem
+  Track entsteht kein unnötiger Befehl. Noch unbelegte Beat-/Taktwechsel
+  werden **abgelehnt**, nicht als harte Schnitte ausgeführt.
+- `consolidate_music_plan`: liefert eine neue, bereinigte Konfiguration **und**
+  den Bericht mit entfernten Track- und Asset-IDs. Das ursprüngliche Modell
+  wird nicht verändert; die Löschung realer Audiodateien erfolgt nicht hier.
 
 `beat` und `bar` sind **Anforderungen**, noch keine tatsächlich unterstützten
 SCUMM-Kommandos. Der Backend-Compiler muss unbekannte oder nicht nachweisbar
@@ -56,16 +63,18 @@ denselben Regeln wie in der Grafikpipeline.
    ScummVM automatisch einen möglicherweise inkompatiblen AdLib-Treiber
    auswählen zu lassen.
    Damit entstanden im CI-Lauf #42048814497 etwa 1,4 MB nicht-stumme
-   Audiodaten. Das belegt eine echte PCM-Ausgabe, aber für den Nachweis, dass
-   **unser Musikstück** die Ursache ist, führt der nachfolgende Test zusätzlich
-   ein sonst identisches Spiel **ohne** Musik aus. Die aktive Sample-Fraktion
-   des Musiklaufs muss signifikant über der Kontrollaufnahme liegen.
-   Der Test bleibt optional, bis das Audioformat und die mögliche
-   Verwechslung mit Systemsounds beziehungsweise Startgeräuschen ausgeschlossen
-   sind. Erst danach ist die Musikerzeugung in ScummVM hörbar nachgewiesen.
-3. `stopSound()` und mindestens zwei Musikzustände durch ein Spielereignis
-   steuern. Tonaufzeichnung und MIDI-Event/Log-Inspektion als CI-Nachweis
-   entwickeln; ein grüner Compile-Lauf alleine reicht nicht.
+   Audiodaten. Im **erfolgreichen CI-Lauf #42051079525** hat auch die
+   A/B-Kontrolle bestanden: Die aktive PCM-Sample-Fraktion des Musiklaufs
+   lag signifikant über der Kontrollaufnahme aus einem Spiel ohne Musik.
+   Dies ist ein belastbarer automatischer Nachweis der Musikaktivität in
+   ScummVM, noch kein Test musikalischer Übergänge oder aller MIDI-Geräte.
+   Der Audio-Forschungsprobe bleibt vorerst `continue-on-error`, bis weitere
+   Plattformen und deterministische MIDI-Ereigniskontrollen hinzukommen.
+3. Zwei Musikzustände durch ein echtes Spielereignis in SCUMM wechseln lassen,
+   dabei `stopSound()` bzw. den passenden iMUSE-Befehl in der Zielengine
+   prüfen. Die deklarative, rein funktionale Kommandovorbereitung ist bereits
+   implementiert; die Ausführung im SCUMM-Backend und A/B-Audioübergangskontrolle
+   stehen noch aus.
 4. iMUSE-Beat- oder Taktwechsel und Hook/SysEx-Strategien einzeln
    implementieren und mit exakt definierten MIDI-Teststücken prüfen.
 5. Soundeffekte mit stabilen IDs und Wiederverwendung ergänzen.
