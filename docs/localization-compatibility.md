@@ -61,6 +61,15 @@ Pixel-/Texterkennungsprüfungen durchgeführt wurden.
 
 ## Opt-in für den tatsächlichen Spiel-Link (vorbereiteter Adapter)
 
+Der deterministische Befehl
+`python -m adventure_studio.scumm_language_package CATALOG LATIN_FONT CJK_FONT SCUMMC_CHAR RESOURCES`
+erstellt den kanonischen Katalog, die kompilierte CHAR-Datei, den BMP-Quellfont,
+den Glyphenbericht und `language-package.json` mit SHA-256-Prüfsummen und
+exakter Byte-/Glyphenzuordnung. Der GitHub-Font-Workflow produziert jetzt
+dieses komplette Paket als Artefakt. Die Generierung erfolgt zuerst in einem
+temporären Verzeichnis; bei einem Compiler- oder Fontfehler wird kein
+unvollständiges Paket veröffentlicht.
+
 Wenn die bereits geprüfte `multilingual-font.char` im Build-Verzeichnis unter
 `resources/multilingual-font.char` vorhanden ist, prüft `scumm_toolchain`
 den CHAR-Header und alle ASCII-Glyph-Slots **vor** dem Kompilieren. Danach
@@ -69,6 +78,8 @@ ersetzt der Adapter beide Text-Zeichensatzreferenzen (`chtest` und
 Der GUI-Zeichensatz an festem Slot 1 bleibt unangetastet. Ohne die optionale
 Datei wird das bisherige Bootstrap unverändert verwendet. Ein defekter CHAR
 führt zum Abbruch statt zu einem stillen Rückfall auf die Demo-Schrift.
+Wenn die Paketmanifest-Datei vorliegt, prüft der Linker-Adapter zusätzlich
+die SHA-256-Prüfsummen und die Zeichenbelegung gegen den Katalog.
 
 **Noch nicht abgeschlossen:** Der Story-Export liefert den Übersetzungskatalog
 und die CHAR-Datei noch nicht automatisch gemeinsam aus. Auch die laufende

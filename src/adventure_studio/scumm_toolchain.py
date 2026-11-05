@@ -8,6 +8,8 @@ The upstream GPL demo bootstrap remains external and research-only.
 from __future__ import annotations
 
 import os
+import hashlib
+import json
 import shutil
 import subprocess
 import sys
@@ -55,6 +57,23 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         # Glyphs needed by the stock 7-bit UI and story text must be present.
         # This rejects truncated or malformed resources before the linker runs.
         verify_char_resource(custom_font, set(range(32, 127)))
+        manifest_path = resources / "language-package.json"
+        if manifest_path.exists():
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            catalog_file = resources / "language-catalog.json"
+            if (not catalog_file.is_file()
+                    or manifest.get("format_version") != 1
+                    or manifest.get("char_sha256") != hashlib.sha256(custom_font.read_bytes()).hexdigest()
+                    or manifest.get("catalog_sha256") != hashlib.sha256(catalog_file.read_bytes()).hexdigest()):
+                raise ValueError("Language package checksum mismatch")
+            from .localization import charset_plan, parse_catalog
+            catalog = parse_catalog(catalog_file.read_text(encoding="utf-8"))
+            plan = charset_plan(catalog)
+            expected = {f"{code:02X}": chr(code) for code in range(32, 127)}
+            expected.update({f"{code:02X}": glyph for glyph, code in plan.extra_glyphs})
+            if manifest.get("languages") != list(catalog.languages) or manifest.get("glyph_map") != expected:
+                raise ValueError("Language package glyph map mismatch")
+            verify_char_resource(custom_font, {code for _, code in plan.extra_glyphs} | set(range(32, 127)))
         bootstrap = inject_multilingual_charset(bootstrap)
         shutil.copyfile(custom_font, road / custom_font.name)
     (resources / "bootstrap.scc").write_text(inject_inventory_objects(bootstrap, icon_ids), encoding="utf-8")

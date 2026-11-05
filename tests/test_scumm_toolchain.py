@@ -63,6 +63,11 @@ class ToolchainTests(unittest.TestCase):
             for code in range(32, 127):
                 data[33 + 4 * code:37 + 4 * code] = (33 + 4 * slots).to_bytes(4, "little")
             font.write_bytes(data)
+            package = font.with_name("language-package.json")
+            package.write_text('{"format_version":1,"char_sha256":"wrong"}')
+            with self.assertRaisesRegex(ValueError, "Language package checksum mismatch"):
+                compile_story_game(root / "build", root / "scummc", root / "game")
+            package.unlink()
             calls = []
 
             def fake_run(args, **kwargs):
