@@ -22,6 +22,8 @@ _PALETTE = ((70, 130, 190), (95, 60, 35), (240, 175, 95),
             (255, 220, 75), (60, 220, 90), (50, 220, 220), (120, 70, 180),
             (225, 80, 180), (160, 230, 55))
 _PICKUP_COLORS = (3, 7, 8)
+_RECIPE_COLORS = (3, 7, 8, 9, 10)
+_RECIPE_EXTRA_PALETTE = ((245, 100, 60), (85, 95, 245))
 
 
 def _text(value: str) -> str:
@@ -154,29 +156,40 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
 
 
 def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument:
-    """Bounded v2 fixture: one two-ingredient recipe unlocks one visible exit."""
+    """Bounded recipe room with up to two composable inventory recipes."""
     if (len(story.chapters) != 1 or len(story.scenes) != 2 or len(story.puzzles) != 1
-            or len(story.recipes) != 1 or story.characters):
-        raise ValueError("Recipe SCUMM adapter supports one recipe, one door and two scenes")
-    recipe, puzzle = story.recipes[0], story.puzzles[0]
+            or not 1 <= len(story.recipes) <= 2 or story.characters):
+        raise ValueError("Recipe SCUMM adapter supports up to two recipes, one door and two scenes")
+    puzzle = story.puzzles[0]
+    recipes = story.recipes
+    produced = {recipe.result_item_id for recipe in recipes}
     if (puzzle.id != story.final_puzzle_id or puzzle.scene_id != story.starting_scene_id
             or puzzle.opens_scene_id is None or puzzle.opens_scene_id == story.starting_scene_id
-            or puzzle.requires != (recipe.result_item_id,)):
-        raise ValueError("Recipe result must be the only required item of the final door")
+            or len(puzzle.requires) != 1 or puzzle.requires[0] not in produced):
+        raise ValueError("One crafted recipe result must unlock the final door")
     if any(not _ID.fullmatch(v) for v in
            [*(c.id for c in story.chapters), *(s.id for s in story.scenes),
-            *(i.id for i in story.items), puzzle.id, recipe.id]):
+            *(i.id for i in story.items), puzzle.id, *(r.id for r in recipes)]):
         raise ValueError("Story identifiers must be valid SCUMM identifiers")
     by_id = {i.id: i for i in story.items}
-    if any(by_id[item_id].role != "pickup" or by_id[item_id].scene_id != story.starting_scene_id
-           for item_id in recipe.ingredients):
-        raise ValueError("Recipe ingredients must be physical pickups in the starting scene")
-    result = by_id[recipe.result_item_id]
-    if result.role != "crafted" or result.scene_id != story.starting_scene_id:
-        raise ValueError("Crafted result must belong to starting scene")
-    if any(i.role in ("pickup", "crafted") and i.id not in (*recipe.ingredients, result.id)
+    ingredients = {item_id for recipe in recipes for item_id in recipe.ingredients}
+    if any(by_id[item_id].role not in ("pickup", "crafted")
+           or by_id[item_id].scene_id != story.starting_scene_id
+           or (by_id[item_id].role == "crafted") != (item_id in produced)
+           for item_id in ingredients):
+        raise ValueError("Recipe ingredients must be local pickups or crafted recipe results")
+    if any(by_id[item_id].scene_id != story.starting_scene_id for item_id in produced):
+        raise ValueError("Crafted results must belong to starting scene")
+    if any(i.role in ("pickup", "crafted") and i.id not in ingredients | produced
            for i in story.items):
         raise ValueError("Recipe fixture has an unreferenced mechanical item")
+    # A consumed ingredient may participate in only one recipe; otherwise the
+    # generated adventure would expose a choice with a dead-end branch.
+    inputs = [item for recipe in recipes for item in recipe.ingredients]
+    if len(inputs) != len(set(inputs)):
+        raise ValueError("A recipe ingredient cannot be consumed by multiple recipes")
+    if any(result != puzzle.requires[0] and result not in ingredients for result in produced):
+        raise ValueError("Every intermediate recipe result must feed another recipe")
     if "Door" in by_id:
         raise ValueError("Story item conflicts with generated Door")
     decorations = [i for i in story.items if i.role == "decoration" and i.scene_id == story.starting_scene_id]
@@ -185,22 +198,32 @@ def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument
     hotspots = [RoomHotspot(i.id, _text(i.name), _text(i.description),
                             *_item_xy(story, i.id, 160 + index * 40, 100, 640), 16, 16, sprite_pixels=_sprite(1, 4))
                 for index, i in enumerate(decorations)]
-    for index, item_id in enumerate((*recipe.ingredients, result.id)):
+    inventory_items = [i.id for i in story.items if i.role in ("pickup", "crafted")]
+    if len(inventory_items) > len(_RECIPE_COLORS):
+        raise ValueError("Too many recipe inventory objects for the fixed palette")
+    for index, item_id in enumerate(inventory_items):
         item = by_id[item_id]
         hotspots.append(RoomHotspot(item.id, _text(item.name), _text(item.description),
                                     *_item_xy(story, item.id, 355 + index * 26, 100, 640), 16, 16, True,
-                                    _sprite(_PICKUP_COLORS[index], 2)))
+                                    _sprite(_RECIPE_COLORS[index], 2)))
     hotspots.append(RoomHotspot("Door", "the exit", _text(puzzle.title),
                                 450, 100, 16, 16, False, _sprite(4, 1),
                                 open_sprite_pixels=_sprite(5, 2),
                                 exit_destination=puzzle.opens_scene_id))
     start_image = _room_image(provider, story.starting_scene_id, 640, False)
     goal_image = _room_image(provider, puzzle.opens_scene_id, 320, True)
+    if len(inventory_items) > len(_PICKUP_COLORS):
+        if len(start_image.palette) != len(_PALETTE):
+            raise ValueError("Chained recipe rooms require the nine-color base palette")
+        start_palette = start_image.palette + _RECIPE_EXTRA_PALETTE
+    else:
+        start_palette = start_image.palette
     start_room = RoomAsset(story.starting_scene_id, RoomGeometry(640, 200, 320, 200),
-                           start_image.pixels, start_image.palette, tuple(hotspots), 540,
-                           (UseRule(result.id, "Door", _text(puzzle.title), open_target=True),),
-                           combine_rules=(CombineRule(recipe.ingredients[0], recipe.ingredients[1],
-                                                      result.id, _text(recipe.title)),))
+                           start_image.pixels, start_palette, tuple(hotspots), 540,
+                           (UseRule(puzzle.requires[0], "Door", _text(puzzle.title), open_target=True),),
+                           combine_rules=tuple(CombineRule(recipe.ingredients[0], recipe.ingredients[1],
+                                                           recipe.result_item_id, _text(recipe.title))
+                                               for recipe in recipes))
     goal_room = RoomAsset(puzzle.opens_scene_id, RoomGeometry(320, 200, 320, 200),
                           goal_image.pixels, goal_image.palette,
                           goal_text=_text(puzzle.title))

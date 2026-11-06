@@ -1,0 +1,25 @@
+{
+  "format_version": 2,
+  "story": {
+    "chapters": [{"id": "intro", "title": "Das alte Labor", "synopsis": "Ein mehrstufiges Rezept oeffnet den Weg."}],
+    "scenes": [
+      {"id": "Kitchen", "chapter_id": "intro", "title": "Kueche", "description": "Hier liegen Zutaten fuer einen Zaubertrank."},
+      {"id": "Laboratory", "chapter_id": "intro", "title": "Labor", "description": "Die letzte Kammer."}
+    ],
+    "characters": [],
+    "items": [
+      {"id": "Pineapple", "name": "Ananas", "description": "Eine seltsame Frucht.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Bottle", "name": "Flasche", "description": "Eine leere Flasche.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Mixture", "name": "Fruchtsaft", "description": "Die erste Mischung.", "scene_id": "Kitchen", "role": "crafted"},
+      {"id": "Powder", "name": "Pulver", "description": "Ein glitzerndes Pulver.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Elixir", "name": "Zaubertrank", "description": "Der fertige Trank.", "scene_id": "Kitchen", "role": "crafted"}
+    ],
+    "recipes": [
+      {"id": "MixJuice", "title": "Der Saft ist fertig.", "ingredients": ["Pineapple", "Bottle"], "result_item_id": "Mixture"},
+      {"id": "MixElixir", "title": "Der Zaubertrank ist fertig.", "ingredients": ["Mixture", "Powder"], "result_item_id": "Elixir"}
+    ],
+    "puzzles": [{"id": "OpenLaboratory", "title": "Das Labor ist offen.", "scene_id": "Kitchen", "requires": ["Elixir"], "opens_scene_id": "Laboratory"}],
+    "starting_scene_id": "Kitchen",
+    "final_puzzle_id": "OpenLaboratory"
+  }
+}

@@ -313,19 +313,23 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                          or route[1]["next_room_id"] != goal["room_id"] or gates):
         raise ValueError("Chain smoke requires exactly two sequential single-item doors")
     combinations = goal.get("fixture_combinations", [])
-    if not isinstance(combinations, list) or len(combinations) > 1:
+    if not isinstance(combinations, list) or len(combinations) > 2:
         raise ValueError("Invalid fixture combination manifest")
     if verify_recipe:
-        if len(combinations) != 1 or gates or len(route) != 1:
-            raise ValueError("Recipe smoke requires exactly one combination and one exit")
-        recipe = combinations[0]
-        if (not isinstance(recipe, dict) or set(recipe) != {"room_id", "ingredients", "result"}
+        if not 1 <= len(combinations) <= 2 or gates or len(route) != 1:
+            raise ValueError("Recipe smoke requires one or two combinations and one exit")
+        for recipe in combinations:
+            if (not isinstance(recipe, dict) or set(recipe) != {"room_id", "ingredients", "result"}
                 or not isinstance(recipe["ingredients"], list) or len(recipe["ingredients"]) != 2
                 or not all(isinstance(item, dict) and set(item) == {"item_id", "rgb"}
                            and isinstance(item["rgb"], list) and len(item["rgb"]) == 3
                            and all(type(c) is int and 0 <= c <= 255 for c in item["rgb"])
                            for item in [*recipe["ingredients"], recipe["result"]])):
-            raise ValueError("Invalid recipe color probes")
+                raise ValueError("Invalid recipe color probes")
+        if len(combinations) == 2 and (
+                combinations[0]["result"]["item_id"] not in
+                [item["item_id"] for item in combinations[1]["ingredients"]]):
+            raise ValueError("Recipe chain smoke requires dependent combinations in order")
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("A virtual X display is required")
 
@@ -604,6 +608,64 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     raise RuntimeError("Recipe combination did not consume ingredients and produce result")
                 recipe_item_center = colored_item_center(output_directory, "recipe-combined", result_rgb,
                                                          inventory=True)
+                if len(combinations) == 2:
+                    next_recipe = combinations[1]
+                    next_ingredients = next_recipe["ingredients"]
+                    extra = next(item for item in next_ingredients
+                                 if item["item_id"] != combinations[0]["result"]["item_id"])
+                    extra_rgb = tuple(extra["rgb"])
+                    subprocess.run(["xdotool", "mousemove", "328", "506", "click", "1"],
+                                   check=True, timeout=5)
+                    time.sleep(0.3)
+                    capture_frame("recipe-chain-before")
+                    extra_x, extra_y = colored_item_center(output_directory, "recipe-chain-before", extra_rgb)
+                    subprocess.run(["xdotool", "mousemove", str(extra_x), str(extra_y), "click", "1"],
+                                   check=True, timeout=5)
+                    extra_owned = False
+                    deadline = time.monotonic() + 15
+                    while time.monotonic() < deadline:
+                        capture_frame("recipe-chain-picked")
+                        if (colored_item_pixels(output_directory, "recipe-chain-picked", extra_rgb) < 10
+                                and colored_item_pixels(output_directory, "recipe-chain-picked", extra_rgb,
+                                                        inventory=True) >= 40):
+                            extra_owned = True
+                            break
+                        time.sleep(0.4)
+                    if not extra_owned:
+                        raise RuntimeError("Second recipe ingredient not in inventory")
+                    prior_center = colored_item_center(output_directory, "recipe-chain-picked", result_rgb,
+                                                       inventory=True)
+                    extra_center = colored_item_center(output_directory, "recipe-chain-picked", extra_rgb,
+                                                       inventory=True)
+                    for x, y in ((408, 506), prior_center, extra_center):
+                        subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                                       check=True, timeout=5)
+                        time.sleep(0.3)
+                    final_rgb = tuple(next_recipe["result"]["rgb"])
+                    chained = False
+                    deadline = time.monotonic() + 15
+                    while time.monotonic() < deadline:
+                        capture_frame("recipe-chain-combined")
+                        final_pixels = colored_item_pixels(output_directory, "recipe-chain-combined", final_rgb,
+                                                           inventory=True)
+                        prior_pixels = colored_item_pixels(output_directory, "recipe-chain-combined", result_rgb,
+                                                           inventory=True)
+                        extra_pixels = colored_item_pixels(output_directory, "recipe-chain-combined", extra_rgb,
+                                                           inventory=True)
+                        if final_pixels >= 40 and prior_pixels < 10 and extra_pixels < 10:
+                            chained = True
+                            break
+                        time.sleep(0.4)
+                    (output_directory / "scummvm-recipe-chain-report.json").write_text(
+                        json.dumps({"first_combined": combined, "second_combined": chained,
+                                    "prior_ingredient_consumed": prior_pixels < 10,
+                                    "extra_ingredient_consumed": extra_pixels < 10,
+                                    "final_inventory_pixels": final_pixels}, indent=2) + "\n",
+                        encoding="utf-8")
+                    if not chained:
+                        raise RuntimeError("Second recipe did not consume ingredients and produce result")
+                    recipe_item_center = colored_item_center(output_directory, "recipe-chain-combined", final_rgb,
+                                                             inventory=True)
                 capture_frame("pickup")
             initial_door_pixels = door_pixels(output_directory, "pickup")
             if initial_door_pixels < 40:
@@ -880,14 +942,14 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only")):
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only|--recipe-reverse-only]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only")):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only|--recipe-reverse-only|--recipe-chain-only]")
         return 2
     mode = sys.argv[3] if len(sys.argv) == 4 else ""
     launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]),
-                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only"),
+                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only"),
                  verify_chain=mode in ("--chain-only", "--static-chain-only"),
-                 verify_recipe=mode in ("--recipe-only", "--recipe-reverse-only"),
+                 verify_recipe=mode in ("--recipe-only", "--recipe-reverse-only", "--recipe-chain-only"),
                  reverse_recipe=mode == "--recipe-reverse-only",
                  allow_static_scene=mode == "--static-chain-only")
     return 0

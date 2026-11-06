@@ -15,6 +15,7 @@ on:
       - 'src/adventure_studio/scumm_toolchain.py'
       - 'src/adventure_studio/scumm_launch.py'
       - 'examples/recipe_story.json'
+      - 'examples/recipe_chain_story.json'
       - 'tests/test_scumm_dialogue_probe.py'
       - 'tests/test_story_v4.py'
   pull_request:
@@ -28,6 +29,7 @@ on:
       - 'src/adventure_studio/scumm_toolchain.py'
       - 'src/adventure_studio/scumm_launch.py'
       - 'examples/recipe_story.json'
+      - 'examples/recipe_chain_story.json'
       - 'tests/test_scumm_dialogue_probe.py'
       - 'tests/test_story_v4.py'
 
@@ -92,6 +94,19 @@ jobs:
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-game /tmp/recipe-forward-evidence --recipe-only
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-game /tmp/recipe-reverse-evidence --recipe-reverse-only
+      - name: Build two-stage recipe chain from story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/recipe_chain_story.json /tmp/recipe-chain-story
+          python -m adventure_studio.scumm_toolchain /tmp/recipe-chain-story /tmp/scummc-upstream /tmp/recipe-chain-game
+          test -s /tmp/recipe-chain-game/tentacle.000
+          test -s /tmp/recipe-chain-game/tentacle.001
+      - name: Complete two consecutive recipes in real ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-chain-game /tmp/recipe-chain-evidence --recipe-chain-only
       - name: Upload playable dialogue game
         if: always()
         uses: actions/upload-artifact@v4
@@ -125,3 +140,6 @@ jobs:
             /tmp/recipe-reverse-evidence/*.png
             /tmp/recipe-reverse-evidence/*.json
             /tmp/recipe-reverse-evidence/scummvm.log
+            /tmp/recipe-chain-evidence/*.png
+            /tmp/recipe-chain-evidence/*.json
+            /tmp/recipe-chain-evidence/scummvm.log

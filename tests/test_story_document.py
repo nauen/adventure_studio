@@ -14,9 +14,34 @@ EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 THREE_ITEMS = EXAMPLE.with_name("mini_story_three_items.json")
 CHAIN = EXAMPLE.with_name("mini_story_chain.json")
 RECIPE = EXAMPLE.with_name("recipe_story.json")
+RECIPE_CHAIN = EXAMPLE.with_name("recipe_chain_story.json")
 
 
 class StoryDocumentTests(unittest.TestCase):
+    def test_two_stage_recipe_chain_compiles_and_reaches_goal(self):
+        from adventure_studio.story import verify_story
+        from adventure_studio.story_to_scumm import compile_story_to_scumm
+        from adventure_studio.scumm_project import canonical_json, parse_document
+        story = parse_story_document(RECIPE_CHAIN.read_text(encoding="utf-8"))
+        self.assertEqual(verify_story(story),
+                         ("take:Pineapple", "take:Bottle", "take:Powder",
+                          "combine:MixJuice", "combine:MixElixir", "solve:OpenLaboratory"))
+        game = compile_story_to_scumm(story)
+        self.assertEqual([(rule.first_id, rule.second_id, rule.result_id)
+                          for rule in game.rooms[0].combine_rules],
+                         [("Pineapple", "Bottle", "Mixture"), ("Mixture", "Powder", "Elixir")])
+        self.assertEqual(parse_document(canonical_json(game)), game)
+        with tempfile.TemporaryDirectory() as tmp:
+            result = build_story_document(RECIPE_CHAIN.read_text(encoding="utf-8"), Path(tmp))
+            source = (result.resource_directory / "Kitchen.scc").read_text()
+            self.assertIn("script combine_0()", source)
+            self.assertIn("script combine_1()", source)
+            self.assertIn("setObjectOwner(Mixture, 0)", source)
+            self.assertIn("pickupObject(Elixir, VAR_ROOM)", source)
+            self.assertIn("if(objB == Powder", source)
+            self.assertIn("if(objB == Mixture", source)
+            self.assertIn("if(objB == Elixir", source)
+
     def test_recipe_story_v2_exports_bounded_inventory_combination(self):
         from adventure_studio.story import compile_story, verify_story
         from adventure_studio.core import execute
