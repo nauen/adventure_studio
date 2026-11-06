@@ -152,7 +152,7 @@ def door_center(output_directory: Path, frame: str = "pickup") -> tuple[int, int
 
 
 def open_door_center(output_directory: Path, frame: str = "door") -> tuple[int, int]:
-    if frame not in ("door", "chain-second-open"):
+    if frame not in ("door", "exit", "chain-second-open"):
         raise ValueError("Invalid opened-door screenshot frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
