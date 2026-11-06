@@ -38,7 +38,8 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                        language_room_probe: bool = False,
                        localize_story: bool = False,
                        graphical_language_buttons: bool = False,
-                       screen_language_gui: bool = False) -> Path:
+                       screen_language_gui: bool = False,
+                       stock_fonts_probe: bool = False) -> Path:
     """Compile and link all validated rooms; return a loadable research fixture."""
     document = parse_document((build_directory / "project.json").read_text(encoding="utf-8"))
     resources = build_directory / "resources"
@@ -81,7 +82,8 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                 raise ValueError("Language package glyph map mismatch")
             verify_char_resource(custom_font, {code for _, code in plan.extra_glyphs} | set(range(32, 127)))
             language_catalog = catalog
-        bootstrap = inject_multilingual_charset(bootstrap)
+        if not stock_fonts_probe:
+            bootstrap = inject_multilingual_charset(bootstrap)
         shutil.copyfile(custom_font, road / custom_font.name)
     if (graphical_language_buttons or screen_language_gui) and not localize_story:
         raise ValueError("Graphical language selectors require --localize-story")
@@ -153,15 +155,17 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
 def main() -> int:
     options = sys.argv[4:]
     allowed = {"--language-room-probe", "--localize-story", "--language-buttons",
-               "--screen-language-gui"}
-    if len(sys.argv) < 4 or len(options) != len(set(options)) or set(options) - allowed:
-        print("Usage: python -m adventure_studio.scumm_toolchain STORY_BUILD_DIRECTORY SCUMMC_DIRECTORY GAME_OUTPUT_DIRECTORY [--language-room-probe] [--localize-story] [--language-buttons] [--screen-language-gui]")
+               "--screen-language-gui", "--stock-fonts-probe"}
+    if (len(sys.argv) < 4 or len(options) != len(set(options)) or set(options) - allowed
+            or ("--stock-fonts-probe" in options and "--localize-story" not in options)):
+        print("Usage: python -m adventure_studio.scumm_toolchain STORY_BUILD_DIRECTORY SCUMMC_DIRECTORY GAME_OUTPUT_DIRECTORY [--language-room-probe] [--localize-story] [--language-buttons] [--screen-language-gui] [--stock-fonts-probe]")
         return 2
     print(compile_story_game(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]),
                              language_room_probe="--language-room-probe" in options,
                              localize_story="--localize-story" in options,
                              graphical_language_buttons="--language-buttons" in options,
-                             screen_language_gui="--screen-language-gui" in options))
+                             screen_language_gui="--screen-language-gui" in options,
+                             stock_fonts_probe="--stock-fonts-probe" in options))
     return 0
 
 
