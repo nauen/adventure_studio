@@ -59,3 +59,32 @@ look like the correct characters but are too small to read at native size.
 Do not merge the localization PR solely on the strength of the automated
 pixel report. Preserve the screenshots and record this checklist's pass/fail
 results before changing the opt-in feature into a default behavior.
+
+## Save/load investigation (not yet an acceptance gate)
+
+The isolated save-menu probe runs with its own `--config` and `--savepath`,
+so it cannot alter a developer's existing ScummVM profile or saves. It
+captures `polish-before-menu.png`, `save-menu-after-ctrl-f5.png`,
+`after-escape.png`, and `menu-after-f5.png`. The JSON report distinguishes
+keys being sent from actions actually verified. Neither a nonblank screenshot
+nor a changed-pixel threshold proves that a save slot is usable.
+
+In run [42233319743](https://github.com/nauen/adventure_studio/actions/runs/42233319743),
+both menu shortcuts visibly opened a dark menu with many identical-looking
+purple square glyphs. The menu labels were not legible in the captured
+images. **Do not automate blind save/load clicks or report persistence as
+passing based on these pictures.** A separate stock-font comparison is being
+used to isolate whether the multilingual CHAR replacement caused this.
+
+Once the controls are legible, the full integration gate must:
+
+1. Select Polish and verify a new, nonempty save-slot file appears in the
+   dedicated save directory after an actual menu action.
+2. Switch to Japanese and change rooms; record a scene screenshot and the
+   state of the language controls.
+3. Load the newly saved slot and check the original room and Polish language
+   independently. A mere process restart or successful `--save-slot` launch
+   must not be counted as state restoration without visual evidence.
+4. Preserve the menu, save-slot inventory, before/after scene screenshots,
+   and ScummVM log as CI artifacts. Keep the feature opt-in until the gate
+   and manual readability review both pass.
