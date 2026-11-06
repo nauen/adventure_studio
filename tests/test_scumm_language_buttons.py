@@ -26,6 +26,7 @@ class GraphicalLanguageButtonsTests(unittest.TestCase):
         self.assertIn('"HarborLangDe.bmp"', source)
         self.assertIn('"HarborLangDeActive.bmp"', source)
         self.assertEqual(source.count("case WalkTo:"), 5)
+        self.assertIn("w = 32;", source)
         self.assertIn("GameLanguage = 27233;", source)
         self.assertIn("setObjectState(LangPl,2);", button_state_source(catalog))
 
@@ -42,6 +43,7 @@ class GraphicalLanguageButtonsTests(unittest.TestCase):
                                           for path in write_button_sprites(room, catalog, directory)))
             self.assertNotEqual(button_sprite("de", 1, 3, True),
                                 button_sprite("de", 1, 3, False))
+            self.assertEqual(len(button_sprite("de", 1, 3, False)), 32 * 16)
             write_button_sprites(destination_fixture(), catalog, directory)
             self.assertTrue((directory / "CellarLangJaActive.bmp").is_file())
 
