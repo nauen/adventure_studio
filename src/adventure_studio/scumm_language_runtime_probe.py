@@ -14,6 +14,9 @@ import time
 from pathlib import Path
 
 
+LANGUAGE_PROBE_KEYS = (("1", "de"), ("2", "en"), ("3", "fr"),
+                       ("4", "ja"), ("5", "pl"))
+
 
 def compare_screenshots(before: Path, after: Path) -> dict:
     """Measure changed pixels, without treating changes as proof of legible text."""
@@ -157,7 +160,7 @@ def language_runtime_probe(game: Path, output: Path,
                 raise RuntimeError("ScummVM exited before language input")
             # Keep Polish selected while changing rooms, then repeat the
             # translated line without changing GameLanguage.
-            for key, code in (("1", "de"), ("4", "ja"), ("5", "pl"),
+            for key, code in (*LANGUAGE_PROBE_KEYS,
                               ("0", "room_after_pl"), ("6", "pl_after_room")):
                 subprocess.run(["xdotool", "key", key], check=True, timeout=10)
                 time.sleep(2)
@@ -201,6 +204,9 @@ def language_runtime_probe(game: Path, output: Path,
               "nonblank_captures_verified": True,
               **room_evidence,
               "language_screenshot_differences": {
+                  "de_to_en": compare_screenshots(output / "de.png", output / "en.png"),
+                  "en_to_fr": compare_screenshots(output / "en.png", output / "fr.png"),
+                  "fr_to_ja": compare_screenshots(output / "fr.png", output / "ja.png"),
                   "de_to_ja": compare_screenshots(output / "de.png", output / "ja.png"),
                   "ja_to_pl": compare_screenshots(output / "ja.png", output / "pl.png"),
                   "room_to_pl_after_room": post_room_difference,

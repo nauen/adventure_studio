@@ -22,6 +22,8 @@ arbitrary player's story.
 | Screenshot | Intended event | Visible text or GUI evidence to inspect |
 | --- | --- | --- |
 | `de.png` | Select German with key `1` | `Die Kellertür ist jetzt offen.`; `ü` must be a distinct, legible glyph |
+| `en.png` | Select English with key `2` | `The cellar door is open now.`; spacing and clipping must be acceptable |
+| `fr.png` | Select French with key `3` | `La porte de la cave est ouverte.`; punctuation and spacing must be legible |
 | `ja.png` | Select Japanese with key `4` | `地下室の扉が開きました。`; distinct Kana/Kanji, no tofu squares or clipped glyphs |
 | `pl.png` | Select Polish with key `5` | `Drzwi do piwnicy są otwarte.`; `ą` must be legible |
 | `room_after_pl.png` | Change to Cellar with key `0` without choosing a new language | Polish remains selected; room transition really occurred |

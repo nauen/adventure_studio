@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from adventure_studio.scumm_language_runtime_probe import (
+    LANGUAGE_PROBE_KEYS,
     compare_fixed_language_gui_across_rooms, compare_screenshots,
     language_runtime_probe, verify_language_button_change,
     verify_room_transition, verify_capture_visible,
@@ -12,6 +13,11 @@ from adventure_studio.scumm_language_runtime_probe import (
 
 
 class LanguageRuntimeProbeTests(unittest.TestCase):
+    def test_all_five_languages_are_selected_before_room_change(self):
+        self.assertEqual(LANGUAGE_PROBE_KEYS,
+                         (("1", "de"), ("2", "en"), ("3", "fr"),
+                          ("4", "ja"), ("5", "pl")))
+
     def test_screen_fixed_gui_region_ignores_room_pixels(self):
         try:
             from PIL import Image
