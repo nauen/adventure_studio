@@ -99,6 +99,13 @@ jobs:
           python -m adventure_studio.story_document examples/mini_story_language_en.json /tmp/stock-font-story
           python -m adventure_studio.scumm_toolchain /tmp/stock-font-story /tmp/scummc-language /tmp/stock-font-game
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/stock-font-game /tmp/stock-font-evidence --no-polish
+      - name: Rebuild identical localized game using stock text fonts
+        env:
+          PYTHONPATH: src
+        run: |
+          cp -a /tmp/language-story /tmp/localized-stock-font-story
+          python -m adventure_studio.scumm_toolchain /tmp/localized-stock-font-story /tmp/scummc-language /tmp/localized-stock-font-game --language-room-probe --localize-story --screen-language-gui --stock-fonts-probe
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/localized-stock-font-game /tmp/localized-stock-font-evidence
       - name: Compare stock and multilingual menu glyph regions
         run: |
           python - <<'PY'
@@ -110,6 +117,7 @@ jobs:
           sources = {
               "multilingual": Path("/tmp/save-load-evidence/save-menu-after-ctrl-f5.png"),
               "stock": Path("/tmp/stock-font-evidence/save-menu-after-ctrl-f5.png"),
+              "localized_stock_fonts": Path("/tmp/localized-stock-font-evidence/save-menu-after-ctrl-f5.png"),
           }
           menus = {}
           stats = {}
@@ -125,6 +133,8 @@ jobs:
                   }
           pixels = ImageChops.difference(menus["multilingual"], menus["stock"]).getdata()
           stats["cross_font_changed_pixels"] = sum(1 for pixel in pixels if max(pixel) >= 24)
+          targeted_pixels = ImageChops.difference(menus["multilingual"], menus["localized_stock_fonts"]).getdata()
+          stats["same_game_font_only_changed_pixels"] = sum(1 for pixel in targeted_pixels if max(pixel) >= 24)
           output = Path("/tmp/save-load-evidence/menu-font-comparison.json")
           output.write_text(json.dumps(stats, indent=2, sort_keys=True) + chr(10))
           print(json.dumps(stats, sort_keys=True))
@@ -148,3 +158,6 @@ jobs:
             /tmp/stock-font-evidence/*.png
             /tmp/stock-font-evidence/*.json
             /tmp/stock-font-evidence/*.log
+            /tmp/localized-stock-font-evidence/*.png
+            /tmp/localized-stock-font-evidence/*.json
+            /tmp/localized-stock-font-evidence/*.log
