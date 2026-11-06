@@ -99,7 +99,8 @@ def verify_loaded_language_selection(default: Path, selected: Path, loaded: Path
             "load_restored_language_verified": True}
 
 
-def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -> dict:
+def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True,
+                         strict_native_save: bool = True) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Save/load probe requires Xvfb DISPLAY")
     if any(not (game / f"tentacle.{suffix}").is_file() for suffix in ("000", "001")):
@@ -159,8 +160,9 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                         raise RuntimeError("ScummVM exited after Ctrl+F5")
                     try:
                         capture("save-menu-after-ctrl-f5", require_global_menu=True)
-                        verify_no_original_menu_behind_gmm(
-                            output / "save-menu-after-ctrl-f5.png")
+                        if strict_native_save:
+                            verify_no_original_menu_behind_gmm(
+                                output / "save-menu-after-ctrl-f5.png")
                         break
                     except ValueError as error:
                         if menu_attempt == 2:
@@ -227,8 +229,8 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
     room_change = (verify_room_transition(output / "polish-in-initial-room.png",
                                           output / "polish-before-menu.png") if select_polish else None)
     ready = verify_global_menu_ready(output / "save-menu-after-ctrl-f5.png")
-    original_menu_gate = verify_no_original_menu_behind_gmm(
-        output / "save-menu-after-ctrl-f5.png")
+    original_menu_gate = (verify_no_original_menu_behind_gmm(
+        output / "save-menu-after-ctrl-f5.png") if strict_native_save else None)
     save_dialog_change = verify_save_menu_open(output / "save-menu-after-ctrl-f5.png",
                                                output / "save-dialog-after-click.png")
     saves = sorted(path.name for path in save_path.iterdir()
@@ -276,6 +278,7 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "isolated_save_directory": save_path.name,
         "polish_key_sent_before_menu": select_polish,
         "save_attempted_after_room_transition": select_polish,
+        "strict_native_save_gate": strict_native_save,
         "room_transition_evidence": room_change,
         "polish_selection_visually_verified": False,
         "ctrl_f5_sent": True,
@@ -318,11 +321,14 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] != "--no-polish"):
-        print("Usage: python -m adventure_studio.scumm_save_load_probe GAME OUTPUT [--no-polish]")
+    options = sys.argv[3:]
+    if len(sys.argv) < 3 or len(options) != len(set(options)) or any(
+            option not in ("--no-polish", "--nonblocking-menu-probe") for option in options):
+        print("Usage: python -m adventure_studio.scumm_save_load_probe GAME OUTPUT [--no-polish] [--nonblocking-menu-probe]")
         return 2
     print(json.dumps(save_load_menu_probe(Path(sys.argv[1]), Path(sys.argv[2]),
-                                          select_polish="--no-polish" not in sys.argv[3:]),
+                                          select_polish="--no-polish" not in options,
+                                          strict_native_save="--nonblocking-menu-probe" not in options),
                      sort_keys=True))
     return 0
 
