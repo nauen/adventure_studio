@@ -88,11 +88,20 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                 subprocess.run(["xdotool", "key", "5"], check=True, timeout=10)
                 time.sleep(2)
             capture("polish-before-menu")
-            subprocess.run(["xdotool", "key", "ctrl+F5"], check=True, timeout=10)
-            time.sleep(2)
-            if process.poll() is not None:
-                raise RuntimeError("ScummVM exited after Ctrl+F5")
-            capture("save-menu-after-ctrl-f5", require_global_menu=True)
+            for menu_attempt in range(3):
+                subprocess.run(["xdotool", "key", "--clearmodifiers", "ctrl+F5"],
+                               check=True, timeout=10)
+                time.sleep(2)
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited after Ctrl+F5")
+                try:
+                    capture("save-menu-after-ctrl-f5", require_global_menu=True)
+                    break
+                except ValueError:
+                    if menu_attempt == 2:
+                        raise RuntimeError("Native ScummVM menu unavailable after three openings")
+                    subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
+                    time.sleep(2)
             # Coordinates measured from the real ScummVM 2.8 GMM capture.
             subprocess.run(["xdotool", "mousemove", "512", "367", "click", "1"],
                            check=True, timeout=10)
