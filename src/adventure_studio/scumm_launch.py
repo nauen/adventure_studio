@@ -272,9 +272,11 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
 def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0,
                  scene_only: bool = False, verify_return: bool = True,
                  verify_chain: bool = False, verify_recipe: bool = False,
-                 allow_static_scene: bool = False) -> None:
+                 allow_static_scene: bool = False, reverse_recipe: bool = False) -> None:
     if allow_static_scene and not verify_chain:
         raise ValueError("Static scene exception is only for the chain/palette fixture")
+    if reverse_recipe and not verify_recipe:
+        raise ValueError("Reversed inventory combination requires recipe mode")
     if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
@@ -573,7 +575,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 first_center = colored_item_center(output_directory, "recipe-second",
                                                    tuple(ingredients[0]["rgb"]), inventory=True)
                 second_center = colored_item_center(output_directory, "recipe-second", second_rgb, inventory=True)
-                for x, y in ((408, 506), first_center, second_center):
+                ordered_ingredients = ((second_center, first_center) if reverse_recipe
+                                       else (first_center, second_center))
+                for x, y in ((408, 506), *ordered_ingredients):
                     command = subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                                              capture_output=True, text=True, timeout=5, check=False)
                     if command.returncode:
@@ -594,6 +598,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     json.dumps({"recipe": combinations[0], "ingredient_pickup": ingredient_owned,
                                 "ingredients_consumed": first_pixels < 10 and second_pixels < 10,
                                 "result_inventory_pixels": result_pixels,
+                                "reversed_ingredient_order": reverse_recipe,
                                 "combined": combined}, indent=2) + "\n", encoding="utf-8")
                 if not combined:
                     raise RuntimeError("Recipe combination did not consume ingredients and produce result")
@@ -861,13 +866,15 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only")):
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only")):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only|--recipe-reverse-only]")
         return 2
     mode = sys.argv[3] if len(sys.argv) == 4 else ""
     launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]),
-                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only"),
-                 verify_chain=mode in ("--chain-only", "--static-chain-only"), verify_recipe=mode == "--recipe-only",
+                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only"),
+                 verify_chain=mode in ("--chain-only", "--static-chain-only"),
+                 verify_recipe=mode in ("--recipe-only", "--recipe-reverse-only"),
+                 reverse_recipe=mode == "--recipe-reverse-only",
                  allow_static_scene=mode == "--static-chain-only")
     return 0
 
