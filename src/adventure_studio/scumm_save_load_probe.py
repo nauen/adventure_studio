@@ -127,43 +127,57 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                 subprocess.run(["xdotool", "key", "0"], check=True, timeout=10)
                 time.sleep(2)
             capture("polish-before-menu")
-            for menu_attempt in range(3):
-                subprocess.run(["xdotool", "key", "--clearmodifiers", "ctrl+F5"],
+            save_attempts = 0
+            for save_attempt in range(3 if select_polish else 1):
+                save_attempts += 1
+                for menu_attempt in range(3):
+                    subprocess.run(["xdotool", "key", "--clearmodifiers", "ctrl+F5"],
+                                   check=True, timeout=10)
+                    time.sleep(2)
+                    if process.poll() is not None:
+                        raise RuntimeError("ScummVM exited after Ctrl+F5")
+                    try:
+                        capture("save-menu-after-ctrl-f5", require_global_menu=True)
+                        break
+                    except ValueError:
+                        if menu_attempt == 2:
+                            raise RuntimeError("Native ScummVM menu unavailable after three openings")
+                        subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
+                        time.sleep(2)
+                # Coordinates measured from the real ScummVM 2.8 GMM capture.
+                subprocess.run(["xdotool", "mousemove", "512", "367", "click", "1"],
                                check=True, timeout=10)
                 time.sleep(2)
                 if process.poll() is not None:
-                    raise RuntimeError("ScummVM exited after Ctrl+F5")
-                try:
-                    capture("save-menu-after-ctrl-f5", require_global_menu=True)
+                    raise RuntimeError("ScummVM exited after Save button click")
+                capture("save-dialog-after-click")
+                # The real ScummVM 2.8 save picker shows a New Save tile at
+                # x=215..382, y=224..350 on our fixed 1024x768 Xvfb display.
+                subprocess.run(["xdotool", "mousemove", "298", "285", "click", "1"],
+                               check=True, timeout=10)
+                time.sleep(2)
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited after selecting New Save")
+                capture("after-new-save-click")
+                subprocess.run(["xdotool", "type", "--clearmodifiers", "--delay", "60",
+                                "Adventure Studio CI"], check=True, timeout=15)
+                subprocess.run(["xdotool", "mousemove", "618", "414", "click", "1"],
+                               check=True, timeout=10)
+                time.sleep(3)
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited after confirming save name")
+                capture("after-save-confirmation")
+                slot = save_path / "tentacle.s01"
+                if slot.is_file() and slot.stat().st_size > 0:
                     break
-                except ValueError:
-                    if menu_attempt == 2:
-                        raise RuntimeError("Native ScummVM menu unavailable after three openings")
+                if save_attempt < 2 and select_polish:
+                    # The engine may temporarily reject saves during scripted
+                    # transitions. Dismiss its warning and retry after settling.
+                    subprocess.run(["xdotool", "mousemove", "512", "396", "click", "1"],
+                                   check=True, timeout=10)
+                    time.sleep(1)
                     subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
-                    time.sleep(2)
-            # Coordinates measured from the real ScummVM 2.8 GMM capture.
-            subprocess.run(["xdotool", "mousemove", "512", "367", "click", "1"],
-                           check=True, timeout=10)
-            time.sleep(2)
-            if process.poll() is not None:
-                raise RuntimeError("ScummVM exited after Save button click")
-            capture("save-dialog-after-click")
-            # The real ScummVM 2.8 save picker shows a New Save tile at
-            # x=215..382, y=224..350 on our fixed 1024x768 Xvfb display.
-            subprocess.run(["xdotool", "mousemove", "298", "285", "click", "1"],
-                           check=True, timeout=10)
-            time.sleep(2)
-            if process.poll() is not None:
-                raise RuntimeError("ScummVM exited after selecting New Save")
-            capture("after-new-save-click")
-            subprocess.run(["xdotool", "type", "--clearmodifiers", "--delay", "60",
-                            "Adventure Studio CI"], check=True, timeout=15)
-            subprocess.run(["xdotool", "mousemove", "618", "414", "click", "1"],
-                           check=True, timeout=10)
-            time.sleep(3)
-            if process.poll() is not None:
-                raise RuntimeError("ScummVM exited after confirming save name")
-            capture("after-save-confirmation")
+                    time.sleep(6)
         finally:
             process.terminate()
             try:
@@ -234,6 +248,7 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "new_save_clicked": True,
         "save_description_entered": "Adventure Studio CI",
         "save_confirmation_clicked": True,
+        "save_attempts": save_attempts,
         "save_dialog_pixel_difference": save_dialog_change,
         "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png",
                                   "save-dialog-after-click.png", "after-new-save-click.png",
