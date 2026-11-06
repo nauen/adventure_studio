@@ -43,6 +43,24 @@ def verify_global_menu_ready(path: Path) -> dict:
         return {"orange_panel_pixels": orange, "menu_rendered": True}
 
 
+def verify_no_original_menu_behind_gmm(path: Path) -> dict:
+    """Reject a second black SCUMM menu behind the native orange GMM."""
+    from PIL import Image
+
+    with Image.open(path) as image:
+        if image.size != (1024, 768):
+            raise ValueError("Unexpected ScummVM menu display dimensions")
+        # Outside the orange GMM, the active game room is purple here.
+        # The intermittent original SCUMM menu fills this area with black.
+        crop = image.convert("RGB").crop((240, 230, 365, 435))
+        pixels = (crop.get_flattened_data() if hasattr(crop, "get_flattened_data")
+                  else crop.getdata())
+        black = sum(1 for r, g, b in pixels if max(r, g, b) < 28)
+        if black > 12000:
+            raise ValueError("Original SCUMM menu is active behind ScummVM GMM")
+        return {"original_menu_overlay_rejected": False, "background_black_pixels": black}
+
+
 def verify_loaded_room(reference: Path, initial: Path, loaded: Path) -> dict:
     """Require the loaded screenshot to resemble the saved room, not the bootstrap."""
     saved_comparison = compare_screenshots(reference, loaded)
@@ -141,11 +159,17 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                         raise RuntimeError("ScummVM exited after Ctrl+F5")
                     try:
                         capture("save-menu-after-ctrl-f5", require_global_menu=True)
+                        verify_no_original_menu_behind_gmm(
+                            output / "save-menu-after-ctrl-f5.png")
                         break
-                    except ValueError:
+                    except ValueError as error:
                         if menu_attempt == 2:
-                            raise RuntimeError("Native ScummVM menu unavailable after three openings")
+                            raise RuntimeError(
+                                f"Native ScummVM save menu unavailable after three openings: {error}")
                         subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
+                        if "Original SCUMM menu" in str(error):
+                            subprocess.run(["xdotool", "key", "Escape"],
+                                           check=True, timeout=10)
                         time.sleep(2)
                 # Coordinates measured from the real ScummVM 2.8 GMM capture.
                 subprocess.run(["xdotool", "mousemove", "512", "367", "click", "1"],
@@ -203,6 +227,8 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
     room_change = (verify_room_transition(output / "polish-in-initial-room.png",
                                           output / "polish-before-menu.png") if select_polish else None)
     ready = verify_global_menu_ready(output / "save-menu-after-ctrl-f5.png")
+    original_menu_gate = verify_no_original_menu_behind_gmm(
+        output / "save-menu-after-ctrl-f5.png")
     save_dialog_change = verify_save_menu_open(output / "save-menu-after-ctrl-f5.png",
                                                output / "save-dialog-after-click.png")
     saves = sorted(path.name for path in save_path.iterdir()
@@ -255,6 +281,7 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "ctrl_f5_sent": True,
         "menu_visibly_changed": True,
         "global_menu_ready": ready,
+        "original_menu_gate": original_menu_gate,
         "menu_pixel_difference": menu_change,
         "save_button_clicked": True,
         "new_save_clicked": True,
