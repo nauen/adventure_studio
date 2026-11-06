@@ -96,6 +96,20 @@ after a visible room transition, for example in run
 [42257549127](https://github.com/nauen/adventure_studio/actions/runs/42257549127).
 The bounded retry waits after dismissing this dialog but is not a proven
 fix for the underlying condition.
+Six independent sessions in run
+[42284700791](https://github.com/nauen/adventure_studio/actions/runs/42284700791)
+reproduced two failures despite three save attempts each. Comparing native
+menu screenshots showed an extra black **original SCUMM menu** behind the
+orange ScummVM GMM in those failures; successful runs showed the purple room
+behind the GMM. The probe now checks that background before attempting Save.
+
+The test input changed from a rapid `xdotool key ctrl+F5` to explicitly
+holding `Control_L` before sending `F5`, then releasing it with a delay.
+With this change, all six stress sessions in
+[42287757595](https://github.com/nauen/adventure_studio/actions/runs/42287757595)
+saved and restored the room and language on their first attempts. This
+supports a keyboard-modifier timing race as the trigger, but one clean
+stress run cannot establish that the issue is permanently eliminated.
 When the first or second save attempt fails, the opt-in fixture also presses
 test key `7` after dismissing the menu: it prints either `Menu key enabled`
 or `Menu key disabled` based on `VAR_MAINMENU_KEY`. The resulting screenshot
