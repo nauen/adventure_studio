@@ -142,6 +142,15 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn("int untouched;", result)
         self.assertNotIn("Road", result)
 
+    def test_full_bootstrap_must_preserve_save_menu_enabling(self):
+        source = ("room Road;\nloadRoom(Road);\nlockRoom(Road);\n"
+                  "startRoom(Road);\nscript main (int bootParam) {\n"
+                  "VAR_MAINMENU_KEY = 319;\n}\n")
+        self.assertIn("VAR_MAINMENU_KEY = 319;",
+                      retarget_upstream_bootstrap(source, "Harbor"))
+        with self.assertRaisesRegex(ValueError, "save gate initialization"):
+            retarget_upstream_bootstrap(source.replace("319", "0"), "Harbor")
+
     def test_upstream_drift_fails_closed(self):
         with self.assertRaisesRegex(ValueError, "Unexpected upstream"):
             retarget_upstream_bootstrap("room Road;", "Harbor")
