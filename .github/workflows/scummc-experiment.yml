@@ -328,6 +328,11 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-fixture /tmp/recipe-smoke --recipe-only
+      - name: Combine same inventory items in reverse order in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-fixture /tmp/recipe-reverse-smoke --recipe-reverse-only
       - name: Publish visual probe summary
         if: always()
         run: |
@@ -461,6 +466,7 @@ jobs:
             /tmp/recipe-story-build/project.json
             /tmp/recipe-story-build/resources/*
             /tmp/recipe-smoke/*
+            /tmp/recipe-reverse-smoke/*
             /tmp/palette-story-build/project.json
             /tmp/palette-story-build/resources/*
             /tmp/palette-smoke/*
