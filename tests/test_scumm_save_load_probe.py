@@ -5,11 +5,33 @@ from unittest.mock import patch
 
 from adventure_studio.scumm_save_load_probe import (
     save_load_menu_probe, verify_save_menu_open, verify_global_menu_ready,
-    verify_loaded_room,
+    verify_loaded_room, verify_loaded_language_selection,
 )
 
 
 class SaveLoadMenuProbeTests(unittest.TestCase):
+    def test_loaded_language_highlight_matches_saved_selection(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            default, selected, loaded = (root / name for name in
+                                         ("default.png", "selected.png", "loaded.png"))
+            for screenshot in (default, selected, loaded):
+                Image.new("RGB", (1024, 768), (20, 70, 110)).save(screenshot)
+            for screenshot in (selected, loaded):
+                image = Image.open(screenshot).convert("RGB")
+                image.paste((240, 150, 20), (200, 465, 220, 475))
+                image.save(screenshot)
+            result = verify_loaded_language_selection(default, selected, loaded)
+            self.assertTrue(result["load_restored_language_verified"])
+            with self.assertRaisesRegex(ValueError, "not restored"):
+                verify_loaded_language_selection(default, selected, default)
+            with self.assertRaisesRegex(ValueError, "did not visibly change"):
+                verify_loaded_language_selection(selected, selected, loaded)
+
     def test_loaded_room_must_match_saved_room_and_differ_from_bootstrap(self):
         try:
             from PIL import Image
