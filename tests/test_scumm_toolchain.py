@@ -116,6 +116,9 @@ class ToolchainTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "verified language package"):
                 compile_story_game(root / "build", root / "scummc", root / "game",
                                    localize_story=True)
+            with self.assertRaisesRegex(ValueError, "require --localize-story"):
+                compile_story_game(root / "build", root / "scummc", root / "game",
+                                   graphical_language_buttons=True)
 
             road = root / "scummc" / "examples" / "road"
             source = (road / "common.scc").read_text(encoding="utf-8")
@@ -167,6 +170,13 @@ class ToolchainTests(unittest.TestCase):
             self.assertIn("/* de */", localized)
             self.assertIn("/* en */", localized)
             self.assertTrue((root / "game" / "tentacle.001").is_file())
+            compile_story_game(root / "build", root / "scummc", root / "game",
+                               runner=fake_run, localize_story=True,
+                               graphical_language_buttons=True)
+            self.assertIn("object LangDe {",
+                          (resources / "Harbor.scc").read_text(encoding="utf-8"))
+            self.assertTrue((resources / "HarborLangDe.bmp").is_file())
+            self.assertTrue((resources / "CellarLangEnActive.bmp").is_file())
 
     def test_story_names_determine_compiler_inputs_and_linker_order(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -207,3 +217,4 @@ class ToolchainTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

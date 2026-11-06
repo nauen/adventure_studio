@@ -162,6 +162,24 @@ automatische Übersetzung eines beliebigen Nutzer-Adventures. Der isolierte
 ScummVM und Raumwechsel prüfen; ein grüner Python-Test ersetzt diesen
 Engine-Nachweis nicht.
 
+
+## Experimentelle anklickbare Sprachauswahl
+
+`scumm_toolchain --localize-story --language-buttons` ergänzt jeden Raum
+um fünf anklickbare, per 8-Bit-BMP gezeichnete Sprachfelder `DE`, `EN`,
+`FR`, `JA` und `PL`. Jeder Raum erhält eigene Bitmap-Ressourcen in seiner
+vorhandenen Palette; ein `WalkTo` auf das Feld setzt `GameLanguage`.
+Das `watchLanguage`-Skript aktualisiert die Markierung des aktiven Feldes
+und die übersetzten Objektnamen. Ohne den expliziten Schalter bleibt
+der bisherige Build unverändert. Die Zifferntasten bleiben während der
+Erprobung zusätzlich verfügbar.
+
+Diese erste Fassung verwendet **Raumobjekte**, keine dauerhaft am
+Bildschirm fixierte GUI. Sie kann bei horizontal scrollenden Räumen aus
+dem sichtbaren Bereich wandern. Die ScummC-Kompilierung, tatsächliche
+Anklickbarkeit und Lesbarkeit der kleinen Bitmap-Beschriftungen müssen
+im Runtime-Test beziehungsweise anhand der Screenshots geprüft werden.
+
 ## Verbindliche Kompatibilitäts-Gates vor Aktivierung im Spiel-Export
 
 1. ScummC kompilieren und einen minimalen Raum mit `GameLanguage` und fünf

@@ -241,8 +241,17 @@ def indexed_bmp(room: RoomAsset) -> bytes:
     return _indexed_bmp(room.geometry.room_width, room.geometry.room_height, room.pixels, room.palette)
 
 
-def scummc_room_source(room: RoomAsset, catalog=None) -> str:
+def scummc_room_source(room: RoomAsset, catalog=None,
+                       graphical_language_buttons: bool = False) -> str:
     _validate(room)
+    if graphical_language_buttons and catalog is None:
+        raise ValueError("Graphical language buttons require a language catalog")
+    if graphical_language_buttons:
+        from .scumm_language_buttons import button_room_source, button_state_source
+        from .scumm_language_buttons import button_names
+        occupied = {hotspot.id for hotspot in room.hotspots}
+        if occupied.intersection(name for name, _lang, _code in button_names(catalog)):
+            raise ValueError("Language button object ID collides with a room hotspot")
     if catalog is not None:
         from .localization import scumm_language_dispatch, validate_catalog
         validate_catalog(catalog)
@@ -412,10 +421,12 @@ def scummc_room_source(room: RoomAsset, catalog=None) -> str:
                     "            }\n            return;\n",
                 ])
         parts.append("        }\n    }\n")
+    if graphical_language_buttons:
+        parts.append(button_room_source(room.name, catalog))
     # ScummC resolves object symbols before script bodies: place the watcher
     # after all object declarations, not before them. It refreshes cached
     # labels when the language changes within a loaded room.
-    if catalog is not None and room.hotspots:
+    if catalog is not None and (room.hotspots or graphical_language_buttons):
         parts.extend([
             "    local script watchLanguage() {\n",
             "        int observedLanguage;\n",
@@ -424,6 +435,7 @@ def scummc_room_source(room: RoomAsset, catalog=None) -> str:
             "            if(observedLanguage != GameLanguage) {\n",
             "                observedLanguage = GameLanguage;\n",
             *[localized_name(hotspot) for hotspot in room.hotspots],
+            *([button_state_source(catalog, 16)] if graphical_language_buttons else []),
             "            }\n",
             "            breakScript();\n",
             "        }\n",
@@ -437,7 +449,9 @@ def scummc_room_source(room: RoomAsset, catalog=None) -> str:
         "        setActorStanding();\n",
         "        cameraFollowActor(VAR_EGO);\n",
         *[localized_name(hotspot) for hotspot in room.hotspots],
-        *(["        watchLanguage();\n"] if catalog is not None and room.hotspots else []),
+        *([button_state_source(catalog)] if graphical_language_buttons else []),
+        *(["        watchLanguage();\n"] if catalog is not None and
+          (room.hotspots or graphical_language_buttons) else []),
         "        ResRoom::showVerbs(1);\n",
         "        ResRoom::showCursor();\n",
     ])
