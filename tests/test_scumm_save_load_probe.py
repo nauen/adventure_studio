@@ -6,11 +6,22 @@ from unittest.mock import patch
 from adventure_studio.scumm_save_load_probe import (
     save_load_menu_probe, verify_save_menu_open, verify_global_menu_ready,
     verify_loaded_room, verify_loaded_language_selection,
-    verify_no_original_menu_behind_gmm,
+    verify_no_original_menu_behind_gmm, open_native_global_menu,
 )
 
 
 class SaveLoadMenuProbeTests(unittest.TestCase):
+    @patch("adventure_studio.scumm_save_load_probe.time.sleep")
+    @patch("adventure_studio.scumm_save_load_probe.subprocess.run")
+    def test_native_global_menu_uses_held_control(self, run, sleep):
+        open_native_global_menu()
+        self.assertEqual([call.args[0] for call in run.call_args_list], [
+            ["xdotool", "keydown", "Control_L"],
+            ["xdotool", "key", "F5"],
+            ["xdotool", "keyup", "Control_L"],
+        ])
+        self.assertEqual(sleep.call_count, 2)
+
     def test_original_scumm_menu_behind_gmm_blocks_save(self):
         try:
             from PIL import Image
