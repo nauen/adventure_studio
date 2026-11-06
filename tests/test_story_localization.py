@@ -94,8 +94,17 @@ class StoryLocalizationTests(unittest.TestCase):
         self.assertEqual(catalog.languages, ("de", "en", "fr", "ja", "pl"))
         lines = {line.id: dict(line.translations) for line in catalog.lines}
         self.assertEqual(lines["room.harbor.use.0.response"]["de"], "Die Tür ist offen.")
+        self.assertEqual(lines["room.harbor.object.key.label"]["de"], "Schlüssel")
+        self.assertEqual(lines["room.harbor.object.door.label"]["ja"], "扉")
+        self.assertEqual(lines["room.harbor.object.door.description"]["pl"], "Zamknięte drzwi.")
         self.assertIn("地下室", lines["room.cellar.goal"]["ja"])
         self.assertNotEqual(lines["room.cellar.goal"]["pl"], lines["room.cellar.goal"]["en"])
+        harbor = scummc_room_source(scrolling_fixture(), catalog)
+        cellar = scummc_room_source(destination_fixture(), catalog)
+        self.assertIn("setObjectName(Key", harbor)
+        self.assertIn("setObjectName(Door", harbor)
+        self.assertIn("/* ja */", cellar)
+        self.assertIn("/* pl */", harbor)
         self.assertLessEqual(len(charset_plan(catalog).extra_glyphs), 126)
         self.assertEqual(canonical_catalog_json(catalog), canonical_catalog_json(fixture_catalog(document)))
 
@@ -118,3 +127,4 @@ class StoryLocalizationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

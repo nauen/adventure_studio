@@ -1,7 +1,8 @@
 """Bounded five-language SCUMM integration fixture, not production translations.
 
-Most fixture strings deliberately reuse their English source. Only two
-identified lines exercise all five actual language branches in the interpreter.
+Most fixture strings deliberately reuse their English source. A bounded set
+of object names, a description, a response and a goal exercise the runtime
+language branches across both rooms.
 """
 
 from __future__ import annotations
@@ -27,17 +28,35 @@ TRANSLATED_DOOR = {
     "ja": "扉が開きました。",
     "pl": "Drzwi są otwarte.",
 }
+TRANSLATED_KEY_NAME = {
+    "de": "Schlüssel", "fr": "clé", "ja": "鍵", "pl": "klucz",
+}
+TRANSLATED_DOOR_NAME = {
+    "de": "Tür", "fr": "porte", "ja": "扉", "pl": "drzwi",
+}
+TRANSLATED_DOOR_DESCRIPTION = {
+    "de": "Eine verschlossene Tür.",
+    "fr": "Une porte fermée.",
+    "ja": "閉じた扉。",
+    "pl": "Zamknięte drzwi.",
+}
+TRANSLATED = {
+    "room.cellar.goal": TRANSLATED_GOAL,
+    "room.harbor.use.0.response": TRANSLATED_DOOR,
+    "room.harbor.object.key.label": TRANSLATED_KEY_NAME,
+    "room.harbor.object.door.label": TRANSLATED_DOOR_NAME,
+    "room.harbor.object.door.description": TRANSLATED_DOOR_DESCRIPTION,
+}
 
 
 def fixture_catalog(document: GameDocument) -> LanguageCatalog:
     inventory = story_text_inventory(document)
-    required = {"room.cellar.goal", "room.harbor.use.0.response"}
+    required = set(TRANSLATED)
     if not required <= inventory.keys():
         raise ValueError("Language fixture requires the two-room key-and-door story")
     lines = []
     for key, source in inventory.items():
-        translated = (TRANSLATED_GOAL if key == "room.cellar.goal" else
-                      TRANSLATED_DOOR if key == "room.harbor.use.0.response" else {})
+        translated = TRANSLATED.get(key, {})
         lines.append(LocalizedLine(key, tuple(
             (language, source if language == "en" else translated.get(language, source))
             for language in LANGUAGES
@@ -61,3 +80,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

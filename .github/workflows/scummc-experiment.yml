@@ -51,17 +51,31 @@ jobs:
     runs-on: ubuntu-24.04
     # ScummVM pulls a large data package. The Ubuntu mirror occasionally
     # stalls; give the full job enough time while bounding the install step.
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Restore previously downloaded Ubuntu packages
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/scumm-experimental-apt
+          key: ubuntu-24.04-scumm-experimental-apt-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ubuntu-24.04-scumm-experimental-apt-
       - name: Install compiler dependencies and stock ScummVM
-        timeout-minutes: 18
+        timeout-minutes: 35
         run: |
+          sudo mkdir -p /tmp/scumm-experimental-apt/partial
           sudo apt-get -o Acquire::Retries=4 -o Acquire::http::Timeout=45 update
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=4 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm timgm6mb-soundfont xvfb xauth x11-apps xdotool imagemagick
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Dir::Cache::archives=/tmp/scumm-experimental-apt -o Acquire::Retries=4 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm timgm6mb-soundfont xvfb xauth x11-apps xdotool imagemagick
+      - name: Save downloaded Ubuntu packages even when install times out
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/scumm-experimental-apt
+          key: ubuntu-24.04-scumm-experimental-apt-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Fetch unmodified ScummC
         run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
       - name: Fix legacy ScummC tool help paths in ephemeral checkout
