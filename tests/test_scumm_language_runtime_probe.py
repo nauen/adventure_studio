@@ -4,7 +4,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from adventure_studio.scumm_language_runtime_probe import (
-    compare_screenshots, language_runtime_probe, verify_room_transition,
+    compare_screenshots, language_runtime_probe, verify_language_button_change,
+    verify_room_transition,
 )
 
 
@@ -45,6 +46,24 @@ class LanguageRuntimeProbeTests(unittest.TestCase):
             Image.new("RGB", (12, 12), (0, 0, 0)).save(after)
             self.assertEqual(compare_screenshots(before, after),
                              {"changed_pixels": 0, "changed_ratio": 0.0})
+
+    def test_graphical_selection_checks_only_badge_region(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Optional Pillow dependency is unavailable")
+        with tempfile.TemporaryDirectory() as temp:
+            before = Path(temp) / "before.png"
+            after = Path(temp) / "after.png"
+            Image.new("RGB", (1024, 768), (10, 20, 30)).save(before)
+            picture = Image.new("RGB", (1024, 768), (10, 20, 30))
+            for x in range(210, 230):
+                for y in range(194, 210):
+                    picture.putpixel((x, y), (100, 220, 30))
+            picture.save(after)
+            self.assertGreaterEqual(verify_language_button_change(before, after)["changed_pixels"], 300)
+            with self.assertRaisesRegex(ValueError, "did not visibly change"):
+                verify_language_button_change(before, before)
 
     def test_missing_display_fails_without_spawning_engine(self):
         with patch.dict("os.environ", {"DISPLAY": ""}):

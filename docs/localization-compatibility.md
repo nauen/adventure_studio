@@ -176,9 +176,12 @@ Erprobung zusätzlich verfügbar.
 
 Diese erste Fassung verwendet **Raumobjekte**, keine dauerhaft am
 Bildschirm fixierte GUI. Sie kann bei horizontal scrollenden Räumen aus
-dem sichtbaren Bereich wandern. Die ScummC-Kompilierung, tatsächliche
-Anklickbarkeit und Lesbarkeit der kleinen Bitmap-Beschriftungen müssen
-im Runtime-Test beziehungsweise anhand der Screenshots geprüft werden.
+dem sichtbaren Bereich wandern. Die ScummC-Kompilierung der 32×16-Bitmaps und der Spielstart sind
+inzwischen bestanden. Der separate Runtime-Klicktest klickt das DE-Feld
+nach polnischer Auswahl, verschiebt den Mauszeiger anschließend weg und
+prüft nur die obere Button-Zone auf sichtbare Änderung. Das ist ein
+Interaktionstest, **kein** pixelgenauer Lesbarkeits- oder OCR-Beweis.
+Die Darstellung ist weiterhin anhand der Screenshots manuell zu prüfen.
 
 ## Verbindliche Kompatibilitäts-Gates vor Aktivierung im Spiel-Export
 
