@@ -4,12 +4,33 @@ from pathlib import Path
 from unittest.mock import patch
 
 from adventure_studio.scumm_language_runtime_probe import (
-    compare_screenshots, language_runtime_probe, verify_language_button_change,
+    compare_fixed_language_gui_across_rooms, compare_screenshots,
+    language_runtime_probe, verify_language_button_change,
     verify_room_transition, verify_capture_visible,
 )
 
 
 class LanguageRuntimeProbeTests(unittest.TestCase):
+    def test_screen_fixed_gui_region_ignores_room_pixels(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Optional Pillow dependency is unavailable")
+        with tempfile.TemporaryDirectory() as temp:
+            before = Path(temp) / "before.png"
+            after = Path(temp) / "after.png"
+            Image.new("RGB", (1024, 768), (15, 15, 15)).save(before)
+            picture = Image.new("RGB", (1024, 768), (15, 15, 15))
+            picture.paste((210, 90, 40), (192, 184, 832, 458))
+            picture.save(after)
+            self.assertEqual(compare_fixed_language_gui_across_rooms(before, after)["changed_pixels"], 0)
+            picture.paste((210, 90, 40), (210, 465, 230, 477))
+            picture.save(after)
+            self.assertEqual(compare_fixed_language_gui_across_rooms(before, after)["changed_pixels"], 240)
+            Image.new("RGB", (100, 100), (15, 15, 15)).save(after)
+            with self.assertRaisesRegex(ValueError, "dimensions are incompatible"):
+                compare_fixed_language_gui_across_rooms(before, after)
+
     def test_blank_capture_rejected_even_when_file_exists(self):
         try:
             from PIL import Image

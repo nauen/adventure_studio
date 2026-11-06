@@ -85,6 +85,26 @@ def verify_capture_visible(path: Path) -> dict:
         return {"contrast_spread": spread, "dimensions": list(rgb.size)}
 
 
+def compare_fixed_language_gui_across_rooms(before: Path, after: Path) -> dict:
+    """Measure the fixed GUI row independently of the scrolling room scene.
+
+    A zero difference is evidence of stable pixels, not text recognition or
+    proof that every language control remains interactive.
+    """
+    from PIL import Image
+
+    region = (200, 460, 340, 484)
+    with Image.open(before) as original, Image.open(after) as changed:
+        if original.size != changed.size or original.width < region[2] or original.height < region[3]:
+            raise ValueError("Fixed language GUI screenshot dimensions are incompatible")
+        with tempfile.TemporaryDirectory() as temp:
+            before_crop = Path(temp) / "before.png"
+            after_crop = Path(temp) / "after.png"
+            original.crop(region).save(before_crop)
+            changed.crop(region).save(after_crop)
+            return compare_screenshots(before_crop, after_crop)
+
+
 def language_runtime_probe(game: Path, output: Path,
                            graphical_language_buttons: bool = False,
                            screen_language_gui: bool = False) -> dict:
@@ -165,6 +185,8 @@ def language_runtime_probe(game: Path, output: Path,
         output / "pl_button_before.png", output / "de_button_after.png",
         screen_fixed=screen_language_gui)
         if graphical_language_buttons or screen_language_gui else None)
+    fixed_gui_room_evidence = (compare_fixed_language_gui_across_rooms(
+        output / "pl.png", output / "room_after_pl.png") if screen_language_gui else None)
     report = {"engine_survived_key_selection": True,
               "nonblank_captures_verified": True,
               **room_evidence,
@@ -176,6 +198,7 @@ def language_runtime_probe(game: Path, output: Path,
               "post_room_probe_visibly_responded": True,
               "graphical_button_click_attempted": graphical_language_buttons or screen_language_gui,
               "screen_fixed_language_gui": screen_language_gui,
+              "screen_gui_across_rooms_pixel_change": fixed_gui_room_evidence,
               "graphical_button_selection_changed": button_evidence is not None,
               "graphical_button_pixel_change": button_evidence,
               "room_transition_probe_attempted": True,
