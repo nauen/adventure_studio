@@ -61,6 +61,17 @@ def verify_no_original_menu_behind_gmm(path: Path) -> dict:
         return {"original_menu_overlay_rejected": False, "background_black_pixels": black}
 
 
+def open_native_global_menu() -> None:
+    """Keep Ctrl held across F5 to avoid firing the original game's bare F5."""
+    subprocess.run(["xdotool", "keydown", "Control_L"], check=True, timeout=10)
+    try:
+        time.sleep(0.25)
+        subprocess.run(["xdotool", "key", "F5"], check=True, timeout=10)
+        time.sleep(0.25)
+    finally:
+        subprocess.run(["xdotool", "keyup", "Control_L"], check=True, timeout=10)
+
+
 def verify_loaded_room(reference: Path, initial: Path, loaded: Path) -> dict:
     """Require the loaded screenshot to resemble the saved room, not the bootstrap."""
     saved_comparison = compare_screenshots(reference, loaded)
@@ -153,8 +164,7 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True,
             for save_attempt in range(3 if select_polish else 1):
                 save_attempts += 1
                 for menu_attempt in range(3):
-                    subprocess.run(["xdotool", "key", "--clearmodifiers", "ctrl+F5"],
-                                   check=True, timeout=10)
+                    open_native_global_menu()
                     time.sleep(2)
                     if process.poll() is not None:
                         raise RuntimeError("ScummVM exited after Ctrl+F5")
