@@ -95,8 +95,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          cp -a /tmp/language-story /tmp/stock-font-story
-          rm /tmp/stock-font-story/resources/multilingual-font.char
+          python -m adventure_studio.story_document examples/mini_story_language_en.json /tmp/stock-font-story
           python -m adventure_studio.scumm_toolchain /tmp/stock-font-story /tmp/scummc-language /tmp/stock-font-game
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/stock-font-game /tmp/stock-font-evidence --no-polish
       - name: Upload linked game and screenshots for visual inspection
