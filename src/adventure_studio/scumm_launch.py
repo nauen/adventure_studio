@@ -207,7 +207,7 @@ def parse_key_bounds(bounds: str) -> tuple[int, int]:
 
 def key_center(output_directory: Path, frame: str = "end") -> tuple[int, int]:
     """Locate the visible key silhouette, rather than assuming camera offset."""
-    if frame not in ("end", "pre-pickup"):
+    if frame not in ("end", "pre-pickup", "pre-pickup-retry"):
         raise ValueError("Invalid key location frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
