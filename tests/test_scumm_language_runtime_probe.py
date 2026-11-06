@@ -5,11 +5,29 @@ from unittest.mock import patch
 
 from adventure_studio.scumm_language_runtime_probe import (
     compare_screenshots, language_runtime_probe, verify_language_button_change,
-    verify_room_transition,
+    verify_room_transition, verify_capture_visible,
 )
 
 
 class LanguageRuntimeProbeTests(unittest.TestCase):
+    def test_blank_capture_rejected_even_when_file_exists(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Optional Pillow dependency is unavailable")
+        with tempfile.TemporaryDirectory() as temp:
+            frame = Path(temp) / "capture.png"
+            Image.new("RGB", (640, 480), (50, 50, 50)).save(frame)
+            self.assertGreater(frame.stat().st_size, 1000)
+            with self.assertRaisesRegex(ValueError, "Blank or low-contrast"):
+                verify_capture_visible(frame)
+            varied = Image.new("RGB", (640, 480), (50, 50, 50))
+            for x in range(20, 600):
+                varied.paste((200, 150, 100), (x, 20, x + 1, 250))
+            varied.save(frame)
+            self.assertEqual(verify_capture_visible(frame)["dimensions"], [640, 480])
+            self.assertEqual(verify_capture_visible(frame)["contrast_spread"], 150)
+
     def test_room_transition_requires_large_visible_pixel_change(self):
         try:
             from PIL import Image
