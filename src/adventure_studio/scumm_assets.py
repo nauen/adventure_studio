@@ -209,13 +209,17 @@ def _validate(room: RoomAsset) -> None:
         if rule.item_id in rule.requires_inventory or any(item not in pickups for item in rule.requires_inventory):
             raise ValueError("Use rule inventory requirements must reference distinct pickup items")
     results: set[str] = set()
+    combination_inputs: set[str] = set()
     for rule in room.combine_rules:
         if (len({rule.first_id, rule.second_id, rule.result_id}) != 3
                 or any(item not in pickups for item in (rule.first_id, rule.second_id, rule.result_id))):
             raise ValueError("Combination must reference three distinct room inventory objects")
-        if rule.result_id in results or rule.second_id in targets:
+        if (rule.result_id in results
+                or rule.first_id in targets or rule.second_id in targets
+                or rule.first_id in combination_inputs or rule.second_id in combination_inputs):
             raise ValueError("Ambiguous combination result or target")
         results.add(rule.result_id)
+        combination_inputs.update((rule.first_id, rule.second_id))
         _scumm_string(rule.response)
     if any(rule.first_id in results or rule.second_id in results for rule in room.combine_rules):
         raise ValueError("Chained combinations are not supported by the bounded SCUMM adapter")
@@ -382,7 +386,8 @@ def scummc_room_source(room: RoomAsset, catalog=None,
             parts.append("            return;\n")
         if hotspot.pickup:
             if (any(rule.item_id == hotspot.id for rule in room.use_rules)
-                    or any(rule.first_id == hotspot.id for rule in room.combine_rules)):
+                    or any(hotspot.id in (rule.first_id, rule.second_id)
+                           for rule in room.combine_rules)):
                 parts.extend(["        case Preposition:\n",
                               '            sntcPrepo[0] = "with";\n',
                               "            return;\n"])
@@ -411,10 +416,12 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                     parts.append(f"                startRoom({rule.destination_room});\n")
                 parts.extend(["                return;\n", "            }\n", "            return;\n"])
         for index, rule in enumerate(room.combine_rules):
-            if rule.second_id == hotspot.id:
+            if hotspot.id in (rule.first_id, rule.second_id):
+                other_id = (rule.first_id if hotspot.id == rule.second_id
+                            else rule.second_id)
                 parts.extend([
                     "        case Use:\n",
-                    f"            if(objB == {rule.first_id} && getObjectOwner({rule.first_id}) == VAR_EGO",
+                    f"            if(objB == {other_id} && getObjectOwner({rule.first_id}) == VAR_EGO",
                     f" && getObjectOwner({rule.second_id}) == VAR_EGO) {{\n",
                     f"                combine_{index}();\n",
                     "                return;\n",
