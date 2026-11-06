@@ -109,7 +109,7 @@ def inject_language_keys(source: str, header: str, catalog) -> tuple[str, str]:
 
 
 def inject_language_room_probe(source: str, destination: str, catalog) -> str:
-    """Add opt-in test keys: 0 changes rooms, 6 repeats the saved language.
+    """Add opt-in test keys: room 0, language 6, save-gate state 7.
 
     This is only for the runtime fixture, never for regular game controls.
     The source must already contain the language keyboard selector.
@@ -122,7 +122,7 @@ def inject_language_room_probe(source: str, destination: str, catalog) -> str:
     marker = "script keyboardHandler(int key) {\n        switch(key) {"
     if source.count(marker) != 1:
         raise ValueError("Missing language keyboard handler")
-    if source.count("case '0':") or source.count("case '6':"):
+    if any(source.count(f"case '{key}':") for key in ("0", "6", "7")):
         raise ValueError("Language probe keys already reserved")
     if not catalog.lines:
         raise ValueError("Language probe needs a translated line")
@@ -139,7 +139,11 @@ def inject_language_room_probe(source: str, destination: str, catalog) -> str:
         "            break;\n"
         "        case '6':\n"
         + branches
-        + "            break;"
+        + "            break;\n"
+        "        case '7':\n"
+        "            if (VAR_MAINMENU_KEY == 0) egoSay(\"Menu key disabled\");\n"
+        "            else egoSay(\"Menu key enabled\");\n"
+        "            break;"
     )
     source = source.replace(marker, marker + probe, 1)
     return f"room {destination};\n" + source
