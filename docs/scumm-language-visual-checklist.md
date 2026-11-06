@@ -60,31 +60,62 @@ Do not merge the localization PR solely on the strength of the automated
 pixel report. Preserve the screenshots and record this checklist's pass/fail
 results before changing the opt-in feature into a default behavior.
 
-## Save/load investigation (not yet an acceptance gate)
+## Native ScummVM save/load integration gate
 
-The isolated save-menu probe runs with its own `--config` and `--savepath`,
-so it cannot alter a developer's existing ScummVM profile or saves. It
-captures `polish-before-menu.png`, `save-menu-after-ctrl-f5.png`,
-`after-escape.png`, and `menu-after-f5.png`. The JSON report distinguishes
-keys being sent from actions actually verified. Neither a nonblank screenshot
-nor a changed-pixel threshold proves that a save slot is usable.
+The isolated probe uses its own `--config` and `--savepath`, preserving the
+developer's ScummVM profile and existing saves. It selects Polish with key
+`5`, changes to Cellar with key `0`, opens the native global menu, creates
+slot `tentacle.s01`, restarts ScummVM with `--save-slot=1`, and captures the
+restored room and fixed language controls.
 
-In run [42233319743](https://github.com/nauen/adventure_studio/actions/runs/42233319743),
-both menu shortcuts visibly opened a dark menu with many identical-looking
-purple square glyphs. The menu labels were not legible in the captured
-images. **Do not automate blind save/load clicks or report persistence as
-passing based on these pictures.** A separate stock-font comparison is being
-used to isolate whether the multilingual CHAR replacement caused this.
+The **SCUMM v6 multilingual gameplay probe** workflow now fails unless all
+three fields in `save-load-menu-report.json` are true:
 
-Once the controls are legible, the full integration gate must:
+- `save_created_verified`: a nonempty `tentacle.s01` exists.
+- `load_restored_room_verified`: the loaded scene is close to the saved
+  scene and differs substantially from the initial bootstrap room.
+- `load_restored_language_verified`: the fixed language GUI differs from
+  its default selection before saving and matches the selected state after
+  loading. This checks the visible active-language highlight, not a direct
+  dump of the internal `GameLanguage` variable.
 
-1. Select Polish and verify a new, nonempty save-slot file appears in the
-   dedicated save directory after an actual menu action.
-2. Switch to Japanese and change rooms; record a scene screenshot and the
-   state of the language controls.
-3. Load the newly saved slot and check the original room and Polish language
-   independently. A mere process restart or successful `--save-slot` launch
-   must not be counted as state restoration without visual evidence.
-4. Preserve the menu, save-slot inventory, before/after scene screenshots,
-   and ScummVM log as CI artifacts. Keep the feature opt-in until the gate
-   and manual readability review both pass.
+The full gate passed in run
+[42271624051](https://github.com/nauen/adventure_studio/actions/runs/42271624051).
+The archive includes `before-polish-selection.png`,
+`polish-in-initial-room.png`, `polish-before-menu.png`,
+`save-menu-after-ctrl-f5.png`, `after-save-confirmation.png`,
+`after-loading-slot-1.png`, and per-attempt screenshots named
+`after-save-confirmation-attempt-N.png`. The report includes `save_attempts`
+and `save_attempts_without_slot` so a successful retry does not hide an
+earlier rejection.
+
+### Intermittent native save rejection
+
+The engine has sometimes shown **"This game cannot be saved at this time"**
+after a visible room transition, for example in run
+[42257549127](https://github.com/nauen/adventure_studio/actions/runs/42257549127).
+The bounded retry waits after dismissing this dialog but is not a proven
+fix for the underlying condition.
+
+In ScummVM 2.8.0, `ScummEngine::canSaveGameStateCurrently()` in
+`engines/scumm/saveload.cpp` denies saves in SCUMM v4+ when the current
+room is `0`, or when the `VAR_MAINMENU_KEY` variable is defined but contains
+`0`. The ScummC Road bootstrap initializes `VAR_MAINMENU_KEY = 319`.
+The ScummVM v6 variable mapping uses index **65** for that variable.
+
+To identify which condition fails, reproduce the game state and open the
+ScummVM debugger with `Ctrl+D` *before* opening the save menu. Query:
+
+```text
+scumm_room
+scumm_vars[65]
+```
+
+The room must be nonzero and `scumm_vars[65]` should be `319`. Capture
+the debugger output in the failing and successful states, then enter
+`exit` to resume. Do not change either variable through the debugger as
+part of the evidence collection. If both values satisfy the save gate,
+inspect the active menu configuration and the exact engine version next.
+
+This is still an opt-in research fixture. The manual font legibility checks
+above remain required before enabling localization by default.
