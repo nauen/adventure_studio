@@ -115,6 +115,22 @@ class StoryLocalizationTests(unittest.TestCase):
         self.assertLessEqual(len(charset_plan(catalog).extra_glyphs), 126)
         self.assertEqual(canonical_catalog_json(catalog), canonical_catalog_json(fixture_catalog(document)))
 
+    def test_story_json_runtime_fixture_has_complete_five_language_texts(self):
+        example = (Path(__file__).resolve().parents[1] /
+                   "examples/mini_story_language_en.json").read_text(encoding="utf-8")
+        game = compile_story_to_scumm(parse_story_document(example))
+        catalog = fixture_catalog(game)
+        self.assertEqual(catalog.source_language, "en")
+        self.assertEqual(len(catalog.lines), 7)
+        self.assertLessEqual(len(charset_plan(catalog).extra_glyphs), 126)
+        lines = {line.id: dict(line.translations) for line in catalog.lines}
+        for key, text in story_text_inventory(game).items():
+            self.assertEqual(lines[key]["en"], text)
+            self.assertTrue(all(lines[key][language] != text
+                                for language in ("de", "fr", "ja", "pl")))
+        harbor = next(room for room in game.rooms if room.name == "Harbor")
+        self.assertIn("watchLanguage();", scummc_room_source(harbor, catalog))
+
     def test_catalog_requires_exact_ids_and_matching_source(self):
         inventory = story_text_inventory(self.document())
         lines = tuple(LocalizedLine(key, (("de", text), ("en", text)))

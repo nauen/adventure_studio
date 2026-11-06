@@ -69,20 +69,60 @@ TRANSLATED = {
     "room.cellar.object.stairs.description": TRANSLATED_STAIRS_DESCRIPTION,
 }
 
+# mini_story_language_en.json is an English source variant of the tiny story.
+# Keep it separate from the original German mini_story.json example, whose
+# legacy ASCII literals must remain unchanged for other compatibility tests.
+STORY_TRANSLATED = {
+    "room.cellar.goal": {
+        "de": "Die Kellertür ist jetzt offen.", "en": "The cellar door is open now.",
+        "fr": "La porte de la cave est ouverte.", "ja": "地下室の扉が開きました。",
+        "pl": "Drzwi do piwnicy są otwarte.",
+    },
+    "room.harbor.object.door.description": {
+        "de": "Die Kellertür ist jetzt offen.", "en": "The cellar door is open now.",
+        "fr": "La porte de la cave est ouverte.", "ja": "地下室の扉が開きました。",
+        "pl": "Drzwi do piwnicy są otwarte.",
+    },
+    "room.harbor.object.door.label": {
+        "de": "der Ausgang", "en": "the exit", "fr": "la sortie",
+        "ja": "出口", "pl": "wyjście",
+    },
+    "room.harbor.object.door.locked": {
+        **TRANSLATED_DOOR_LOCKED, "en": "The door is locked.",
+    },
+    "room.harbor.object.key.description": {
+        "de": "Ein verrosteter Schlüssel.", "en": "A rusty key.",
+        "fr": "Une clé rouillée.", "ja": "さびた鍵。",
+        "pl": "Zardzewiały klucz.",
+    },
+    "room.harbor.object.key.label": {
+        "de": "Schlüssel", "en": "key", "fr": "clé",
+        "ja": "鍵", "pl": "klucz",
+    },
+    "room.harbor.use.0.response": {
+        "de": "Die Kellertür ist jetzt offen.", "en": "The cellar door is open now.",
+        "fr": "La porte de la cave est ouverte.", "ja": "地下室の扉が開きました。",
+        "pl": "Drzwi do piwnicy są otwarte.",
+    },
+}
+
 
 def fixture_catalog(document: GameDocument) -> LanguageCatalog:
     inventory = story_text_inventory(document)
-    required = set(TRANSLATED)
-    if not required <= inventory.keys():
-        raise ValueError("Language fixture requires the two-room key-and-door story")
+    if set(inventory) == set(TRANSLATED):
+        translations, source_language = TRANSLATED, "en"
+    elif set(inventory) == set(STORY_TRANSLATED):
+        translations, source_language = STORY_TRANSLATED, "en"
+    else:
+        raise ValueError("Language fixture requires a supported two-room key-and-door story")
     lines = []
     for key, source in inventory.items():
-        translated = TRANSLATED.get(key, {})
+        translated = translations[key]
         lines.append(LocalizedLine(key, tuple(
-            (language, source if language == "en" else translated[language])
+            (language, source if language == source_language else translated[language])
             for language in LANGUAGES
         )))
-    catalog = LanguageCatalog("en", LANGUAGES, tuple(lines))
+    catalog = LanguageCatalog(source_language, LANGUAGES, tuple(lines))
     validate_story_catalog(document, catalog)
     return catalog
 

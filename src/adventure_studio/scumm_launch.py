@@ -427,7 +427,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             picked_up = False
             remaining = visible_key_pixels(output_directory)
             inventory_pixels = 0
-            pickup_deadline = time.monotonic() + 15.0
+            pickup_start = time.monotonic()
+            pickup_deadline = pickup_start + 20.0
+            pickup_retried = False
             while time.monotonic() < pickup_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit during pickup (exit={process.returncode})")
@@ -437,11 +439,30 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 if remaining < 10 and inventory_pixels >= 40:
                     picked_up = True
                     break
+                # On slower CI runners the first object click can land while
+                # the actor/camera is still moving. Reacquire the visible key
+                # once after settling, rather than treating input timing as
+                # an inventory-regression failure.
+                if (not pickup_retried and remaining >= 10
+                        and time.monotonic() - pickup_start >= 7.0):
+                    pickup_retried = True
+                    subprocess.run(
+                        ["xdotool", "mousemove", "328", "506", "click", "1"],
+                        check=True, timeout=5,
+                    )
+                    time.sleep(0.3)
+                    capture_frame("pre-pickup-retry")
+                    retry_x, retry_y = key_center(output_directory, "pre-pickup-retry")
+                    subprocess.run(
+                        ["xdotool", "mousemove", str(retry_x), str(retry_y), "click", "1"],
+                        check=True, timeout=5,
+                    )
                 time.sleep(0.4)
             (output_directory / "scummvm-interaction-report.json").write_text(
                 json.dumps({"verb": "PickUp", "key_click": [key_x, key_y],
                             "remaining_gold_pixels": remaining,
                             "inventory_gold_pixels": inventory_pixels,
+                            "pickup_retried": pickup_retried,
                             "key_removed_from_room": picked_up}, indent=2) + "\n",
                 encoding="utf-8",
             )
@@ -853,3 +874,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

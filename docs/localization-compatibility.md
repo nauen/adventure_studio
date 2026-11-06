@@ -146,10 +146,13 @@ Tür-Fehlermeldung hat nun eine eigene stabile Übersetzungs-ID. Die Darstellung
 bleibt gesondert im Interpreter zu verifizieren.
 
 `story_language_fixture.py` erzeugt einen begrenzten Integrationskatalog,
-in dem **alle neun Texte** der kleinen Zwei-Raum-Geschichte in fünf Sprachen
-vorliegen: Objektnamen und -beschreibungen, Tür-/Rätselantworten und Zieltext.
-Das ist eine vollständige Übersetzung **dieses Testspiels**, keine automatische
-Übersetzung eines beliebigen Nutzer-Adventures. Der isolierte
+in dem **alle neun Texte** der Zeichentest-Geschichte in fünf Sprachen
+vorliegen. Für den echten ScummVM-Test wird eine separate englische
+`mini_story_language_en.json` mit **sieben** sichtbaren Story-Texten verwendet;
+auch diese sind in allen fünf Sprachen vollständig übersetzt. Objektnamen,
+Beschreibungen, Tür-/Rätselantworten und Zieltexte sind abgedeckt.
+Das sind vollständige Übersetzungen **dieser kleinen Testspiele**, keine
+automatische Übersetzung eines beliebigen Nutzer-Adventures. Der isolierte
 `language-runtime.yml`-Workflow soll damit den echten ScummC-Compiler,
 ScummVM und Raumwechsel prüfen; ein grüner Python-Test ersetzt diesen
 Engine-Nachweis nicht.

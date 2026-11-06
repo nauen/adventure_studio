@@ -16,6 +16,7 @@ on:
       - 'src/adventure_studio/scumm_language_runtime_probe.py'
       - 'src/adventure_studio/localization.py'
       - 'examples/language_probe.json'
+      - 'examples/mini_story_language_en.json'
   pull_request:
     paths:
       - '.github/workflows/language-runtime.yml'
@@ -62,7 +63,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          python -m adventure_studio.story_document examples/mini_story.json /tmp/language-story
+          python -m adventure_studio.story_document examples/mini_story_language_en.json /tmp/language-story
           CHAR_BIN=$(find /tmp/scummc-language -type f -name char -executable -print -quit)
           LATIN_FONT=$(find /usr/share/fonts -type f -name DejaVuSans.ttf -print -quit)
           CJK_FONT=$(find /usr/share/fonts -type f \( -iname 'ipag.ttf' -o -iname 'ipagp.ttf' \) -print -quit)
