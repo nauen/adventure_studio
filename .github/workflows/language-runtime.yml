@@ -99,6 +99,36 @@ jobs:
           python -m adventure_studio.story_document examples/mini_story_language_en.json /tmp/stock-font-story
           python -m adventure_studio.scumm_toolchain /tmp/stock-font-story /tmp/scummc-language /tmp/stock-font-game
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/stock-font-game /tmp/stock-font-evidence --no-polish
+      - name: Compare stock and multilingual menu glyph regions
+        run: |
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+          from PIL import Image, ImageChops
+
+          sources = {
+              "multilingual": Path("/tmp/save-load-evidence/save-menu-after-ctrl-f5.png"),
+              "stock": Path("/tmp/stock-font-evidence/save-menu-after-ctrl-f5.png"),
+          }
+          menus = {}
+          stats = {}
+          for name, path in sources.items():
+              with Image.open(path) as image:
+                  # Known 1024x768 Xvfb menu text area from the CI screenshot.
+                  crop = image.convert("RGB").crop((365, 250, 630, 425))
+                  menus[name] = crop.copy()
+                  colors = Counter(crop.getdata())
+                  stats[name] = {
+                      "frequent_colors": [[list(rgb), count] for rgb, count in colors.most_common(6)],
+                      "nonblack_pixels": sum(n for rgb, n in colors.items() if max(rgb) > 35),
+                  }
+          pixels = ImageChops.difference(menus["multilingual"], menus["stock"]).getdata()
+          stats["cross_font_changed_pixels"] = sum(1 for pixel in pixels if max(pixel) >= 24)
+          output = Path("/tmp/save-load-evidence/menu-font-comparison.json")
+          output.write_text(json.dumps(stats, indent=2, sort_keys=True) + "\\n")
+          print(json.dumps(stats, sort_keys=True))
+          PY
       - name: Upload linked game and screenshots for visual inspection
         if: always()
         uses: actions/upload-artifact@v4
