@@ -161,7 +161,10 @@ def language_runtime_probe(game: Path, output: Path,
             # Keep Polish selected while changing rooms, then repeat the
             # translated line without changing GameLanguage.
             for key, code in (*LANGUAGE_PROBE_KEYS,
-                              ("0", "room_after_pl"), ("6", "pl_after_room")):
+                              ("0", "room_after_pl"),
+                              ("4", "ja_after_room"),
+                              ("5", "pl_returned_after_room"),
+                              ("6", "pl_after_room")):
                 subprocess.run(["xdotool", "key", key], check=True, timeout=10)
                 time.sleep(2)
                 if process.poll() is not None:
@@ -194,6 +197,10 @@ def language_runtime_probe(game: Path, output: Path,
         output / "room_after_pl.png", output / "pl_after_room.png")
     if post_room_difference["changed_pixels"] == 0:
         raise ValueError("Post-room language probe produced no visible response")
+    post_room_language_switch = compare_screenshots(
+        output / "ja_after_room.png", output / "pl_returned_after_room.png")
+    if post_room_language_switch["changed_pixels"] == 0:
+        raise ValueError("Language switch after room transition produced no visible response")
     button_evidence = (verify_language_button_change(
         output / "pl_button_before.png", output / "de_button_after.png",
         screen_fixed=screen_language_gui)
@@ -210,8 +217,10 @@ def language_runtime_probe(game: Path, output: Path,
                   "de_to_ja": compare_screenshots(output / "de.png", output / "ja.png"),
                   "ja_to_pl": compare_screenshots(output / "ja.png", output / "pl.png"),
                   "room_to_pl_after_room": post_room_difference,
+                  "ja_to_pl_after_room": post_room_language_switch,
               },
               "post_room_probe_visibly_responded": True,
+              "post_room_language_switch_visibly_responded": True,
               "graphical_button_click_attempted": graphical_language_buttons or screen_language_gui,
               "screen_fixed_language_gui": screen_language_gui,
               "screen_gui_across_rooms_pixel_change": fixed_gui_room_evidence,

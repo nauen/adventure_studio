@@ -18,6 +18,22 @@ class LanguageRuntimeProbeTests(unittest.TestCase):
                          (("1", "de"), ("2", "en"), ("3", "fr"),
                           ("4", "ja"), ("5", "pl")))
 
+    def test_post_room_language_comparison_requires_visible_change(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Optional Pillow dependency is unavailable")
+        with tempfile.TemporaryDirectory() as temp:
+            japanese = Path(temp) / "ja_after_room.png"
+            polish = Path(temp) / "pl_returned_after_room.png"
+            Image.new("RGB", (60, 40), (20, 20, 20)).save(japanese)
+            Image.new("RGB", (60, 40), (20, 20, 20)).save(polish)
+            self.assertEqual(compare_screenshots(japanese, polish)["changed_pixels"], 0)
+            varied = Image.new("RGB", (60, 40), (20, 20, 20))
+            varied.paste((220, 130, 80), (10, 10, 50, 20))
+            varied.save(polish)
+            self.assertEqual(compare_screenshots(japanese, polish)["changed_pixels"], 400)
+
     def test_screen_fixed_gui_region_ignores_room_pixels(self):
         try:
             from PIL import Image

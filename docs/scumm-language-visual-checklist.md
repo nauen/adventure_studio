@@ -27,6 +27,8 @@ arbitrary player's story.
 | `ja.png` | Select Japanese with key `4` | `地下室の扉が開きました。`; distinct Kana/Kanji, no tofu squares or clipped glyphs |
 | `pl.png` | Select Polish with key `5` | `Drzwi do piwnicy są otwarte.`; `ą` must be legible |
 | `room_after_pl.png` | Change to Cellar with key `0` without choosing a new language | Polish remains selected; room transition really occurred |
+| `ja_after_room.png` | Select Japanese with key `4` inside Cellar | Japanese text appears and `JA` is active in the fixed GUI |
+| `pl_returned_after_room.png` | Select Polish again with key `5` inside Cellar | Polish text appears and `PL` becomes active |
 | `pl_after_room.png` | Repeat translated line with key `6` after the room change | The Polish key name `klucz` appears, not the English `key` |
 | `pl_button_before.png` | Keep Polish selected in the second room | Fixed bottom GUI shows `PL` as active and all five language controls are present |
 | `de_button_after.png` | Click `DE` in the bottom GUI | Selection changes to `DE` without a room jump or hidden controls |
