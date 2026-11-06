@@ -152,14 +152,14 @@ jobs:
         run: |
           python -m adventure_studio.story_document examples/mini_story_language_en.json /tmp/stock-font-story
           python -m adventure_studio.scumm_toolchain /tmp/stock-font-story /tmp/scummc-language /tmp/stock-font-game
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/stock-font-game /tmp/stock-font-evidence --no-polish
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/stock-font-game /tmp/stock-font-evidence --no-polish --nonblocking-menu-probe
       - name: Rebuild identical localized game using stock text fonts
         env:
           PYTHONPATH: src
         run: |
           cp -a /tmp/language-story /tmp/localized-stock-font-story
           python -m adventure_studio.scumm_toolchain /tmp/localized-stock-font-story /tmp/scummc-language /tmp/localized-stock-font-game --language-room-probe --localize-story --screen-language-gui --stock-fonts-probe
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/localized-stock-font-game /tmp/localized-stock-font-evidence
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/localized-stock-font-game /tmp/localized-stock-font-evidence --nonblocking-menu-probe
       - name: Compare stock and multilingual menu glyph regions
         run: |
           python - <<'PY'
