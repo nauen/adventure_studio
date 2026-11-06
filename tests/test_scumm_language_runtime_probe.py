@@ -7,6 +7,7 @@ from adventure_studio.scumm_language_runtime_probe import (
     compare_fixed_language_gui_across_rooms, compare_screenshots,
     language_runtime_probe, verify_language_button_change,
     verify_room_transition, verify_capture_visible,
+    verify_fixed_language_gui_across_rooms,
 )
 
 
@@ -24,9 +25,13 @@ class LanguageRuntimeProbeTests(unittest.TestCase):
             picture.paste((210, 90, 40), (192, 184, 832, 458))
             picture.save(after)
             self.assertEqual(compare_fixed_language_gui_across_rooms(before, after)["changed_pixels"], 0)
+            self.assertTrue(verify_fixed_language_gui_across_rooms(
+                before, after)["screen_fixed_gui_stable_across_rooms"])
             picture.paste((210, 90, 40), (210, 474, 230, 486))
             picture.save(after)
             self.assertEqual(compare_fixed_language_gui_across_rooms(before, after)["changed_pixels"], 240)
+            with self.assertRaisesRegex(ValueError, "changed across rooms"):
+                verify_fixed_language_gui_across_rooms(before, after)
             Image.new("RGB", (100, 100), (15, 15, 15)).save(after)
             with self.assertRaisesRegex(ValueError, "dimensions are incompatible"):
                 compare_fixed_language_gui_across_rooms(before, after)

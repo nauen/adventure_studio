@@ -107,6 +107,14 @@ def compare_fixed_language_gui_across_rooms(before: Path, after: Path) -> dict:
             return compare_screenshots(before_crop, after_crop)
 
 
+def verify_fixed_language_gui_across_rooms(before: Path, after: Path) -> dict:
+    """Fail when a room change visibly disturbs the permanent language row."""
+    comparison = compare_fixed_language_gui_across_rooms(before, after)
+    if comparison["changed_pixels"] > 20:
+        raise ValueError(f"Screen-fixed language GUI changed across rooms: {comparison}")
+    return {**comparison, "screen_fixed_gui_stable_across_rooms": True}
+
+
 def language_runtime_probe(game: Path, output: Path,
                            graphical_language_buttons: bool = False,
                            screen_language_gui: bool = False) -> dict:
@@ -187,7 +195,7 @@ def language_runtime_probe(game: Path, output: Path,
         output / "pl_button_before.png", output / "de_button_after.png",
         screen_fixed=screen_language_gui)
         if graphical_language_buttons or screen_language_gui else None)
-    fixed_gui_room_evidence = (compare_fixed_language_gui_across_rooms(
+    fixed_gui_room_evidence = (verify_fixed_language_gui_across_rooms(
         output / "pl.png", output / "room_after_pl.png") if screen_language_gui else None)
     report = {"engine_survived_key_selection": True,
               "nonblank_captures_verified": True,
