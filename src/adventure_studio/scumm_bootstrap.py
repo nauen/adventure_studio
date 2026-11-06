@@ -121,7 +121,12 @@ def inject_language_room_probe(source: str, destination: str, catalog) -> str:
         raise ValueError("Language probe keys already reserved")
     if not catalog.lines:
         raise ValueError("Language probe needs a translated line")
-    dispatch = scumm_language_dispatch(catalog, catalog.lines[0].id)
+    # After the room transition, choose a line that differs from the new
+    # room's entry goal. Reprinting the goal produced identical screenshots
+    # and could not establish whether the keyboard handler ran at all.
+    probe_id = next((line.id for line in catalog.lines
+                     if line.id.endswith(".object.key.label")), catalog.lines[0].id)
+    dispatch = scumm_language_dispatch(catalog, probe_id)
     branches = "".join("            " + line + "\n" for line in dispatch.splitlines())
     probe = (
         "\n        case '0':\n"
@@ -172,3 +177,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

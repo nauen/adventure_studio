@@ -59,6 +59,18 @@ class BootstrapTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Invalid language probe destination"):
             inject_language_room_probe(selected, "Bad;code", catalog)
 
+    def test_room_probe_uses_distinct_object_line_when_available(self):
+        catalog = LanguageCatalog("en", ("en", "pl"), (
+            LocalizedLine("room.cellar.goal", (("en", "Goal reached"), ("pl", "Cel"))),
+            LocalizedLine("room.harbor.object.key.label", (("en", "key"), ("pl", "klucz"))),
+        ))
+        source = "script keyboardHandler(int key) {\n        switch(key) {\n        }\n    }"
+        selected, _ = inject_language_keys(source + "\n        setupActors();", "// Dialog string list\n", catalog)
+        changed = inject_language_room_probe(selected, "Cellar", catalog)
+        post_room_probe = changed.split("case '6':", 1)[1].split("break;", 1)[0]
+        self.assertIn('egoSay("klucz")', post_room_probe)
+        self.assertNotIn('egoSay("Cel")', post_room_probe)
+
     def test_language_selector_rejects_missing_bootstrap_hooks(self):
         catalog = LanguageCatalog("de", ("de",), (
             LocalizedLine("probe", (("de", "Hallo"),)),
@@ -103,3 +115,4 @@ class BootstrapTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

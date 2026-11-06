@@ -105,6 +105,11 @@ OCR oder Pixelreferenzen verifiziert**; diese Schranke bleibt offen. Der
 Laufzeitbericht misst zusätzlich Bildunterschiede zwischen deutscher,
 japanischer und polnischer Auswahl sowie nach dem Raumwechsel. Pixelunterschiede
 sind Diagnosedaten und ausdrücklich kein Zeichen-/Spracherkennungsbeweis.
+Die Nach-Raumwechsel-Taste `6` gibt nun einen anderen lokalisierten
+Objektnamen aus als die Zielmeldung beim Raumeintritt. Bleibt der sichtbare
+Bildschirm darauf unverändert, schlägt die Laufzeitprobe fehl; dadurch kann
+ein bisher pixelgleiches, nicht aussagekräftiges Bildpaar nicht mehr als
+bestanden durchgehen.
 
 Die ersten tatsächlichen Screenshots zeigten überlappende UI-Zeilen mit der
 ursprünglichen 14-Pixel-Schrift. Daher verwendet der SCUMM-Font-Generator

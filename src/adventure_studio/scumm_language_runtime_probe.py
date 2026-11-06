@@ -92,14 +92,18 @@ def language_runtime_probe(game: Path, output: Path) -> dict:
                 process.kill()
                 process.wait(timeout=5)
     room_evidence = verify_room_transition(output / "pl.png", output / "room_after_pl.png")
+    post_room_difference = compare_screenshots(
+        output / "room_after_pl.png", output / "pl_after_room.png")
+    if post_room_difference["changed_pixels"] == 0:
+        raise ValueError("Post-room language probe produced no visible response")
     report = {"engine_survived_key_selection": True,
               **room_evidence,
               "language_screenshot_differences": {
                   "de_to_ja": compare_screenshots(output / "de.png", output / "ja.png"),
                   "ja_to_pl": compare_screenshots(output / "ja.png", output / "pl.png"),
-                  "room_to_pl_after_room": compare_screenshots(
-                      output / "room_after_pl.png", output / "pl_after_room.png"),
+                  "room_to_pl_after_room": post_room_difference,
               },
+              "post_room_probe_visibly_responded": True,
               "room_transition_probe_attempted": True,
               "language_persistence_visually_verified": False,
               "screenshots": results,
