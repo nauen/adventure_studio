@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 from adventure_studio.scumm_language_runtime_probe import (
-    compare_screenshots, verify_capture_visible,
+    compare_screenshots, verify_capture_visible, verify_room_transition,
 )
 
 
@@ -87,6 +87,9 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
             if select_polish:
                 subprocess.run(["xdotool", "key", "5"], check=True, timeout=10)
                 time.sleep(2)
+                capture("polish-in-initial-room")
+                subprocess.run(["xdotool", "key", "0"], check=True, timeout=10)
+                time.sleep(2)
             capture("polish-before-menu")
             for menu_attempt in range(3):
                 subprocess.run(["xdotool", "key", "--clearmodifiers", "ctrl+F5"],
@@ -135,6 +138,8 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
 
     menu_change = verify_save_menu_open(output / "polish-before-menu.png",
                                         output / "save-menu-after-ctrl-f5.png")
+    room_change = (verify_room_transition(output / "polish-in-initial-room.png",
+                                          output / "polish-before-menu.png") if select_polish else None)
     ready = verify_global_menu_ready(output / "save-menu-after-ctrl-f5.png")
     save_dialog_change = verify_save_menu_open(output / "save-menu-after-ctrl-f5.png",
                                                output / "save-dialog-after-click.png")
@@ -144,6 +149,8 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "isolated_config": config_path.name,
         "isolated_save_directory": save_path.name,
         "polish_key_sent_before_menu": select_polish,
+        "save_attempted_after_room_transition": select_polish,
+        "room_transition_evidence": room_change,
         "polish_selection_visually_verified": False,
         "ctrl_f5_sent": True,
         "menu_visibly_changed": True,
@@ -156,7 +163,8 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "save_dialog_pixel_difference": save_dialog_change,
         "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png",
                                   "save-dialog-after-click.png", "after-new-save-click.png",
-                                  "after-save-confirmation.png"],
+                                  "after-save-confirmation.png"]
+                                 + (["polish-in-initial-room.png"] if select_polish else []),
         "save_files_observed": saves,
         "save_created_verified": bool(saves),
         "load_restored_room_verified": False,
