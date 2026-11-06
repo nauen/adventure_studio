@@ -28,6 +28,11 @@ def detect_answer_transition(before: int, displayed: int, dismissed: int) -> boo
     return before < 10 and displayed >= 50 and dismissed < 10
 
 
+def initial_dialogue_ready(scene_visible: bool, actor_pixels: int, answer_pixels: int) -> bool:
+    """Wait for the actor as well as the backdrop before attempting input."""
+    return scene_visible and actor_pixels >= 40 and answer_pixels < 10
+
+
 def _run(command: list[str], timeout: int = 10) -> str:
     result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
     if result.returncode:
@@ -76,21 +81,23 @@ def run(game_directory: Path, output: Path) -> dict:
                                    env={**os.environ, "SDL_AUDIODRIVER": "dummy"})
         try:
             ready = False
+            before = 0
+            actor_count = 0
             for _ in range(35):
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited before dialogue test")
                 _capture(output, "before")
-                if close_rgb(scene_pixel(output, "before"), (70, 130, 190)):
+                scene_visible = close_rgb(scene_pixel(output, "before"), (70, 130, 190))
+                if scene_visible:
+                    before = _color_count(output, "before", ANSWER_RGB)
+                    actor_count = _color_count(output, "before", ACTOR_RGB)
+                if initial_dialogue_ready(scene_visible, actor_count, before):
                     ready = True
                     break
                 time.sleep(0.3)
-            if not ready:
-                raise RuntimeError("Initial scene not visible")
-            before = _color_count(output, "before", ANSWER_RGB)
-            actor_count = _color_count(output, "before", ACTOR_RGB)
             report.update({"answer_pixels_before": before, "actor_pixels": actor_count})
-            if actor_count < 40 or before >= 10:
-                raise RuntimeError(f"Initial character/answer visibility invalid: {report}")
+            if not ready:
+                raise RuntimeError(f"Initial scene/character not ready: {report}")
             # The inherited DOTT verb GUI is in fixed 1024x768 Xvfb coords.
             _click(330, 560)  # Talk to
             x, y = _color_center(output, "before", ACTOR_RGB)
@@ -151,3 +158,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
