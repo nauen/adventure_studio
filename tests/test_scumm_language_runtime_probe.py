@@ -64,6 +64,13 @@ class LanguageRuntimeProbeTests(unittest.TestCase):
             self.assertGreaterEqual(verify_language_button_change(before, after)["changed_pixels"], 300)
             with self.assertRaisesRegex(ValueError, "did not visibly change"):
                 verify_language_button_change(before, before)
+            fixed = Image.new("RGB", (1024, 768), (10, 20, 30))
+            for x in range(215, 235):
+                for y in range(463, 480):
+                    fixed.putpixel((x, y), (100, 220, 30))
+            fixed.save(after)
+            self.assertGreaterEqual(verify_language_button_change(
+                before, after, screen_fixed=True)["changed_pixels"], 300)
 
     def test_missing_display_fails_without_spawning_engine(self):
         with patch.dict("os.environ", {"DISPLAY": ""}):

@@ -47,15 +47,17 @@ def verify_room_transition(before: Path, after: Path) -> dict:
             "room_transition_visually_confirmed": True}
 
 
-def verify_language_button_change(before: Path, after: Path) -> dict:
-    """Check the five badge pixels, excluding the rest of the moving scene."""
+def verify_language_button_change(before: Path, after: Path,
+                                  screen_fixed: bool = False) -> dict:
+    """Check only the language controls, excluding the moving room scene."""
     from PIL import Image
 
     with Image.open(before) as old, Image.open(after) as new:
         if old.size != new.size:
             raise ValueError("Language button screenshots have different sizes")
-        # 1024x768 Xvfb: 640-pixel ScummVM viewport begins at (192,184).
-        region = (192, 184, 392, 218)
+        # 1024x768 Xvfb: room sprites start at (192,184); the shared
+        # verb interface is drawn around virtual y=141 (screen y=466).
+        region = (192, 460, 480, 490) if screen_fixed else (192, 184, 392, 218)
         if old.width < region[2] or old.height < region[3]:
             raise ValueError("Language button viewport is too small")
         with tempfile.TemporaryDirectory() as temp:
@@ -70,7 +72,10 @@ def verify_language_button_change(before: Path, after: Path) -> dict:
 
 
 def language_runtime_probe(game: Path, output: Path,
-                           graphical_language_buttons: bool = False) -> dict:
+                           graphical_language_buttons: bool = False,
+                           screen_language_gui: bool = False) -> dict:
+    if graphical_language_buttons and screen_language_gui:
+        raise ValueError("Choose one graphical language probe mode")
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Language probe requires Xvfb DISPLAY")
     if any(not (game / f"tentacle.{suffix}").is_file() for suffix in ("000", "001")):
@@ -111,14 +116,15 @@ def language_runtime_probe(game: Path, output: Path,
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM exited after selecting {code}")
                 capture(code, process)
-            if graphical_language_buttons:
+            if graphical_language_buttons or screen_language_gui:
                 # After entering Cellar with PL selected, compare only the
                 # persistent badge row. Move the pointer away in both shots.
                 subprocess.run(["xdotool", "mousemove", "900", "700"],
                                check=True, timeout=10)
                 time.sleep(0.4)
                 capture("pl_button_before", process)
-                subprocess.run(["xdotool", "mousemove", "217", "202", "click", "1"],
+                button_x, button_y = ((215, 470) if screen_language_gui else (217, 202))
+                subprocess.run(["xdotool", "mousemove", str(button_x), str(button_y), "click", "1"],
                                check=True, timeout=10)
                 time.sleep(3)
                 subprocess.run(["xdotool", "mousemove", "900", "700"],
@@ -138,8 +144,9 @@ def language_runtime_probe(game: Path, output: Path,
     if post_room_difference["changed_pixels"] == 0:
         raise ValueError("Post-room language probe produced no visible response")
     button_evidence = (verify_language_button_change(
-        output / "pl_button_before.png", output / "de_button_after.png")
-        if graphical_language_buttons else None)
+        output / "pl_button_before.png", output / "de_button_after.png",
+        screen_fixed=screen_language_gui)
+        if graphical_language_buttons or screen_language_gui else None)
     report = {"engine_survived_key_selection": True,
               **room_evidence,
               "language_screenshot_differences": {
@@ -148,7 +155,8 @@ def language_runtime_probe(game: Path, output: Path,
                   "room_to_pl_after_room": post_room_difference,
               },
               "post_room_probe_visibly_responded": True,
-              "graphical_button_click_attempted": graphical_language_buttons,
+              "graphical_button_click_attempted": graphical_language_buttons or screen_language_gui,
+              "screen_fixed_language_gui": screen_language_gui,
               "graphical_button_selection_changed": button_evidence is not None,
               "graphical_button_pixel_change": button_evidence,
               "room_transition_probe_attempted": True,
@@ -161,11 +169,13 @@ def language_runtime_probe(game: Path, output: Path,
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] != "--language-buttons"):
-        print("Usage: python -m adventure_studio.scumm_language_runtime_probe GAME OUTPUT [--language-buttons]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and
+                                   sys.argv[3] not in ("--language-buttons", "--screen-language-gui")):
+        print("Usage: python -m adventure_studio.scumm_language_runtime_probe GAME OUTPUT [--language-buttons|--screen-language-gui]")
         return 2
     print(json.dumps(language_runtime_probe(Path(sys.argv[1]), Path(sys.argv[2]),
-                                            graphical_language_buttons=len(sys.argv) == 4),
+                                            graphical_language_buttons="--language-buttons" in sys.argv[3:],
+                                            screen_language_gui="--screen-language-gui" in sys.argv[3:]),
                      sort_keys=True))
     return 0
 

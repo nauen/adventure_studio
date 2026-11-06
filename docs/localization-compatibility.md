@@ -183,6 +183,25 @@ prüft nur die obere Button-Zone auf sichtbare Änderung. Das ist ein
 Interaktionstest, **kein** pixelgenauer Lesbarkeits- oder OCR-Beweis.
 Die Darstellung ist weiterhin anhand der Screenshots manuell zu prüfen.
 
+
+## Bildschirmfeste Sprachauswahl im gemeinsamen Verb-Bereich (Experiment)
+
+Mit `--localize-story --screen-language-gui` wird der originale
+ScummC-Bootstrap über validierte feste Einfügepunkte erweitert: Die
+Sprachcodes DE/EN/FR/JA/PL werden als echte SCUMM-Verben in der immer
+sichtbaren unteren Bedienleiste eingerichtet (IDs 120–124). Ein Klick
+setzt die globale `GameLanguage`-Variable, die Auswahl erhält eine
+Hervorhebungsfarbe und die vorhandenen Tastaturkürzel aktualisieren die
+Anzeige ebenfalls. Das ist unabhängig vom Raumscrolling und benötigt
+keine zusätzlichen Raum-Sprites.
+
+Dieser Modus ist zunächst **alternativ** zu `--language-buttons` und
+bewusst experimentell. `language-runtime.yml` kompiliert ihn mit ScummC
+und prüft im echten ScummVM einen Klick auf DE sowie die Pixeländerung
+im festen GUI-Ausschnitt. Ein bestandener Klicktest ist kein OCR- oder
+Lesbarkeitsnachweis. Ohne explizites Opt-in bleibt der bisherige
+Spielbuild unverändert.
+
 ## Verbindliche Kompatibilitäts-Gates vor Aktivierung im Spiel-Export
 
 1. ScummC kompilieren und einen minimalen Raum mit `GameLanguage` und fünf

@@ -6,6 +6,7 @@ from adventure_studio.localization import LanguageCatalog, LocalizedLine
 from adventure_studio.scumm_bootstrap import (
     inject_inventory_declarations, inject_inventory_objects, inject_language_keys,
     inject_language_room_probe,
+    inject_screen_language_verbs,
     read_icon_ids, retarget_upstream_bootstrap,
 )
 
@@ -70,6 +71,31 @@ class BootstrapTests(unittest.TestCase):
         post_room_probe = changed.split("case '6':", 1)[1].split("break;", 1)[0]
         self.assertIn('egoSay("klucz")', post_room_probe)
         self.assertNotIn('egoSay("Cel")', post_room_probe)
+
+    def test_screen_fixed_gui_uses_persistent_verb_area(self):
+        catalog = LanguageCatalog("en", ("de", "en", "fr", "ja", "pl"), (
+            LocalizedLine("probe", tuple((code, "Hello") for code in ("de", "en", "fr", "ja", "pl"))),
+        ))
+        source = (
+            "script keyboardHandler(int key) {\n        switch(key) {\n        }\n    }\n"
+            "        setupActors();\n        setupVerbs();\n"
+            "        dimInt(invObj,8);\n"
+            "    // turn on all the verb for the interface\n"
+            "        verbsOn = !!show;\n"
+            "        // A verb was clicked\n"
+        )
+        header = "// Dialog string list\n// The inventory arrows\n"
+        source, header = inject_language_keys(source, header, catalog)
+        fixed, fixed_header = inject_screen_language_verbs(source, header, catalog)
+        self.assertIn("verb LanguageJa @ 123;", fixed_header)
+        self.assertIn('setVerbName("PL");', fixed)
+        self.assertIn("setVerbXY(114,141);", fixed)
+        self.assertIn("if(cmd == LanguageDe)", fixed)
+        self.assertIn("GameLanguage = 25701;", fixed)
+        self.assertIn("refreshLanguageVerbs();", fixed)
+        self.assertIn("setVerbOn();", fixed)
+        with self.assertRaisesRegex(ValueError, "upstream screen-language GUI layout"):
+            inject_screen_language_verbs("invalid", header, catalog)
 
     def test_language_selector_rejects_missing_bootstrap_hooks(self):
         catalog = LanguageCatalog("de", ("de",), (

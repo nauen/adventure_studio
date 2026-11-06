@@ -140,6 +140,85 @@ def inject_language_room_probe(source: str, destination: str, catalog) -> str:
     return f"room {destination};\n" + source
 
 
+def inject_screen_language_verbs(source: str, header: str, catalog) -> tuple[str, str]:
+    """Add screen-fixed language verbs to ScummC's shared bottom GUI.
+
+    Unlike room objects these verbs are positioned in the permanent verb
+    interface and remain reachable when the camera scrolls. The adapter is
+    deliberately tied to the validated upstream road bootstrap markers.
+    """
+    from .localization import validate_catalog
+
+    validate_catalog(catalog)
+    if not (1 <= len(catalog.languages) <= 5):
+        raise ValueError("Screen language GUI supports one to five languages")
+    verbs = [(f"Language{language.title()}", language,
+              int.from_bytes(language.encode("ascii"), "big"))
+             for language in catalog.languages]
+    markers = (
+        (header, "// The inventory arrows\n"),
+        (source, "        dimInt(invObj,8);\n"),
+        (source, "    // turn on all the verb for the interface"),
+        (source, "        verbsOn = !!show;\n"),
+        (source, "        // A verb was clicked\n"),
+        (source, "        setupVerbs();\n"),
+    )
+    if any(body.count(marker) != 1 for body, marker in markers):
+        raise ValueError("Unexpected upstream screen-language GUI layout")
+    header = header.replace(
+        "// The inventory arrows\n",
+        "".join(f"verb {name} @ {120 + index};\n"
+                for index, (name, _lang, _code) in enumerate(verbs))
+        + "// The inventory arrows\n", 1)
+    setup = "".join(
+        f"        setCurrentVerb({name});\n"
+        f"        initVerb();\n"
+        f'        setVerbName("{language.upper()}");\n'
+        f"        setVerbXY({10 + index * 26},141);\n"
+        "        setVerbColor(VERB_COLOR);\n"
+        "        setVerbHiColor(VERB_HI_COLOR);\n"
+        for index, (name, language, _code) in enumerate(verbs))
+    source = source.replace("        dimInt(invObj,8);\n",
+                            "        dimInt(invObj,8);\n" + setup, 1)
+    refresh = (
+        "    script refreshLanguageVerbs() {\n"
+        + "".join(
+            f"        setCurrentVerb({name});\n"
+            f"        if(GameLanguage == {code}) setVerbColor(VERB_HI_COLOR);\n"
+            "        else setVerbColor(VERB_COLOR);\n"
+            "        redrawVerb();\n"
+            for name, _language, code in verbs)
+        + "    }\n\n")
+    source = source.replace("    // turn on all the verb for the interface",
+                            refresh + "    // turn on all the verb for the interface", 1)
+    show = "".join(
+        f"        setCurrentVerb({name});\n"
+        "        if(show) setVerbOn();\n"
+        "        else setVerbOff();\n"
+        "        redrawVerb();\n"
+        for name, _language, _code in verbs)
+    source = source.replace("        verbsOn = !!show;\n", show + "        verbsOn = !!show;\n", 1)
+    clicks = "".join(
+        f"        if(cmd == {name}) {{\n"
+        f"            GameLanguage = {code};\n"
+        "            refreshLanguageVerbs();\n"
+        "            return;\n"
+        "        }\n"
+        for name, _language, code in verbs)
+    source = source.replace("        // A verb was clicked\n",
+                            clicks + "        // A verb was clicked\n", 1)
+    source = source.replace("        setupVerbs();\n",
+                            "        setupVerbs();\n        refreshLanguageVerbs();\n", 1)
+    for _name, _language, code in verbs:
+        marker = f"            GameLanguage = {code};\n            egoSay("
+        if source.count(marker) != 1:
+            raise ValueError("Unexpected keyboard branch for screen-language GUI")
+        source = source.replace(marker,
+                                f"            GameLanguage = {code};\n"
+                                "            refreshLanguageVerbs();\n            egoSay(", 1)
+    return source, header
+
+
 def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str:
     marker = "    // Inventory objects\n"
     if header.count(marker) != 1:

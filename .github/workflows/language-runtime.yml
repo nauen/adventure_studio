@@ -71,16 +71,16 @@ jobs:
           test -n "$CHAR_BIN" && test -n "$LATIN_FONT" && test -n "$CJK_FONT"
           python -m adventure_studio.story_language_fixture /tmp/language-story/project.json /tmp/language-story/story-language-catalog.json
           python -m adventure_studio.scumm_language_package /tmp/language-story/story-language-catalog.json "$LATIN_FONT" "$CJK_FONT" "$CHAR_BIN" /tmp/language-story/resources
-          python -m adventure_studio.scumm_toolchain /tmp/language-story /tmp/scummc-language /tmp/language-game --language-room-probe --localize-story --language-buttons
-          test -s /tmp/language-story/resources/HarborLangDe.bmp
-          test -s /tmp/language-story/resources/HarborLangJaActive.bmp
+          python -m adventure_studio.scumm_toolchain /tmp/language-story /tmp/scummc-language /tmp/language-game --language-room-probe --localize-story --screen-language-gui
+          grep -Fq 'setVerbName("DE")' /tmp/language-story/resources/bootstrap.scc
+          grep -Fq 'LanguageJa' /tmp/language-story/resources/common.sch
           test -s /tmp/language-game/tentacle.000
           test -s /tmp/language-game/tentacle.001
       - name: Select languages and test Polish persistence across room transition
         env:
           PYTHONPATH: src
         run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_language_runtime_probe /tmp/language-game /tmp/language-evidence --language-buttons
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_language_runtime_probe /tmp/language-game /tmp/language-evidence --screen-language-gui
       - name: Upload linked game and screenshots for visual inspection
         if: always()
         uses: actions/upload-artifact@v4
