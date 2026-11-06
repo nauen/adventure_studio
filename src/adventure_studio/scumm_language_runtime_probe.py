@@ -98,7 +98,9 @@ def compare_fixed_language_gui_across_rooms(before: Path, after: Path) -> dict:
 
     # The 640x288 game scene occupies Xvfb y=184..471. Sampling from y=460
     # would mix twelve rows of scrolling scenery into the fixed GUI result.
-    region = (200, 472, 340, 490)
+    # Five verbs use logical x positions 10,36,62,88,114 at 2x scale.
+    # Include the rightmost JA and PL entries, not just DE/EN/FR.
+    region = (200, 472, 460, 490)
     with Image.open(before) as original, Image.open(after) as changed:
         if original.size != changed.size or original.width < region[2] or original.height < region[3]:
             raise ValueError("Fixed language GUI screenshot dimensions are incompatible")

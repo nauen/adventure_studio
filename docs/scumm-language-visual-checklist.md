@@ -44,8 +44,9 @@ look like the correct characters but are too small to read at native size.
   the game scene or decode text.
 - `graphical_button_selection_changed` is a pixel-change check after clicking
   the bottom GUI, not a semantic text-recognition check.
-- `screen_gui_across_rooms_pixel_change` compares only the bottom control area
-  **below** the 640×288 scene (`y >= 472` on the 1024×768 Xvfb display). A
+- `screen_gui_across_rooms_pixel_change` compares all five language entries
+  in the bottom control area **below** the 640×288 scene (`y >= 472` on the
+  1024×768 Xvfb display). A
   low change count indicates stable pixels, not guaranteed click handling.
 - `language_persistence_visually_verified` and `glyph_rendering_verified`
   remain `false` until a human or a separately validated recognition procedure

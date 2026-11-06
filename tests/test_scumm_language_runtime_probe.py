@@ -54,6 +54,13 @@ class LanguageRuntimeProbeTests(unittest.TestCase):
             self.assertEqual(compare_fixed_language_gui_across_rooms(before, after)["changed_pixels"], 240)
             with self.assertRaisesRegex(ValueError, "changed across rooms"):
                 verify_fixed_language_gui_across_rooms(before, after)
+            # A regression only in the far-right PL control must also fail.
+            rightmost = Image.new("RGB", (1024, 768), (15, 15, 15))
+            rightmost.paste((210, 90, 40), (420, 474, 440, 486))
+            rightmost.save(after)
+            self.assertEqual(compare_fixed_language_gui_across_rooms(before, after)["changed_pixels"], 240)
+            with self.assertRaisesRegex(ValueError, "changed across rooms"):
+                verify_fixed_language_gui_across_rooms(before, after)
             Image.new("RGB", (100, 100), (15, 15, 15)).save(after)
             with self.assertRaisesRegex(ValueError, "dimensions are incompatible"):
                 compare_fixed_language_gui_across_rooms(before, after)
