@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from adventure_studio.scumm_language_runtime_probe import (
-    LANGUAGE_PROBE_KEYS,
+    LANGUAGE_PROBE_KEYS, SCREEN_GUI_CLICK_TARGETS,
     compare_fixed_language_gui_across_rooms, compare_screenshots,
     language_runtime_probe, verify_language_button_change,
     verify_room_transition, verify_capture_visible,
@@ -17,6 +17,9 @@ class LanguageRuntimeProbeTests(unittest.TestCase):
         self.assertEqual(LANGUAGE_PROBE_KEYS,
                          (("1", "de"), ("2", "en"), ("3", "fr"),
                           ("4", "ja"), ("5", "pl")))
+        self.assertEqual(SCREEN_GUI_CLICK_TARGETS,
+                         (("de", 215), ("en", 267), ("fr", 319),
+                          ("ja", 371), ("pl", 423)))
 
     def test_post_room_language_comparison_requires_visible_change(self):
         try:

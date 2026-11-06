@@ -16,6 +16,8 @@ from pathlib import Path
 
 LANGUAGE_PROBE_KEYS = (("1", "de"), ("2", "en"), ("3", "fr"),
                        ("4", "ja"), ("5", "pl"))
+SCREEN_GUI_CLICK_TARGETS = (("de", 215), ("en", 267), ("fr", 319),
+                            ("ja", 371), ("pl", 423))
 
 
 def compare_screenshots(before: Path, after: Path) -> dict:
@@ -179,14 +181,16 @@ def language_runtime_probe(game: Path, output: Path,
                                check=True, timeout=10)
                 time.sleep(0.4)
                 capture("pl_button_before", process)
-                button_x, button_y = ((215, 470) if screen_language_gui else (217, 202))
-                subprocess.run(["xdotool", "mousemove", str(button_x), str(button_y), "click", "1"],
-                               check=True, timeout=10)
-                time.sleep(3)
-                subprocess.run(["xdotool", "mousemove", "900", "700"],
-                               check=True, timeout=10)
-                time.sleep(0.4)
-                capture("de_button_after", process)
+                targets = (SCREEN_GUI_CLICK_TARGETS if screen_language_gui else (("de", 217),))
+                for language, button_x in targets:
+                    button_y = 470 if screen_language_gui else 202
+                    subprocess.run(["xdotool", "mousemove", str(button_x), str(button_y), "click", "1"],
+                                   check=True, timeout=10)
+                    time.sleep(2)
+                    subprocess.run(["xdotool", "mousemove", "900", "700"],
+                                   check=True, timeout=10)
+                    time.sleep(0.4)
+                    capture(f"{language}_button_after", process)
         finally:
             process.terminate()
             try:
@@ -207,6 +211,15 @@ def language_runtime_probe(game: Path, output: Path,
         output / "pl_button_before.png", output / "de_button_after.png",
         screen_fixed=screen_language_gui)
         if graphical_language_buttons or screen_language_gui else None)
+    all_screen_gui_clicks = None
+    if screen_language_gui:
+        all_screen_gui_clicks = {"de": button_evidence}
+        previous = "de"
+        for language, _x in SCREEN_GUI_CLICK_TARGETS[1:]:
+            all_screen_gui_clicks[language] = verify_language_button_change(
+                output / f"{previous}_button_after.png",
+                output / f"{language}_button_after.png", screen_fixed=True)
+            previous = language
     fixed_gui_room_evidence = (verify_fixed_language_gui_across_rooms(
         output / "pl.png", output / "room_after_pl.png") if screen_language_gui else None)
     report = {"engine_survived_key_selection": True,
@@ -228,6 +241,8 @@ def language_runtime_probe(game: Path, output: Path,
               "screen_gui_across_rooms_pixel_change": fixed_gui_room_evidence,
               "graphical_button_selection_changed": button_evidence is not None,
               "graphical_button_pixel_change": button_evidence,
+              "screen_gui_all_five_clicks_changed": all_screen_gui_clicks is not None,
+              "screen_gui_individual_click_pixel_changes": all_screen_gui_clicks,
               "room_transition_probe_attempted": True,
               "language_persistence_visually_verified": False,
               "screenshots": results,

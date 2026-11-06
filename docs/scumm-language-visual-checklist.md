@@ -32,6 +32,7 @@ arbitrary player's story.
 | `pl_after_room.png` | Repeat translated line with key `6` after the room change | The Polish key name `klucz` appears, not the English `key` |
 | `pl_button_before.png` | Keep Polish selected in the second room | Fixed bottom GUI shows `PL` as active and all five language controls are present |
 | `de_button_after.png` | Click `DE` in the bottom GUI | Selection changes to `DE` without a room jump or hidden controls |
+| `en_button_after.png`, `fr_button_after.png`, `ja_button_after.png`, `pl_button_after.png` | Click each remaining language control in sequence inside Cellar | Each newly selected entry becomes active and the others remain visible |
 
 For every text screenshot also check that adjacent letters and lines do not
 overlap, that narrow glyphs have reasonable spacing, and that the whole
@@ -44,6 +45,9 @@ look like the correct characters but are too small to read at native size.
   the game scene or decode text.
 - `graphical_button_selection_changed` is a pixel-change check after clicking
   the bottom GUI, not a semantic text-recognition check.
+- `screen_gui_individual_click_pixel_changes` checks each adjacent selection
+  pair for a visible change in the permanent GUI row; it still does not
+  recognize which text the game rendered in its room.
 - `screen_gui_across_rooms_pixel_change` compares all five language entries
   in the bottom control area **below** the 640×288 scene (`y >= 472` on the
   1024×768 Xvfb display). A
