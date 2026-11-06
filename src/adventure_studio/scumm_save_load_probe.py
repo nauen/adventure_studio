@@ -81,7 +81,8 @@ def verify_loaded_language_selection(default: Path, selected: Path, loaded: Path
             "load_restored_language_verified": True}
 
 
-def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -> dict:
+def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True,
+                         debug_save_state: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Save/load probe requires Xvfb DISPLAY")
     if any(not (game / f"tentacle.{suffix}").is_file() for suffix in ("000", "001")):
@@ -128,6 +129,22 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                 subprocess.run(["xdotool", "key", "0"], check=True, timeout=10)
                 time.sleep(2)
             capture("polish-before-menu")
+            if debug_save_state:
+                # ScummVM 2.8 registers these two read-only debugger queries.
+                # For v6, scumm_vars[65] is VAR_MAINMENU_KEY (expected 319).
+                subprocess.run(["xdotool", "key", "--clearmodifiers", "ctrl+d"],
+                               check=True, timeout=10)
+                time.sleep(2)
+                for command in ("scumm_room", "scumm_vars[65]"):
+                    subprocess.run(["xdotool", "type", "--clearmodifiers",
+                                    "--delay", "80", command], check=True, timeout=15)
+                    subprocess.run(["xdotool", "key", "Return"], check=True, timeout=10)
+                    time.sleep(1)
+                capture("scumm-save-gate-debugger")
+                subprocess.run(["xdotool", "type", "--clearmodifiers", "exit"],
+                               check=True, timeout=10)
+                subprocess.run(["xdotool", "key", "Return"], check=True, timeout=10)
+                time.sleep(2)
             save_attempts = 0
             save_attempt_screenshots = []
             for save_attempt in range(3 if select_polish else 1):
@@ -243,6 +260,9 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "isolated_save_directory": save_path.name,
         "polish_key_sent_before_menu": select_polish,
         "save_attempted_after_room_transition": select_polish,
+        "debug_save_state_requested": debug_save_state,
+        "debug_save_state_screenshot": ("scumm-save-gate-debugger.png"
+                                         if debug_save_state else None),
         "room_transition_evidence": room_change,
         "polish_selection_visually_verified": False,
         "ctrl_f5_sent": True,
@@ -283,11 +303,14 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] != "--no-polish"):
-        print("Usage: python -m adventure_studio.scumm_save_load_probe GAME OUTPUT [--no-polish]")
+    options = sys.argv[3:]
+    if len(sys.argv) < 3 or len(set(options)) != len(options) or any(
+            option not in ("--no-polish", "--debug-save-state") for option in options):
+        print("Usage: python -m adventure_studio.scumm_save_load_probe GAME OUTPUT [--no-polish] [--debug-save-state]")
         return 2
     print(json.dumps(save_load_menu_probe(Path(sys.argv[1]), Path(sys.argv[2]),
-                                          select_polish="--no-polish" not in sys.argv[3:]),
+                                          select_polish="--no-polish" not in options,
+                                          debug_save_state="--debug-save-state" in options),
                      sort_keys=True))
     return 0
 
