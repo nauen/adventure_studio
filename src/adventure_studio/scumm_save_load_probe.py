@@ -26,6 +26,25 @@ def verify_save_menu_open(before: Path, after: Path) -> dict:
     return menu_change
 
 
+def verify_global_menu_ready(path: Path) -> dict:
+    """Recognize the actual ScummVM 2.8 main menu, not a transient overlay."""
+    from PIL import Image
+
+    with Image.open(path) as screenshot:
+        rgb = screenshot.convert("RGB")
+        if rgb.size != (1024, 768):
+            raise ValueError("Unexpected ScummVM menu display dimensions")
+        # The left half of the orange GMM panel covers this rectangle.
+        # The game background here is blue, so it cannot satisfy the gate.
+        crop = rgb.crop((395, 210, 500, 550))
+        pixels = (crop.get_flattened_data() if hasattr(crop, "get_flattened_data")
+                  else crop.getdata())
+        orange = sum(1 for r, g, b in pixels if 170 <= r <= 240 and 60 <= g <= 160 and b < 40)
+        if orange < 12000:
+            raise ValueError("ScummVM global main menu not fully rendered")
+        return {"orange_panel_pixels": orange, "menu_rendered": True}
+
+
 def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Save/load probe requires Xvfb DISPLAY")
@@ -39,7 +58,7 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
     log_path = output / "scummvm-save-menu.log"
     environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
 
-    def capture(name: str) -> None:
+    def capture(name: str, require_global_menu: bool = False) -> None:
         raw = output / f"{name}.xwd"
         png = output / f"{name}.png"
         for attempt in range(4):
@@ -48,6 +67,8 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
             subprocess.run(["convert", str(raw), str(png)], check=True, timeout=10)
             try:
                 verify_capture_visible(png)
+                if require_global_menu:
+                    verify_global_menu_ready(png)
                 return
             except ValueError:
                 if attempt == 3:
@@ -71,17 +92,14 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
             time.sleep(2)
             if process.poll() is not None:
                 raise RuntimeError("ScummVM exited after Ctrl+F5")
-            capture("save-menu-after-ctrl-f5")
-            # Inspect the alternative engine menu independently. Do not
-            # infer controls from the broken-font Ctrl+F5 screenshot.
-            subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
-            time.sleep(1)
-            capture("after-escape")
-            subprocess.run(["xdotool", "key", "F5"], check=True, timeout=10)
+            capture("save-menu-after-ctrl-f5", require_global_menu=True)
+            # Coordinates measured from the real ScummVM 2.8 GMM capture.
+            subprocess.run(["xdotool", "mousemove", "512", "367", "click", "1"],
+                           check=True, timeout=10)
             time.sleep(2)
             if process.poll() is not None:
-                raise RuntimeError("ScummVM exited after F5")
-            capture("menu-after-f5")
+                raise RuntimeError("ScummVM exited after Save button click")
+            capture("save-dialog-after-click")
         finally:
             process.terminate()
             try:
@@ -92,8 +110,9 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
 
     menu_change = verify_save_menu_open(output / "polish-before-menu.png",
                                         output / "save-menu-after-ctrl-f5.png")
-    alternative_menu = compare_screenshots(output / "after-escape.png",
-                                           output / "menu-after-f5.png")
+    ready = verify_global_menu_ready(output / "save-menu-after-ctrl-f5.png")
+    save_dialog_change = verify_save_menu_open(output / "save-menu-after-ctrl-f5.png",
+                                               output / "save-dialog-after-click.png")
     saves = sorted(path.name for path in save_path.iterdir() if path.is_file())
     report = {
         "isolated_config": config_path.name,
@@ -102,16 +121,17 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "polish_selection_visually_verified": False,
         "ctrl_f5_sent": True,
         "menu_visibly_changed": True,
+        "global_menu_ready": ready,
         "menu_pixel_difference": menu_change,
-        "f5_menu_pixel_difference": alternative_menu,
-        "f5_menu_legibility_verified": False,
+        "save_button_clicked": True,
+        "save_dialog_pixel_difference": save_dialog_change,
         "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png",
-                                  "after-escape.png", "menu-after-f5.png"],
+                                  "save-dialog-after-click.png"],
         "save_files_observed": saves,
         "save_created_verified": False,
         "load_restored_room_verified": False,
         "load_restored_language_verified": False,
-        "status": "menu-discovery-only",
+        "status": "save-dialog-discovery-only",
     }
     (output / "save-load-menu-report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
