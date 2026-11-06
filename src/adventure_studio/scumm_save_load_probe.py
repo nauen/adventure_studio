@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -54,6 +55,31 @@ def verify_loaded_room(reference: Path, initial: Path, loaded: Path) -> dict:
             "load_restored_room_verified": True}
 
 
+def verify_loaded_language_selection(default: Path, selected: Path, loaded: Path) -> dict:
+    """Compare the active-language highlight in ScummVM's fixed verb strip."""
+    from PIL import Image
+
+    region = (192, 460, 480, 490)
+    with tempfile.TemporaryDirectory() as directory:
+        crops = []
+        for index, screenshot in enumerate((default, selected, loaded)):
+            with Image.open(screenshot) as image:
+                if image.size != (1024, 768):
+                    raise ValueError("Unexpected screenshot size for language selection")
+                crop = Path(directory) / f"language-{index}.png"
+                image.convert("RGB").crop(region).save(crop)
+                crops.append(crop)
+        selection_change = compare_screenshots(crops[0], crops[1])
+        restored_change = compare_screenshots(crops[1], crops[2])
+    if selection_change["changed_pixels"] < 20:
+        raise ValueError("Language highlight did not visibly change from default")
+    if restored_change["changed_pixels"] > 20:
+        raise ValueError("Language highlight not restored after loading")
+    return {"language_selection_pixel_difference": selection_change,
+            "language_restore_pixel_difference": restored_change,
+            "load_restored_language_verified": True}
+
+
 def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Save/load probe requires Xvfb DISPLAY")
@@ -94,6 +120,7 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
             if process.poll() is not None:
                 raise RuntimeError("ScummVM exited before save-menu probe")
             if select_polish:
+                capture("before-polish-selection")
                 subprocess.run(["xdotool", "key", "5"], check=True, timeout=10)
                 time.sleep(2)
                 capture("polish-in-initial-room")
@@ -157,6 +184,8 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
     slot_one = save_path / "tentacle.s01"
     load_evidence = None
     load_error = None
+    language_load_evidence = None
+    language_load_error = None
     if select_polish and slot_one.is_file() and slot_one.stat().st_size > 0:
         load_log_path = output / "scummvm-load.log"
         with load_log_path.open("w", encoding="utf-8") as load_log:
@@ -174,6 +203,13 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                     output / "polish-before-menu.png",
                     output / "polish-in-initial-room.png",
                     output / "after-loading-slot-1.png")
+                try:
+                    language_load_evidence = verify_loaded_language_selection(
+                        output / "before-polish-selection.png",
+                        output / "polish-before-menu.png",
+                        output / "after-loading-slot-1.png")
+                except ValueError as error:
+                    language_load_error = str(error)
             except (RuntimeError, ValueError) as error:
                 load_error = str(error)
             finally:
@@ -202,14 +238,19 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png",
                                   "save-dialog-after-click.png", "after-new-save-click.png",
                                   "after-save-confirmation.png"]
-                                 + (["polish-in-initial-room.png"] if select_polish else []),
+                                 + (["before-polish-selection.png", "polish-in-initial-room.png"]
+                                    if select_polish else [])
+                                 + (["after-loading-slot-1.png"] if load_evidence else []),
         "save_files_observed": saves,
         "save_created_verified": slot_one.is_file() and slot_one.stat().st_size > 0,
         "load_restored_room_verified": bool(load_evidence),
         "load_room_evidence": load_evidence,
         "load_error": load_error,
-        "load_restored_language_verified": False,
-        "status": ("save-and-load-room-verified" if load_evidence else
+        "load_restored_language_verified": bool(language_load_evidence),
+        "load_language_evidence": language_load_evidence,
+        "load_language_error": language_load_error,
+        "status": ("save-load-room-and-language-verified" if language_load_evidence else
+                   "save-and-load-room-verified" if load_evidence else
                    "save-created-load-unverified" if slot_one.is_file() else
                    "save-dialog-discovery-only"),
     }
