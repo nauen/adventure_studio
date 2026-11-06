@@ -13,7 +13,17 @@ import sys
 import time
 from pathlib import Path
 
-from adventure_studio.scumm_language_runtime_probe import verify_capture_visible
+from adventure_studio.scumm_language_runtime_probe import (
+    compare_screenshots, verify_capture_visible,
+)
+
+
+def verify_save_menu_open(before: Path, after: Path) -> dict:
+    """Require a substantial visual change; does not recognize menu labels."""
+    menu_change = compare_screenshots(before, after)
+    if menu_change["changed_ratio"] < 0.02:
+        raise ValueError("Ctrl+F5 did not visibly open a menu; refusing Save/Load claims")
+    return menu_change
 
 
 def save_load_menu_probe(game: Path, output: Path) -> dict:
@@ -69,12 +79,17 @@ def save_load_menu_probe(game: Path, output: Path) -> dict:
                 process.kill()
                 process.wait(timeout=5)
 
+    menu_change = verify_save_menu_open(output / "polish-before-menu.png",
+                                        output / "save-menu-after-ctrl-f5.png")
     saves = sorted(path.name for path in save_path.iterdir() if path.is_file())
     report = {
         "isolated_config": config_path.name,
         "isolated_save_directory": save_path.name,
-        "polish_selected_before_menu": True,
+        "polish_key_sent_before_menu": True,
+        "polish_selection_visually_verified": False,
         "ctrl_f5_sent": True,
+        "menu_visibly_changed": True,
+        "menu_pixel_difference": menu_change,
         "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png"],
         "save_files_observed": saves,
         "save_created_verified": False,
