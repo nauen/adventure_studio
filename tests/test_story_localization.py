@@ -71,6 +71,8 @@ class StoryLocalizationTests(unittest.TestCase):
         self.assertIn("if(observedLanguage != GameLanguage)", localized)
         self.assertIn("breakScript();", localized)
         self.assertIn("watchLanguage();", localized)
+        self.assertLess(localized.index("object Key {"),
+                        localized.index("local script watchLanguage()"))
         self.assertNotIn("watchLanguage", regular)
         self.assertIn(r"\x", localized)
         incomplete = LanguageCatalog("en", ("de", "en"), tuple(line for line in lines if line.id != "room.harbor.use.0.response"))

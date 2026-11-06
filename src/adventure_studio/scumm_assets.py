@@ -313,22 +313,6 @@ def scummc_room_source(room: RoomAsset, catalog=None) -> str:
             f"        setObjectState({rule.result_id}, 1);\n",
             "    }\n",
         ])
-    # Object labels are cached by the engine. Refresh them whenever the
-    # keyboard language selector changes without leaving the current room.
-    if catalog is not None and room.hotspots:
-        parts.extend([
-            "    local script watchLanguage() {\n",
-            "        int observedLanguage;\n",
-            "        observedLanguage = GameLanguage;\n",
-            "        while(1) {\n",
-            "            if(observedLanguage != GameLanguage) {\n",
-            "                observedLanguage = GameLanguage;\n",
-            *[localized_name(hotspot) for hotspot in room.hotspots],
-            "            }\n",
-            "            breakScript();\n",
-            "        }\n",
-            "    }\n",
-        ])
     for hotspot in room.hotspots:
         speaker_rule = next((r for r in room.talk_rules if r.speaker_id == hotspot.id), None)
         answer_pair = next(((r, c) for r in room.talk_rules for c in r.choices
@@ -428,6 +412,23 @@ def scummc_room_source(room: RoomAsset, catalog=None) -> str:
                     "            }\n            return;\n",
                 ])
         parts.append("        }\n    }\n")
+    # ScummC resolves object symbols before script bodies: place the watcher
+    # after all object declarations, not before them. It refreshes cached
+    # labels when the language changes within a loaded room.
+    if catalog is not None and room.hotspots:
+        parts.extend([
+            "    local script watchLanguage() {\n",
+            "        int observedLanguage;\n",
+            "        observedLanguage = GameLanguage;\n",
+            "        while(1) {\n",
+            "            if(observedLanguage != GameLanguage) {\n",
+            "                observedLanguage = GameLanguage;\n",
+            *[localized_name(hotspot) for hotspot in room.hotspots],
+            "            }\n",
+            "            breakScript();\n",
+            "        }\n",
+            "    }\n",
+        ])
     parts.extend([
         "    local script entry() {\n",
         "        setCurrentActor(VAR_EGO);\n",
