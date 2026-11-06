@@ -49,7 +49,8 @@ jobs:
           sudo mkdir -p /tmp/scumm-language-apt/partial
           # Azure's Ubuntu mirror repeatedly stalled on scummvm-data (72 MB).
           # Use the canonical Ubuntu mirror for this research-only workflow.
-          sudo sed -i 's@http://azure.archive.ubuntu.com/ubuntu@http://archive.ubuntu.com/ubuntu@g' /etc/apt/sources.list.d/ubuntu.sources
+          sudo grep -R -l 'azure.archive.ubuntu.com' /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null | sudo xargs -r sed -i 's@azure.archive.ubuntu.com@archive.ubuntu.com@g'
+          if sudo grep -R 'azure.archive.ubuntu.com' /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then exit 1; fi
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 update
           sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Dir::Cache::archives=/tmp/scumm-language-apt -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core fonts-ipafont-gothic
           python -m pip install 'Pillow>=10,<13' 'fonttools>=4,<6'
