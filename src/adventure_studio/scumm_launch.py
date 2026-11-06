@@ -152,7 +152,7 @@ def door_center(output_directory: Path, frame: str = "pickup") -> tuple[int, int
 
 
 def open_door_center(output_directory: Path, frame: str = "door") -> tuple[int, int]:
-    if frame not in ("door", "chain-second-open"):
+    if frame not in ("door", "exit", "chain-second-open"):
         raise ValueError("Invalid opened-door screenshot frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -207,7 +207,7 @@ def parse_key_bounds(bounds: str) -> tuple[int, int]:
 
 def key_center(output_directory: Path, frame: str = "end") -> tuple[int, int]:
     """Locate the visible key silhouette, rather than assuming camera offset."""
-    if frame not in ("end", "pre-pickup"):
+    if frame not in ("end", "pre-pickup", "pre-pickup-retry"):
         raise ValueError("Invalid key location frame")
     screenshot = output_directory / f"scummvm-{frame}.png"
     result = subprocess.run(
@@ -272,9 +272,11 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
 def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0,
                  scene_only: bool = False, verify_return: bool = True,
                  verify_chain: bool = False, verify_recipe: bool = False,
-                 allow_static_scene: bool = False) -> None:
+                 allow_static_scene: bool = False, reverse_recipe: bool = False) -> None:
     if allow_static_scene and not verify_chain:
         raise ValueError("Static scene exception is only for the chain/palette fixture")
+    if reverse_recipe and not verify_recipe:
+        raise ValueError("Reversed inventory combination requires recipe mode")
     if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
@@ -427,7 +429,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             picked_up = False
             remaining = visible_key_pixels(output_directory)
             inventory_pixels = 0
-            pickup_deadline = time.monotonic() + 15.0
+            pickup_start = time.monotonic()
+            pickup_deadline = pickup_start + 20.0
+            pickup_retried = False
             while time.monotonic() < pickup_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit during pickup (exit={process.returncode})")
@@ -437,11 +441,30 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 if remaining < 10 and inventory_pixels >= 40:
                     picked_up = True
                     break
+                # On slower CI runners the first object click can land while
+                # the actor/camera is still moving. Reacquire the visible key
+                # once after settling, rather than treating input timing as
+                # an inventory-regression failure.
+                if (not pickup_retried and remaining >= 10
+                        and time.monotonic() - pickup_start >= 7.0):
+                    pickup_retried = True
+                    subprocess.run(
+                        ["xdotool", "mousemove", "328", "506", "click", "1"],
+                        check=True, timeout=5,
+                    )
+                    time.sleep(0.3)
+                    capture_frame("pre-pickup-retry")
+                    retry_x, retry_y = key_center(output_directory, "pre-pickup-retry")
+                    subprocess.run(
+                        ["xdotool", "mousemove", str(retry_x), str(retry_y), "click", "1"],
+                        check=True, timeout=5,
+                    )
                 time.sleep(0.4)
             (output_directory / "scummvm-interaction-report.json").write_text(
                 json.dumps({"verb": "PickUp", "key_click": [key_x, key_y],
                             "remaining_gold_pixels": remaining,
                             "inventory_gold_pixels": inventory_pixels,
+                            "pickup_retried": pickup_retried,
                             "key_removed_from_room": picked_up}, indent=2) + "\n",
                 encoding="utf-8",
             )
@@ -552,7 +575,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 first_center = colored_item_center(output_directory, "recipe-second",
                                                    tuple(ingredients[0]["rgb"]), inventory=True)
                 second_center = colored_item_center(output_directory, "recipe-second", second_rgb, inventory=True)
-                for x, y in ((408, 506), first_center, second_center):
+                ordered_ingredients = ((second_center, first_center) if reverse_recipe
+                                       else (first_center, second_center))
+                for x, y in ((408, 506), *ordered_ingredients):
                     command = subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                                              capture_output=True, text=True, timeout=5, check=False)
                     if command.returncode:
@@ -573,6 +598,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     json.dumps({"recipe": combinations[0], "ingredient_pickup": ingredient_owned,
                                 "ingredients_consumed": first_pixels < 10 and second_pixels < 10,
                                 "result_inventory_pixels": result_pixels,
+                                "reversed_ingredient_order": reverse_recipe,
                                 "combined": combined}, indent=2) + "\n", encoding="utf-8")
                 if not combined:
                     raise RuntimeError("Recipe combination did not consume ingredients and produce result")
@@ -774,6 +800,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 return
             goal_reached = False
             exit_deadline = time.monotonic() + 15.0
+            exit_retry_at = time.monotonic() + 6.0
+            exit_retried = False
             while time.monotonic() < exit_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit during exit (exit={process.returncode})")
@@ -781,6 +809,17 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 goal_reached = close_rgb(scene_pixel(output_directory, "exit"), tuple(expected_color))
                 if goal_reached:
                     break
+                # The actor may still be finishing the door-opening animation
+                # when the first exit click arrives. Once the open hotspot is
+                # stable, repeat the click once with freshly measured bounds.
+                if (verify_recipe and not exit_retried and time.monotonic() >= exit_retry_at
+                        and door_pixels(output_directory, "exit", open_state=True) >= 40):
+                    exit_retried = True
+                    exit_x, exit_y = open_door_center(output_directory, "exit")
+                    subprocess.run(
+                        ["xdotool", "mousemove", str(exit_x), str(exit_y), "click", "1"],
+                        check=True, timeout=5,
+                    )
                 time.sleep(0.4)
             (output_directory / "scummvm-use-report.json").write_text(
                 json.dumps({"inventory_item": "Key", "target": "Door",
@@ -788,6 +827,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                             "green_after": remaining_door_pixels, "door_opened": door_opened,
                             "open_door_pixels": open_door_pixels,
                             "exit_click": [exit_x, exit_y],
+                            "exit_retried": exit_retried,
                             "destination_room_visible": goal_reached,
                             "goal_room": goal["room_id"], "goal_reached": goal_reached}, indent=2) + "\n",
                 encoding="utf-8",
@@ -840,16 +880,19 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only")):
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only")):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only|--recipe-reverse-only]")
         return 2
     mode = sys.argv[3] if len(sys.argv) == 4 else ""
     launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]),
-                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only"),
-                 verify_chain=mode in ("--chain-only", "--static-chain-only"), verify_recipe=mode == "--recipe-only",
+                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only"),
+                 verify_chain=mode in ("--chain-only", "--static-chain-only"),
+                 verify_recipe=mode in ("--recipe-only", "--recipe-reverse-only"),
+                 reverse_recipe=mode == "--recipe-reverse-only",
                  allow_static_scene=mode == "--static-chain-only")
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

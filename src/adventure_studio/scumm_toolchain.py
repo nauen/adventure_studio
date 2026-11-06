@@ -18,7 +18,7 @@ from typing import Callable
 
 from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_objects,
                               inject_language_keys, inject_language_room_probe, inject_multilingual_charset,
-                              retarget_upstream_bootstrap)
+                              inject_screen_language_verbs, retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
 from .scumm_project import parse_document
 
@@ -35,7 +35,11 @@ def _tool(upstream: Path, name: str) -> Path:
 
 def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                        runner: Callable = subprocess.run,
-                       language_room_probe: bool = False) -> Path:
+                       language_room_probe: bool = False,
+                       localize_story: bool = False,
+                       graphical_language_buttons: bool = False,
+                       screen_language_gui: bool = False,
+                       stock_fonts_probe: bool = False) -> Path:
     """Compile and link all validated rooms; return a loadable research fixture."""
     document = parse_document((build_directory / "project.json").read_text(encoding="utf-8"))
     resources = build_directory / "resources"
@@ -78,8 +82,28 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                 raise ValueError("Language package glyph map mismatch")
             verify_char_resource(custom_font, {code for _, code in plan.extra_glyphs} | set(range(32, 127)))
             language_catalog = catalog
-        bootstrap = inject_multilingual_charset(bootstrap)
+        if not stock_fonts_probe:
+            bootstrap = inject_multilingual_charset(bootstrap)
         shutil.copyfile(custom_font, road / custom_font.name)
+    if (graphical_language_buttons or screen_language_gui) and not localize_story:
+        raise ValueError("Graphical language selectors require --localize-story")
+    if graphical_language_buttons and screen_language_gui:
+        raise ValueError("Choose one graphical language selector mode")
+    if localize_story:
+        if language_catalog is None:
+            raise ValueError("Localized story export requires a verified language package")
+        from .story_localization import validate_story_catalog
+        from .scumm_assets import scummc_room_source
+        if graphical_language_buttons:
+            from .scumm_language_buttons import write_button_sprites
+        validate_story_catalog(document, language_catalog)
+        for room in document.rooms:
+            (resources / f"{room.name}.scc").write_text(
+                scummc_room_source(room, language_catalog,
+                                   graphical_language_buttons=graphical_language_buttons),
+                encoding="utf-8")
+            if graphical_language_buttons:
+                write_button_sprites(room, language_catalog, resources)
     if language_room_probe and (language_catalog is None or len(document.rooms) < 2):
         raise ValueError("Room language probe needs a language package and two rooms")
     if language_catalog is not None:
@@ -87,6 +111,9 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         if language_room_probe:
             bootstrap = inject_language_room_probe(bootstrap, document.rooms[1].name,
                                                    language_catalog)
+        if screen_language_gui:
+            bootstrap, header = inject_screen_language_verbs(bootstrap, header,
+                                                             language_catalog)
     (resources / "bootstrap.scc").write_text(inject_inventory_objects(bootstrap, icon_ids), encoding="utf-8")
     (resources / "common.sch").write_text(inject_inventory_declarations(header, icon_ids), encoding="utf-8")
     for name in icon_ids:
@@ -126,13 +153,22 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
 
 
 def main() -> int:
-    if len(sys.argv) not in (4, 5) or (len(sys.argv) == 5 and sys.argv[4] != "--language-room-probe"):
-        print("Usage: python -m adventure_studio.scumm_toolchain STORY_BUILD_DIRECTORY SCUMMC_DIRECTORY GAME_OUTPUT_DIRECTORY [--language-room-probe]")
+    options = sys.argv[4:]
+    allowed = {"--language-room-probe", "--localize-story", "--language-buttons",
+               "--screen-language-gui", "--stock-fonts-probe"}
+    if (len(sys.argv) < 4 or len(options) != len(set(options)) or set(options) - allowed
+            or ("--stock-fonts-probe" in options and "--localize-story" not in options)):
+        print("Usage: python -m adventure_studio.scumm_toolchain STORY_BUILD_DIRECTORY SCUMMC_DIRECTORY GAME_OUTPUT_DIRECTORY [--language-room-probe] [--localize-story] [--language-buttons] [--screen-language-gui] [--stock-fonts-probe]")
         return 2
     print(compile_story_game(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]),
-                             language_room_probe=len(sys.argv) == 5))
+                             language_room_probe="--language-room-probe" in options,
+                             localize_story="--localize-story" in options,
+                             graphical_language_buttons="--language-buttons" in options,
+                             screen_language_gui="--screen-language-gui" in options,
+                             stock_fonts_probe="--stock-fonts-probe" in options))
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

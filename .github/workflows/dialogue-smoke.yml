@@ -13,6 +13,8 @@ on:
       - 'src/adventure_studio/scumm_project.py'
       - 'src/adventure_studio/story_to_scumm.py'
       - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/scumm_launch.py'
+      - 'examples/recipe_story.json'
       - 'tests/test_scumm_dialogue_probe.py'
       - 'tests/test_story_v4.py'
   pull_request:
@@ -24,6 +26,8 @@ on:
       - 'src/adventure_studio/scumm_project.py'
       - 'src/adventure_studio/story_to_scumm.py'
       - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/scumm_launch.py'
+      - 'examples/recipe_story.json'
       - 'tests/test_scumm_dialogue_probe.py'
       - 'tests/test_story_v4.py'
 
@@ -74,6 +78,20 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe /tmp/dialogue-game /tmp/dialogue-evidence
+      - name: Build recipe adventure entirely from story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/recipe_story.json /tmp/recipe-story
+          python -m adventure_studio.scumm_toolchain /tmp/recipe-story /tmp/scummc-upstream /tmp/recipe-game
+          test -s /tmp/recipe-game/tentacle.000
+          test -s /tmp/recipe-game/tentacle.001
+      - name: Verify inventory recipe in both orders in real ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-game /tmp/recipe-forward-evidence --recipe-only
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-game /tmp/recipe-reverse-evidence --recipe-reverse-only
       - name: Upload playable dialogue game
         if: always()
         uses: actions/upload-artifact@v4
@@ -94,3 +112,16 @@ jobs:
             /tmp/dialogue-evidence/*.png
             /tmp/dialogue-evidence/*.json
             /tmp/dialogue-evidence/scummvm.log
+      - name: Upload recipe combination evidence in both directions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recipe-combination-evidence
+          if-no-files-found: ignore
+          path: |
+            /tmp/recipe-forward-evidence/*.png
+            /tmp/recipe-forward-evidence/*.json
+            /tmp/recipe-forward-evidence/scummvm.log
+            /tmp/recipe-reverse-evidence/*.png
+            /tmp/recipe-reverse-evidence/*.json
+            /tmp/recipe-reverse-evidence/scummvm.log

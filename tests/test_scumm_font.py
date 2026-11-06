@@ -96,7 +96,16 @@ class ScummFontTests(unittest.TestCase):
             self.assertTrue(verify_char_resource(path, {0})["all_slots_present"])
             with self.assertRaisesRegex(ValueError, "Missing compiled glyph"):
                 verify_char_resource(path, {1})
+            data[33:37] = (len(data) + 1).to_bytes(4, "little")
+            path.write_bytes(data)
+            with self.assertRaisesRegex(ValueError, "Missing compiled glyph"):
+                verify_char_resource(path, {0})
+            data[31:33] = (4).to_bytes(2, "little")
+            path.write_bytes(data)
+            with self.assertRaisesRegex(ValueError, "Truncated CHAR glyph offset table"):
+                verify_char_resource(path, {0})
 
 
 if __name__ == "__main__":
     unittest.main()
+

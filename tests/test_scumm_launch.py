@@ -6,7 +6,7 @@ from unittest.mock import patch
 from subprocess import CompletedProcess
 from pathlib import Path
 
-from adventure_studio.scumm_launch import close_rgb, colored_item_center, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
+from adventure_studio.scumm_launch import close_rgb, colored_item_center, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, key_center, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
 
 
 class ScummLaunchTests(unittest.TestCase):
@@ -22,6 +22,10 @@ class ScummLaunchTests(unittest.TestCase):
         for invalid in ("", "1x1-1+2", "20x20+630+0", "0x1+1+1"):
             with self.subTest(bounds=invalid), self.assertRaises(ValueError):
                 parse_key_bounds(invalid)
+    def test_retry_capture_frame_can_locate_key(self):
+        with patch("adventure_studio.scumm_launch.subprocess.run",
+                   return_value=CompletedProcess([], 0, stdout="28x8+338+204", stderr="")):
+            self.assertEqual(key_center(Path("/tmp"), "pre-pickup-retry"), (544, 392))
     def test_key_pixel_histogram(self):
         histogram = "   250: (246,173,90) #F6AD5A srgb(246,173,90)\n   112: (255,222,74) #FFDE4A srgb(255,222,74)\n"
         self.assertEqual(count_gold_pixels(histogram), 112)
@@ -78,6 +82,20 @@ class ScummLaunchTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Missing isolated"):
                 launch_smoke(path, path / "out", verify_recipe=True)
 
+    def test_reverse_recipe_mode_requires_recipe_and_maps_cli_flag(self):
+        from adventure_studio.scumm_launch import main
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaisesRegex(ValueError, "requires recipe mode"):
+                launch_smoke(root, root / "out", reverse_recipe=True)
+            with patch("sys.argv", ["scumm_launch", str(root), str(root / "out"),
+                                    "--recipe-reverse-only"]):
+                with patch("adventure_studio.scumm_launch.launch_smoke") as launch:
+                    self.assertEqual(main(), 0)
+                    self.assertTrue(launch.call_args.kwargs["verify_recipe"])
+                    self.assertTrue(launch.call_args.kwargs["reverse_recipe"])
+                    self.assertFalse(launch.call_args.kwargs["verify_return"])
+
     def test_static_scene_exception_requires_full_chain_verification(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)
@@ -87,3 +105,4 @@ class ScummLaunchTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

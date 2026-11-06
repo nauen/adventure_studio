@@ -14,6 +14,11 @@ from pathlib import Path
 def retarget_upstream_bootstrap(source: str, room_name: str) -> str:
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", room_name):
         raise ValueError("Invalid room identifier")
+    # ScummVM v4+ rejects native saves when VAR_MAINMENU_KEY is disabled.
+    # The actual upstream example initializes it to 319 in main(). Keep
+    # that invariant when adapting a full upstream script for the fixture.
+    if "script main (int bootParam)" in source and source.count("VAR_MAINMENU_KEY = 319;") != 1:
+        raise ValueError("Upstream SCUMM main-menu save gate initialization changed")
     original = (
         "room Road;",
         "loadRoom(Road);",
@@ -104,7 +109,7 @@ def inject_language_keys(source: str, header: str, catalog) -> tuple[str, str]:
 
 
 def inject_language_room_probe(source: str, destination: str, catalog) -> str:
-    """Add opt-in test keys: 0 changes rooms, 6 repeats the saved language.
+    """Add opt-in test keys: room 0, language 6, save-gate state 7.
 
     This is only for the runtime fixture, never for regular game controls.
     The source must already contain the language keyboard selector.
@@ -117,11 +122,16 @@ def inject_language_room_probe(source: str, destination: str, catalog) -> str:
     marker = "script keyboardHandler(int key) {\n        switch(key) {"
     if source.count(marker) != 1:
         raise ValueError("Missing language keyboard handler")
-    if source.count("case '0':") or source.count("case '6':"):
+    if any(source.count(f"case '{key}':") for key in ("0", "6", "7")):
         raise ValueError("Language probe keys already reserved")
     if not catalog.lines:
         raise ValueError("Language probe needs a translated line")
-    dispatch = scumm_language_dispatch(catalog, catalog.lines[0].id)
+    # After the room transition, choose a line that differs from the new
+    # room's entry goal. Reprinting the goal produced identical screenshots
+    # and could not establish whether the keyboard handler ran at all.
+    probe_id = next((line.id for line in catalog.lines
+                     if line.id.endswith(".object.key.label")), catalog.lines[0].id)
+    dispatch = scumm_language_dispatch(catalog, probe_id)
     branches = "".join("            " + line + "\n" for line in dispatch.splitlines())
     probe = (
         "\n        case '0':\n"
@@ -129,10 +139,93 @@ def inject_language_room_probe(source: str, destination: str, catalog) -> str:
         "            break;\n"
         "        case '6':\n"
         + branches
-        + "            break;"
+        + "            break;\n"
+        "        case '7':\n"
+        "            if (VAR_MAINMENU_KEY == 0) egoSay(\"Menu key disabled\");\n"
+        "            else egoSay(\"Menu key enabled\");\n"
+        "            break;"
     )
     source = source.replace(marker, marker + probe, 1)
     return f"room {destination};\n" + source
+
+
+def inject_screen_language_verbs(source: str, header: str, catalog) -> tuple[str, str]:
+    """Add screen-fixed language verbs to ScummC's shared bottom GUI.
+
+    Unlike room objects these verbs are positioned in the permanent verb
+    interface and remain reachable when the camera scrolls. The adapter is
+    deliberately tied to the validated upstream road bootstrap markers.
+    """
+    from .localization import validate_catalog
+
+    validate_catalog(catalog)
+    if not (1 <= len(catalog.languages) <= 5):
+        raise ValueError("Screen language GUI supports one to five languages")
+    verbs = [(f"Language{language.title()}", language,
+              int.from_bytes(language.encode("ascii"), "big"))
+             for language in catalog.languages]
+    markers = (
+        (header, "// The inventory arrows\n"),
+        (source, "        dimInt(invObj,8);\n"),
+        (source, "    // turn on all the verb for the interface"),
+        (source, "        verbsOn = !!show;\n"),
+        (source, "        // A verb was clicked\n"),
+        (source, "        setupVerbs();\n"),
+    )
+    if any(body.count(marker) != 1 for body, marker in markers):
+        raise ValueError("Unexpected upstream screen-language GUI layout")
+    header = header.replace(
+        "// The inventory arrows\n",
+        "".join(f"verb {name} @ {120 + index};\n"
+                for index, (name, _lang, _code) in enumerate(verbs))
+        + "// The inventory arrows\n", 1)
+    setup = "".join(
+        f"        setCurrentVerb({name});\n"
+        f"        initVerb();\n"
+        f'        setVerbName("{language.upper()}");\n'
+        f"        setVerbXY({10 + index * 26},141);\n"
+        "        setVerbColor(VERB_COLOR);\n"
+        "        setVerbHiColor(VERB_HI_COLOR);\n"
+        for index, (name, language, _code) in enumerate(verbs))
+    source = source.replace("        dimInt(invObj,8);\n",
+                            "        dimInt(invObj,8);\n" + setup, 1)
+    refresh = (
+        "    script refreshLanguageVerbs() {\n"
+        + "".join(
+            f"        setCurrentVerb({name});\n"
+            f"        if(GameLanguage == {code}) setVerbColor(VERB_HI_COLOR);\n"
+            "        else setVerbColor(VERB_COLOR);\n"
+            "        redrawVerb();\n"
+            for name, _language, code in verbs)
+        + "    }\n\n")
+    source = source.replace("    // turn on all the verb for the interface",
+                            refresh + "    // turn on all the verb for the interface", 1)
+    show = "".join(
+        f"        setCurrentVerb({name});\n"
+        "        if(show) setVerbOn();\n"
+        "        else setVerbOff();\n"
+        "        redrawVerb();\n"
+        for name, _language, _code in verbs)
+    source = source.replace("        verbsOn = !!show;\n", show + "        verbsOn = !!show;\n", 1)
+    clicks = "".join(
+        f"        if(cmd == {name}) {{\n"
+        f"            GameLanguage = {code};\n"
+        "            refreshLanguageVerbs();\n"
+        "            return;\n"
+        "        }\n"
+        for name, _language, code in verbs)
+    source = source.replace("        // A verb was clicked\n",
+                            clicks + "        // A verb was clicked\n", 1)
+    source = source.replace("        setupVerbs();\n",
+                            "        setupVerbs();\n        refreshLanguageVerbs();\n", 1)
+    for _name, _language, code in verbs:
+        marker = f"            GameLanguage = {code};\n            egoSay("
+        if source.count(marker) != 1:
+            raise ValueError("Unexpected keyboard branch for screen-language GUI")
+        source = source.replace(marker,
+                                f"            GameLanguage = {code};\n"
+                                "            refreshLanguageVerbs();\n            egoSay(", 1)
+    return source, header
 
 
 def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str:
@@ -172,3 +265,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

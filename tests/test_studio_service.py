@@ -22,6 +22,23 @@ class StudioServiceTests(unittest.TestCase):
             self.assertIsInstance(line["translations"]["en"], str)
             self.assertIsNone(line["translations"]["de"])
         self.assertEqual(translation_draft(SAMPLE), translation_draft(SAMPLE))
+        german = json.loads(translation_draft(SAMPLE, "de"))
+        self.assertEqual(german["source_language"], "de")
+        self.assertIsNone(german["lines"][0]["translations"]["en"])
+        self.assertIsInstance(german["lines"][0]["translations"]["de"], str)
+
+    def test_draft_preserves_authored_umlauts_and_accepts_validated_source(self):
+        changed = change_item(SAMPLE, "Key", "Alter Schlüssel", "Ein rostiger Schlüssel")
+        draft = json.loads(translation_draft(changed.story_json, "de"))
+        key = next(line for line in draft["lines"]
+                   if line["id"] == "room.harbor.object.key.label")
+        self.assertEqual(key["translations"]["de"], "Alter Schlüssel")
+        for line in draft["lines"]:
+            source = line["translations"]["de"]
+            for language in draft["languages"]:
+                line["translations"][language] = source
+        checked = validate_translation_draft(changed.story_json, json.dumps(draft, ensure_ascii=False))
+        self.assertIn("Alter Schlüssel", checked)
 
     def test_completed_translations_require_story_and_charset_coverage(self):
         draft = json.loads(translation_draft(SAMPLE))

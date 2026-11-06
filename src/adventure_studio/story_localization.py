@@ -35,6 +35,8 @@ def story_text_inventory(document: GameDocument) -> dict[str, str]:
             base = f"{prefix}.object.{hotspot.id.lower()}"
             add(f"{base}.label", hotspot.label)
             add(f"{base}.description", hotspot.description)
+            if hotspot.exit_destination is not None and hotspot.open_sprite_pixels is not None:
+                add(f"{base}.locked", "The door is locked.")
             for index, line in enumerate(hotspot.talk_lines):
                 add(f"{base}.talk.{index}", line)
         for index, rule in enumerate(room.use_rules):
@@ -82,10 +84,74 @@ def story_translation_template(
     }
 
 
-def story_translation_template_json(document: GameDocument) -> str:
+def story_translation_template_json(document: GameDocument,
+                                    source_language: str = "en") -> str:
     """Return a byte-stable UTF-8 translation draft for an editor/export."""
-    return json.dumps(story_translation_template(document), ensure_ascii=False,
+    return json.dumps(story_translation_template(document, source_language), ensure_ascii=False,
                       sort_keys=True, separators=(",", ":")) + "\n"
+
+
+
+def source_matches_compiled(source: str, compiled: str) -> bool:
+    """Allow authored Unicode when it normalizes to this old ASCII fixture."""
+    if source == compiled:
+        return True
+    from .story_to_scumm import _text
+    try:
+        return _text(source) == compiled
+    except ValueError:
+        return False
+
+
+def story_authoring_template(story, source_language: str = "en") -> dict:
+    """Retain the author's Unicode where text has a stable SCUMM counterpart."""
+    from .story_to_scumm import _text, compile_story_to_scumm
+
+    document = compile_story_to_scumm(story)
+    template = story_translation_template(document, source_language)
+    candidates = {}
+    for value in (
+        *(item.name for item in story.items),
+        *(item.description for item in story.items),
+        *(actor.name for actor in story.characters),
+        *(actor.description for actor in story.characters),
+        *(puzzle.title for puzzle in story.puzzles),
+        *(recipe.title for recipe in story.recipes),
+        *(node.text for node in story.dialogue_nodes),
+        *(choice.text for choice in story.dialogue_choices),
+    ):
+        try:
+            normalized = _text(value)
+        except ValueError:
+            continue
+        candidates.setdefault(normalized, set()).add(value)
+    exact = {}
+    for item in story.items:
+        base = f"room.{item.scene_id.lower()}.object.{item.id.lower()}"
+        exact[f"{base}.label"] = item.name
+        exact[f"{base}.description"] = item.description
+    for actor in story.characters:
+        base = f"room.{actor.scene_id.lower()}.object.{actor.id.lower()}"
+        exact[f"{base}.label"] = actor.name
+        exact[f"{base}.description"] = actor.description
+
+    for line in template["lines"]:
+        key = line["id"]
+        compiled = line["translations"][source_language]
+        if key in exact:
+            original = exact[key]
+        else:
+            possibilities = candidates.get(compiled, set())
+            original = next(iter(possibilities)) if len(possibilities) == 1 else compiled
+        if not source_matches_compiled(original, compiled):
+            raise ValueError(f"Authoring text no longer matches SCUMM source: {key}")
+        line["translations"][source_language] = original
+    return template
+
+
+def story_authoring_template_json(story, source_language: str = "en") -> str:
+    return json.dumps(story_authoring_template(story, source_language),
+                      ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
 
 
 def validate_story_catalog(document: GameDocument, catalog: LanguageCatalog) -> None:
@@ -98,5 +164,5 @@ def validate_story_catalog(document: GameDocument, catalog: LanguageCatalog) -> 
     if missing or extra:
         raise ValueError(f"Story translation IDs mismatch: missing={missing}, extra={extra}")
     for key, source_text in expected.items():
-        if actual[key][catalog.source_language] != source_text:
+        if not source_matches_compiled(actual[key][catalog.source_language], source_text):
             raise ValueError(f"Source translation differs from story: {key}")

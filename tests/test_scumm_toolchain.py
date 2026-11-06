@@ -1,13 +1,18 @@
 """No ScummC download required: validate exact toolchain boundaries."""
 
+import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from adventure_studio.scumm_toolchain import compile_story_game
+from adventure_studio.scumm_toolchain import compile_story_game, main
 from adventure_studio.scumm_bootstrap import inject_language_keys, inject_multilingual_charset
-from adventure_studio.localization import parse_catalog
+from adventure_studio.localization import LanguageCatalog, LocalizedLine, canonical_catalog_json, parse_catalog
 from adventure_studio.story_document import build_story_document
+from adventure_studio.scumm_project import parse_document
+from adventure_studio.story_localization import story_text_inventory
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -28,6 +33,21 @@ def fake_upstream(path: Path):
 
 
 class ToolchainTests(unittest.TestCase):
+    def test_stock_font_probe_requires_localized_story(self):
+        argv = ["scumm_toolchain", "story", "scummc", "output", "--stock-fonts-probe"]
+        with patch("sys.argv", argv), patch("builtins.print"):
+            self.assertEqual(main(), 2)
+
+    def test_stock_font_probe_is_explicit_and_passed_to_compiler(self):
+        argv = ["scumm_toolchain", "story", "scummc", "output",
+                "--localize-story", "--stock-fonts-probe"]
+        with patch("sys.argv", argv), patch(
+            "adventure_studio.scumm_toolchain.compile_story_game", return_value=Path("output")
+        ) as compile_mock, patch("builtins.print"):
+            self.assertEqual(main(), 0)
+        self.assertTrue(compile_mock.call_args.kwargs["stock_fonts_probe"])
+        self.assertTrue(compile_mock.call_args.kwargs["localize_story"])
+
     def test_language_keyboard_selection_is_global_and_byte_encoded(self):
         catalog = parse_catalog('{"format_version":1,"source_language":"de",'
             '"languages":["de","ja","pl"],"lines":[{"id":"hello",'
@@ -103,6 +123,77 @@ class ToolchainTests(unittest.TestCase):
             self.assertEqual(bootstrap.count('"multilingual-font.char"'), 2)
             self.assertEqual(len(calls), 4)
 
+    def test_opt_in_story_localization_is_gated_and_generates_scumm_branches(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            build_story_document(EXAMPLE.read_text(encoding="utf-8"), root / "build")
+            fake_upstream(root / "scummc")
+            resources = root / "build" / "resources"
+            with self.assertRaisesRegex(ValueError, "verified language package"):
+                compile_story_game(root / "build", root / "scummc", root / "game",
+                                   localize_story=True)
+            with self.assertRaisesRegex(ValueError, "require --localize-story"):
+                compile_story_game(root / "build", root / "scummc", root / "game",
+                                   graphical_language_buttons=True)
+
+            road = root / "scummc" / "examples" / "road"
+            source = (road / "common.scc").read_text(encoding="utf-8")
+            source = source.replace(
+                "room ResRoom {",
+                'chset chtest = "vera.char";\n'
+                'chset dialogCharset = "vera-small.char";\n'
+                'script keyboardHandler(int key) {\n        switch(key) {\n        }\n    }\n'
+                '        setupActors();\nroom ResRoom {',
+            )
+            (road / "common.scc").write_text(source, encoding="utf-8")
+            with (road / "common.sch").open("a", encoding="utf-8") as header:
+                header.write("// Dialog string list\n")
+
+            document = parse_document((root / "build" / "project.json").read_text(encoding="utf-8"))
+            lines = tuple(LocalizedLine(key, (("de", value), ("en", value)))
+                          for key, value in story_text_inventory(document).items())
+            catalog = LanguageCatalog("en", ("de", "en"), lines)
+            canonical = canonical_catalog_json(catalog)
+            (resources / "language-catalog.json").write_text(canonical, encoding="utf-8")
+            slots = 127
+            font_bytes = bytearray(33 + 4 * slots + 1)
+            font_bytes[:4] = b"CHAR"
+            font_bytes[4:8] = len(font_bytes).to_bytes(4, "big")
+            font_bytes[31:33] = slots.to_bytes(2, "little")
+            for code in range(32, 127):
+                font_bytes[33 + 4 * code:37 + 4 * code] = (33 + 4 * slots).to_bytes(4, "little")
+            (resources / "multilingual-font.char").write_bytes(font_bytes)
+            manifest = {
+                "format_version": 1, "languages": ["de", "en"],
+                "catalog_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+                "char_sha256": hashlib.sha256(font_bytes).hexdigest(),
+                "glyph_map": {f"{code:02X}": chr(code) for code in range(32, 127)},
+            }
+            (resources / "language-package.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+            def fake_run(args, **kwargs):
+                target = Path(args[args.index("-o") + 1])
+                if args[0].endswith("/sld"):
+                    target.with_suffix(".000").write_bytes(b"index")
+                    target.with_suffix(".001").write_bytes(b"data")
+                else:
+                    target.write_bytes(b"compiled")
+
+            compile_story_game(root / "build", root / "scummc", root / "game",
+                               runner=fake_run, localize_story=True)
+            localized = (resources / "Harbor.scc").read_text(encoding="utf-8")
+            self.assertIn("GameLanguage ==", localized)
+            self.assertIn("/* de */", localized)
+            self.assertIn("/* en */", localized)
+            self.assertTrue((root / "game" / "tentacle.001").is_file())
+            compile_story_game(root / "build", root / "scummc", root / "game",
+                               runner=fake_run, localize_story=True,
+                               graphical_language_buttons=True)
+            self.assertIn("object LangDe {",
+                          (resources / "Harbor.scc").read_text(encoding="utf-8"))
+            self.assertTrue((resources / "HarborLangDe.bmp").is_file())
+            self.assertTrue((resources / "CellarLangEnActive.bmp").is_file())
+
     def test_story_names_determine_compiler_inputs_and_linker_order(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -142,3 +233,4 @@ class ToolchainTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -35,10 +35,11 @@ deterministisch auf reservierte Bytecodes `0x80..0xfd` abgebildet.
 16-Bit-Wert verwendet wird (statt von einer Position in der Sprachenliste
 abzuhängen). Unbekannte Sprachwerte fallen auf die Quellsprache zurück.
 
-Diese Funktionen **erzeugen derzeit weder eine .CHAR-Schriftdatei noch ein
-spielbares mehrsprachiges SCUMM-Spiel**. Das Unicode-zu-Glyphen-Mapping ist
-eine Anforderung an den späteren Font-Compiler, nicht der Beweis, dass
-ScummVM die Zeichen richtig zeichnet. Insbesondere für Japanisch sind
+Diese Funktionen allein erzeugen noch kein Spiel. Die nachgelagerte
+`scumm_language_package`- und `scumm_toolchain`-Integration verlinkt jedoch
+inzwischen eine reale .CHAR-Ressource und ein spielbares mehrsprachiges
+SCUMM-v6-Adventure. Das beweist weiterhin **nicht**, dass alle Glyphen in
+ScummVM richtig und lesbar gezeichnet werden. Insbesondere für Japanisch sind
 Zeichenbreite und die Zahl verschiedener Schriftzeichen offene Grenzen.
 
 ## Erste echte CHAR-Ressource (experimentell)
@@ -88,9 +89,11 @@ wird die Quellsprache initialisiert; eine Ziffer ändert die Sprache und
 gibt als kontrollierte Laufzeitprobe die erste übersetzte Katalogzeile
 mit den Bytewerten des gebündelten Fonts aus. Die Variable gehört zum
 Spielzustand und wird beim normalen Raumwechsel nicht neu gesetzt.
-Dies ist **noch kein grafisches Auswahlmenü** und noch keine automatische
-Übersetzung sämtlicher Objekt-/Dialogtexte. Der tatsächliche Compiler-
-und ScummVM-Nachweis dieses neuen Tastaturpfads steht noch aus.
+Dies ist **noch kein grafisches Auswahlmenü**. Ein vollständig ausgefüllter
+Story-Katalog kann mit `--localize-story` nun Dialoge, Objekte,
+Beschreibungen und Rätseltexte in SCUMM verzweigen. ScummC-Kompilierung
+und ScummVM-Start des Sprachpfads sind im isolierten GitHub-Lauf belegt;
+die Glyphenlesbarkeit ist weiterhin offen.
 
 Der unabhängige GitHub-Workflow `language-runtime.yml` baut dafür den
 unveränderten ScummC, erzeugt ein echtes Sprachpaket, verlinkt damit
@@ -98,19 +101,106 @@ ein kleines Adventure und startet es in stock ScummVM. Nach den Tasten
 `1` (Deutsch), `4` (Japanisch) und `5` (Polnisch) werden Screenshots und
 Engine-Log abgelegt. Der Test prüft zunächst, ob der Interpreter läuft
 und die Screenshots erzeugt. **Die Glyphen selbst werden noch nicht durch
-OCR oder Pixelreferenzen verifiziert**; diese Schranke bleibt offen.
+OCR oder Pixelreferenzen verifiziert**; diese Schranke bleibt offen. Der
+Laufzeitbericht misst zusätzlich Bildunterschiede zwischen deutscher,
+japanischer und polnischer Auswahl sowie nach dem Raumwechsel. Pixelunterschiede
+sind Diagnosedaten und ausdrücklich kein Zeichen-/Spracherkennungsbeweis.
+Die Nach-Raumwechsel-Taste `6` gibt nun einen anderen lokalisierten
+Objektnamen aus als die Zielmeldung beim Raumeintritt. Bleibt der sichtbare
+Bildschirm darauf unverändert, schlägt die Laufzeitprobe fehl; dadurch kann
+ein bisher pixelgleiches, nicht aussagekräftiges Bildpaar nicht mehr als
+bestanden durchgehen.
 
 Die ersten tatsächlichen Screenshots zeigten überlappende UI-Zeilen mit der
 ursprünglichen 14-Pixel-Schrift. Daher verwendet der SCUMM-Font-Generator
 nun 9-Pixel-Glyphen mit 11×12 nutzbaren Pixeln und weiterhin einem
-getrennten Führungsrand für den ScummC-Importer. Auch diese Änderung wird
-erst durch einen neuen Lauf visuell bestätigt; ein grüner Prozess-Exit allein
-ist ausdrücklich kein Beweis für korrekt dargestellte Sonderzeichen.
+getrennten Führungsrand für den ScummC-Importer. Die kleinere Schrift beseitigte die beobachtete Zeilenüberlagerung.
+Ein grüner Prozess-Exit allein ist ausdrücklich kein Beweis für korrekt
+dargestellte Sonderzeichen; die Glyphenlesbarkeit bleibt separat zu prüfen.
 
-**Noch nicht abgeschlossen:** Der Story-Export liefert den Übersetzungskatalog
-und die CHAR-Datei noch nicht automatisch gemeinsam aus. Eine vollständige
-Sprachumschaltung für sämtliche Story-Texte und der Pixelnachweis für polnische
-bzw. japanische Glyphen fehlen noch.
+**Noch nicht abgeschlossen:** Der Standard-Story-Export liefert den
+Übersetzungskatalog und die CHAR-Datei noch nicht automatisch gemeinsam aus.
+Die lokalisierte Kompilierung ist explizit zuschaltbar, aber eine grafische
+Sprachauswahl, der Pixelnachweis polnischer bzw. japanischer Glyphen und der Test
+von Sprachwechseln im selben Raum stehen noch aus.
+
+## Optionaler Story-Text-Compiler (vor Runtime-Abnahme)
+
+`story_localization.py` inventarisiert stabile Text-IDs für Objektbezeichnungen,
+Beschreibungen, Dialoge, Auswahltexte, Rätselantworten und Zieltexte. Das
+Gradio-Studio kann eine fünfsprachige, bewusst unvollständige Vorlage als JSON
+ausgeben und einen ausgefüllten Katalog gegen die aktuelle Story prüfen.
+Der Übersetzungsentwurf übernimmt eindeutig zuordenbare Originaltexte aus dem
+Unicode-Storymodell (etwa Gegenstandsnamen und Dialogzeilen). Synthetische
+Compilertexte und mehrdeutige ASCII-Normalisierungen bleiben in der aktuellen
+Adaptergrenze als technische Texte erhalten. Die ursprüngliche Story selbst
+wird dabei nicht verändert.
+Fehlende Sprachfelder bleiben `null`; ein unvollständiger Katalog besteht
+weder die strikte Validierung noch die Zeichensatzbedarfsprüfung.
+
+Mit dem expliziten Compiler-Schalter `--localize-story` werden
+`egoSay`-Zeilen als bedingte SCUMM-v6-Sprachzweige erzeugt. Voraussetzung
+ist ein vollständiger Katalog mit exakt passenden Originaltexten und einem
+bereits geprüften CHAR-Paket. Der normale Export bleibt unverändert.
+Objektnamen werden beim Betreten eines Raums über `setObjectName` an den
+Sprachzustand angepasst. Ein kleines raumlokales `watchLanguage`-Skript
+beobachtet zusätzlich `GameLanguage` und setzt die Namen bei einem
+Sprachwechsel im bereits geladenen Raum neu. Die Laufzeitkompilierung dieses
+Monitor-Skripts wird im GitHub-ScummVM-Test abgesichert. Die bislang fest codierte
+Tür-Fehlermeldung hat nun eine eigene stabile Übersetzungs-ID. Die Darstellung
+bleibt gesondert im Interpreter zu verifizieren.
+
+`story_language_fixture.py` erzeugt einen begrenzten Integrationskatalog,
+in dem **alle neun Texte** der Zeichentest-Geschichte in fünf Sprachen
+vorliegen. Für den echten ScummVM-Test wird eine separate englische
+`mini_story_language_en.json` mit **sieben** sichtbaren Story-Texten verwendet;
+auch diese sind in allen fünf Sprachen vollständig übersetzt. Objektnamen,
+Beschreibungen, Tür-/Rätselantworten und Zieltexte sind abgedeckt.
+Das sind vollständige Übersetzungen **dieser kleinen Testspiele**, keine
+automatische Übersetzung eines beliebigen Nutzer-Adventures. Der isolierte
+`language-runtime.yml`-Workflow soll damit den echten ScummC-Compiler,
+ScummVM und Raumwechsel prüfen; ein grüner Python-Test ersetzt diesen
+Engine-Nachweis nicht.
+
+
+## Experimentelle anklickbare Sprachauswahl
+
+`scumm_toolchain --localize-story --language-buttons` ergänzt jeden Raum
+um fünf anklickbare, per 8-Bit-BMP gezeichnete Sprachfelder `DE`, `EN`,
+`FR`, `JA` und `PL`. Jeder Raum erhält eigene Bitmap-Ressourcen in seiner
+vorhandenen Palette; ein `WalkTo` auf das Feld setzt `GameLanguage`.
+Das `watchLanguage`-Skript aktualisiert die Markierung des aktiven Feldes
+und die übersetzten Objektnamen. Ohne den expliziten Schalter bleibt
+der bisherige Build unverändert. Die Zifferntasten bleiben während der
+Erprobung zusätzlich verfügbar.
+
+Diese erste Fassung verwendet **Raumobjekte**, keine dauerhaft am
+Bildschirm fixierte GUI. Sie kann bei horizontal scrollenden Räumen aus
+dem sichtbaren Bereich wandern. Die ScummC-Kompilierung der 32×16-Bitmaps und der Spielstart sind
+inzwischen bestanden. Der separate Runtime-Klicktest klickt das DE-Feld
+nach polnischer Auswahl, verschiebt den Mauszeiger anschließend weg und
+prüft nur die obere Button-Zone auf sichtbare Änderung. Das ist ein
+Interaktionstest, **kein** pixelgenauer Lesbarkeits- oder OCR-Beweis.
+Die Darstellung ist weiterhin anhand der Screenshots manuell zu prüfen.
+
+
+## Bildschirmfeste Sprachauswahl im gemeinsamen Verb-Bereich (Experiment)
+
+Mit `--localize-story --screen-language-gui` wird der originale
+ScummC-Bootstrap über validierte feste Einfügepunkte erweitert: Die
+Sprachcodes DE/EN/FR/JA/PL werden als echte SCUMM-Verben in der immer
+sichtbaren unteren Bedienleiste eingerichtet (IDs 120–124). Ein Klick
+setzt die globale `GameLanguage`-Variable, die Auswahl erhält eine
+Hervorhebungsfarbe und die vorhandenen Tastaturkürzel aktualisieren die
+Anzeige ebenfalls. Das ist unabhängig vom Raumscrolling und benötigt
+keine zusätzlichen Raum-Sprites.
+
+Dieser Modus ist zunächst **alternativ** zu `--language-buttons` und
+bewusst experimentell. `language-runtime.yml` kompiliert ihn mit ScummC
+und prüft im echten ScummVM einen Klick auf DE sowie die Pixeländerung
+im festen GUI-Ausschnitt. Ein bestandener Klicktest ist kein OCR- oder
+Lesbarkeitsnachweis. Ohne explizites Opt-in bleibt der bisherige
+Spielbuild unverändert.
 
 ## Verbindliche Kompatibilitäts-Gates vor Aktivierung im Spiel-Export
 

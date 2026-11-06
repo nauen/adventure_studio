@@ -48,6 +48,12 @@ class StoryDocumentTests(unittest.TestCase):
             self.assertIn("setObjectOwner(Bottle, 0)", source)
             self.assertIn("pickupObject(Mixture, VAR_ROOM)", source)
             self.assertIn("combine_0();", source)
+            pineapple_case = source.split("object Pineapple {", 1)[1].split("object Bottle {", 1)[0]
+            bottle_case = source.split("object Bottle {", 1)[1].split("object Mixture {", 1)[0]
+            self.assertIn("case Use:\n            if(objB == Bottle", pineapple_case)
+            self.assertIn("case Use:\n            if(objB == Pineapple", bottle_case)
+            self.assertIn("sntcPrepo[0] = \"with\";", pineapple_case)
+            self.assertIn("sntcPrepo[0] = \"with\";", bottle_case)
             self.assertIn("state = 0;", source)
             self.assertTrue((result.resource_directory / "Inv_Mixture.bmp").is_file())
 
