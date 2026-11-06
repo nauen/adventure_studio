@@ -3,7 +3,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from adventure_studio.scumm_language_runtime_probe import language_runtime_probe, verify_room_transition
+from adventure_studio.scumm_language_runtime_probe import (
+    compare_screenshots, language_runtime_probe, verify_room_transition,
+)
 
 
 class LanguageRuntimeProbeTests(unittest.TestCase):
@@ -28,6 +30,21 @@ class LanguageRuntimeProbeTests(unittest.TestCase):
             self.assertTrue(report["room_transition_visually_confirmed"])
             self.assertEqual(report["room_transition_changed_pixels"], 8000)
             self.assertAlmostEqual(report["room_transition_changed_ratio"], 0.8)
+            self.assertEqual(compare_screenshots(before, after),
+                             {"changed_pixels": 8000, "changed_ratio": 0.8})
+
+    def test_language_diagnostics_do_not_claim_character_recognition(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Optional Pillow dependency is unavailable")
+        with tempfile.TemporaryDirectory() as temp:
+            before = Path(temp) / "de.png"
+            after = Path(temp) / "ja.png"
+            Image.new("RGB", (12, 12), (0, 0, 0)).save(before)
+            Image.new("RGB", (12, 12), (0, 0, 0)).save(after)
+            self.assertEqual(compare_screenshots(before, after),
+                             {"changed_pixels": 0, "changed_ratio": 0.0})
 
     def test_missing_display_fails_without_spawning_engine(self):
         with patch.dict("os.environ", {"DISPLAY": ""}):
@@ -45,3 +62,4 @@ class LanguageRuntimeProbeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

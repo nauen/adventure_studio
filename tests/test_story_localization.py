@@ -67,6 +67,11 @@ class StoryLocalizationTests(unittest.TestCase):
         self.assertIn("/* en */", localized)
         self.assertIn("setObjectName(Key", localized)
         self.assertNotIn("setObjectName(Key", regular)
+        self.assertIn("local script watchLanguage()", localized)
+        self.assertIn("if(observedLanguage != GameLanguage)", localized)
+        self.assertIn("breakScript();", localized)
+        self.assertIn("watchLanguage();", localized)
+        self.assertNotIn("watchLanguage", regular)
         self.assertIn(r"\x", localized)
         incomplete = LanguageCatalog("en", ("de", "en"), tuple(line for line in lines if line.id != "room.harbor.use.0.response"))
         with self.assertRaisesRegex(ValueError, "Missing or stale SCUMM translation"):
@@ -94,11 +99,13 @@ class StoryLocalizationTests(unittest.TestCase):
         self.assertEqual(catalog.languages, ("de", "en", "fr", "ja", "pl"))
         lines = {line.id: dict(line.translations) for line in catalog.lines}
         self.assertEqual(lines["room.harbor.use.0.response"]["de"], "Die Tür ist offen.")
-        self.assertEqual(lines["room.harbor.object.key.label"]["de"], "Schlüssel")
+        self.assertEqual(lines["room.harbor.object.key.label"]["de"], "der Schlüssel")
         self.assertEqual(lines["room.harbor.object.door.label"]["ja"], "扉")
         self.assertEqual(lines["room.harbor.object.door.description"]["pl"], "Zamknięte drzwi.")
         self.assertIn("地下室", lines["room.cellar.goal"]["ja"])
         self.assertNotEqual(lines["room.cellar.goal"]["pl"], lines["room.cellar.goal"]["en"])
+        self.assertTrue(all(line[language] != line["en"]
+                            for line in lines.values() for language in ("de", "fr", "ja", "pl")))
         harbor = scummc_room_source(scrolling_fixture(), catalog)
         cellar = scummc_room_source(destination_fixture(), catalog)
         self.assertIn("setObjectName(Key", harbor)

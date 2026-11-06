@@ -1,8 +1,7 @@
-"""Bounded five-language SCUMM integration fixture, not production translations.
+"""Complete five-language translation of the tiny two-room runtime fixture.
 
-Most fixture strings deliberately reuse their English source. A bounded set
-of object names, a description, a response and a goal exercise the runtime
-language branches across both rooms.
+This is a deliberately small, hand-authored integration story; the strings
+must never be presented as translations for a user's own adventure.
 """
 
 from __future__ import annotations
@@ -29,10 +28,10 @@ TRANSLATED_DOOR = {
     "pl": "Drzwi są otwarte.",
 }
 TRANSLATED_KEY_NAME = {
-    "de": "Schlüssel", "fr": "clé", "ja": "鍵", "pl": "klucz",
+    "de": "der Schlüssel", "fr": "la clé", "ja": "鍵", "pl": "klucz",
 }
 TRANSLATED_DOOR_NAME = {
-    "de": "Tür", "fr": "porte", "ja": "扉", "pl": "drzwi",
+    "de": "die Tür", "fr": "la porte", "ja": "扉", "pl": "drzwi",
 }
 TRANSLATED_DOOR_DESCRIPTION = {
     "de": "Eine verschlossene Tür.",
@@ -40,12 +39,34 @@ TRANSLATED_DOOR_DESCRIPTION = {
     "ja": "閉じた扉。",
     "pl": "Zamknięte drzwi.",
 }
+TRANSLATED_STAIRS_NAME = {
+    "de": "Treppe zum Hafen", "fr": "escalier vers le port",
+    "ja": "港への階段", "pl": "schody do portu",
+}
+TRANSLATED_STAIRS_DESCRIPTION = {
+    "de": "Der Weg zurück.", "fr": "Le chemin du retour.",
+    "ja": "戻る道。", "pl": "Droga powrotna.",
+}
+TRANSLATED_KEY_DESCRIPTION = {
+    "de": "Ein rostiger Schlüssel.", "fr": "Une clé rouillée.",
+    "ja": "さびた鍵。", "pl": "Zardzewiały klucz.",
+}
+TRANSLATED_DOOR_LOCKED = {
+    "de": "Die Tür ist verschlossen.",
+    "fr": "La porte est verrouillée.",
+    "ja": "扉には鍵がかかっています。",
+    "pl": "Drzwi są zamknięte.",
+}
 TRANSLATED = {
     "room.cellar.goal": TRANSLATED_GOAL,
     "room.harbor.use.0.response": TRANSLATED_DOOR,
     "room.harbor.object.key.label": TRANSLATED_KEY_NAME,
     "room.harbor.object.door.label": TRANSLATED_DOOR_NAME,
     "room.harbor.object.door.description": TRANSLATED_DOOR_DESCRIPTION,
+    "room.harbor.object.door.locked": TRANSLATED_DOOR_LOCKED,
+    "room.harbor.object.key.description": TRANSLATED_KEY_DESCRIPTION,
+    "room.cellar.object.stairs.label": TRANSLATED_STAIRS_NAME,
+    "room.cellar.object.stairs.description": TRANSLATED_STAIRS_DESCRIPTION,
 }
 
 
@@ -58,7 +79,7 @@ def fixture_catalog(document: GameDocument) -> LanguageCatalog:
     for key, source in inventory.items():
         translated = TRANSLATED.get(key, {})
         lines.append(LocalizedLine(key, tuple(
-            (language, source if language == "en" else translated.get(language, source))
+            (language, source if language == "en" else translated[language])
             for language in LANGUAGES
         )))
     catalog = LanguageCatalog("en", LANGUAGES, tuple(lines))

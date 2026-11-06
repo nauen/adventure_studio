@@ -14,8 +14,8 @@ from pathlib import Path
 
 
 
-def verify_room_transition(before: Path, after: Path) -> dict:
-    """Reject a mere surviving key press without a substantial scene change."""
+def compare_screenshots(before: Path, after: Path) -> dict:
+    """Measure changed pixels, without treating changes as proof of legible text."""
     try:
         from PIL import Image, ImageChops
     except ImportError as error:
@@ -27,13 +27,22 @@ def verify_room_transition(before: Path, after: Path) -> dict:
         old_rgb = old.convert("RGB")
         new_rgb = new.convert("RGB")
         difference = ImageChops.difference(old_rgb, new_rgb)
-        changed = sum(1 for pixel in difference.getdata() if max(pixel) >= 24)
+        pixels = (difference.get_flattened_data() if hasattr(difference, "get_flattened_data")
+                  else difference.getdata())
+        changed = sum(1 for pixel in pixels if max(pixel) >= 24)
         total = old_rgb.width * old_rgb.height
     ratio = changed / total
+    return {"changed_pixels": changed, "changed_ratio": round(ratio, 6)}
+
+
+def verify_room_transition(before: Path, after: Path) -> dict:
+    """Reject a mere surviving key press without a substantial scene change."""
+    comparison = compare_screenshots(before, after)
+    ratio = comparison["changed_ratio"]
     if ratio < 0.05:
         raise ValueError(f"Room transition not visually confirmed: {ratio:.3%} changed pixels")
-    return {"room_transition_changed_pixels": changed,
-            "room_transition_changed_ratio": round(ratio, 6),
+    return {"room_transition_changed_pixels": comparison["changed_pixels"],
+            "room_transition_changed_ratio": ratio,
             "room_transition_visually_confirmed": True}
 
 
@@ -85,6 +94,12 @@ def language_runtime_probe(game: Path, output: Path) -> dict:
     room_evidence = verify_room_transition(output / "pl.png", output / "room_after_pl.png")
     report = {"engine_survived_key_selection": True,
               **room_evidence,
+              "language_screenshot_differences": {
+                  "de_to_ja": compare_screenshots(output / "de.png", output / "ja.png"),
+                  "ja_to_pl": compare_screenshots(output / "ja.png", output / "pl.png"),
+                  "room_to_pl_after_room": compare_screenshots(
+                      output / "room_after_pl.png", output / "pl_after_room.png"),
+              },
               "room_transition_probe_attempted": True,
               "language_persistence_visually_verified": False,
               "screenshots": results,
@@ -105,3 +120,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
