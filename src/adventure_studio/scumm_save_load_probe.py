@@ -109,6 +109,14 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
             if process.poll() is not None:
                 raise RuntimeError("ScummVM exited after Save button click")
             capture("save-dialog-after-click")
+            # The real ScummVM 2.8 save picker shows a New Save tile at
+            # x=215..382, y=224..350 on our fixed 1024x768 Xvfb display.
+            subprocess.run(["xdotool", "mousemove", "298", "285", "click", "1"],
+                           check=True, timeout=10)
+            time.sleep(2)
+            if process.poll() is not None:
+                raise RuntimeError("ScummVM exited after selecting New Save")
+            capture("after-new-save-click")
         finally:
             process.terminate()
             try:
@@ -122,7 +130,8 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
     ready = verify_global_menu_ready(output / "save-menu-after-ctrl-f5.png")
     save_dialog_change = verify_save_menu_open(output / "save-menu-after-ctrl-f5.png",
                                                output / "save-dialog-after-click.png")
-    saves = sorted(path.name for path in save_path.iterdir() if path.is_file())
+    saves = sorted(path.name for path in save_path.iterdir()
+                   if path.is_file() and path.stat().st_size > 0)
     report = {
         "isolated_config": config_path.name,
         "isolated_save_directory": save_path.name,
@@ -133,11 +142,12 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "global_menu_ready": ready,
         "menu_pixel_difference": menu_change,
         "save_button_clicked": True,
+        "new_save_clicked": True,
         "save_dialog_pixel_difference": save_dialog_change,
         "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png",
-                                  "save-dialog-after-click.png"],
+                                  "save-dialog-after-click.png", "after-new-save-click.png"],
         "save_files_observed": saves,
-        "save_created_verified": False,
+        "save_created_verified": bool(saves),
         "load_restored_room_verified": False,
         "load_restored_language_verified": False,
         "status": "save-dialog-discovery-only",
