@@ -71,6 +71,20 @@ def verify_language_button_change(before: Path, after: Path,
     return change
 
 
+def verify_capture_visible(path: Path) -> dict:
+    """Reject blank captures; this is not a glyph-legibility assertion."""
+    try:
+        from PIL import Image
+    except ImportError as error:
+        raise RuntimeError("Screenshot validation requires Pillow") from error
+    with Image.open(path) as image:
+        rgb = image.convert("RGB")
+        spread = max(high - low for low, high in rgb.getextrema())
+        if spread < 24:
+            raise ValueError(f"Blank or low-contrast ScummVM screenshot: {path.name}")
+        return {"contrast_spread": spread, "dimensions": list(rgb.size)}
+
+
 def language_runtime_probe(game: Path, output: Path,
                            graphical_language_buttons: bool = False,
                            screen_language_gui: bool = False) -> dict:
@@ -92,7 +106,11 @@ def language_runtime_probe(game: Path, output: Path,
                            check=True, timeout=10)
             subprocess.run(["convert", str(raw), str(png)], check=True, timeout=10)
             if png.stat().st_size >= 1000:
-                break
+                try:
+                    verify_capture_visible(png)
+                    break
+                except ValueError:
+                    pass
             if process.poll() is not None:
                 raise RuntimeError(f"ScummVM exited while capturing {code}")
             time.sleep(2)
@@ -148,6 +166,7 @@ def language_runtime_probe(game: Path, output: Path,
         screen_fixed=screen_language_gui)
         if graphical_language_buttons or screen_language_gui else None)
     report = {"engine_survived_key_selection": True,
+              "nonblank_captures_verified": True,
               **room_evidence,
               "language_screenshot_differences": {
                   "de_to_ja": compare_screenshots(output / "de.png", output / "ja.png"),
