@@ -14,6 +14,7 @@ on:
       - 'src/adventure_studio/scumm_font_probe.py'
       - 'src/adventure_studio/scumm_language_package.py'
       - 'src/adventure_studio/scumm_language_runtime_probe.py'
+      - 'src/adventure_studio/scumm_save_load_probe.py'
       - 'src/adventure_studio/scumm_language_buttons.py'
       - 'src/adventure_studio/localization.py'
       - 'examples/language_probe.json'
@@ -26,6 +27,7 @@ on:
       - 'src/adventure_studio/scumm_font.py'
       - 'src/adventure_studio/scumm_language_package.py'
       - 'src/adventure_studio/scumm_language_runtime_probe.py'
+      - 'src/adventure_studio/scumm_save_load_probe.py'
 
 jobs:
   language:
@@ -81,6 +83,11 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_language_runtime_probe /tmp/language-game /tmp/language-evidence --screen-language-gui
+      - name: Capture isolated save menu for Save/Load test development
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/language-game /tmp/save-load-evidence
       - name: Upload linked game and screenshots for visual inspection
         if: always()
         uses: actions/upload-artifact@v4
@@ -94,3 +101,6 @@ jobs:
             /tmp/language-evidence/*.png
             /tmp/language-evidence/*.json
             /tmp/language-evidence/scummvm.log
+            /tmp/save-load-evidence/*.png
+            /tmp/save-load-evidence/*.json
+            /tmp/save-load-evidence/*.log
