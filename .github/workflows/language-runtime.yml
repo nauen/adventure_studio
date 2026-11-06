@@ -91,7 +91,7 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/language-game /tmp/save-load-evidence --debug-save-state
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/language-game /tmp/save-load-evidence
           python - <<'PY'
           import json
           from pathlib import Path
