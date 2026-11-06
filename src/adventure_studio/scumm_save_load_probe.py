@@ -132,7 +132,7 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True,
             if debug_save_state:
                 # ScummVM 2.8 registers these two read-only debugger queries.
                 # For v6, scumm_vars[65] is VAR_MAINMENU_KEY (expected 319).
-                subprocess.run(["xdotool", "key", "--clearmodifiers", "ctrl+d"],
+                subprocess.run(["xdotool", "key", "--clearmodifiers", "ctrl+alt+d"],
                                check=True, timeout=10)
                 time.sleep(2)
                 for command in ("scumm_room", "scumm_vars[65]"):
