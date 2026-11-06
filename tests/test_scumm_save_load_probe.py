@@ -5,10 +5,33 @@ from unittest.mock import patch
 
 from adventure_studio.scumm_save_load_probe import (
     save_load_menu_probe, verify_save_menu_open, verify_global_menu_ready,
+    verify_loaded_room,
 )
 
 
 class SaveLoadMenuProbeTests(unittest.TestCase):
+    def test_loaded_room_must_match_saved_room_and_differ_from_bootstrap(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            initial, saved, loaded = (root / name for name in
+                                      ("initial.png", "saved.png", "loaded.png"))
+            Image.new("RGB", (100, 100), (20, 70, 110)).save(initial)
+            Image.new("RGB", (100, 100), (170, 90, 30)).save(saved)
+            Image.new("RGB", (100, 100), (170, 90, 30)).save(loaded)
+            self.assertTrue(verify_loaded_room(saved, initial, loaded)
+                            ["load_restored_room_verified"])
+            Image.new("RGB", (100, 100), (20, 70, 110)).save(loaded)
+            with self.assertRaisesRegex(ValueError, "differs substantially"):
+                verify_loaded_room(saved, initial, loaded)
+            Image.new("RGB", (100, 100), (170, 90, 30)).save(initial)
+            Image.new("RGB", (100, 100), (170, 90, 30)).save(loaded)
+            with self.assertRaisesRegex(ValueError, "initial bootstrap"):
+                verify_loaded_room(saved, initial, loaded)
+
     def test_global_menu_requires_orange_panel_in_fixed_viewport(self):
         try:
             from PIL import Image
