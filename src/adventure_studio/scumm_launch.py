@@ -800,6 +800,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 return
             goal_reached = False
             exit_deadline = time.monotonic() + 15.0
+            exit_retry_at = time.monotonic() + 6.0
+            exit_retried = False
             while time.monotonic() < exit_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit during exit (exit={process.returncode})")
@@ -807,6 +809,17 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 goal_reached = close_rgb(scene_pixel(output_directory, "exit"), tuple(expected_color))
                 if goal_reached:
                     break
+                # The actor may still be finishing the door-opening animation
+                # when the first exit click arrives. Once the open hotspot is
+                # stable, repeat the click once with freshly measured bounds.
+                if (verify_recipe and not exit_retried and time.monotonic() >= exit_retry_at
+                        and door_pixels(output_directory, "exit", open_state=True) >= 40):
+                    exit_retried = True
+                    exit_x, exit_y = open_door_center(output_directory, "exit")
+                    subprocess.run(
+                        ["xdotool", "mousemove", str(exit_x), str(exit_y), "click", "1"],
+                        check=True, timeout=5,
+                    )
                 time.sleep(0.4)
             (output_directory / "scummvm-use-report.json").write_text(
                 json.dumps({"inventory_item": "Key", "target": "Door",
@@ -814,6 +827,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                             "green_after": remaining_door_pixels, "door_opened": door_opened,
                             "open_door_pixels": open_door_pixels,
                             "exit_click": [exit_x, exit_y],
+                            "exit_retried": exit_retried,
                             "destination_room_visible": goal_reached,
                             "goal_room": goal["room_id"], "goal_reached": goal_reached}, indent=2) + "\n",
                 encoding="utf-8",
