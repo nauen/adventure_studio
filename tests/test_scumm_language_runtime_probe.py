@@ -24,7 +24,7 @@ class LanguageRuntimeProbeTests(unittest.TestCase):
             picture.paste((210, 90, 40), (192, 184, 832, 458))
             picture.save(after)
             self.assertEqual(compare_fixed_language_gui_across_rooms(before, after)["changed_pixels"], 0)
-            picture.paste((210, 90, 40), (210, 465, 230, 477))
+            picture.paste((210, 90, 40), (210, 474, 230, 486))
             picture.save(after)
             self.assertEqual(compare_fixed_language_gui_across_rooms(before, after)["changed_pixels"], 240)
             Image.new("RGB", (100, 100), (15, 15, 15)).save(after)
