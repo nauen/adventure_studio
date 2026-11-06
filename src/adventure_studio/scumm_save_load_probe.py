@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -128,6 +129,7 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                 time.sleep(2)
             capture("polish-before-menu")
             save_attempts = 0
+            save_attempt_screenshots = []
             for save_attempt in range(3 if select_polish else 1):
                 save_attempts += 1
                 for menu_attempt in range(3):
@@ -167,6 +169,9 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited after confirming save name")
                 capture("after-save-confirmation")
+                attempt_image = f"after-save-confirmation-attempt-{save_attempts}.png"
+                shutil.copyfile(output / "after-save-confirmation.png", output / attempt_image)
+                save_attempt_screenshots.append(attempt_image)
                 slot = save_path / "tentacle.s01"
                 if slot.is_file() and slot.stat().st_size > 0:
                     break
@@ -249,6 +254,9 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "save_description_entered": "Adventure Studio CI",
         "save_confirmation_clicked": True,
         "save_attempts": save_attempts,
+        "save_attempt_screenshots": save_attempt_screenshots,
+        "save_attempts_without_slot": (save_attempts - 1 if slot_one.is_file() else
+                                       save_attempts),
         "save_dialog_pixel_difference": save_dialog_change,
         "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png",
                                   "save-dialog-after-click.png", "after-new-save-click.png",
