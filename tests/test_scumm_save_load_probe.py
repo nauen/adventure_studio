@@ -6,10 +6,27 @@ from unittest.mock import patch
 from adventure_studio.scumm_save_load_probe import (
     save_load_menu_probe, verify_save_menu_open, verify_global_menu_ready,
     verify_loaded_room, verify_loaded_language_selection,
+    verify_no_original_menu_behind_gmm,
 )
 
 
 class SaveLoadMenuProbeTests(unittest.TestCase):
+    def test_original_scumm_menu_behind_gmm_blocks_save(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            shot = Path(directory) / "menu.png"
+            Image.new("RGB", (1024, 768), (123, 68, 180)).save(shot)
+            self.assertFalse(verify_no_original_menu_behind_gmm(shot)
+                             ["original_menu_overlay_rejected"])
+            image = Image.open(shot).convert("RGB")
+            image.paste((0, 0, 0), (240, 230, 365, 435))
+            image.save(shot)
+            with self.assertRaisesRegex(ValueError, "Original SCUMM menu"):
+                verify_no_original_menu_behind_gmm(shot)
+
     def test_loaded_language_highlight_matches_saved_selection(self):
         try:
             from PIL import Image
