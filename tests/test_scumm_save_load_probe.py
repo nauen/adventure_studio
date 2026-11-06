@@ -4,11 +4,26 @@ from pathlib import Path
 from unittest.mock import patch
 
 from adventure_studio.scumm_save_load_probe import (
-    save_load_menu_probe, verify_save_menu_open,
+    save_load_menu_probe, verify_save_menu_open, verify_global_menu_ready,
 )
 
 
 class SaveLoadMenuProbeTests(unittest.TestCase):
+    def test_global_menu_requires_orange_panel_in_fixed_viewport(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("Pillow unavailable")
+        with tempfile.TemporaryDirectory() as directory:
+            shot = Path(directory) / "menu.png"
+            Image.new("RGB", (1024, 768), (65, 129, 189)).save(shot)
+            with self.assertRaisesRegex(ValueError, "not fully rendered"):
+                verify_global_menu_ready(shot)
+            menu = Image.new("RGB", (1024, 768), (65, 129, 189))
+            menu.paste((205, 101, 0), (395, 210, 500, 550))
+            menu.save(shot)
+            self.assertTrue(verify_global_menu_ready(shot)["menu_rendered"])
+
     def test_menu_gate_rejects_unchanged_frame_and_accepts_substantial_change(self):
         try:
             from PIL import Image
