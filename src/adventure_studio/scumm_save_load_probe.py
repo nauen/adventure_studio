@@ -1,8 +1,4 @@
-"""Collect real ScummVM save-menu evidence without claiming a save/load pass.
-
-The first gate discovers the menu layout in an isolated ScummVM session.
-It intentionally does not guess save-slot click coordinates.
-"""
+"""Exercise ScummVM's native save dialog and independently reload a saved room."""
 
 from __future__ import annotations
 
@@ -43,6 +39,19 @@ def verify_global_menu_ready(path: Path) -> dict:
         if orange < 12000:
             raise ValueError("ScummVM global main menu not fully rendered")
         return {"orange_panel_pixels": orange, "menu_rendered": True}
+
+
+def verify_loaded_room(reference: Path, initial: Path, loaded: Path) -> dict:
+    """Require the loaded screenshot to resemble the saved room, not the bootstrap."""
+    saved_comparison = compare_screenshots(reference, loaded)
+    initial_comparison = compare_screenshots(initial, loaded)
+    if saved_comparison["changed_ratio"] > 0.08:
+        raise ValueError("Loaded room differs substantially from saved room")
+    if initial_comparison["changed_ratio"] < 0.05:
+        raise ValueError("Loaded room still resembles the initial bootstrap")
+    return {"saved_room_pixel_difference": saved_comparison,
+            "initial_room_pixel_difference": initial_comparison,
+            "load_restored_room_verified": True}
 
 
 def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -> dict:
@@ -145,6 +154,35 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                                                output / "save-dialog-after-click.png")
     saves = sorted(path.name for path in save_path.iterdir()
                    if path.is_file() and path.stat().st_size > 0)
+    slot_one = save_path / "tentacle.s01"
+    load_evidence = None
+    load_error = None
+    if select_polish and slot_one.is_file() and slot_one.stat().st_size > 0:
+        load_log_path = output / "scummvm-load.log"
+        with load_log_path.open("w", encoding="utf-8") as load_log:
+            load_process = subprocess.Popen([
+                "scummvm", f"--config={config_path.resolve()}",
+                f"--savepath={save_path.resolve()}", "--save-slot=1",
+                f"--path={game.resolve()}", "tentacle",
+            ], stdout=load_log, stderr=subprocess.STDOUT, env=environment)
+            try:
+                time.sleep(6)
+                if load_process.poll() is not None:
+                    raise RuntimeError("ScummVM exited before saved slot could be inspected")
+                capture("after-loading-slot-1")
+                load_evidence = verify_loaded_room(
+                    output / "polish-before-menu.png",
+                    output / "polish-in-initial-room.png",
+                    output / "after-loading-slot-1.png")
+            except (RuntimeError, ValueError) as error:
+                load_error = str(error)
+            finally:
+                load_process.terminate()
+                try:
+                    load_process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    load_process.kill()
+                    load_process.wait(timeout=5)
     report = {
         "isolated_config": config_path.name,
         "isolated_save_directory": save_path.name,
@@ -167,9 +205,13 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                                  + (["polish-in-initial-room.png"] if select_polish else []),
         "save_files_observed": saves,
         "save_created_verified": bool(saves),
-        "load_restored_room_verified": False,
+        "load_restored_room_verified": bool(load_evidence),
+        "load_room_evidence": load_evidence,
+        "load_error": load_error,
         "load_restored_language_verified": False,
-        "status": "save-dialog-discovery-only",
+        "status": ("save-and-load-room-verified" if load_evidence else
+                   "save-created-load-unverified" if slot_one.is_file() else
+                   "save-dialog-discovery-only"),
     }
     (output / "save-load-menu-report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
