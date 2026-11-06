@@ -104,6 +104,48 @@ jobs:
               raise SystemExit(f'SCUMM save/load regression: {missing}; report={result}')
           print('SCUMM save, room restore and language restore verified')
           PY
+      - name: Stress native save and reload in six isolated sessions
+        timeout-minutes: 20
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          mkdir -p /tmp/save-stress-evidence
+          for attempt in 1 2 3 4 5 6; do
+            echo "SCUMM save/load stress session $attempt of 6"
+            xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/language-game "/tmp/save-stress-evidence/run-$attempt" > "/tmp/save-stress-evidence/run-$attempt.stdout.log" 2>&1 || true
+          done
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('/tmp/save-stress-evidence')
+          runs = []
+          for number in range(1, 7):
+              report_file = root / f'run-{number}' / 'save-load-menu-report.json'
+              if report_file.is_file():
+                  report = json.loads(report_file.read_text())
+                  runs.append({
+                      'run': number,
+                      'save_created': report['save_created_verified'],
+                      'room_restored': report['load_restored_room_verified'],
+                      'language_restored': report['load_restored_language_verified'],
+                      'save_attempts': report['save_attempts'],
+                      'attempts_without_slot': report['save_attempts_without_slot'],
+                      'diagnostic_screenshots': report['save_gate_diagnostic_screenshots'],
+                  })
+              else:
+                  runs.append({'run': number, 'error': 'Probe exited without a report'})
+          failures = [run for run in runs if not all(run.get(key) for key in
+                      ('save_created', 'room_restored', 'language_restored'))]
+          summary = {'sessions': runs, 'completed': len(runs), 'failed': len(failures),
+                     'first_attempt_rejections': sum(run.get('attempts_without_slot', 0)
+                                                     for run in runs)}
+          (root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          print(json.dumps(summary, sort_keys=True))
+          if failures:
+              raise SystemExit(f'{len(failures)} of 6 independent save/load sessions failed')
+          PY
       - name: Compare save menu with original ScummC GUI font
         env:
           PYTHONPATH: src
@@ -167,6 +209,11 @@ jobs:
             /tmp/save-load-evidence/*.png
             /tmp/save-load-evidence/*.json
             /tmp/save-load-evidence/*.log
+            /tmp/save-stress-evidence/*.json
+            /tmp/save-stress-evidence/*.log
+            /tmp/save-stress-evidence/*/*.png
+            /tmp/save-stress-evidence/*/*.json
+            /tmp/save-stress-evidence/*/*.log
             /tmp/stock-font-evidence/*.png
             /tmp/stock-font-evidence/*.json
             /tmp/stock-font-evidence/*.log
