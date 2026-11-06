@@ -104,7 +104,7 @@ room is `0`, or when the `VAR_MAINMENU_KEY` variable is defined but contains
 The ScummVM v6 variable mapping uses index **65** for that variable.
 
 To identify which condition fails, reproduce the game state and open the
-ScummVM debugger with `Ctrl+D` *before* opening the save menu. Query:
+ScummVM debugger with `Ctrl+Alt+D` *before* opening the save menu. Query:
 
 ```text
 scumm_room
