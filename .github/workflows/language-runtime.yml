@@ -91,6 +91,14 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/language-game /tmp/save-load-evidence
+      - name: Compare save menu with original ScummC GUI font
+        env:
+          PYTHONPATH: src
+        run: |
+          cp -a /tmp/language-story /tmp/stock-font-story
+          rm /tmp/stock-font-story/resources/multilingual-font.char
+          python -m adventure_studio.scumm_toolchain /tmp/stock-font-story /tmp/scummc-language /tmp/stock-font-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/stock-font-game /tmp/stock-font-evidence --no-polish
       - name: Upload linked game and screenshots for visual inspection
         if: always()
         uses: actions/upload-artifact@v4
@@ -107,3 +115,6 @@ jobs:
             /tmp/save-load-evidence/*.png
             /tmp/save-load-evidence/*.json
             /tmp/save-load-evidence/*.log
+            /tmp/stock-font-evidence/*.png
+            /tmp/stock-font-evidence/*.json
+            /tmp/stock-font-evidence/*.log
