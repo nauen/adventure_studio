@@ -204,7 +204,7 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
                                   "after-save-confirmation.png"]
                                  + (["polish-in-initial-room.png"] if select_polish else []),
         "save_files_observed": saves,
-        "save_created_verified": bool(saves),
+        "save_created_verified": slot_one.is_file() and slot_one.stat().st_size > 0,
         "load_restored_room_verified": bool(load_evidence),
         "load_room_evidence": load_evidence,
         "load_error": load_error,
