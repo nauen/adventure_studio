@@ -96,6 +96,12 @@ after a visible room transition, for example in run
 [42257549127](https://github.com/nauen/adventure_studio/actions/runs/42257549127).
 The bounded retry waits after dismissing this dialog but is not a proven
 fix for the underlying condition.
+When the first or second save attempt fails, the opt-in fixture also presses
+test key `7` after dismissing the menu: it prints either `Menu key enabled`
+or `Menu key disabled` based on `VAR_MAINMENU_KEY`. The resulting screenshot
+is named `save-gate-variable-after-rejection-N.png`. This diagnoses the
+script-visible menu variable without depending on ScummVM's debugger hotkey;
+it cannot directly inspect the engine's private current-room field.
 
 In ScummVM 2.8.0, `ScummEngine::canSaveGameStateCurrently()` in
 `engines/scumm/saveload.cpp` denies saves in SCUMM v4+ when the current
@@ -116,6 +122,12 @@ the debugger output in the failing and successful states, then enter
 `exit` to resume. Do not change either variable through the debugger as
 part of the evidence collection. If both values satisfy the save gate,
 inspect the active menu configuration and the exact engine version next.
+
+This debugger check is **manual**: an attempt to automate `Ctrl+Alt+D` and
+read the console through Xvfb in run
+[42279547835](https://github.com/nauen/adventure_studio/actions/runs/42279547835)
+did not yield readable debugger output. It is intentionally not part of the
+automated Save/Load acceptance gate.
 
 This is still an opt-in research fixture. The manual font legibility checks
 above remain required before enabling localization by default.
