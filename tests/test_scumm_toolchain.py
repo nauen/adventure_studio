@@ -5,8 +5,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from adventure_studio.scumm_toolchain import compile_story_game
+from adventure_studio.scumm_toolchain import compile_story_game, main
 from adventure_studio.scumm_bootstrap import inject_language_keys, inject_multilingual_charset
 from adventure_studio.localization import LanguageCatalog, LocalizedLine, canonical_catalog_json, parse_catalog
 from adventure_studio.story_document import build_story_document
@@ -32,6 +33,21 @@ def fake_upstream(path: Path):
 
 
 class ToolchainTests(unittest.TestCase):
+    def test_stock_font_probe_requires_localized_story(self):
+        argv = ["scumm_toolchain", "story", "scummc", "output", "--stock-fonts-probe"]
+        with patch("sys.argv", argv), patch("builtins.print"):
+            self.assertEqual(main(), 2)
+
+    def test_stock_font_probe_is_explicit_and_passed_to_compiler(self):
+        argv = ["scumm_toolchain", "story", "scummc", "output",
+                "--localize-story", "--stock-fonts-probe"]
+        with patch("sys.argv", argv), patch(
+            "adventure_studio.scumm_toolchain.compile_story_game", return_value=Path("output")
+        ) as compile_mock, patch("builtins.print"):
+            self.assertEqual(main(), 0)
+        self.assertTrue(compile_mock.call_args.kwargs["stock_fonts_probe"])
+        self.assertTrue(compile_mock.call_args.kwargs["localize_story"])
+
     def test_language_keyboard_selection_is_global_and_byte_encoded(self):
         catalog = parse_catalog('{"format_version":1,"source_language":"de",'
             '"languages":["de","ja","pl"],"lines":[{"id":"hello",'
