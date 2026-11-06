@@ -94,6 +94,18 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn("GameLanguage = 25701;", fixed)
         self.assertIn("refreshLanguageVerbs();", fixed)
         self.assertIn("setVerbOn();", fixed)
+        # Every GUI control must select its own persistent language, and the
+        # keyboard path must refresh the same selection highlight.
+        for index, language in enumerate(catalog.languages, 1):
+            code = int.from_bytes(language.encode("ascii"), "big")
+            verb = f"Language{language.title()}"
+            self.assertIn(f"verb {verb} @", fixed_header)
+            self.assertIn(f"if(cmd == {verb}) {{\n            GameLanguage = {code};", fixed)
+            self.assertIn(f"if(GameLanguage == {code}) setVerbColor(VERB_HI_COLOR);", fixed)
+            key_branch = fixed.split(f"case '{index}':", 1)[1].split("break;", 1)[0]
+            self.assertIn(f"GameLanguage = {code};\n            refreshLanguageVerbs();", key_branch)
+        self.assertEqual(fixed.count("if(cmd == Language"), len(catalog.languages))
+        self.assertEqual(fixed.count("setVerbHiColor(VERB_HI_COLOR);"), len(catalog.languages))
         with self.assertRaisesRegex(ValueError, "upstream screen-language GUI layout"):
             inject_screen_language_verbs("invalid", header, catalog)
 
