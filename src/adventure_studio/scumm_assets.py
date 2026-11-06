@@ -221,8 +221,26 @@ def _validate(room: RoomAsset) -> None:
         results.add(rule.result_id)
         combination_inputs.update((rule.first_id, rule.second_id))
         _scumm_string(rule.response)
-    if any(rule.first_id in results or rule.second_id in results for rule in room.combine_rules):
-        raise ValueError("Chained combinations are not supported by the bounded SCUMM adapter")
+    # Produced objects may be consumed by later recipes. Reject cycles even
+    # when the input order is not the order in which recipes were declared.
+    producers = {rule.result_id: rule for rule in room.combine_rules}
+    visiting: set[str] = set()
+    visited: set[str] = set()
+
+    def visit(item_id: str) -> None:
+        if item_id in visiting:
+            raise ValueError("Cyclic inventory combinations are not supported")
+        if item_id in visited or item_id not in producers:
+            return
+        visiting.add(item_id)
+        recipe = producers[item_id]
+        visit(recipe.first_id)
+        visit(recipe.second_id)
+        visiting.remove(item_id)
+        visited.add(item_id)
+
+    for output_id in producers:
+        visit(output_id)
 
 
 def _indexed_bmp(width: int, height: int, pixels: bytes, palette: tuple[tuple[int, int, int], ...]) -> bytes:
