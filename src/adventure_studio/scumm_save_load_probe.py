@@ -26,7 +26,7 @@ def verify_save_menu_open(before: Path, after: Path) -> dict:
     return menu_change
 
 
-def save_load_menu_probe(game: Path, output: Path) -> dict:
+def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Save/load probe requires Xvfb DISPLAY")
     if any(not (game / f"tentacle.{suffix}").is_file() for suffix in ("000", "001")):
@@ -63,8 +63,9 @@ def save_load_menu_probe(game: Path, output: Path) -> dict:
             time.sleep(5)
             if process.poll() is not None:
                 raise RuntimeError("ScummVM exited before save-menu probe")
-            subprocess.run(["xdotool", "key", "5"], check=True, timeout=10)
-            time.sleep(2)
+            if select_polish:
+                subprocess.run(["xdotool", "key", "5"], check=True, timeout=10)
+                time.sleep(2)
             capture("polish-before-menu")
             subprocess.run(["xdotool", "key", "ctrl+F5"], check=True, timeout=10)
             time.sleep(2)
@@ -97,7 +98,7 @@ def save_load_menu_probe(game: Path, output: Path) -> dict:
     report = {
         "isolated_config": config_path.name,
         "isolated_save_directory": save_path.name,
-        "polish_key_sent_before_menu": True,
+        "polish_key_sent_before_menu": select_polish,
         "polish_selection_visually_verified": False,
         "ctrl_f5_sent": True,
         "menu_visibly_changed": True,
@@ -118,10 +119,11 @@ def save_load_menu_probe(game: Path, output: Path) -> dict:
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
-        print("Usage: python -m adventure_studio.scumm_save_load_probe GAME OUTPUT")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] != "--no-polish"):
+        print("Usage: python -m adventure_studio.scumm_save_load_probe GAME OUTPUT [--no-polish]")
         return 2
-    print(json.dumps(save_load_menu_probe(Path(sys.argv[1]), Path(sys.argv[2])),
+    print(json.dumps(save_load_menu_probe(Path(sys.argv[1]), Path(sys.argv[2]),
+                                          select_polish="--no-polish" not in sys.argv[3:]),
                      sort_keys=True))
     return 0
 
