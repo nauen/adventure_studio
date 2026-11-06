@@ -14,6 +14,11 @@ from pathlib import Path
 def retarget_upstream_bootstrap(source: str, room_name: str) -> str:
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", room_name):
         raise ValueError("Invalid room identifier")
+    # ScummVM v4+ rejects native saves when VAR_MAINMENU_KEY is disabled.
+    # The actual upstream example initializes it to 319 in main(). Keep
+    # that invariant when adapting a full upstream script for the fixture.
+    if "script main (int bootParam)" in source and source.count("VAR_MAINMENU_KEY = 319;") != 1:
+        raise ValueError("Upstream SCUMM main-menu save gate initialization changed")
     original = (
         "room Road;",
         "loadRoom(Road);",
