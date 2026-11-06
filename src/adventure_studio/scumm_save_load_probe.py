@@ -117,6 +117,14 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
             if process.poll() is not None:
                 raise RuntimeError("ScummVM exited after selecting New Save")
             capture("after-new-save-click")
+            subprocess.run(["xdotool", "type", "--clearmodifiers", "--delay", "60",
+                            "Adventure Studio CI"], check=True, timeout=15)
+            subprocess.run(["xdotool", "mousemove", "618", "414", "click", "1"],
+                           check=True, timeout=10)
+            time.sleep(3)
+            if process.poll() is not None:
+                raise RuntimeError("ScummVM exited after confirming save name")
+            capture("after-save-confirmation")
         finally:
             process.terminate()
             try:
@@ -143,9 +151,12 @@ def save_load_menu_probe(game: Path, output: Path, select_polish: bool = True) -
         "menu_pixel_difference": menu_change,
         "save_button_clicked": True,
         "new_save_clicked": True,
+        "save_description_entered": "Adventure Studio CI",
+        "save_confirmation_clicked": True,
         "save_dialog_pixel_difference": save_dialog_change,
         "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png",
-                                  "save-dialog-after-click.png", "after-new-save-click.png"],
+                                  "save-dialog-after-click.png", "after-new-save-click.png",
+                                  "after-save-confirmation.png"],
         "save_files_observed": saves,
         "save_created_verified": bool(saves),
         "load_restored_room_verified": False,
