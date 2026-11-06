@@ -126,7 +126,7 @@ jobs:
           pixels = ImageChops.difference(menus["multilingual"], menus["stock"]).getdata()
           stats["cross_font_changed_pixels"] = sum(1 for pixel in pixels if max(pixel) >= 24)
           output = Path("/tmp/save-load-evidence/menu-font-comparison.json")
-          output.write_text(json.dumps(stats, indent=2, sort_keys=True) + "\\n")
+          output.write_text(json.dumps(stats, indent=2, sort_keys=True) + chr(10))
           print(json.dumps(stats, sort_keys=True))
           PY
       - name: Upload linked game and screenshots for visual inspection
