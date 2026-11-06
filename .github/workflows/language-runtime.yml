@@ -29,10 +29,6 @@ on:
       - 'src/adventure_studio/scumm_language_runtime_probe.py'
       - 'src/adventure_studio/scumm_save_load_probe.py'
 
-concurrency:
-  group: scumm-language-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   language:
     runs-on: ubuntu-24.04
@@ -91,11 +87,23 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_language_runtime_probe /tmp/language-game /tmp/language-evidence --screen-language-gui
-      - name: Capture isolated save menu for Save/Load test development
+      - name: Verify actual save and restored room and language
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/language-game /tmp/save-load-evidence
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          result = json.loads(Path('/tmp/save-load-evidence/save-load-menu-report.json').read_text())
+          required = ('save_created_verified', 'load_restored_room_verified',
+                      'load_restored_language_verified')
+          missing = [name for name in required if not result.get(name)]
+          if missing:
+              raise SystemExit(f'SCUMM save/load regression: {missing}; report={result}')
+          print('SCUMM save, room restore and language restore verified')
+          PY
       - name: Compare save menu with original ScummC GUI font
         env:
           PYTHONPATH: src
