@@ -82,6 +82,20 @@ class ScummLaunchTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Missing isolated"):
                 launch_smoke(path, path / "out", verify_recipe=True)
 
+    def test_reverse_recipe_mode_requires_recipe_and_maps_cli_flag(self):
+        from adventure_studio.scumm_launch import main
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaisesRegex(ValueError, "requires recipe mode"):
+                launch_smoke(root, root / "out", reverse_recipe=True)
+            with patch("sys.argv", ["scumm_launch", str(root), str(root / "out"),
+                                    "--recipe-reverse-only"]):
+                with patch("adventure_studio.scumm_launch.launch_smoke") as launch:
+                    self.assertEqual(main(), 0)
+                    self.assertTrue(launch.call_args.kwargs["verify_recipe"])
+                    self.assertTrue(launch.call_args.kwargs["reverse_recipe"])
+                    self.assertFalse(launch.call_args.kwargs["verify_return"])
+
     def test_static_scene_exception_requires_full_chain_verification(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)
