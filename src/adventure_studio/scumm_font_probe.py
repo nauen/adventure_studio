@@ -22,9 +22,14 @@ def verify_char_resource(path: Path, needed_codes: set[int]) -> dict:
     count = int.from_bytes(data[31:33], "little")
     if not needed_codes or max(needed_codes) >= count:
         raise ValueError("Required glyph index is missing from CHAR")
+    if 33 + 4 * count > len(data):
+        raise ValueError("Truncated CHAR glyph offset table")
     for code in sorted(needed_codes):
         position = 33 + 4 * code
-        if position + 4 > len(data) or struct.unpack_from("<I", data, position)[0] == 0:
+        offset = struct.unpack_from("<I", data, position)[0]
+        # Offsets are relative to the font pointer; one beyond the entire
+        # resource cannot designate a valid glyph under any such base.
+        if offset == 0 or offset >= len(data):
             raise ValueError(f"Missing compiled glyph at SCUMM byte {code}")
     return {"resource_bytes": len(data), "charset_slots": count,
             "required_glyphs": len(needed_codes), "all_slots_present": True}
@@ -61,3 +66,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
