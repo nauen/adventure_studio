@@ -29,6 +29,10 @@ on:
       - 'src/adventure_studio/scumm_language_runtime_probe.py'
       - 'src/adventure_studio/scumm_save_load_probe.py'
 
+concurrency:
+  group: scumm-language-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   language:
     runs-on: ubuntu-24.04
