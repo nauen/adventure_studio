@@ -71,6 +71,16 @@ def save_load_menu_probe(game: Path, output: Path) -> dict:
             if process.poll() is not None:
                 raise RuntimeError("ScummVM exited after Ctrl+F5")
             capture("save-menu-after-ctrl-f5")
+            # Inspect the alternative engine menu independently. Do not
+            # infer controls from the broken-font Ctrl+F5 screenshot.
+            subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
+            time.sleep(1)
+            capture("after-escape")
+            subprocess.run(["xdotool", "key", "F5"], check=True, timeout=10)
+            time.sleep(2)
+            if process.poll() is not None:
+                raise RuntimeError("ScummVM exited after F5")
+            capture("menu-after-f5")
         finally:
             process.terminate()
             try:
@@ -81,6 +91,8 @@ def save_load_menu_probe(game: Path, output: Path) -> dict:
 
     menu_change = verify_save_menu_open(output / "polish-before-menu.png",
                                         output / "save-menu-after-ctrl-f5.png")
+    alternative_menu = compare_screenshots(output / "after-escape.png",
+                                           output / "menu-after-f5.png")
     saves = sorted(path.name for path in save_path.iterdir() if path.is_file())
     report = {
         "isolated_config": config_path.name,
@@ -90,7 +102,10 @@ def save_load_menu_probe(game: Path, output: Path) -> dict:
         "ctrl_f5_sent": True,
         "menu_visibly_changed": True,
         "menu_pixel_difference": menu_change,
-        "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png"],
+        "f5_menu_pixel_difference": alternative_menu,
+        "f5_menu_legibility_verified": False,
+        "nonblank_screenshots": ["polish-before-menu.png", "save-menu-after-ctrl-f5.png",
+                                  "after-escape.png", "menu-after-f5.png"],
         "save_files_observed": saves,
         "save_created_verified": False,
         "load_restored_room_verified": False,
