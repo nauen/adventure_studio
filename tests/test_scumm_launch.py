@@ -96,6 +96,18 @@ class ScummLaunchTests(unittest.TestCase):
                     self.assertTrue(launch.call_args.kwargs["reverse_recipe"])
                     self.assertFalse(launch.call_args.kwargs["verify_return"])
 
+    def test_four_recipe_mode_runs_full_gameplay_without_return(self):
+        from adventure_studio.scumm_launch import main
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with patch("sys.argv", ["scumm_launch", str(root), str(root / "out"),
+                                    "--recipe-four-only"]):
+                with patch("adventure_studio.scumm_launch.launch_smoke") as launch:
+                    self.assertEqual(main(), 0)
+                    self.assertTrue(launch.call_args.kwargs["verify_recipe"])
+                    self.assertFalse(launch.call_args.kwargs["verify_return"])
+                    self.assertFalse(launch.call_args.kwargs["reverse_recipe"])
+
     def test_static_scene_exception_requires_full_chain_verification(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)
