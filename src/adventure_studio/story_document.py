@@ -78,7 +78,7 @@ def parse_story_document(raw: str) -> Story:
                       or (entity_type in (DialogueNode, DialogueChoice) and field_name == "next_node_id")) and value is None:
                     continue
                 elif entity_type is Placement and field_name in ("x", "y"):
-                    if type(value) is not int or not 0 <= value <= 640:
+                    if type(value) is not int or value < 0:
                         raise ValueError("Invalid placement coordinate")
                 else:
                     _text(value, field_name)

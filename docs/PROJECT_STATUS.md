@@ -75,13 +75,24 @@ Gültige Architekturleitlinien:
 Eine [PR-Checkliste](../.github/pull_request_template.md) sichert
 Regression, Versionsverträglichkeit und native Nachweise ab.
 
-**Noch nicht implementiert:** Der allgemeine Action-/Condition-Vertrag,
-strukturierte Export-Blocker und Geometrieentkopplung sind geplante
-Refactorings, kein bereits abgeschlossener Generatorfortschritt.
+**Stabilisierung umgesetzt (2026-11-07):** Platzierungen werden im fachlichen
+Story-Modell und im JSON-Parser nicht mehr auf die 640×200-Demogeometrie
+begrenzt. Der aktuelle Exportadapter prüft seine konkrete Raumgeometrie
+weiterhin und verweigert nicht darstellbare Exporte ausdrücklich. Die
+Studio-Editierfassade lässt fachlich gültige Änderungen (auch mehr als vier
+Dekoobjekte) mit Exportwarnung speichern; explizite Platzierungen bleiben
+selbst bei nicht exportierbaren Stories lesbar. Regressionen: 203 Unit-Tests
+lokal grün, darunter neue Grenztests und unveränderte Exportfixtures.
+
+**Weiterhin offen:** Maschinenlesbare Export-Blocker mit Feature-ID,
+Entität und Zielprofil, der allgemeine Action-/Condition-Vertrag und
+raumgrößenabhängige Editor-Vorschauen sind weitere Refactorings.
+Dies ist ein Qualitäts-/Authoring-Fortschritt, **keine** neue native
+SCUMM-v6-Fähigkeit.
 
 ## Nächste drei priorisierte Pakete
 
-1. **A0 + P0.1 – Bestehende Modellgrenzen charakterisieren und Binär-Roundtrip-Prüfer für ScummC-Räume.**
+1. **P0.1 – Binär-Roundtrip-Prüfer für ScummC-Räume; bestehende Modellgrenzen sind initial durch Regressionstests charakterisiert.**
    Chunk-Baum, Tag-/Größenprüfung, SMAP-/ZPxx-Offsets,
    OBIM/OBCD-IDs; erst wenn das bestehende Fixture valide parsebar
    ist, als erledigt markieren.

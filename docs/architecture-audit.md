@@ -137,3 +137,21 @@ gemessen werden; Testdaten jenseits der Grenze müssen klar scheitern.
 
 Siehe [ADR-0001](adr/0001-domain-and-export-boundaries.md) und
 [ADR-0002](adr/0002-limits-evidence-and-compatibility.md).
+
+## Nachtrag 2026-11-07: A0-Stabilisierung
+
+Die ursprünglichen Auditbefunde bleiben als historische Bestandsaufnahme erhalten.
+Folgende konkreten Grenzen wurden nach ADR-0002 eingeordnet und behandelt:
+
+| Vorherige Regel | Klasse | Aktueller Vertrag |
+| --- | --- | --- |
+| Story-/JSON-`Placement` auf `x<=624`, `y<=184` bzw. `<=640` | `FIXTURE_LIMIT` im Domain-/JSON-Layer (Fehlplatzierung) | Dort nur nichtnegative Integer; `story_to_scumm._item_xy` prüft weiter die echte Raumgröße des aktuellen Exports. |
+| Vier automatisch platzierte Dekorationen pro Raum | `EXPORTER_LIMIT`/`FIXTURE_LIMIT` | Story-Änderung bleibt speicherbar mit Warnung; expliziter SCUMM-Export bleibt fail-closed. |
+| Zwei unterschiedliche Rezeptzutaten (`Use A with B`) | `DOMAIN_RULE` des binären Use-Operators | Unverändert; `Puzzle.requires` kann N Bedingungen enthalten. |
+| 1–2 lineare Tür-Rätsel im `story_to_scumm`-Adapter | `EXPORTER_LIMIT` | Unverändert; kein Beweis einer nativen SCUMM-Obergrenze. |
+| `scumm_project`-Obergrenzen (z. B. 64 Räume, 16 Regeln) | Noch nicht nativ belegt | Bleiben bis zur Quellcodeprüfung am Export-Rand; dürfen nicht in das fachliche Storymodell wandern. |
+
+Automatisierte Regression: 203 Unit-Tests grün. Keine neue native
+SCUMM-Funktion implementiert oder in ScummVM verifiziert. Noch offen sind
+maschinenlesbare, vollständige Export-Blocker und die Entkopplung der
+Raumvorschau vom gebundenen Exportadapter.
