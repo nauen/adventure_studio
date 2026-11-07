@@ -6,11 +6,11 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from adventure_studio.scumm_assets import (ZPlane, _native_box_file,
+from adventure_studio.scumm_assets import (ScaleCurve, ZPlane, _native_box_file,
                                           destination_fixture, scrolling_fixture,
                                           scummc_room_source, write_room_sources)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
-from adventure_studio.scumm_room_fixture import native_room
+from adventure_studio.scumm_room_fixture import native_room, perspective_room
 
 
 class RoomNativePrimitiveTests(unittest.TestCase):
@@ -59,6 +59,31 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         self.assertIn("setActorFollowBoxes();", scummc_room_source(masked))
         self.assertNotIn("setActorIgnoreBoxes();", scummc_room_source(masked))
         self.assertIn("setActorIgnoreBoxes();", scummc_room_source(scrolling_fixture()))
+
+    def test_native_scal_curve_and_box_reference_are_encoded(self):
+        room = perspective_room(target_y=145)
+        binary = _native_box_file(room)
+        self.assertEqual(struct.unpack_from("<H", binary, 27)[0], 0x8000)
+        self.assertEqual(struct.unpack_from("<H", binary, 48)[0], 0x8000)
+        scal = binary.index(b"SCAL")
+        self.assertEqual(struct.unpack_from(">I", binary, scal + 4)[0], 40)
+        self.assertEqual(struct.unpack_from("<HHHH", binary, scal + 8),
+                         (80, 70, 255, 155))
+        self.assertEqual(binary[scal + 16:scal + 40], bytes(24))
+        self.assertIn("walkActorTo(VAR_EGO, 540, 145);", scummc_room_source(room))
+        document = GameDocument("curve", (room, destination_fixture()))
+        self.assertEqual(parse_document(canonical_json(document)), document)
+
+    def test_rejects_invalid_native_scal_curve_contracts(self):
+        room = perspective_room()
+        with self.assertRaisesRegex(ValueError, "undefined SCAL curve"):
+            _native_box_file(replace(room, scale_curves=()))
+        with self.assertRaisesRegex(ValueError, "Invalid SCAL curve"):
+            _native_box_file(replace(room, scale_curves=(ScaleCurve(1, 80, 130, 255, 70),)))
+        with self.assertRaisesRegex(ValueError, "Raw SCAL"):
+            _native_box_file(replace(room, scale_slots=bytes(32)))
+        with self.assertRaisesRegex(ValueError, "Demo walk Y"):
+            scummc_room_source(replace(room, demo_walk_to_y=999))
 
     def test_legacy_json_omits_new_optional_fields(self):
         room = scrolling_fixture()

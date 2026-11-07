@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 
-from .scumm_assets import Walkbox, ZPlane, scrolling_fixture
+from .scumm_assets import ScaleCurve, Walkbox, ZPlane, scrolling_fixture
 
 
 def native_room(*, occlusion: bool = True, far_scale: int = 180):
@@ -21,3 +21,12 @@ def native_room(*, occlusion: bool = True, far_scale: int = 180):
     routes = ((0, None, None), (None, 1, 2), (None, 1, 2))
     return replace(original, zplanes=(ZPlane(1, mask),), walkboxes=boxes,
                    box_routes=routes, scale_slots=bytes(32))
+
+
+def perspective_room(*, target_y: int = 130):
+    """One native vertical SCAL curve shared by both connected walkboxes."""
+    base = native_room(occlusion=False, far_scale=255)
+    boxes = tuple(replace(box, scale_slot=1) for box in base.walkboxes)
+    return replace(base, walkboxes=boxes, scale_slots=None,
+                   scale_curves=(ScaleCurve(1, 80, 70, 255, 155),),
+                   demo_walk_to_y=target_y)

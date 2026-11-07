@@ -14,21 +14,23 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .scumm_assets import write_room_sources
+from .scumm_assets import RoomAsset, write_room_sources
 from .scumm_binary import verify_room_binary
 from .scumm_launch import launch_smoke
 from .scumm_room_fixture import native_room
 from .scumm_toolchain import _tool
 
 
-def black_costume_pixels(screenshot: Path) -> int:
+def black_costume_pixels(screenshot: Path, crop: str = "140x105+535+305") -> int:
     """Count dark costume pixels in the fixed end-of-walk scene crop.
 
     This region excludes ScummVM's dark letterbox, verb labels and cursor.
     It is a measurement, not a proof of occlusion by itself.
     """
+    if not re.fullmatch(r"\d+x\d+\+\d+\+\d+", crop):
+        raise ValueError("Invalid costume crop geometry")
     result = subprocess.run(
-        ["convert", str(screenshot), "-crop", "140x105+535+305", "+repage",
+        ["convert", str(screenshot), "-crop", crop, "+repage",
          "-format", "%c", "histogram:info:"],
         capture_output=True, text=True, check=True, timeout=15,
     )
@@ -64,44 +66,52 @@ def verify_visual_effects(masked: int, unmasked: int, fullscale: int) -> dict:
     }
 
 
-def run_visual_comparison(upstream: Path, generated: Path, destination: Path) -> dict:
-    """Build and capture mask-on, mask-off and differently scaled variants."""
+def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
+                       destination: Path, label: str, *, crop: str = "140x105+535+305") -> dict:
+    """Compile, link, run and measure exactly one independently authored room."""
+    if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", label):
+        raise ValueError("Invalid native visual probe label")
     compiler = _tool(upstream, "scc")
     linker = _tool(upstream, "sld")
     road = upstream / "examples" / "road"
     goal_manifest = generated / "game-goal.json"
     if not goal_manifest.is_file():
         raise ValueError("Native visual probe requires the generated game-goal manifest")
+    root = destination / label
+    root.mkdir(parents=True, exist_ok=True)
+    write_room_sources(room, root)
+    shutil.copyfile(goal_manifest, root / "game-goal.json")
+    subprocess.run([
+        str(compiler), "-V", "6", "-I", str(upstream / "include"),
+        "-I", str(generated), "-I", str(road), "-R", str(root),
+        "-o", str(root / "Harbor.roobj"), str(root / "Harbor.scc"),
+    ], check=True, timeout=120)
+    subprocess.run([
+        str(linker), "-o", str(root / "tentacle"), "-key", "0x69",
+        str(generated / "bootstrap.roobj"), str(root / "Harbor.roobj"),
+        str(generated / "Cellar.roobj"),
+    ], cwd=road, check=True, timeout=120)
+    verify_room_binary((root / "tentacle.001").read_bytes(), xor_key=0x69)
+    images = destination / f"{label}-screenshots"
+    launch_smoke(root, images, scene_only=True)
+    return {
+        "dark_costume_pixels": black_costume_pixels(images / "scummvm-end.png", crop),
+        "frame_report": json.loads((images / "scummvm-frame-report.json").read_text()),
+    }
+
+
+def run_visual_comparison(upstream: Path, generated: Path, destination: Path) -> dict:
+    """Build and capture mask-on, mask-off and differently scaled variants."""
     destination.mkdir(parents=True, exist_ok=True)
     results = {}
     variants = (("masked", True, 180), ("unmasked", False, 180),
                 ("fullscale", False, 255))
     for label, occlusion, scale in variants:
-        root = destination / label
-        root.mkdir(parents=True, exist_ok=True)
-        room = native_room(occlusion=occlusion, far_scale=scale)
-        write_room_sources(room, root)
-        shutil.copyfile(goal_manifest, root / "game-goal.json")
-        subprocess.run([
-            str(compiler), "-V", "6", "-I", str(upstream / "include"),
-            "-I", str(generated), "-I", str(road), "-R", str(root),
-            "-o", str(root / "Harbor.roobj"), str(root / "Harbor.scc"),
-        ], check=True, timeout=120)
-        subprocess.run([
-            str(linker), "-o", str(root / "tentacle"), "-key", "0x69",
-            str(generated / "bootstrap.roobj"), str(root / "Harbor.roobj"),
-            str(generated / "Cellar.roobj"),
-        ], cwd=road, check=True, timeout=120)
-        binary = (root / "tentacle.001").read_bytes()
-        verify_room_binary(binary, xor_key=0x69)
-        images = destination / f"{label}-screenshots"
-        launch_smoke(root, images, scene_only=True)
-        end = images / "scummvm-end.png"
         results[label] = {
             "mask_enabled": occlusion,
             "box_scale": scale,
-            "dark_costume_pixels": black_costume_pixels(end),
-            "frame_report": json.loads((images / "scummvm-frame-report.json").read_text()),
+            **render_native_room(native_room(occlusion=occlusion, far_scale=scale),
+                                 upstream, generated, destination, label),
         }
     results["comparison"] = verify_visual_effects(
         results["masked"]["dark_costume_pixels"],

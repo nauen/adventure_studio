@@ -11,6 +11,7 @@ on:
       - 'src/adventure_studio/scumm_binary.py'
       - 'src/adventure_studio/scumm_room_fixture.py'
       - 'src/adventure_studio/scumm_room_visual_probe.py'
+      - 'src/adventure_studio/scumm_scal_probe.py'
       - 'src/adventure_studio/palette_animation.py'
       - 'src/adventure_studio/palette_demo.py'
       - 'src/adventure_studio/scumm_palette_probe.py'
@@ -37,6 +38,7 @@ on:
       - 'tests/test_scumm_assets.py'
       - 'tests/test_scumm_binary.py'
       - 'tests/test_scumm_room_primitives.py'
+      - 'tests/test_scumm_scal_probe.py'
       - 'tests/test_palette_animation.py'
       - 'tests/test_palette_demo.py'
       - 'tests/test_scumm_palette_probe.py'
@@ -178,6 +180,21 @@ jobs:
             /tmp/native-visual-comparison/native-room-visual-comparison.json
             /tmp/native-visual-comparison/*-screenshots/scummvm-end.png
             /tmp/native-visual-comparison/*-screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
+      - name: Measure native SCAL perspective curve at three walking depths
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_scal_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-scal-perspective
+      - name: Retain perspective SCAL comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-scal-perspective
+          path: |
+            /tmp/native-scal-perspective/native-scal-perspective-report.json
+            /tmp/native-scal-perspective/*-screenshots/scummvm-end.png
+            /tmp/native-scal-perspective/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Produce ScummC documented compatibility-only detection fixture
         # Research fixture only: this uses the Day of the Tentacle game ID
