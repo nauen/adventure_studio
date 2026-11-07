@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .scumm_assets import destination_fixture, scrolling_fixture
 from .scumm_costume_probe import gesture_fixture
+from .scumm_costume import CostumeDirection
 from .scumm_launch import launch_smoke
 from .scumm_launch import visible_key_pixels
 from .scumm_binary import verify_room_binary
@@ -60,7 +61,18 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
     build = destination / "build"
     resources = build / "resources"
     resources.mkdir(parents=True, exist_ok=True)
-    costume = replace(gesture_fixture(), name="StudioCompanionCostume")
+    base_costume = gesture_fixture()
+    # The extra Actor may have a different facing than the upstream hero.
+    # Exercise the same two COUNT events in every native costume direction.
+    gesture = next(animation for animation in base_costume.animations
+                   if animation.name == "gesture")
+    commands = gesture.directions[0].commands
+    directions = tuple(CostumeDirection(direction, commands, loop=False)
+                       for direction in ("N", "E", "S", "W"))
+    costume = replace(base_costume, name="StudioCompanionCostume",
+                      animations=tuple(replace(animation, directions=directions)
+                                       if animation.name == "gesture" else animation
+                                       for animation in base_costume.animations))
     document = GameDocument("NativeActorProbe", (scrolling_fixture(), destination_fixture()),
                             (costume,), (
                                 ActorAsset("Companion", costume.name, "Harbor", 410, 110, "S", "Companion",
