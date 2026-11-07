@@ -1,0 +1,31 @@
+{
+  "format_version": 2,
+  "story": {
+    "chapters": [{"id": "intro", "title": "Alchemie", "synopsis": "Vier Rezepte mit neun Inventargegenstaenden."}],
+    "scenes": [
+      {"id": "Kitchen", "chapter_id": "intro", "title": "Alchemiekueche", "description": "Viele Zutaten ergeben einen Schluesseltrank."},
+      {"id": "Laboratory", "chapter_id": "intro", "title": "Labor", "description": "Der Ausgang."}
+    ],
+    "characters": [],
+    "items": [
+      {"id": "Pineapple", "name": "Ananas", "description": "Eine Frucht.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Bottle", "name": "Flasche", "description": "Eine Flasche.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Juice", "name": "Saft", "description": "Ananas in der Flasche.", "scene_id": "Kitchen", "role": "crafted"},
+      {"id": "Herb", "name": "Kraut", "description": "Getrocknete Blaetter.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Powder", "name": "Pulver", "description": "Feines Pulver.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Catalyst", "name": "Katalysator", "description": "Kraut und Pulver.", "scene_id": "Kitchen", "role": "crafted"},
+      {"id": "Essence", "name": "Essenz", "description": "Saft und Katalysator.", "scene_id": "Kitchen", "role": "crafted"},
+      {"id": "Crystal", "name": "Kristall", "description": "Ein Kristall.", "scene_id": "Kitchen", "role": "pickup"},
+      {"id": "Elixir", "name": "Elixier", "description": "Die fertige Mischung.", "scene_id": "Kitchen", "role": "crafted"}
+    ],
+    "recipes": [
+      {"id": "MixJuice", "title": "Der Saft ist fertig.", "ingredients": ["Pineapple", "Bottle"], "result_item_id": "Juice"},
+      {"id": "MixCatalyst", "title": "Der Katalysator ist fertig.", "ingredients": ["Herb", "Powder"], "result_item_id": "Catalyst"},
+      {"id": "MixEssence", "title": "Die Essenz ist fertig.", "ingredients": ["Juice", "Catalyst"], "result_item_id": "Essence"},
+      {"id": "MixElixir", "title": "Das Elixier ist fertig.", "ingredients": ["Essence", "Crystal"], "result_item_id": "Elixir"}
+    ],
+    "puzzles": [{"id": "OpenLaboratory", "title": "Das Labor ist offen.", "scene_id": "Kitchen", "requires": ["Elixir"], "opens_scene_id": "Laboratory"}],
+    "starting_scene_id": "Kitchen",
+    "final_puzzle_id": "OpenLaboratory"
+  }
+}
