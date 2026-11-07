@@ -61,6 +61,15 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_inventory_paging_probe /tmp/paging-game /tmp/paging-evidence
+      - name: Print inventory interaction diagnostics on failure
+        if: failure()
+        run: |
+          if test -f /tmp/paging-evidence/scummvm-pickup-history.json; then
+            sed -n '1,120p' /tmp/paging-evidence/scummvm-pickup-history.json
+          fi
+          if test -f /tmp/paging-evidence/scummvm.log; then
+            tail -80 /tmp/paging-evidence/scummvm.log
+          fi
       - name: Upload inventory paging screenshots and report
         if: always()
         uses: actions/upload-artifact@v4
