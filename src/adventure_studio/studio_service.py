@@ -12,6 +12,8 @@ from .story import Item, Placement, Story, verify_story
 from .story_changes import PutEntity, StoryChangeReport, edit_story
 from .story_document import canonical_story_json, parse_story_document
 from .story_to_scumm import compile_story_to_scumm
+from .export_compatibility import ExportCompatibility, assess_export, format_export_warning
+from .studio_preview import authoring_scene_preview, preview_positions
 from .story_localization import story_authoring_template_json, validate_story_catalog
 from .localization import canonical_catalog_json, charset_plan, parse_catalog
 
@@ -22,11 +24,12 @@ def export_warning(story: Story) -> str:
     The exporter itself still rejects unsupported stories; no content is
     silently omitted from a generated SCUMM game.
     """
-    try:
-        compile_story_to_scumm(story)
-    except ValueError as error:
-        return f"SCUMM-Export noch nicht möglich: {error}"
-    return ""
+    return format_export_warning(assess_export(story))
+
+
+def assess_story_export(raw: str) -> ExportCompatibility:
+    """Machine-readable target-specific blockers for Studio or future clients."""
+    return assess_export(parse_story_document(raw))
 
 
 @dataclass(frozen=True)
@@ -141,12 +144,10 @@ def item_position(raw: str, item_id: str) -> tuple[int, int]:
     placement = next((p for p in story.placements if p.item_id == item_id), None)
     if placement is not None:
         return placement.x, placement.y
-    game = compile_story_to_scumm(story)
-    room = next((r for r in game.rooms if r.name == item.scene_id), None)
-    hotspot = next((h for h in room.hotspots if h.id == item_id), None) if room else None
-    if hotspot is None:
+    position = preview_positions(story, item.scene_id).get(item_id)
+    if position is None:
         raise ValueError("Item does not have a visible room hotspot")
-    return hotspot.x, hotspot.y
+    return position
 
 
 def change_position(raw: str, item_id: str, x: int, y: int) -> StudioEdit:
@@ -172,14 +173,9 @@ def accept_proposal(raw: str, proposal: StudioProposal) -> str:
 
 
 def scene_preview(raw: str, scene_id: str) -> tuple[int, int, bytes, tuple[tuple[int, int, int], ...], tuple[tuple[str, int, int, int, int], ...]]:
-    """Data-only preview; the optional UI layer chooses the image renderer."""
+    """Data-only authoring preview, independent from SCUMM exportability."""
     story = parse_story_document(raw)
-    game = compile_story_to_scumm(story)
-    room = next((room for room in game.rooms if room.name == scene_id), None)
-    if room is None:
-        raise ValueError("Unknown or unsupported scene ID")
-    hotspots = tuple((h.label, h.x, h.y, h.width, h.height) for h in room.hotspots)
-    return room.geometry.room_width, room.geometry.room_height, room.pixels, room.palette, hotspots
+    return authoring_scene_preview(story, scene_id)
 
 
 

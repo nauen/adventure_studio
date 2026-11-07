@@ -42,7 +42,7 @@ class StudioPositionTests(unittest.TestCase):
 
         decorated = add_decoration(SAMPLE, "Archive", "Lamp", "Lamp", "Old lamp")
         authored = change_position(decorated.story_json, "Lamp", 410, 120)
-        self.assertIn("geometry", authored.report.export_warning)
+        self.assertIn("FIXTURE_ROOM_GEOMETRY", authored.report.export_warning)
         self.assertEqual(item_position(authored.story_json, "Lamp"), (410, 120))
         with self.assertRaisesRegex(ValueError, "geometry"):
             compile_story_to_scumm(parse_story_document(authored.story_json))
@@ -54,7 +54,7 @@ class StudioPositionTests(unittest.TestCase):
             with self.subTest(x=x, y=y):
                 edited = change_position(SAMPLE, "Key", x, y)
                 self.assertEqual(item_position(edited.story_json, "Key"), (x, y))
-                self.assertIn("geometry", edited.report.export_warning)
+                self.assertIn("FIXTURE_ROOM_GEOMETRY", edited.report.export_warning)
                 with self.assertRaisesRegex(ValueError, "geometry"):
                     compile_story_to_scumm(parse_story_document(edited.story_json))
 

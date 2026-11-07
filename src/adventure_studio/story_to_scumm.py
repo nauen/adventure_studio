@@ -11,6 +11,7 @@ import re
 import unicodedata
 
 from .image_pipeline import ImageProvider, ImageRequest, IndexedImage
+from .story_fixture_image import DeterministicStoryImageProvider, _PALETTE
 from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, TalkChoice, TalkRule, UseRule
 from .scumm_project import GameDocument
 from .story import Story, verify_story
@@ -18,9 +19,6 @@ from .targets import RoomGeometry
 
 
 _ID = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
-_PALETTE = ((70, 130, 190), (95, 60, 35), (240, 175, 95),
-            (255, 220, 75), (60, 220, 90), (50, 220, 220), (120, 70, 180),
-            (225, 80, 180), (160, 230, 55))
 _PICKUP_COLORS = (3, 7, 8)
 _RECIPE_COLORS = (3, 7, 8, 9, 10, 11, 12, 13, 14)
 _RECIPE_EXTRA_PALETTE = ((245, 100, 60), (85, 95, 245),
@@ -54,24 +52,6 @@ def _item_xy(story: Story, item_id: str, default_x: int,
     if placement.x + 16 > room_width or placement.y + 16 > 200:
         raise ValueError(f"Item placement exceeds room geometry: {item_id}")
     return placement.x, placement.y
-
-
-def _room_pixels(width: int, goal: bool) -> bytes:
-    if goal:
-        return bytes([6]) * (width * 200)
-    return bytes(1 if y >= 150 else (2 if x >= 320 else 0)
-                 for y in range(200) for x in range(width))
-
-
-class DeterministicStoryImageProvider:
-    """Default offline source, preserving existing visual fixtures byte-for-byte."""
-
-    def generate(self, request: ImageRequest) -> IndexedImage:
-        if request.height != 200 or request.width not in (320, 640):
-            raise ValueError("Unsupported fixture room geometry")
-        is_goal = request.asset_id.endswith("-goal")
-        return IndexedImage(_room_pixels(request.width, is_goal), _PALETTE,
-                            request.width, request.height, "story-fixture:v1")
 
 
 def _room_image(provider: ImageProvider, scene_id: str, width: int, goal: bool) -> IndexedImage:

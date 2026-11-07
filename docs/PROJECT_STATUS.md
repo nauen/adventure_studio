@@ -84,11 +84,26 @@ Dekoobjekte) mit Exportwarnung speichern; explizite Platzierungen bleiben
 selbst bei nicht exportierbaren Stories lesbar. Regressionen: 203 Unit-Tests
 lokal grün, darunter neue Grenztests und unveränderte Exportfixtures.
 
-**Weiterhin offen:** Maschinenlesbare Export-Blocker mit Feature-ID,
-Entität und Zielprofil, der allgemeine Action-/Condition-Vertrag und
-raumgrößenabhängige Editor-Vorschauen sind weitere Refactorings.
-Dies ist ein Qualitäts-/Authoring-Fortschritt, **keine** neue native
-SCUMM-v6-Fähigkeit.
+**Architekturstabilisierung abgeschlossen (weiteres Paket):** Das Studio
+liefert nun typisierte Export-Blocker (`code`, `entity_kind`, `entity_id`,
+`target_id`, `reason`), einschließlich mehrerer gleichzeitig bekannter
+Hindernisse. Nicht klassifizierte Adapterfehler bleiben als
+`ADAPTER_REJECTED` sichtbar, statt als native Limits ausgegeben zu werden.
+Die Raumvorschau benutzt einen unabhängigen Authoring-Layoutpfad und
+zeigt auch nicht exportierbare Projekte; sie ist ausdrücklich **keine**
+Spielsimulation. Die Demo-Bildquelle wird von Exporter und Vorschau geteilt,
+ohne dass die Vorschau den Compiler benötigt. Die zuvor künstlichen
+JSON-Grenzen von 128 Entitäten bzw. 32 Bedingungen sind entfernt; das
+1-MB-Eingabelimit bleibt als Ressourcenschutz bestehen. Grenzklassifikation:
+[Audit-Nachtrag](architecture-audit.md). Regressionen: 208 Unit-Tests
+lokal grün. **Keine** neue native SCUMM-v6-Funktion ist damit belegt.
+
+**Unverändert als Produktentwicklung offen:** Allgemeine Action-/Condition-
+IR, dynamische Raumgeometrie und vollständige native SCUMM-v6-Fähigkeiten.
+Der Diagnosebericht beschreibt alle aktuell statisch erkannten Blocker;
+für noch nicht typisierte Compilerfälle wird die allgemeine Ablehnung
+zurückgegeben. Diese Fähigkeiten gehören zu den nächsten vertikalen
+SCUMM-Paketen, nicht zum abgeschlossenen A0-Stabilisierungsgate.
 
 ## Nächste drei priorisierte Pakete
 

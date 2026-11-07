@@ -155,3 +155,39 @@ Automatisierte Regression: 203 Unit-Tests grün. Keine neue native
 SCUMM-Funktion implementiert oder in ScummVM verifiziert. Noch offen sind
 maschinenlesbare, vollständige Export-Blocker und die Entkopplung der
 Raumvorschau vom gebundenen Exportadapter.
+
+## A0-Abschluss: überprüfte Limit-Zuordnung (2026-11-07)
+
+Dieser Abschnitt ersetzt keine native Formatprüfung. Grenzen ohne Beleg
+in ScummC/ScummVM sind ausdrücklich **nicht** als `NATIVE_LIMIT` markiert.
+
+| Quelle / Grenze | Klasse (Stand heute) | Konsequenz |
+| --- | --- | --- |
+| `story.py`: genau zwei verschiedene Rezeptzutaten | `DOMAIN_RULE` für binären Use-Operator | Beibehalten; `Puzzle.requires` bleibt N-är. |
+| `story.py`: nichtnegative Koordinaten und stabile Referenzen | `DOMAIN_RULE` | Beibehalten; keine fixe Raumgeometrie. |
+| `story_document.py`: 128 Entitäten pro Liste, 32 Anforderungen | `UI_LIMIT`/Parserartefakt, entfernt | Fachlich gültige N-Elemente sind jetzt im JSON übertragbar. |
+| `story_document.py`: 1 MB Dokument, 4096 Zeichen pro Storytext | `UI_LIMIT`/Eingaberessourcenschutz | Bleibt mit eigener Fehlerdiagnose; **kein** SCUMM-Limit. |
+| `story_to_scumm.py`: 1 Kapitel, 1–2 Tür-Rätsel, lineare Route, Rezept-Fixture | `EXPORTER_LIMIT` | Im Fachmodell gültig, kein nativer Export bis zum allgemeinen Backend. |
+| `story_to_scumm.py`: drei Pickup-Farben, vier Dekoobjekte, fixe Positionen, 320×200/640×200 | `FIXTURE_LIMIT` | Fachliche Authoring-Grenzen entfernt; Compiler muss bei Überschreitung abbrechen. |
+| `story_to_scumm.py`: eine lineare Konversation, maximal drei Antworten, 16 Zeilen | `EXPORTER_LIMIT` plus `FIXTURE_LIMIT` im Layout | Nicht als native SCUMM-Semantik behaupten. |
+| `scumm_project.py`: 64 Räume, 3 Kombinationen, 16 Talk-/Palette-Zyklen/Anforderungen | vorläufig `EXPORTER_LIMIT` | Im Export-/Projektformat belassen, native Obergrenzen bei P0.x prüfen. |
+| `scumm_project.py`/`scumm_assets.py`: genau ein Raum mit `goal_text` | `DOMAIN_RULE` des **Demo-Spielziels**, keine SCUMM-Regel | Bei allgemeiner Game-IR abzulösen. |
+| `scumm_assets.py`: 40×16 Inventarslot und Sprite-Pixelzahl = Breite×Höhe | `FIXTURE_LIMIT`/konkreter GUI-Vertrag bzw. Datenintegrität | Vor Änderung ursprüngliche GUI-Skript-/Costume-Semantik nachweisen. |
+| `scumm_assets.py`: 1–256 Paletteneinträge, RGB 0–255 | `EXPORTER_LIMIT` des indizierten 8-Bit-Ressourcenpfads | Kein Anspruch, alle SCUMM-Grafikformate seien identisch begrenzt. |
+| `targets.py`: 320×200 Viewport und valide Dimensionen | `EXPORTER_LIMIT` des gewählten v6-Baseline-Targets und `DOMAIN_RULE` für positive Maße | Zielprofilabhängig, nicht als globale Adventure-Regel. |
+
+### Implementierter Vertrag und verbleibende Risiken
+
+- `export_compatibility.assess_export` gibt maschinenlesbare Blocker für
+  erkannte Adaptergrenzen einschließlich Entity-ID und Target zurück.
+  Ein unbekannter Compilerfehler wird als `ADAPTER_REJECTED` gemeldet,
+  **nicht** über die Fehlermeldung heuristisch einer nativen Grenze zugewiesen.
+  Die Liste bekannter Codes wächst mit den kommenden nativen Features.
+- `studio_preview.authoring_scene_preview` zeigt jedes physische Objekt
+  und markiert Koordinaten außerhalb des Exportfensters sichtbar am Rand.
+  Das Ergebnis ist ein Layoutentwurf, keine simulierte SCUMM-Laufzeit.
+- Die gemeinsame deterministische Fixture-Bildquelle liegt unabhängig
+  vom Compiler in `story_fixture_image.py`; bestehende exportierte
+  Pixelwerte wurden nicht verändert.
+- 208 Unit-Tests lokal erfolgreich; die nativen ScummVM-Gates bleiben
+  für zukünftige Spielfunktionen separat offen.
