@@ -8,7 +8,10 @@ from .scumm_assets import Walkbox, ZPlane, scrolling_fixture
 def native_room(*, occlusion: bool = True, far_scale: int = 180):
     original = scrolling_fixture()
     width, height = original.geometry.room_width, original.geometry.room_height
-    mask = bytes(1 if occlusion and x > width // 2 and 120 < y < 190 else 0
+    # Room coordinates are magnified by the ScummVM output viewport.  The
+    # costume at walking baseline y=100 occupies approximately y=65..100,
+    # so this band intersects its torso rather than the ground below it.
+    mask = bytes(1 if occlusion and x > width // 2 and 60 < y < 110 else 0
                  for y in range(height) for x in range(width))
     boxes = (
         Walkbox(((0, 70), (120, 70), (120, 150), (0, 150))),
