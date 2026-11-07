@@ -14,6 +14,8 @@ import sys
 import time
 from pathlib import Path
 
+from .scumm_recipe_plan import plan_recipes
+
 
 def parse_changed_pixels(metric: str) -> int:
     """Parse ImageMagick's absolute-error metric, rejecting ambiguous output."""
@@ -275,11 +277,14 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
 def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0,
                  scene_only: bool = False, verify_return: bool = True,
                  verify_chain: bool = False, verify_recipe: bool = False,
-                 allow_static_scene: bool = False, reverse_recipe: bool = False) -> None:
+                 allow_static_scene: bool = False, reverse_recipe: bool = False,
+                 auto_recipe: bool = False) -> None:
     if allow_static_scene and not verify_chain:
         raise ValueError("Static scene exception is only for the chain/palette fixture")
     if reverse_recipe and not verify_recipe:
         raise ValueError("Reversed inventory combination requires recipe mode")
+    if auto_recipe and not verify_recipe:
+        raise ValueError("Automatic recipe replay requires recipe mode")
     if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
         raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 20:
@@ -319,8 +324,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     if not isinstance(combinations, list) or len(combinations) > 16:
         raise ValueError("Invalid fixture combination manifest")
     if verify_recipe:
-        if not 1 <= len(combinations) <= 4 or gates or len(route) != 1:
-            raise ValueError("Recipe smoke requires one to four combinations and one exit")
+        if not 1 <= len(combinations) <= (16 if auto_recipe else 4) or gates or len(route) != 1:
+            raise ValueError("Recipe smoke requires supported combinations and one exit")
         for recipe in combinations:
             if (not isinstance(recipe, dict) or set(recipe) != {"room_id", "ingredients", "result"}
                 or not isinstance(recipe["ingredients"], list) or len(recipe["ingredients"]) != 2
@@ -329,18 +334,19 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                            and all(type(c) is int and 0 <= c <= 255 for c in item["rgb"])
                            for item in [*recipe["ingredients"], recipe["result"]])):
                 raise ValueError("Invalid recipe color probes")
-        if len(combinations) == 2 and (
+        if not auto_recipe and len(combinations) == 2 and (
                 combinations[0]["result"]["item_id"] not in
                 [item["item_id"] for item in combinations[1]["ingredients"]]):
             raise ValueError("Recipe chain smoke requires dependent combinations in order")
-        if len(combinations) in (3, 4) and (
+        if not auto_recipe and len(combinations) in (3, 4) and (
                 {item["item_id"] for item in combinations[2]["ingredients"]}
                 != {combinations[0]["result"]["item_id"], combinations[1]["result"]["item_id"]}):
             raise ValueError("Recipe graph smoke requires two branches feeding a final recipe")
-        if len(combinations) == 4 and (
+        if not auto_recipe and len(combinations) == 4 and (
                 combinations[2]["result"]["item_id"] not in
                 {item["item_id"] for item in combinations[3]["ingredients"]}):
             raise ValueError("Fourth recipe must consume the combined branch result")
+    recipe_plan = plan_recipes(combinations, route[0]["item_id"]) if auto_recipe else ()
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("A virtual X display is required")
 
@@ -561,7 +567,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 )
                 capture_frame("pickup")
             recipe_item_center = None
-            if verify_recipe:
+            if verify_recipe and not auto_recipe:
                 ingredients = combinations[0]["ingredients"]
                 result_rgb = tuple(combinations[0]["result"]["rgb"])
                 second_rgb = tuple(ingredients[1]["rgb"])
@@ -802,6 +808,94 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                             raise RuntimeError("Fourth recipe did not consume both ingredients")
                         recipe_item_center = colored_item_center(output_directory, "recipe-four-combined",
                                                                  final_rgb, inventory=True)
+                capture_frame("pickup")
+            if verify_recipe and auto_recipe:
+                # The shared pickup prelude collected the uniquely gold first
+                # ingredient. All subsequent actions follow the topologically
+                # sorted manifest, not a fixed number of recipe branches.
+                gold = [item["item_id"] for recipe in recipe_plan for item in recipe["ingredients"]
+                        if tuple(item["rgb"]) == (255, 220, 75)]
+                if len(set(gold)) != 1:
+                    raise ValueError("Automatic replay needs exactly one gold starting ingredient")
+                owned = {gold[0]}
+                produced_ids = {recipe["result"]["item_id"] for recipe in recipe_plan}
+                completed_recipes = []
+                for recipe_index, recipe in enumerate(recipe_plan):
+                    for ingredient_index, item in enumerate(recipe["ingredients"]):
+                        if item["item_id"] in owned:
+                            continue
+                        if item["item_id"] in produced_ids:
+                            raise RuntimeError(f"Required intermediate {item['item_id']} not in inventory")
+                        rgb = tuple(item["rgb"])
+                        subprocess.run(["xdotool", "mousemove", "328", "506", "click", "1"],
+                                       check=True, timeout=5)
+                        time.sleep(0.3)
+                        frame = f"auto-before-{recipe_index}-{ingredient_index}"
+                        capture_frame(frame)
+                        item_x, item_y = colored_item_center(output_directory, frame, rgb,
+                                                             fuzz_percent=4)
+                        subprocess.run(["xdotool", "mousemove", str(item_x), str(item_y), "click", "1"],
+                                       check=True, timeout=5)
+                        acquired = False
+                        pickup_start = time.monotonic()
+                        retried = False
+                        while time.monotonic() - pickup_start < 18:
+                            frame = f"auto-picked-{recipe_index}-{ingredient_index}"
+                            capture_frame(frame)
+                            if (colored_item_pixels(output_directory, frame, rgb) < 10
+                                    and colored_item_pixels(output_directory, frame, rgb,
+                                                            inventory=True) >= 40):
+                                acquired = True
+                                break
+                            if not retried and time.monotonic() - pickup_start >= 7:
+                                retried = True
+                                subprocess.run(["xdotool", "mousemove", "328", "506", "click", "1"],
+                                               check=True, timeout=5)
+                                time.sleep(0.3)
+                                capture_frame(frame)
+                                item_x, item_y = colored_item_center(output_directory, frame, rgb,
+                                                                     fuzz_percent=4)
+                                subprocess.run(["xdotool", "mousemove", str(item_x), str(item_y), "click", "1"],
+                                               check=True, timeout=5)
+                            time.sleep(0.4)
+                        if not acquired:
+                            raise RuntimeError(f"Automatic recipe pickup failed: {item['item_id']}")
+                        owned.add(item["item_id"])
+                        time.sleep(0.5)
+                    frame = f"auto-ready-{recipe_index}"
+                    capture_frame(frame)
+                    inputs = recipe["ingredients"]
+                    clicks = [colored_item_center(output_directory, frame, tuple(item["rgb"]),
+                                                  inventory=True, fuzz_percent=4)
+                              for item in inputs]
+                    for x, y in ((408, 506), *clicks):
+                        subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                                       check=True, timeout=5)
+                        time.sleep(0.3)
+                    output_rgb = tuple(recipe["result"]["rgb"])
+                    input_rgbs = [tuple(item["rgb"]) for item in inputs]
+                    combined = False
+                    deadline = time.monotonic() + 15
+                    while time.monotonic() < deadline:
+                        frame = f"auto-combined-{recipe_index}"
+                        capture_frame(frame)
+                        if (colored_item_pixels(output_directory, frame, output_rgb, inventory=True) >= 40
+                                and all(colored_item_pixels(output_directory, frame, rgb,
+                                                            inventory=True) < 10 for rgb in input_rgbs)):
+                            combined = True
+                            break
+                        time.sleep(0.4)
+                    completed_recipes.append({"result": recipe["result"]["item_id"], "combined": combined})
+                    if not combined:
+                        raise RuntimeError(f"Automatic recipe combination failed: {recipe['result']['item_id']}")
+                    owned.difference_update(item["item_id"] for item in inputs)
+                    owned.add(recipe["result"]["item_id"])
+                recipe_item_center = colored_item_center(output_directory, frame, output_rgb,
+                                                         inventory=True, fuzz_percent=4)
+                (output_directory / "scummvm-recipe-auto-report.json").write_text(
+                    json.dumps({"completed_recipes": completed_recipes,
+                                "goal_item": route[0]["item_id"], "owned": sorted(owned)},
+                               indent=2) + "\n", encoding="utf-8")
                 capture_frame("pickup")
             initial_door_pixels = door_pixels(output_directory, "pickup")
             if initial_door_pixels < 40:
@@ -1078,14 +1172,15 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only", "--recipe-four-only")):
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only|--recipe-reverse-only|--recipe-chain-only|--recipe-graph-only|--recipe-four-only]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only", "--recipe-four-only", "--recipe-auto-only")):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only|--recipe-reverse-only|--recipe-chain-only|--recipe-graph-only|--recipe-four-only|--recipe-auto-only]")
         return 2
     mode = sys.argv[3] if len(sys.argv) == 4 else ""
     launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]),
-                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only", "--recipe-four-only"),
+                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only", "--recipe-four-only", "--recipe-auto-only"),
                  verify_chain=mode in ("--chain-only", "--static-chain-only"),
-                 verify_recipe=mode in ("--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only", "--recipe-four-only"),
+                 verify_recipe=mode in ("--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only", "--recipe-four-only", "--recipe-auto-only"),
+                 auto_recipe=mode == "--recipe-auto-only",
                  reverse_recipe=mode == "--recipe-reverse-only",
                  allow_static_scene=mode == "--static-chain-only")
     return 0

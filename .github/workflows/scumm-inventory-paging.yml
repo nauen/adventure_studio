@@ -87,6 +87,11 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/nine-recipe-game /tmp/nine-recipe-full-evidence --recipe-four-only
+      - name: Autoplan four recipes and complete the same adventure in ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/nine-recipe-game /tmp/nine-recipe-auto-evidence --recipe-auto-only
       - name: Print inventory interaction diagnostics on failure
         if: failure()
         run: |
@@ -110,3 +115,5 @@ jobs:
             /tmp/nine-recipe-evidence/*.json
             /tmp/nine-recipe-full-evidence/*.png
             /tmp/nine-recipe-full-evidence/*.json
+            /tmp/nine-recipe-auto-evidence/*.png
+            /tmp/nine-recipe-auto-evidence/*.json

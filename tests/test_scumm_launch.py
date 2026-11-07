@@ -108,6 +108,20 @@ class ScummLaunchTests(unittest.TestCase):
                     self.assertFalse(launch.call_args.kwargs["verify_return"])
                     self.assertFalse(launch.call_args.kwargs["reverse_recipe"])
 
+    def test_automatic_recipe_mode_uses_planned_gameplay(self):
+        from adventure_studio.scumm_launch import main
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            with self.assertRaisesRegex(ValueError, "requires recipe mode"):
+                launch_smoke(root, root / "out", auto_recipe=True)
+            with patch("sys.argv", ["scumm_launch", str(root), str(root / "out"),
+                                    "--recipe-auto-only"]):
+                with patch("adventure_studio.scumm_launch.launch_smoke") as launch:
+                    self.assertEqual(main(), 0)
+                    self.assertTrue(launch.call_args.kwargs["verify_recipe"])
+                    self.assertTrue(launch.call_args.kwargs["auto_recipe"])
+                    self.assertFalse(launch.call_args.kwargs["verify_return"])
+
     def test_static_scene_exception_requires_full_chain_verification(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)
