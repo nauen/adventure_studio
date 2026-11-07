@@ -7,6 +7,7 @@ from adventure_studio.studio_service import (
     describe_story, prepare_proposal, report_text, scene_preview, translation_draft, validate_translation_draft,
 )
 from adventure_studio.story_document import parse_story_document
+from adventure_studio.story_to_scumm import compile_story_to_scumm
 
 
 SAMPLE = (Path(__file__).resolve().parents[1] / "examples/mini_story_chain.json").read_text(encoding="utf-8")
@@ -79,6 +80,20 @@ class StudioServiceTests(unittest.TestCase):
         self.assertEqual((width, height), (640, 200))
         self.assertEqual(len(pixels), width * height)
         self.assertTrue(any("Kuhlschrank" in label for label, *_ in hotspots))
+
+    def test_export_layout_limit_does_not_block_further_authoring(self):
+        current = SAMPLE
+        for index in range(5):
+            result = add_decoration(current, "Harbor", f"Decor{index}", f"Dekor {index}", "Dekoration")
+            current = result.story_json
+        story = parse_story_document(current)
+        self.assertEqual(len([i for i in story.items if i.role == "decoration" and i.scene_id == "Harbor"]), 5)
+        self.assertIn("decorations", result.report.export_warning)
+        with self.assertRaisesRegex(ValueError, "decorations"):
+            compile_story_to_scumm(story)
+        renamed = change_item(current, "Decor4", "Neue Dekoration", "Bleibt editierbar")
+        self.assertIn("Neue Dekoration", renamed.story_json)
+        self.assertIn("SCUMM-Export", renamed.report.export_warning)
 
     def test_rejects_invalid_edit_without_mutating_input(self):
         with self.assertRaises(ValueError):
