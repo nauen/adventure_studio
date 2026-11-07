@@ -97,13 +97,16 @@ def colored_item_pixels(output_directory: Path, frame: str,
 
 
 def colored_item_center(output_directory: Path, frame: str,
-                        rgb: tuple[int, int, int], inventory: bool = False) -> tuple[int, int]:
+                        rgb: tuple[int, int, int], inventory: bool = False,
+                        fuzz_percent: int = 8) -> tuple[int, int]:
+    if type(fuzz_percent) is not int or not 0 <= fuzz_percent <= 8:
+        raise ValueError("Invalid item color matching tolerance")
     screenshot = output_directory / f"scummvm-{frame}.png"
     color_hex = "#" + "".join(f"{channel:02X}" for channel in rgb)
     crop = "304x40+528+500" if inventory else "640x288+192+184"
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", crop, "+repage",
-         "-fuzz", "8%", "-fill", "white", "-opaque", color_hex,
+         "-fuzz", f"{fuzz_percent}%", "-fill", "white", "-opaque", color_hex,
          "-fill", "black", "+opaque", "white", "-trim", "-format", "%wx%h%O", "info:"],
         capture_output=True, text=True, timeout=10, check=False,
     )
