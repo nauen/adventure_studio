@@ -6,6 +6,11 @@ Die 64 stabilen IDs und der Implementierungsstatus stehen ausschließlich in
 [`SCUMM_V6_CAPABILITIES.md`](../SCUMM_V6_CAPABILITIES.md). Die
 [Produktvision](../PRODUCT_VISION.md) legt das unveränderliche Ziel fest.
 
+**Dokumente finden:** [Thematisch sortierte Dokumentationsübersicht](DOCUMENTATION_INDEX.md)
+mit direkten Links zu sämtlichen relevanten Audits und Verträgen –
+insbesondere [Bildkomposition](../scumm-v6-compositing-compiler-audit.md)
+und [Room/Export](../room-and-export-contract.md).
+
 ## Verbindlicher Scope
 
 Adventure Studio erzeugt vollständige klassische Point-and-Click-Adventures
