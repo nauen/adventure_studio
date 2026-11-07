@@ -1,4 +1,5 @@
 import unittest
+import struct
 from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -22,6 +23,8 @@ class NativeCostumeTests(unittest.TestCase):
             self.assertTrue(script.read_text().startswith("palette([16-47]);"))
             self.assertEqual(len(images), 3)
             self.assertTrue(all(path.read_bytes().startswith(b"BM") for path in images))
+            self.assertTrue(all(struct.unpack_from("<I", path.read_bytes(), 46)[0] == 32
+                                for path in images))
 
     def test_invalid_frames_and_native_commands_are_rejected(self):
         base = gesture_fixture()
@@ -29,7 +32,7 @@ class NativeCostumeTests(unittest.TestCase):
             replace(base, frames=()),
             replace(base, frames=base.frames + (base.frames[0],)),
             replace(base, frames=(replace(base.frames[0], pixels=b""),) + base.frames[1:]),
-            replace(base, frames=(replace(base.frames[0], pixels=bytes([48]) * 384),) + base.frames[1:]),
+            replace(base, frames=(replace(base.frames[0], pixels=bytes([32]) * 384),) + base.frames[1:]),
             replace(base, animations=(replace(base.animations[1], index=23),)),
             replace(base, animations=(CostumeAnimation("bad", (CostumeDirection("S", ("Unknown",)),)),)),
             replace(base, animations=(CostumeAnimation("bad", (CostumeDirection("S", ("Pose0",)),

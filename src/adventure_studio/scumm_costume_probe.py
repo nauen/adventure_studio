@@ -18,11 +18,12 @@ from .scumm_toolchain import _tool
 
 
 def gesture_fixture() -> CostumeAsset:
-    palette = tuple((i * 3 % 256, i * 5 % 256, i * 7 % 256) for i in range(48))
+    palette = tuple((0, 0, 0) if i in (16, 17, 18)
+                    else (i * 3 % 256, i * 5 % 256, i * 7 % 256) for i in range(48))
     frames = []
     for index in range(3):
-        pixels = bytes(17 if (4 + index <= x < 12 + index and 4 <= y < 20)
-                       else 16 for y in range(24) for x in range(16))
+        pixels = bytes(2 if (4 + index <= x < 12 + index and 4 <= y < 20)
+                       else 1 for y in range(24) for x in range(16))
         frames.append(CostumeFrame(f"Pose{index}", 16, 24, pixels, -8, -23))
     base_directions = tuple(CostumeDirection(d, ("Pose0", "Pose1", "Pose2"))
                             for d in ("N", "E", "S", "W"))

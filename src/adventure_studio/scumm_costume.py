@@ -75,9 +75,11 @@ def validate_costume(costume: CostumeAsset) -> None:
             or not -32768 <= frame.offset_x <= 32767
             or not -32768 <= frame.offset_y <= 32767):
             raise ValueError("Invalid costume frame dimensions, pixels or origin")
-        if any(pixel < costume.palette_first or pixel > costume.palette_last
+        # Frame pixels are LOCAL indices into the costume's selected palette.
+        # ScummC maps these entries to the v6 room palette range on import.
+        if any(pixel > costume.palette_last - costume.palette_first
                for pixel in frame.pixels):
-            raise ValueError("Costume frame uses a palette entry outside the native COST range")
+            raise ValueError("Costume frame uses a local palette index outside the COST range")
     animation_names = set()
     animation_indices = set()
     for anim in costume.animations:
@@ -130,8 +132,9 @@ def write_costume_sources(costume: CostumeAsset, destination: Path) -> tuple[Pat
     script = destination / f"{costume.name}.scost"
     script.write_text(source, encoding="utf-8")
     images = []
+    frame_palette = costume.palette[costume.palette_first:costume.palette_last + 1]
     for frame in costume.frames:
         path = destination / f"{costume.name}_{frame.id}.bmp"
-        path.write_bytes(_indexed_bmp(frame.width, frame.height, frame.pixels, costume.palette))
+        path.write_bytes(_indexed_bmp(frame.width, frame.height, frame.pixels, frame_palette))
         images.append(path)
     return script, tuple(images)
