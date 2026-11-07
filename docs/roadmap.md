@@ -23,9 +23,25 @@
    Validierte, nachvollziehbare Änderungen statt unkontrolliertem Code.
 5. **P5 – Produktreife:** Distribution, Bedienbarkeit, Stabilität, Qualität.
 
+### Architektur- und Regression-Gates
+
+[Architekturaudit](architecture-audit.md) ·
+[Architekturverträge](architecture-contracts.md) ·
+[ADR-0001](adr/0001-domain-and-export-boundaries.md) ·
+[ADR-0002](adr/0002-limits-evidence-and-compatibility.md).
+
+- [x] Bestand auf künstliche Demo-/Adapter-Limits geprüft; A0-Befunde
+      dokumentiert. Noch **kein Refactoring** durchgeführt.
+- [ ] Vor dem nächsten Modellumbau Characterization Tests der betroffenen
+      alten JSON-/Export-Varianten und größere Grenzfälle ergänzen.
+- [ ] Exportfähigkeitsbericht vom fachlich gültigen Storymodell entkoppeln,
+      sobald ein entsprechender Story-Adapter-Ausbau ansteht.
+- [ ] Geometrie-, Layout- und Mengen-Grenzen gemäß ADR-0002
+      nach nativer Semantik oder temporärem Scope klassifizieren.
+
 ### Aktueller Arbeitsvorrat (P1)
 
-- [ ] **P0.1:** Binär-Roundtrip-Parser für ScummC-Raumdaten
+- [ ] **P0.1 (mit A0-Regression-Gates):** Binär-Roundtrip-Parser für ScummC-Raumdaten
       (RMIM/SMAP/ZPxx/OBIM/OBCD), mit Test-Fixture und Größen-/Offset-/ID-Prüfungen.
 - [ ] **P0.2:** Z-Plane-/Maskenbilder in RoomAsset, JSON, Validierung und
       ScummC-Export; sichtbare Verdeckung in stock ScummVM.
