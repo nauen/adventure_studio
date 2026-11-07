@@ -147,7 +147,7 @@ class BootstrapTests(unittest.TestCase):
             "        // A verb was clicked\n"
             "    }\n"
             "    script setInventoryIcon(int icon, int slot) {\n    }\n"
-            "    script inventoryHandler(int obj) {\n"
+            "    script inventoryHandler(int obj) {\n        int i, count;\n"
             "        obj = findInventory(hero,i+1);\n"
             "    }\n"
             "    //\n    // Dialogs stuff\n}"
