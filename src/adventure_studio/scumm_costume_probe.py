@@ -104,33 +104,42 @@ def run_costume_count_gameplay(upstream: Path, generated: Path, destination: Pat
     marker = "        ResRoom::showCursor();\n"
     if source.count(marker) != 1:
         raise ValueError("Unexpected room entry structure for COUNT evidence")
-    injection = (
-        "        animateActor(VAR_EGO, 24);\n"
-        "        while(getActorAnimCounter1(VAR_EGO) < 2) {\n"
-        "            breakScript();\n"
-        "        }\n"
-        "        setObjectState(Key, 0);\n"
-    )
-    (destination / "Harbor.scc").write_text(source.replace(marker, marker + injection, 1),
-                                              encoding="utf-8")
     road = upstream / "examples" / "road"
-    subprocess.run([str(_tool(upstream, "scc")), "-V", "6", "-I", str(upstream / "include"),
-                    "-I", str(generated), "-I", str(road), "-R", str(generated),
-                    "-o", str(destination / "Harbor.roobj"), str(destination / "Harbor.scc")],
-                   check=True, timeout=120)
-    subprocess.run([str(_tool(upstream, "sld")), "-o", str(destination / "tentacle"),
-                    "-key", "0x69", str(playback / "bootstrap.roobj"),
-                    str(destination / "Harbor.roobj"), str(generated / "Cellar.roobj")],
-                   cwd=road, check=True, timeout=120)
-    verify_room_binary((destination / "tentacle.001").read_bytes(), xor_key=0x69)
-    shutil.copyfile(generated / "game-goal.json", destination / "game-goal.json")
-    launch_smoke(destination, destination / "screenshots", scene_only=True,
-                 allow_static_scene=True)
-    remaining_key_pixels = visible_key_pixels(destination / "screenshots")
+    def run_variant(target: Path, required_events: int) -> int:
+        target.mkdir(parents=True, exist_ok=True)
+        injection = (
+            "        animateActor(VAR_EGO, 24);\n"
+            f"        while(getActorAnimCounter1(VAR_EGO) < {required_events}) {{\n"
+            "            breakScript();\n"
+            "        }\n"
+            "        setObjectState(Key, 0);\n"
+        )
+        (target / "Harbor.scc").write_text(source.replace(marker, marker + injection, 1),
+                                            encoding="utf-8")
+        subprocess.run([str(_tool(upstream, "scc")), "-V", "6", "-I", str(upstream / "include"),
+                        "-I", str(generated), "-I", str(road), "-R", str(generated),
+                        "-o", str(target / "Harbor.roobj"), str(target / "Harbor.scc")],
+                       check=True, timeout=120)
+        subprocess.run([str(_tool(upstream, "sld")), "-o", str(target / "tentacle"),
+                        "-key", "0x69", str(playback / "bootstrap.roobj"),
+                        str(target / "Harbor.roobj"), str(generated / "Cellar.roobj")],
+                       cwd=road, check=True, timeout=120)
+        verify_room_binary((target / "tentacle.001").read_bytes(), xor_key=0x69)
+        shutil.copyfile(generated / "game-goal.json", target / "game-goal.json")
+        launch_smoke(target, target / "screenshots", scene_only=True,
+                     allow_static_scene=True)
+        return visible_key_pixels(target / "screenshots")
+
+    remaining_key_pixels = run_variant(destination, 2)
     if remaining_key_pixels >= 40:
         raise RuntimeError(f"COUNT-gated object state did not hide key: {remaining_key_pixels}")
+    unreachable = destination / "three_count_control"
+    control_key_pixels = run_variant(unreachable, 3)
+    if control_key_pixels < 40:
+        raise RuntimeError(f"Three-COUNT negative control unexpectedly hid key: {control_key_pixels}")
     result = {"native_count_gate_passed": True,
               "remaining_key_pixels": remaining_key_pixels,
+              "control_key_pixels": control_key_pixels,
               "expected_count_events": 2}
     (destination / "native-count-gameplay-report.json").write_text(
         json.dumps(result, indent=2) + "\n", encoding="utf-8")
