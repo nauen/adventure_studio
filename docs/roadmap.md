@@ -2,6 +2,15 @@
 
 Stand: 2026-11-04. Dieses Dokument ist die Arbeitsgrundlage für die Umsetzung.
 
+**Mechanik-Erweiterung (2026-11-07):** Der vollständige Anforderungskatalog
+für typische, auch zeitabhängige klassische Adventure-Spielabläufe steht in
+[`scumm-adventure-mechanics.md`](scumm-adventure-mechanics.md). Die erste
+quellenbasierte Zuordnung zu originalen v6-Operationen und offenen
+Kompatibilitätsfragen steht in
+[`scumm-v6-runtime-contract.md`](scumm-v6-runtime-contract.md).
+Diese Dokumente sind Forschungs-/Entwurfsstände, keine als implementiert
+markierten Produktfeatures.
+
 ## Produktziel
 
 Eine storyorientierte, KI-gestützte Entwicklungsumgebung für Point-and-Click-
@@ -141,12 +150,10 @@ Analyse und die offenen Nachweispunkte stehen in
 - [x] Deklaratives Story-Rezeptmodell v2: exakt zwei Zutaten, ein hergestelltes
       Ergebnis, einmalige Entnahme vom Boden, atomare KI-Änderungen,
       deterministische Spielbarkeitsprüfung auch bei Verbrauchs-Softlocks und
-      Bereinigung nicht mehr referenzierter Pickups mit Änderungsbericht.
-- [x] Inventar-zu-Inventar-Kombinationen aus Story-JSON in SCUMM v6
-      kompilieren: zwei Zutaten in beiden Reihenfolgen kombinierbar,
-      Zutaten werden verbraucht, Ergebnis wird ins Inventar gelegt und
-      öffnet die Zieltür. Beide vollständigen Spielabläufe in stock
-      ScummVM nachgewiesen (CI-Lauf #42294166727).
+      Bereinigung nicht mehr referenzierter Pickups mit Änderungsbericht
+      (ohne SCUMM-Laufzeitexport).
+- [ ] Inventar-zu-Inventar-Kombinationen in SCUMM v6 kompilieren und den
+      kompletten Spielablauf bis zum Ziel in ScummVM nachweisen.
 - [ ] Adapter auf weitere Rätseltypen, mehrere Kapitel, Figuren und Dialoge
       erweitern; die aktuelle Platzhaltergrafik durch einen Asset-Generator
       ersetzen und End-to-End-Spielbarkeit eines adaptierten Projekts testen.
