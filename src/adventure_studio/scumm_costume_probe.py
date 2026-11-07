@@ -80,8 +80,10 @@ def run_costume_playback(upstream: Path, generated: Path, destination: Path) -> 
     verify_room_binary((destination / "tentacle.001").read_bytes(), xor_key=0x69)
     shutil.copyfile(generated / "game-goal.json", destination / "game-goal.json")
     launch_smoke(destination, destination / "screenshots", scene_only=True)
+    # Camera follow and the actor's walk can shift the onscreen X between
+    # captures. Cover the whole playfield band, not one fixed actor X.
     silhouette = black_costume_pixels(destination / "screenshots" / "scummvm-end.png",
-                                      "40x56+568+272")
+                                      "240x75+520+260")
     if silhouette < 1200:
         raise RuntimeError(f"Native authored costume silhouette not visible: {silhouette}")
     report = {**costume, "linked_in_scummvm": True,

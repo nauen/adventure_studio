@@ -39,8 +39,8 @@ in ScummVM ausgeführtes Actor-Timing.**
   Probe* das Costume des externen GPL-Game-Bootstraps, kompiliert und linkt
   neu und startet das Spiel in stock ScummVM. Die in der Screenshotprobe
   tatsächlich gezeichnete Figur muss mindestens 1.200 dunkle Pixel in der
-  definierten Costume-Region besitzen. Im ersten nativen Lauf wurden
-  1.536 Pixel gemessen (Actions `42407361581`). Dies ist ein **sichtbarer
+  **horizontal bewegungstoleranten** Costume-Bildregion besitzen. Im ersten
+  nativen Lauf wurden 1.536 Pixel gemessen (Actions `42407361581`). Dies ist ein **sichtbarer
   COST-Resource-Nachweis**, nicht bereits ein Animations-Counter-Test.
 
 ## Noch offen für die eigentliche Gameplay-Abnahme
