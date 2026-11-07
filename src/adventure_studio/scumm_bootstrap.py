@@ -77,6 +77,22 @@ def inject_inventory_objects(source: str, icon_ids: tuple[str, ...]) -> str:
                             "            inventoryHandler(0);\n"
                             "            return;\n"
                             "        }\n" + input_marker, 1)
+    # ScummC resolves script symbols while parsing, so the arrow dispatcher
+    # must be preceded by the full inventory handler and its icon helper.
+    helper_marker = "    script setInventoryIcon(int icon, int slot) {\n"
+    dialog_marker = "    //\n    // Dialogs stuff\n"
+    handler_marker = "    script inputHandler(int area,int cmd, int btn) {\n"
+    if any(source.count(marker) != 1 for marker in
+           (helper_marker, dialog_marker, handler_marker)):
+        raise ValueError("Unexpected upstream inventory script ordering")
+    helper_start = source.index(helper_marker)
+    helper_end = source.index(dialog_marker, helper_start)
+    input_start = source.index(handler_marker)
+    if not input_start < helper_start < helper_end:
+        raise ValueError("Unexpected upstream inventory script ordering")
+    helper_scripts = source[helper_start:helper_end]
+    source = source[:helper_start] + source[helper_end:]
+    source = source[:input_start] + helper_scripts + source[input_start:]
     return source
 
 
