@@ -208,7 +208,7 @@ def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument
                                     *_item_xy(story, item.id, 355 + index * 26, 100, 640), 16, 16, True,
                                     _sprite(_RECIPE_COLORS[index], 2)))
     hotspots.append(RoomHotspot("Door", "the exit", _text(puzzle.title),
-                                560 if len(inventory_items) > 5 else 450, 100, 16, 16, False, _sprite(4, 1),
+                                500 if len(inventory_items) > 5 else 450, 100, 16, 16, False, _sprite(4, 1),
                                 open_sprite_pixels=_sprite(5, 2),
                                 exit_destination=puzzle.opens_scene_id))
     start_image = _room_image(provider, story.starting_scene_id, 640, False)
