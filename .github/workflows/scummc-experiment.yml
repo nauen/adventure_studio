@@ -172,6 +172,21 @@ jobs:
             /tmp/native-costume-playback/screenshots/scummvm-end.png
             /tmp/native-costume-playback/screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
+      - name: Verify two native COUNT events unlock object-state change
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_costume_probe --count /tmp/scummc-upstream /tmp/generated-room /tmp/native-costume-count-gameplay
+      - name: Retain native Costume COUNT event evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-costume-count-gameplay
+          path: |
+            /tmp/native-costume-count-gameplay/native-count-gameplay-report.json
+            /tmp/native-costume-count-gameplay/Harbor.scc
+            /tmp/native-costume-count-gameplay/screenshots/scummvm-end.png
+          if-no-files-found: ignore
       - name: Compile and structurally verify generated Z-plane/BOXM/SCAL room
         env:
           PYTHONPATH: src:tests

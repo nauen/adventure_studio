@@ -9,7 +9,7 @@ from pathlib import Path
 import shutil
 
 from .scumm_binary import verify_room_binary
-from .scumm_launch import launch_smoke
+from .scumm_launch import launch_smoke, visible_key_pixels
 from .scumm_room_visual_probe import black_costume_pixels
 
 from .scumm_costume import (CostumeAnimation, CostumeAsset, CostumeDirection,
@@ -91,11 +91,58 @@ def run_costume_playback(upstream: Path, generated: Path, destination: Path) -> 
     return report
 
 
+def run_costume_count_gameplay(upstream: Path, generated: Path, destination: Path) -> dict:
+    """Verify native COUNT events gate a real object state change in ScummVM."""
+    # Deliberately isolate this from the general action schema until the
+    # runtime semantics of the exact v6 getter are shown by gameplay.
+    playback = destination / "costume-game"
+    destination.mkdir(parents=True, exist_ok=True)
+    run_costume_playback(upstream, generated, playback)
+    source = (generated / "Harbor.scc").read_text(encoding="utf-8")
+    marker = "        ResRoom::showCursor();\n"
+    if source.count(marker) != 1:
+        raise ValueError("Unexpected room entry structure for COUNT evidence")
+    injection = (
+        "        animateActor(VAR_EGO, 24);\n"
+        "        while(getActorAnimCounter1(VAR_EGO) < 2) {\n"
+        "            breakScript();\n"
+        "        }\n"
+        "        setObjectState(Key, 0);\n"
+    )
+    (destination / "Harbor.scc").write_text(source.replace(marker, marker + injection, 1),
+                                              encoding="utf-8")
+    road = upstream / "examples" / "road"
+    subprocess.run([str(_tool(upstream, "scc")), "-V", "6", "-I", str(upstream / "include"),
+                    "-I", str(generated), "-I", str(road), "-R", str(generated),
+                    "-o", str(destination / "Harbor.roobj"), str(destination / "Harbor.scc")],
+                   check=True, timeout=120)
+    subprocess.run([str(_tool(upstream, "sld")), "-o", str(destination / "tentacle"),
+                    "-key", "0x69", str(playback / "bootstrap.roobj"),
+                    str(destination / "Harbor.roobj"), str(generated / "Cellar.roobj")],
+                   cwd=road, check=True, timeout=120)
+    verify_room_binary((destination / "tentacle.001").read_bytes(), xor_key=0x69)
+    shutil.copyfile(generated / "game-goal.json", destination / "game-goal.json")
+    launch_smoke(destination, destination / "screenshots", scene_only=True,
+                 allow_static_scene=True)
+    remaining_key_pixels = visible_key_pixels(destination / "screenshots")
+    if remaining_key_pixels >= 40:
+        raise RuntimeError(f"COUNT-gated object state did not hide key: {remaining_key_pixels}")
+    result = {"native_count_gate_passed": True,
+              "remaining_key_pixels": remaining_key_pixels,
+              "expected_count_events": 2}
+    (destination / "native-count-gameplay-report.json").write_text(
+        json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    return result
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 3:
         result = run_costume_probe(Path(sys.argv[1]), Path(sys.argv[2]))
     elif len(sys.argv) == 4:
         result = run_costume_playback(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]))
+    elif len(sys.argv) == 5 and sys.argv[1] == "--count":
+        result = run_costume_count_gameplay(Path(sys.argv[2]), Path(sys.argv[3]),
+                                             Path(sys.argv[4]))
     else:
         raise SystemExit("Usage: python -m adventure_studio.scumm_costume_probe UPSTREAM [GENERATED] OUTPUT")
     print(json.dumps(result, indent=2))
