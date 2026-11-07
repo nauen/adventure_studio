@@ -40,6 +40,15 @@ class StoryDocumentTests(unittest.TestCase):
             self.assertIn("script combine_3()", source)
             self.assertIn("pickupObject(Elixir, VAR_ROOM)", source)
             self.assertEqual(len((resources / "inventory-ids.txt").read_text().strip().split(",")), 9)
+            goal = json.loads((resources / "game-goal.json").read_text(encoding="utf-8"))
+            self.assertEqual(goal["fixture_room_geometry"]["Kitchen"],
+                             {"width": 640, "viewport_width": 320})
+            recipes = goal["fixture_combinations"]
+            self.assertEqual(recipes[0]["ingredients"][0]["item_id"], "Pineapple")
+            self.assertEqual(recipes[0]["ingredients"][0]["world_x"], 355)
+            self.assertEqual(recipes[0]["ingredients"][0]["world_y"], 100)
+            self.assertEqual(recipes[0]["ingredients"][1]["world_x"], 381)
+            self.assertEqual(recipes[-1]["result"]["world_x"], 563)
 
     def test_three_recipe_converging_graph_compiles_from_json(self):
         from adventure_studio.story import verify_story
