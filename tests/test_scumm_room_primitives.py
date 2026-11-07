@@ -18,7 +18,8 @@ def native_room():
     mask = bytes(1 if x > w // 2 and 50 < y < 110 else 0
                  for y in range(h) for x in range(w))
     boxes = (Walkbox(((0, 70), (120, 70), (120, 150), (0, 150))),
-             Walkbox(((120, 70), (240, 70), (240, 150), (120, 150)), scale=180))
+             Walkbox(((120, 70), (639, 70), (639, 150), (120, 150)),
+                     mask=1, scale=180))
     # Index zero is reserved.  Travel between the two authored boxes uses
     # a first-hop route through the destination box.
     routes = ((0, None, None), (None, 1, 2), (None, 1, 2))

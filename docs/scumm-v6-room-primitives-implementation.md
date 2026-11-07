@@ -71,5 +71,9 @@ expliziten Next-Hop-Routen erforderlich. Ohne diesen Lauf wäre die Aussage
 Die bestehende experimentelle GitHub-Action
 `.github/workflows/scummc-experiment.yml` ist um einen separaten
 Compiler-/Linker-/Binärstruktur-Smoke für die neuen Raumdaten erweitert.
-Der Job muss erst erfolgreich auf GitHub gelaufen sein, bevor dieser
-Compilerbeleg als bestanden gilt. Er ersetzt keine visuelle ScummVM-Probe.
+Der reine Compiler-/Binärschritt ist in
+[Run 42395881760](https://github.com/nauen/adventure_studio/actions/runs/42395881760)
+erfolgreich durchgelaufen. Ein nachfolgender, eigenständiger stock-ScummVM-
+Szenenlauf mit Screenshot-Artefakten ist ergänzt. Bis dessen Ergebnis
+vorliegt, bleibt die Laufzeitabnahme offen; ein erfolgreiches Scrollen
+allein beweist außerdem keine pixelgenaue Verdeckung oder Skalierung.
