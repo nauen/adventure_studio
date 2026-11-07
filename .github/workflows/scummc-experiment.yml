@@ -157,6 +157,21 @@ jobs:
         # its linked resource tree must contain the requested native chunks.
         # This is NOT a visual ScummVM occlusion/walking acceptance test.
         # Kept separate from the existing screenshot baseline.
+      - name: Link Studio COST actor and render in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_costume_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-costume-playback
+      - name: Retain native Costume gameplay frame
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-costume-playback
+          path: |
+            /tmp/native-costume-playback/native-costume-report.json
+            /tmp/native-costume-playback/screenshots/scummvm-end.png
+            /tmp/native-costume-playback/screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
       - name: Compile and structurally verify generated Z-plane/BOXM/SCAL room
         env:
           PYTHONPATH: src:tests
