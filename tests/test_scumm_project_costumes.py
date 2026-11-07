@@ -7,7 +7,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from adventure_studio.scumm_costume_probe import gesture_fixture
-from adventure_studio.scumm_project import GameDocument, canonical_json, export_document, parse_document
+from adventure_studio.scumm_project import (ActorAsset, GameDocument, canonical_json,
+                                           export_document, parse_document)
 from adventure_studio.scumm_assets import destination_fixture, scrolling_fixture
 
 
@@ -52,6 +53,36 @@ class ProjectCostumeTests(unittest.TestCase):
         data["costumes"][0]["frames"][0]["runtime_script"] = "malicious()"
         with self.assertRaises(ValueError):
             parse_document(json.dumps(data))
+
+    def test_multiple_actor_bindings_round_trip(self):
+        game = replace(self.document(), actors=(
+            ActorAsset("Companion", "NativeGesture", "Harbor", 290, 110, "W", "Companion"),
+            ActorAsset("Guide", "NativeGesture", "Cellar", 100, 120, "E"),
+        ))
+        self.assertEqual(parse_document(canonical_json(game)), game)
+        self.assertEqual(len(json.loads(canonical_json(game))["actors"]), 2)
+
+    def test_actor_reference_integrity_and_coordinates(self):
+        game = self.document()
+        for actor in (
+            ActorAsset("Companion", "Absent", "Harbor", 20, 30),
+            ActorAsset("Companion", "NativeGesture", "Absent", 20, 30),
+            ActorAsset("Companion", "NativeGesture", "Harbor", -1, 30),
+            ActorAsset("Companion", "NativeGesture", "Harbor", 20, 30, "UP"),
+        ):
+            with self.subTest(actor=actor), self.assertRaises(ValueError):
+                canonical_json(replace(game, actors=(actor,)))
+        actor = ActorAsset("Companion", "NativeGesture", "Harbor", 20, 30)
+        with self.assertRaisesRegex(ValueError, "Duplicate"):
+            canonical_json(replace(game, actors=(actor, actor)))
+
+    def test_rejects_freeform_actor_script(self):
+        game = replace(self.document(), actors=(ActorAsset(
+            "Companion", "NativeGesture", "Harbor", 20, 30),))
+        value = json.loads(canonical_json(game))
+        value["actors"][0]["script"] = "setObjectState(door, 0);"
+        with self.assertRaises(ValueError):
+            parse_document(json.dumps(value))
 
 
 if __name__ == "__main__":

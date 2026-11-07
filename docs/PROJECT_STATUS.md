@@ -160,6 +160,19 @@ bleiben bitgenau unverändert. Dieses Gate belegt **noch keine freie
 Actor-Instanz und keine Verknüpfung des COST im Spiel**; das nächste Paket
 ist die native Actor-Symbol-/Costume-Bindung über den ScummC-Bootstrap.
 
+**P0.5 Mehr-Actor-Integrationsschritt (2026-11-07):** Das Projektmodell hat
+nun referenzgeprüfte Actor-Instanzen mit Costume-ID, Anfangsraum, Position,
+Blickrichtung und optionalem Namen. JSON-v1-Roundtrip bleibt kompatibel,
+und der ScummC-Forschungsadapter erzeugt globale `actor`-Symbole,
+native Costume-Deklarationen, `initActor`/`setActorCostume` und Platzierung
+für mehrere Actors. Ein gemeinsames Costume wird nur einmal kompiliert.
+CI prüft einen SCUMM-v6-Spielstart mit zwei NPCs und gemeinsamem COST;
+der native Ergebnisstatus ist erst nach grünem Actions-Lauf zu setzen.
+**Noch offen:** freier Spieler-Actor jenseits des Road-Fixture-Symbols `hero`,
+echte Spielgrafik-Evidenz für jede Figur, Animations-Cues, Action/Condition-IR
+und Interaktion während laufender Animation. Der externe Bootstrap wird
+nicht zur Produktarchitektur erklärt.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

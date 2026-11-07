@@ -15,6 +15,7 @@ on:
       - 'src/adventure_studio/scumm_camera_probe.py'
       - 'src/adventure_studio/scumm_costume.py'
       - 'src/adventure_studio/scumm_costume_probe.py'
+      - 'src/adventure_studio/scumm_actor_probe.py'
       - 'src/adventure_studio/palette_animation.py'
       - 'src/adventure_studio/palette_demo.py'
       - 'src/adventure_studio/scumm_palette_probe.py'
@@ -44,6 +45,7 @@ on:
       - 'tests/test_scumm_scal_probe.py'
       - 'tests/test_scumm_camera_cues.py'
       - 'tests/test_scumm_costume.py'
+      - 'tests/test_scumm_actor_bindings.py'
       - 'tests/test_palette_animation.py'
       - 'tests/test_palette_demo.py'
       - 'tests/test_scumm_palette_probe.py'
@@ -188,6 +190,22 @@ jobs:
             /tmp/native-costume-count-gameplay/screenshots/scummvm-end.png
             /tmp/native-costume-count-gameplay/three_count_control/Harbor.scc
             /tmp/native-costume-count-gameplay/three_count_control/screenshots/scummvm-end.png
+          if-no-files-found: ignore
+      - name: Link two authored Actor symbols with shared native COST in ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe /tmp/scummc-upstream /tmp/native-actors
+      - name: Retain project-authored native Actor link evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-project-actors
+          path: |
+            /tmp/native-actors/native-actor-report.json
+            /tmp/native-actors/build/resources/bootstrap.scc
+            /tmp/native-actors/build/resources/common.sch
+            /tmp/native-actors/screenshots/scummvm-end.png
           if-no-files-found: ignore
       - name: Compile and structurally verify generated Z-plane/BOXM/SCAL room
         env:
