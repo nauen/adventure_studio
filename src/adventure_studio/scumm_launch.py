@@ -866,10 +866,12 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                             # The actor can occlude a nearby ground sprite after
                             # the preceding pickup. Walk away, then re-scan the
                             # rendered scene rather than guessing a world offset.
-                            for walk_x in (575, 245):
+                            # Start at the far right: later recipe ingredients
+                            # may be beyond the current camera viewport.
+                            for walk_x in (800, 730, 610, 245):
                                 subprocess.run(["xdotool", "mousemove", str(walk_x), "355", "click", "1"],
                                                check=True, timeout=5)
-                                time.sleep(2.5)
+                                time.sleep(3)
                                 subprocess.run(["xdotool", "mousemove", "328", "506", "click", "1"],
                                                check=True, timeout=5)
                                 time.sleep(0.3)
