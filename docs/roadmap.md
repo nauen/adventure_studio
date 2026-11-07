@@ -32,13 +32,19 @@
 
 - [x] Bestand auf künstliche Demo-/Adapter-Limits geprüft; A0-Befunde
       dokumentiert; feste Story-/JSON-Koordinatenbegrenzungen entfernt.
-- [x] Grenzfall-Regressionen für Platzierung, fünf Dekoobjekte und
-      Fail-Closed-Export ergänzt; bestehende JSON-/Export-Tests grün.
+- [x] Grenzfall-Regressionen für 0/1/2/N Dekorationen, Platzierungen,
+      JSON-Sammlungen >128, Anforderungen >32 und Fail-Closed-Export;
+      vorhandene JSON-/Export-Fälle unverändert grün.
 - [x] Fachlich gültige Änderungen bei aktuellem Export-Limit editierbar;
-      Exportwarnung vorhanden. **Offen:** strukturierter Blockerbericht
-      mit Feature-ID, Zielprofil, Entität und vollständiger Fehlerliste.
-- [ ] Weitere Geometrie-, Layout- und Mengen-Grenzen gemäß ADR-0002
-      nach nativer Semantik oder temporärem Scope vollständig klassifizieren.
+      maschinenlesbare Blocker nach Zielprofil, Feature-Code und Objekt
+      verfügbar. Unbekannte Compilergründe sind ausdrücklich generisch.
+- [x] Studio-Raumvorschau benötigt keinen erfolgreichen SCUMM-Export mehr;
+      sichtbare Authoring-Platzhalter werden nicht als Gameplay beworben.
+- [x] Vorhandene Mengen-/Geometrie-/Layoutgrenzen nach ADR-0002
+      [klassifiziert](architecture-audit.md); ohne nativen Quellbeleg gelten
+      übrige Compilerquoten als vorläufige `EXPORTER_LIMIT`.
+- [ ] Native Grenzen bei den jeweiligen P0.x-Arbeitspaketen mit
+      ScummC/ScummVM-Quellen beweisen bzw. vorläufige Exporterquoten ersetzen.
 
 ### Aktueller Arbeitsvorrat (P1)
 
