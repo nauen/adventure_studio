@@ -56,6 +56,9 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         self.assertEqual(clear.zplanes, fullscale.zplanes)
         self.assertEqual(fullscale.walkboxes[-1].scale, 255)
         self.assertEqual(clear.walkboxes[-1].scale, 180)
+        self.assertIn("setActorFollowBoxes();", scummc_room_source(masked))
+        self.assertNotIn("setActorIgnoreBoxes();", scummc_room_source(masked))
+        self.assertIn("setActorIgnoreBoxes();", scummc_room_source(scrolling_fixture()))
 
     def test_legacy_json_omits_new_optional_fields(self):
         room = scrolling_fixture()

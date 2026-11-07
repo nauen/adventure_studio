@@ -109,3 +109,10 @@ andere Animationspose haben. Erst reproduzierbare, plausibel unterschiedliche
 Messungen mit visuell geprüften Bildern dürfen die zwei offenen Gates
 schließen. Der Kontrolllauf trennt Masken- von Skalierungseffekt, statt
 beides aus einem einzelnen Endbild zu behaupten.
+
+Der erste Kontrolllauf zeigte identische Kostümpixelzahlen trotz unterschiedlicher
+Masken- und Skalierungsparameter. Ursache im Generator: Der Raumeinstieg
+rief noch `setActorIgnoreBoxes()` auf und schaltete damit beide Features
+für den Demo-Actor aus. Der Export ruft nun bei Räumen mit Walkboxen
+`setActorFollowBoxes()` auf; Räume ohne Walkboxmodell behalten ihr
+bisheriges Verhalten. Diese Korrektur muss erneut nativ geprüft werden.
