@@ -31,13 +31,14 @@
 [ADR-0002](adr/0002-limits-evidence-and-compatibility.md).
 
 - [x] Bestand auf künstliche Demo-/Adapter-Limits geprüft; A0-Befunde
-      dokumentiert. Noch **kein Refactoring** durchgeführt.
-- [ ] Vor dem nächsten Modellumbau Characterization Tests der betroffenen
-      alten JSON-/Export-Varianten und größere Grenzfälle ergänzen.
-- [ ] Exportfähigkeitsbericht vom fachlich gültigen Storymodell entkoppeln,
-      sobald ein entsprechender Story-Adapter-Ausbau ansteht.
-- [ ] Geometrie-, Layout- und Mengen-Grenzen gemäß ADR-0002
-      nach nativer Semantik oder temporärem Scope klassifizieren.
+      dokumentiert; feste Story-/JSON-Koordinatenbegrenzungen entfernt.
+- [x] Grenzfall-Regressionen für Platzierung, fünf Dekoobjekte und
+      Fail-Closed-Export ergänzt; bestehende JSON-/Export-Tests grün.
+- [x] Fachlich gültige Änderungen bei aktuellem Export-Limit editierbar;
+      Exportwarnung vorhanden. **Offen:** strukturierter Blockerbericht
+      mit Feature-ID, Zielprofil, Entität und vollständiger Fehlerliste.
+- [ ] Weitere Geometrie-, Layout- und Mengen-Grenzen gemäß ADR-0002
+      nach nativer Semantik oder temporärem Scope vollständig klassifizieren.
 
 ### Aktueller Arbeitsvorrat (P1)
 
