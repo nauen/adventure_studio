@@ -8,7 +8,8 @@ Dieses Dokument gilt für Arbeit am Repository `nauen/adventure_studio`.
 2. `docs/PROJECT_STATUS.md` – aktueller Projektstand und nächstes Paket.
 3. `docs/SCUMM_V6_CAPABILITIES.md` – genaue Funktionsabdeckung.
 4. `docs/roadmap.md` – Abhängigkeiten, Phasen, Akzeptanzkriterien.
-5. Die für das konkrete Thema einschlägigen Source-Audits.
+5. `docs/architecture-contracts.md` und relevante ADRs – Modell-/Exportgrenzen. 
+6. Die für das konkrete Thema einschlägigen Source-Audits.
 
 Vor Änderungen außerdem `git status`, aktuelle PRs/CI und die betroffenen
 Tests prüfen. Vorhandene Änderungen respektieren; keinen fremden
@@ -26,6 +27,17 @@ Gegenprobe behaupten.
 Die moderne Editoroberfläche darf abstrakte Konzepte (Shot, Nahaufnahme,
 Animations-Ereignis) haben, **muss aber** deren native SCUMM-v6-Abbildung
 nachweisen. Kein neuer Engine-Befehl ohne Versions-/Bytecode-Beweis.
+
+## Modell- und Exportgrenzen
+
+- Fachlich gültige Stories nicht auf aktuelle Test- oder Layoutgrenzen reduzieren.
+  Nicht unterstützte Exporte als konkrete Blocker ausweisen.
+- Jede Mengenbegrenzung einer Klasse zuordnen: native Grenze,
+  Exporter-, Fixture-, UI-Limit oder begründete Fachregel (ADR-0002).
+- Vor Architekturänderungen Characterization-/Kompatibilitätstests
+  des bestehenden Modells und der JSON-Versionen einplanen.
+- [Architekturaudit](docs/architecture-audit.md) und
+  [ADR-0001](docs/adr/0001-domain-and-export-boundaries.md) beachten.
 
 ## Wahl des Arbeitspakets
 
