@@ -139,6 +139,18 @@ Die unabhängigen ScummVM-Bildkompositionen sind im Actions-Lauf
 bewegte Objekte und Actor-/Costume-Animationen mit zeitlichen Phasen;
 vollständige Cutscene-Skip-Zustände bleiben P1.1 offen.
 
+**Nächster P0.5-Teilnachweis (2026-11-07):** Ein allgemeiner
+[`CostumeAsset`-Ressourcenvertrag](scumm-v6-native-costume-count-contract.md)
+liefert eigene Bildframes, vier Blickrichtungen, Stand-/Walk-/Init- und
+Aktionsanimationen sowie explizite `COUNT`-Kommandos in ScummCs v6-`COST`.
+Die erzeugte Figur wurde in stock ScummVM gerendert; eine Counter-Scriptprobe
+schaltet den Objektzustand nach zwei markierten Ereignissen, während eine
+Gegenprobe mit drei erwarteten Ereignissen den Ausgangszustand bewahrt.
+Die native CI-Evidenz liegt in Actions `42408510454` und deren Artefakten.
+**Offen und priorisiert:** freie Actor-Instanzen samt Costume-Bindung im
+Projektmodell, generischer Action-/Condition-/Ereignisablauf sowie echte
+Spielereingabe während laufender Animation. P0.5 insgesamt ist nicht fertig.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

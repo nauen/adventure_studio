@@ -13,6 +13,8 @@ on:
       - 'src/adventure_studio/scumm_room_visual_probe.py'
       - 'src/adventure_studio/scumm_scal_probe.py'
       - 'src/adventure_studio/scumm_camera_probe.py'
+      - 'src/adventure_studio/scumm_costume.py'
+      - 'src/adventure_studio/scumm_costume_probe.py'
       - 'src/adventure_studio/palette_animation.py'
       - 'src/adventure_studio/palette_demo.py'
       - 'src/adventure_studio/scumm_palette_probe.py'
@@ -41,6 +43,7 @@ on:
       - 'tests/test_scumm_room_primitives.py'
       - 'tests/test_scumm_scal_probe.py'
       - 'tests/test_scumm_camera_cues.py'
+      - 'tests/test_scumm_costume.py'
       - 'tests/test_palette_animation.py'
       - 'tests/test_palette_demo.py'
       - 'tests/test_scumm_palette_probe.py'
@@ -103,6 +106,21 @@ jobs:
           ./configure
           make -j2
           find . -type f \( -name scc -o -name sld \) -print
+      - name: Compile authored SCUMM v6 COST with two explicit COUNT events
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.scumm_costume_probe /tmp/scummc-upstream /tmp/native-costume
+      - name: Retain generated native COST research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-costume-count
+          path: |
+            /tmp/native-costume/native-costume-report.json
+            /tmp/native-costume/NativeGesture.scost
+            /tmp/native-costume/NativeGesture.cost
+          if-no-files-found: ignore
       - name: Build upstream road example
         working-directory: /tmp/scummc-upstream/examples/road
         run: make
@@ -139,6 +157,38 @@ jobs:
         # its linked resource tree must contain the requested native chunks.
         # This is NOT a visual ScummVM occlusion/walking acceptance test.
         # Kept separate from the existing screenshot baseline.
+      - name: Link Studio COST actor and render in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_costume_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-costume-playback
+      - name: Retain native Costume gameplay frame
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-costume-playback
+          path: |
+            /tmp/native-costume-playback/native-costume-report.json
+            /tmp/native-costume-playback/screenshots/scummvm-end.png
+            /tmp/native-costume-playback/screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
+      - name: Verify two native COUNT events unlock object-state change
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_costume_probe --count /tmp/scummc-upstream /tmp/generated-room /tmp/native-costume-count-gameplay
+      - name: Retain native Costume COUNT event evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-costume-count-gameplay
+          path: |
+            /tmp/native-costume-count-gameplay/native-count-gameplay-report.json
+            /tmp/native-costume-count-gameplay/Harbor.scc
+            /tmp/native-costume-count-gameplay/screenshots/scummvm-end.png
+            /tmp/native-costume-count-gameplay/three_count_control/Harbor.scc
+            /tmp/native-costume-count-gameplay/three_count_control/screenshots/scummvm-end.png
+          if-no-files-found: ignore
       - name: Compile and structurally verify generated Z-plane/BOXM/SCAL room
         env:
           PYTHONPATH: src:tests
