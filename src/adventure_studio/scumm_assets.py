@@ -95,6 +95,13 @@ class ScaleCurve:
 
 
 @dataclass(frozen=True)
+class CameraCue:
+    """One native v6 camera operation, ordered within room entry."""
+    operation: str  # set, pan, wait, follow_ego
+    x: int | None = None
+
+
+@dataclass(frozen=True)
 class RoomAsset:
     name: str
     geometry: RoomGeometry
@@ -114,6 +121,7 @@ class RoomAsset:
     scale_slots: bytes | None = None
     scale_curves: tuple[ScaleCurve, ...] = ()
     demo_walk_to_y: int | None = None
+    camera_cues: tuple[CameraCue, ...] = ()
 
 
 def _scumm_string(value: str) -> str:
@@ -194,6 +202,14 @@ def _validate(room: RoomAsset) -> None:
         or not 0 <= room.demo_walk_to_y < height
     ):
         raise ValueError("Demo walk Y target requires a valid X target and room Y coordinate")
+    for cue in room.camera_cues:
+        if cue.operation not in ("set", "pan", "wait", "follow_ego"):
+            raise ValueError("Unsupported native v6 camera operation")
+        if cue.operation in ("set", "pan"):
+            if type(cue.x) is not int or not 0 <= cue.x < width:
+                raise ValueError("Camera target X must be inside the room")
+        elif cue.x is not None:
+            raise ValueError("Camera wait/follow must not have an X parameter")
     if room.goal_text is not None:
         _scumm_string(room.goal_text)
     ids: set[str] = set()
@@ -559,7 +575,13 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         f"        putActorAt(VAR_EGO, 60, 100, {room.name});\n",
         "        setActorFollowBoxes();\n" if room.walkboxes else "        setActorIgnoreBoxes();\n",
         "        setActorStanding();\n",
-        "        cameraFollowActor(VAR_EGO);\n",
+        *(["        cameraFollowActor(VAR_EGO);\n"] if not room.camera_cues else []),
+        *[{
+            "set": lambda cue: f"        setCameraAt({cue.x});\n",
+            "pan": lambda cue: f"        panCameraTo({cue.x});\n",
+            "wait": lambda cue: "        waitForCamera();\n",
+            "follow_ego": lambda cue: "        cameraFollowActor(VAR_EGO);\n",
+        }[cue.operation](cue) for cue in room.camera_cues],
         *[localized_name(hotspot) for hotspot in room.hotspots],
         *([button_state_source(catalog)] if graphical_language_buttons else []),
         *(["        watchLanguage();\n"] if catalog is not None and
