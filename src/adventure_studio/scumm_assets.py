@@ -68,6 +68,22 @@ class TalkRule:
 
 
 @dataclass(frozen=True)
+class ZPlane:
+    """One full-room binary occlusion mask (0=clear, 1=occluding)."""
+    index: int
+    pixels: bytes
+
+
+@dataclass(frozen=True)
+class Walkbox:
+    """Four native SCUMM walkbox corners in UL, UR, LR, LL order."""
+    corners: tuple[tuple[int, int], tuple[int, int], tuple[int, int], tuple[int, int]]
+    mask: int = 0
+    flags: int = 0
+    scale: int = 255
+
+
+@dataclass(frozen=True)
 class RoomAsset:
     name: str
     geometry: RoomGeometry
@@ -81,6 +97,10 @@ class RoomAsset:
     palette_cycles: tuple[PaletteCycle, ...] = ()
     music_id: str | None = None
     talk_rules: tuple[TalkRule, ...] = ()
+    zplanes: tuple[ZPlane, ...] = ()
+    walkboxes: tuple[Walkbox, ...] = ()
+    box_routes: tuple[tuple[int | None, ...], ...] = ()
+    scale_slots: bytes | None = None
 
 
 def _scumm_string(value: str) -> str:
@@ -107,6 +127,31 @@ def _validate(room: RoomAsset) -> None:
         raise ValueError("Palette contains invalid RGB values")
     if room.pixels and max(room.pixels) >= len(room.palette):
         raise ValueError("Pixels reference missing palette entries")
+    # ScummC scc.h: SCC_MAX_IM_PLANES == 10; index zero is reserved.
+    if len(room.zplanes) > 9 or tuple(p.index for p in room.zplanes) != tuple(range(1, len(room.zplanes) + 1)):
+        raise ValueError("Z-plane indices must be unique and consecutive from 1 (maximum 9)")
+    for plane in room.zplanes:
+        if len(plane.pixels) != width * height or any(value not in (0, 1) for value in plane.pixels):
+            raise ValueError("Z-plane must contain one binary pixel per room pixel")
+    if len(room.walkboxes) > 254:
+        raise ValueError("SCUMM supports at most 254 authored walkboxes plus reserved box zero")
+    for box in room.walkboxes:
+        if len(box.corners) != 4 or any(len(point) != 2 or any(type(v) is not int for v in point) for point in box.corners):
+            raise ValueError("Walkbox requires four integer coordinate pairs")
+        if any(not 0 <= x < width or not 0 <= y < height for x, y in box.corners):
+            raise ValueError("Walkbox corners outside room bounds")
+        if any(type(value) is not int or not 0 <= value <= limit
+               for value, limit in ((box.mask, 255), (box.flags, 255), (box.scale, 65535))):
+            raise ValueError("Invalid native walkbox mask, flags or scale")
+    count = len(room.walkboxes) + 1
+    if room.box_routes:
+        if not room.walkboxes or len(room.box_routes) != count or any(len(row) != count for row in room.box_routes):
+            raise ValueError("BOXM route matrix must include the reserved box zero")
+        for row in room.box_routes:
+            if any(value is not None and (type(value) is not int or not 0 <= value < count) for value in row):
+                raise ValueError("Invalid BOXM route target")
+    if room.scale_slots is not None and (not room.walkboxes or len(room.scale_slots) != 32):
+        raise ValueError("SCAL requires exactly 32 bytes and walkboxes")
     if room.demo_walk_to_x is not None and (
         type(room.demo_walk_to_x) is not int
         or not 0 <= room.demo_walk_to_x < width
@@ -317,6 +362,11 @@ def scummc_room_source(room: RoomAsset, catalog=None,
     for destination in sorted(destinations):
         parts.append(f"room {destination};\n")
     parts.append(f'\nroom {room.name} {{\n    image = "{room.name}.bmp";\n')
+    if room.zplanes:
+        planes = ", ".join(f'"{room.name}Z{plane.index:02}.bmp"' for plane in room.zplanes)
+        parts.append(f"    zplane = {{ {planes} }};\n")
+    if room.walkboxes:
+        parts.append(f'    boxd = "{room.name}.box";\n')
     if room.music_id is not None:
         parts.append(f'    sound {room.music_id} = "{room.music_id}.soun";\n')
     for cycle in room.palette_cycles:
@@ -500,6 +550,13 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
     scc = directory / f"{room.name}.scc"
     bmp.write_bytes(binary)
     scc.write_text(source, encoding="utf-8")
+    for plane in room.zplanes:
+        (directory / f"{room.name}Z{plane.index:02}.bmp").write_bytes(
+            _indexed_bmp(room.geometry.room_width, room.geometry.room_height,
+                         plane.pixels, ((0, 0, 0), (255, 255, 255)))
+        )
+    if room.walkboxes:
+        (directory / f"{room.name}.box").write_bytes(_native_box_file(room))
     for hotspot in room.hotspots:
         if hotspot.sprite_pixels is not None:
             (directory / f"{hotspot.id}.bmp").write_bytes(
@@ -522,6 +579,49 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
                     _indexed_bmp(icon_width, icon_height, bytes(icon_pixels), room.palette)
                 )
     return bmp, scc
+
+
+def _chunk(tag: bytes, payload: bytes) -> bytes:
+    return tag + struct.pack(">I", len(payload) + 8) + payload
+
+
+def _native_box_file(room: RoomAsset) -> bytes:
+    """ScummC scc_roobj_set_boxd input: BOXD plus BOXM and SCAL.
+
+    The BOXD form starts with a reserved number-zero box; ScummC reads the
+    remaining chunks verbatim.  Each BOXM row is run-length encoded as
+    (first destination, last destination, next-hop) triples, 0xff terminated.
+    """
+    _validate(room)
+    sentinel = struct.pack("<8hBBH", *([-32000] * 8), 0, 0, 255)
+    boxes = bytearray(sentinel)
+    for box in room.walkboxes:
+        coordinates = [number for point in box.corners for number in point]
+        boxes.extend(struct.pack("<8hBBH", *coordinates, box.mask, box.flags, box.scale))
+    boxd = _chunk(b"BOXD", struct.pack("<H", len(room.walkboxes) + 1) + boxes)
+    if room.box_routes:
+        routes = room.box_routes
+    else:
+        # Default is conservative: each box may stay within itself, with no
+        # inferred connection to any other geometry.
+        count = len(room.walkboxes) + 1
+        routes = tuple(tuple(i if i == j else None for j in range(count)) for i in range(count))
+    matrix = bytearray()
+    for row in routes:
+        index = 0
+        while index < len(row):
+            destination = row[index]
+            if destination is None:
+                index += 1
+                continue
+            last = index
+            while last + 1 < len(row) and row[last + 1] == destination:
+                last += 1
+            matrix.extend((index, last, destination))
+            index = last + 1
+        matrix.append(255)
+    scal = room.scale_slots if room.scale_slots is not None else bytes(32)
+    return boxd + _chunk(b"BOXM", bytes(matrix)) + _chunk(b"SCAL", scal)
 
 
 def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[tuple[Path, Path], ...]:

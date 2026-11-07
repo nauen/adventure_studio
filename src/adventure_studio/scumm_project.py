@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .palette_animation import PaletteCycle
 from .scumm_assets import (CombineRule, RoomAsset, RoomHotspot, TalkChoice,
-                           TalkRule, UseRule, _validate, write_game_sources)
+                           TalkRule, UseRule, Walkbox, ZPlane, _validate, write_game_sources)
 from .targets import RoomGeometry
 
 
@@ -56,6 +56,15 @@ def document_dict(document: GameDocument) -> dict:
                          "viewport_height": room.geometry.viewport_height},
             "pixels": _encode_pixels(room.pixels),
             "palette": [list(rgb) for rgb in room.palette],
+            **({"zplanes": [{"index": plane.index, "pixels": _encode_pixels(plane.pixels)}
+                            for plane in room.zplanes]} if room.zplanes else {}),
+            **({"walkboxes": [{"corners": [list(point) for point in box.corners],
+                                "mask": box.mask, "flags": box.flags, "scale": box.scale}
+                               for box in room.walkboxes]} if room.walkboxes else {}),
+            **({"box_routes": [[target for target in row] for row in room.box_routes]}
+               if room.box_routes else {}),
+            **({"scale_slots": _encode_pixels(room.scale_slots)}
+               if room.scale_slots is not None else {}),
             "hotspots": [{"id": h.id, "label": h.label, "description": h.description,
                           "x": h.x, "y": h.y, "width": h.width, "height": h.height,
                           "pickup": h.pickup, "sprite_pixels": _encode_pixels(h.sprite_pixels),
@@ -123,7 +132,7 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Too many rooms")
     rooms = []
     for raw in data["rooms"]:
-        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules",
+        room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots",
                            "demo_walk_to_x", "goal_text"},
                      {"name", "geometry", "pixels", "palette", "hotspots", "use_rules",
                       "demo_walk_to_x", "goal_text"})
@@ -133,6 +142,35 @@ def parse_document(source: str) -> GameDocument:
             raise ValueError("Room geometry must use integers")
         if not isinstance(room["hotspots"], list) or not isinstance(room["use_rules"], list):
             raise ValueError("Hotspots and rules must be lists")
+        raw_planes = room.get("zplanes", [])
+        if not isinstance(raw_planes, list) or len(raw_planes) > 9:
+            raise ValueError("Invalid room Z-plane list")
+        planes = []
+        for raw_plane in raw_planes:
+            plane = _only(raw_plane, {"index", "pixels"}, {"index", "pixels"})
+            if type(plane["index"]) is not int:
+                raise ValueError("Z-plane index must be an integer")
+            planes.append(ZPlane(plane["index"], _decode_pixels(plane["pixels"])))
+        raw_boxes = room.get("walkboxes", [])
+        if not isinstance(raw_boxes, list) or len(raw_boxes) > 254:
+            raise ValueError("Invalid room walkbox list")
+        boxes = []
+        for raw_box in raw_boxes:
+            box = _only(raw_box, {"corners", "mask", "flags", "scale"},
+                        {"corners", "mask", "flags", "scale"})
+            if not isinstance(box["corners"], list) or any(
+                not isinstance(point, list) or len(point) != 2 for point in box["corners"]
+            ):
+                raise ValueError("Walkbox corners must be coordinate lists")
+            boxes.append(Walkbox(tuple(tuple(point) for point in box["corners"]),
+                                 box["mask"], box["flags"], box["scale"]))
+        raw_routes = room.get("box_routes", [])
+        if not isinstance(raw_routes, list) or any(not isinstance(row, list) for row in raw_routes):
+            raise ValueError("Invalid walkbox route matrix")
+        routes = tuple(tuple(row) for row in raw_routes)
+        scale = room.get("scale_slots")
+        if scale is not None:
+            scale = _decode_pixels(scale)
         raw_combinations = room.get("combine_rules", [])
         if not isinstance(raw_combinations, list) or len(raw_combinations) > 16:
             raise ValueError("Invalid combine rules")
@@ -214,6 +252,7 @@ def parse_document(source: str) -> GameDocument:
             tuple(cycles),
             room.get("music_id"),
             tuple(talk_rules),
+            tuple(planes), tuple(boxes), routes, scale,
         ))
     document = GameDocument(data["id"], tuple(rooms))
     _validate_document(document)
