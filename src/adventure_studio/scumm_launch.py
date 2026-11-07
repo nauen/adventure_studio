@@ -316,7 +316,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                          or route[1]["next_room_id"] != goal["room_id"] or gates):
         raise ValueError("Chain smoke requires exactly two sequential single-item doors")
     combinations = goal.get("fixture_combinations", [])
-    if not isinstance(combinations, list) or len(combinations) > 3:
+    if not isinstance(combinations, list) or len(combinations) > 16:
         raise ValueError("Invalid fixture combination manifest")
     if verify_recipe:
         if not 1 <= len(combinations) <= 3 or gates or len(route) != 1:

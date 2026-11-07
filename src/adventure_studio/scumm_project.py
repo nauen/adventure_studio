@@ -134,7 +134,7 @@ def parse_document(source: str) -> GameDocument:
         if not isinstance(room["hotspots"], list) or not isinstance(room["use_rules"], list):
             raise ValueError("Hotspots and rules must be lists")
         raw_combinations = room.get("combine_rules", [])
-        if not isinstance(raw_combinations, list) or len(raw_combinations) > 3:
+        if not isinstance(raw_combinations, list) or len(raw_combinations) > 16:
             raise ValueError("Invalid combine rules")
         combinations = []
         raw_talk_rules = room.get("talk_rules", [])

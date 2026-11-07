@@ -9,6 +9,10 @@ on:
       - 'src/adventure_studio/scumm_inventory_paging_demo.py'
       - 'src/adventure_studio/scumm_inventory_paging_probe.py'
       - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'src/adventure_studio/scumm_project.py'
+      - 'examples/recipe_nine_items_story.json'
+      - 'tests/test_story_document.py'
       - 'tests/test_scumm_bootstrap.py'
   pull_request:
     paths:
@@ -17,6 +21,10 @@ on:
       - 'src/adventure_studio/scumm_inventory_paging_demo.py'
       - 'src/adventure_studio/scumm_inventory_paging_probe.py'
       - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'src/adventure_studio/scumm_project.py'
+      - 'examples/recipe_nine_items_story.json'
+      - 'tests/test_story_document.py'
       - 'tests/test_scumm_bootstrap.py'
 
 jobs:
@@ -61,6 +69,19 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_inventory_paging_probe /tmp/paging-game /tmp/paging-evidence
+      - name: Compile nine-item four-recipe story from authored JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/recipe_nine_items_story.json /tmp/nine-recipe-story
+          python -m adventure_studio.scumm_toolchain /tmp/nine-recipe-story /tmp/scummc-upstream /tmp/nine-recipe-game
+          test -s /tmp/nine-recipe-game/tentacle.000
+          test -s /tmp/nine-recipe-game/tentacle.001
+      - name: Render nine-item story room in real ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/nine-recipe-game /tmp/nine-recipe-evidence --scene-only
       - name: Print inventory interaction diagnostics on failure
         if: failure()
         run: |
@@ -80,3 +101,5 @@ jobs:
             /tmp/paging-evidence/*.png
             /tmp/paging-evidence/*.json
             /tmp/paging-evidence/scummvm.log
+            /tmp/nine-recipe-evidence/*.png
+            /tmp/nine-recipe-evidence/*.json
