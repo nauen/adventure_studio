@@ -58,6 +58,8 @@ def verify_inventory_paging(game: Path, output: Path) -> None:
                 x, y = colored_item_center(output, frame, rgb)
                 click(x, y)
                 acquired = False
+                pickup_started = time.monotonic()
+                retried = False
                 deadline = time.monotonic() + 15
                 while time.monotonic() < deadline:
                     frame = f"paging-picked-{index}"
@@ -65,6 +67,13 @@ def verify_inventory_paging(game: Path, output: Path) -> None:
                     if colored_item_pixels(output, frame, rgb) < 10:
                         acquired = True
                         break
+                    if not retried and time.monotonic() - pickup_started >= 7:
+                        retried = True
+                        click(328, 506)
+                        time.sleep(0.35)
+                        capture(frame)
+                        retry_x, retry_y = colored_item_center(output, frame, rgb)
+                        click(retry_x, retry_y)
                     time.sleep(0.35)
                 if not acquired:
                     raise RuntimeError(f"Inventory item {index} was not picked up")
