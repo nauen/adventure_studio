@@ -17,13 +17,15 @@ from .localization import canonical_catalog_json, charset_plan, parse_catalog
 
 
 def export_warning(story: Story) -> str:
-    """Allow new authoring concepts while never silently dropping them on export."""
+    """Report adapter limitations without rejecting valid authoring edits.
+
+    The exporter itself still rejects unsupported stories; no content is
+    silently omitted from a generated SCUMM game.
+    """
     try:
         compile_story_to_scumm(story)
     except ValueError as error:
-        if story.characters or story.dialogues or story.dialogue_nodes or story.dialogue_choices or story.assets:
-            return f"SCUMM-Export noch nicht möglich: {error}"
-        raise
+        return f"SCUMM-Export noch nicht möglich: {error}"
     return ""
 
 
@@ -61,8 +63,8 @@ def describe_story(raw: str) -> StudioView:
 
 def _commit(story: Story, operation: PutEntity) -> StudioEdit:
     changed, report = edit_story(story, (operation,))
-    # Prevent accepting a locally valid story which the bounded SCUMM adapter
-    # cannot yet export (e.g. more than four decorations in one room).
+    # Export support is a separate capability; authoring validity is checked
+    # by edit_story and the strict JSON roundtrip below.
     warning = export_warning(changed)
     # UI output is again parsed by the same strict format boundary.
     canonical = canonical_story_json(changed)
@@ -134,6 +136,11 @@ def item_position(raw: str, item_id: str) -> tuple[int, int]:
     item = next((i for i in story.items if i.id == item_id), None)
     if item is None or item.role == "crafted":
         raise ValueError("Position requires a physical item")
+    # Explicit placements stay inspectable/editable even when the remaining
+    # story exceeds the current export adapter's layout capabilities.
+    placement = next((p for p in story.placements if p.item_id == item_id), None)
+    if placement is not None:
+        return placement.x, placement.y
     game = compile_story_to_scumm(story)
     room = next((r for r in game.rooms if r.name == item.scene_id), None)
     hotspot = next((h for h in room.hotspots if h.id == item_id), None) if room else None
