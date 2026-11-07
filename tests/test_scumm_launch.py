@@ -6,10 +6,22 @@ from unittest.mock import patch
 from subprocess import CompletedProcess
 from pathlib import Path
 
-from adventure_studio.scumm_launch import close_rgb, colored_item_center, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, key_center, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
+from adventure_studio.scumm_launch import close_rgb, colored_item_center, compare_frames, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, key_center, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
 
 
 class ScummLaunchTests(unittest.TestCase):
+    def test_scrolling_probe_uses_manifest_color_instead_of_gold_for_auto_recipe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with (patch("adventure_studio.scumm_launch.subprocess.run",
+                        return_value=CompletedProcess([], 1, stderr="1200")),
+                  patch("adventure_studio.scumm_launch.scene_pixel",
+                        side_effect=[(70, 130, 190), (240, 175, 95)]),
+                  patch("adventure_studio.scumm_launch.colored_item_pixels", return_value=240) as colors,
+                  patch("adventure_studio.scumm_launch.visible_key_pixels",
+                        side_effect=AssertionError("Should not require golden key"))):
+                self.assertEqual(compare_frames(Path(tmp), initial_pickup_rgb=(225, 80, 180)), 1200)
+                colors.assert_called_once_with(Path(tmp), "end", (225, 80, 180))
+
     def test_inventory_icon_locator_excludes_verbs_and_sentence_text(self):
         with patch("adventure_studio.scumm_launch.subprocess.run",
                    return_value=CompletedProcess([], 0, stdout="32x32+104+4", stderr="")) as run:
