@@ -13,7 +13,9 @@ from .scumm_launch import launch_smoke, visible_key_pixels
 from .scumm_room_visual_probe import black_costume_pixels
 
 from .scumm_costume import (CostumeAnimation, CostumeAsset, CostumeDirection,
-                            CostumeFrame, write_costume_sources)
+                            CostumeFrame)
+from .scumm_assets import scrolling_fixture, destination_fixture
+from .scumm_project import GameDocument, canonical_json, parse_document, export_document
 from .scumm_toolchain import _tool
 
 
@@ -41,7 +43,13 @@ def gesture_fixture() -> CostumeAsset:
 def run_costume_probe(upstream: Path, destination: Path) -> dict:
     destination.mkdir(parents=True, exist_ok=True)
     costume = gesture_fixture()
-    source, frames = write_costume_sources(costume, destination)
+    # The native compilation probe exercises the same JSON-backed resource
+    # export used by projects, rather than a fixture-only direct COST writer.
+    game = GameDocument("NativeCostumeProbe", (scrolling_fixture(), destination_fixture()),
+                        (costume,))
+    export_document(parse_document(canonical_json(game)), destination)
+    source = destination / f"{costume.name}.scost"
+    frames = tuple(destination / f"{costume.name}_{frame.id}.bmp" for frame in costume.frames)
     output = destination / "NativeGesture.cost"
     subprocess.run([str(_tool(upstream, "cost")), "-o", str(output),
                     "-I", str(destination), str(source)], check=True, timeout=120)

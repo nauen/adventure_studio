@@ -151,6 +151,15 @@ Die native CI-Evidenz liegt in Actions `42408510454` und deren Artefakten.
 Projektmodell, generischer Action-/Condition-/Ereignisablauf sowie echte
 Spielereingabe während laufender Animation. P0.5 insgesamt ist nicht fertig.
 
+**Weiterer P0.5-Modellschritt (2026-11-07):** `GameDocument` speichert nun
+beliebig viele validierte `CostumeAsset`-Ressourcen als versioniertes JSON
+(inklusive Frame-Pixeln, Blickrichtungen, nativen Animations-IDs und `COUNT`).
+`export_document` schreibt zu den Räumen auch die zugehörigen `.scost`-
+und Frame-BMP-Compiler-Eingaben. Bestehende JSON-v1-Projekte ohne Costumes
+bleiben bitgenau unverändert. Dieses Gate belegt **noch keine freie
+Actor-Instanz und keine Verknüpfung des COST im Spiel**; das nächste Paket
+ist die native Actor-Symbol-/Costume-Bindung über den ScummC-Bootstrap.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
