@@ -9,6 +9,8 @@ on:
       - '.github/workflows/scummc-experiment.yml'
       - 'src/adventure_studio/scumm_assets.py'
       - 'src/adventure_studio/scumm_binary.py'
+      - 'src/adventure_studio/scumm_room_fixture.py'
+      - 'src/adventure_studio/scumm_room_visual_probe.py'
       - 'src/adventure_studio/palette_animation.py'
       - 'src/adventure_studio/palette_demo.py'
       - 'src/adventure_studio/scumm_palette_probe.py'
@@ -137,7 +139,7 @@ jobs:
         env:
           PYTHONPATH: src:tests
         run: |
-          python -c 'from pathlib import Path; from test_scumm_room_primitives import native_room; from adventure_studio.scumm_assets import write_room_sources; write_room_sources(native_room(), Path("/tmp/native-check"))'
+          python -c 'from pathlib import Path; from adventure_studio.scumm_room_fixture import native_room; from adventure_studio.scumm_assets import write_room_sources; write_room_sources(native_room(), Path("/tmp/native-check"))'
           SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
           SLD_BIN=$(find /tmp/scummc-upstream -type f -name sld -executable -print -quit)
           "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/generated-room -I /tmp/scummc-upstream/examples/road -R /tmp/native-check -o /tmp/native-check/Harbor.roobj /tmp/native-check/Harbor.scc
@@ -161,6 +163,21 @@ jobs:
             /tmp/native-room-smoke/scummvm-end.png
             /tmp/native-room-smoke/scummvm-frame-report.json
             /tmp/native-room-smoke/scummvm-launch.log
+          if-no-files-found: ignore
+      - name: Compare native mask and scaling variants in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_room_visual_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-visual-comparison
+      - name: Retain native mask and scaling comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-room-comparison
+          path: |
+            /tmp/native-visual-comparison/native-room-visual-comparison.json
+            /tmp/native-visual-comparison/*-screenshots/scummvm-end.png
+            /tmp/native-visual-comparison/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Produce ScummC documented compatibility-only detection fixture
         # Research fixture only: this uses the Day of the Tentacle game ID

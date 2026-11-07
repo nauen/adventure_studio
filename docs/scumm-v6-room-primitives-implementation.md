@@ -88,3 +88,24 @@ Kostümfigur aus `SCAL` korrekt wirkt. Diese visuellen Assertions bleiben
 für die finale P0.2/P0.3-Abnahme offen. Insbesondere darf eine nur
 erfolgreiche Compiler- und Szenenprobe nicht als volle Featurefreigabe
 ausgegeben werden.
+
+## Kontrollierte Bildvergleiche (Folgepaket)
+
+`scumm_room_fixture.native_room` stellt drei Varianten mit exakt denselben
+Ressourcen/Positionen außer den untersuchten Parametern bereit:
+
+| Variante | Z-Plane an | zweite Walkbox-Scale |
+| --- | --- | --- |
+| masked | ja | 180 |
+| unmasked | nein (alle Maskenbits null) | 180 |
+| fullscale | nein | 255 |
+
+`scumm_room_visual_probe` kompiliert und linkt jede Variante mit ScummC,
+startet sie getrennt in stock ScummVM, prüft die Raumdarstellung und
+zählt dunkle Kostümpixel in einem festgelegten Schauspieler-Ausschnitt.
+Die GitHub-Action speichert Screenshots und JSON-Messwerte. Diese Werte
+sind vorerst **diagnostisch**: die Figur kann während der Aufnahme eine
+andere Animationspose haben. Erst reproduzierbare, plausibel unterschiedliche
+Messungen mit visuell geprüften Bildern dürfen die zwei offenen Gates
+schließen. Der Kontrolllauf trennt Masken- von Skalierungseffekt, statt
+beides aus einem einzelnen Endbild zu behaupten.

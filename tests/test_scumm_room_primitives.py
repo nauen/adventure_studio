@@ -6,27 +6,11 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from adventure_studio.scumm_assets import (Walkbox, ZPlane, _native_box_file,
+from adventure_studio.scumm_assets import (ZPlane, _native_box_file,
                                           destination_fixture, scrolling_fixture,
                                           scummc_room_source, write_room_sources)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
-
-
-def native_room():
-    original = scrolling_fixture()
-    w, h = original.geometry.room_width, original.geometry.room_height
-    # The stock SCUMM costume stands above the actor's walking baseline;
-    # this band intentionally intersects its torso at the end of the walk.
-    mask = bytes(1 if x > w // 2 and 120 < y < 190 else 0
-                 for y in range(h) for x in range(w))
-    boxes = (Walkbox(((0, 70), (120, 70), (120, 150), (0, 150))),
-             Walkbox(((120, 70), (639, 70), (639, 150), (120, 150)),
-                     mask=1, scale=180))
-    # Index zero is reserved.  Travel between the two authored boxes uses
-    # a first-hop route through the destination box.
-    routes = ((0, None, None), (None, 1, 2), (None, 1, 2))
-    return replace(original, zplanes=(ZPlane(1, mask),), walkboxes=boxes,
-                   box_routes=routes, scale_slots=bytes(32))
+from adventure_studio.scumm_room_fixture import native_room
 
 
 class RoomNativePrimitiveTests(unittest.TestCase):
@@ -62,6 +46,16 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             _native_box_file(replace(room, box_routes=((0,),)))
         with self.assertRaisesRegex(ValueError, "SCAL"):
             _native_box_file(replace(room, scale_slots=b"bad"))
+
+    def test_control_variants_isolate_mask_and_scale(self):
+        masked = native_room()
+        clear = native_room(occlusion=False)
+        fullscale = native_room(occlusion=False, far_scale=255)
+        self.assertEqual(masked.walkboxes, clear.walkboxes)
+        self.assertNotEqual(masked.zplanes[0].pixels, clear.zplanes[0].pixels)
+        self.assertEqual(clear.zplanes, fullscale.zplanes)
+        self.assertEqual(fullscale.walkboxes[-1].scale, 255)
+        self.assertEqual(clear.walkboxes[-1].scale, 180)
 
     def test_legacy_json_omits_new_optional_fields(self):
         room = scrolling_fixture()
