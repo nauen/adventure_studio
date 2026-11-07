@@ -67,7 +67,8 @@ def verify_visual_effects(masked: int, unmasked: int, fullscale: int) -> dict:
 
 
 def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
-                       destination: Path, label: str, *, crop: str = "140x105+535+305") -> dict:
+                       destination: Path, label: str, *, crop: str = "140x105+535+305",
+                       allow_static_scene: bool = False) -> dict:
     """Compile, link, run and measure exactly one independently authored room."""
     if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", label):
         raise ValueError("Invalid native visual probe label")
@@ -93,7 +94,7 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
     ], cwd=road, check=True, timeout=120)
     verify_room_binary((root / "tentacle.001").read_bytes(), xor_key=0x69)
     images = destination / f"{label}-screenshots"
-    launch_smoke(root, images, scene_only=True)
+    launch_smoke(root, images, scene_only=True, allow_static_scene=allow_static_scene)
     return {
         "dark_costume_pixels": black_costume_pixels(images / "scummvm-end.png", crop),
         "frame_report": json.loads((images / "scummvm-frame-report.json").read_text()),

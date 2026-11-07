@@ -94,8 +94,8 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | S02 | Parallele Scripts/`breakHere`/Wait/Freeze | A | – | – | – | Scheduler-Szenarien |
 | S03 | Cutscene-Stack/`begin`/`end` | A | – | – | – | Native Sequenz |
 | S04 | Skip-/Override-Endzustand | A | – | – | – | Kontrollfluss/Inventarzustand |
-| S05 | Kamerasprung `setCameraAt` | A | I (Demo) | T (Teil) | V (Teil) | Als Shot-Primitive |
-| S06 | Horizontaler Pan + `waitForCamera` | A | – | – | – | Quell-/Bytecode-Fixture |
+| S05 | Kamerasprung `setCameraAt` | A | I (Raum-Cues) | T | V (Raum) | Allgemeiner Shot-/Cutscene-Export |
+| S06 | Horizontaler Pan + `waitForCamera` | A | I (Raum-Cues) | T | V (Raum) | Multi-Track-/Cutscene-Synchronisation |
 | S07 | Camera-Follows-Actor | A | – | – | – | Follow/Abbruch |
 | S08 | Shot: Totale/Nahaufnahme/Schnitt | A (Konzept) | – | – | – | Native Raum-/Bild-Komposition |
 | S09 | Parallel laufende Aktionen in Cutscene | A (Teil) | – | – | – | Multi-Track-Export |

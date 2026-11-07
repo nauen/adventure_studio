@@ -72,6 +72,12 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
       und zeitabhängige Skriptreaktionen.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
       Kontrollfluss mit Skip-Endzustand.
+  - [x] Teil-Gate: unbeschränkte native v6-Raum-Kamera-Cues
+        (`setCameraAt`, `panCameraTo`, `waitForCamera`, `cameraFollowActor`),
+        dokumentierter Binärpfad und zwei in stock ScummVM verglichene
+        Bildkompositionen ([Kamera-Vertrag](scumm-v6-camera-cue-contract.md)).
+        **Nicht** als Abschluss von P1.1 werten: Override/Skip, Shots und
+        Actor-Choreografie sind weiterhin offen.
 
 Detaillierte Abhängigkeiten: [Export-Lückenanalyse](scumm-v6-export-gap-analysis.md).
 Diese Liste ist **kein Abschluss** des v6-Funktionsumfangs; weitere

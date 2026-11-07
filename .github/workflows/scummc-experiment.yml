@@ -12,6 +12,7 @@ on:
       - 'src/adventure_studio/scumm_room_fixture.py'
       - 'src/adventure_studio/scumm_room_visual_probe.py'
       - 'src/adventure_studio/scumm_scal_probe.py'
+      - 'src/adventure_studio/scumm_camera_probe.py'
       - 'src/adventure_studio/palette_animation.py'
       - 'src/adventure_studio/palette_demo.py'
       - 'src/adventure_studio/scumm_palette_probe.py'
@@ -39,6 +40,7 @@ on:
       - 'tests/test_scumm_binary.py'
       - 'tests/test_scumm_room_primitives.py'
       - 'tests/test_scumm_scal_probe.py'
+      - 'tests/test_scumm_camera_cues.py'
       - 'tests/test_palette_animation.py'
       - 'tests/test_palette_demo.py'
       - 'tests/test_scumm_palette_probe.py'
@@ -195,6 +197,20 @@ jobs:
             /tmp/native-scal-perspective/native-scal-perspective-report.json
             /tmp/native-scal-perspective/*-screenshots/scummvm-end.png
             /tmp/native-scal-perspective/*-screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
+      - name: Verify native SCUMM v6 horizontal camera pan in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_camera_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-camera-pan
+      - name: Retain native camera composition evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-camera-pan
+          path: |
+            /tmp/native-camera-pan/native-camera-pan-report.json
+            /tmp/native-camera-pan/*-screenshots/scummvm-end.png
           if-no-files-found: ignore
       - name: Produce ScummC documented compatibility-only detection fixture
         # Research fixture only: this uses the Day of the Tentacle game ID
