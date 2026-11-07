@@ -138,6 +138,33 @@ class BootstrapTests(unittest.TestCase):
             inject_inventory_objects('room ResRoom {}', ('Key',))
         with self.assertRaisesRegex(ValueError, 'identifier'):
             inject_inventory_objects('    // the inventory icons\n', ('Bad;code',))
+
+    def test_nine_inventory_icons_enable_paging_using_existing_arrows(self):
+        source = (
+            "int* invObj;\nroom ResRoom {\n"
+            "    // the inventory icons\n"
+            "    script inputHandler(int area,int cmd, int btn) {\n"
+            "        // A verb was clicked\n"
+            "    }\n"
+            "    script setInventoryIcon(int icon, int slot) {\n    }\n"
+            "    script inventoryHandler(int obj) {\n        int i, count;\n"
+            "        obj = findInventory(hero,i+1);\n"
+            "    }\n"
+            "    //\n    // Dialogs stuff\n}"
+        )
+        small = inject_inventory_objects(source, tuple(f"Item{i}" for i in range(8)))
+        self.assertNotIn("inventoryPage", small)
+        extended = inject_inventory_objects(source, tuple(f"Item{i}" for i in range(9)))
+        self.assertEqual(extended.count("object Item8Icon"), 1)
+        self.assertIn("int inventoryPage;", extended)
+        self.assertIn("findInventory(hero,inventoryPage*8+i+1)", extended)
+        self.assertIn("if(inventoryPage * 8 >= getInventoryCount(hero)) inventoryPage = 0;", extended)
+        self.assertIn("if(cmd == invUp && inventoryPage > 0) inventoryPage--;", extended)
+        self.assertIn("if(cmd == invDown && (inventoryPage + 1) * 8 < getInventoryCount(hero)) inventoryPage++;", extended)
+        self.assertLess(extended.index("script inventoryHandler"), extended.index("script inputHandler"))
+        with self.assertRaisesRegex(ValueError, "paging layout"):
+            inject_inventory_objects(source.replace("findInventory(hero,i+1)", "findInventory(hero,i)"),
+                                     tuple(f"Item{i}" for i in range(9)))
     def test_retarget_without_touching_other_logic(self):
         source = "room Road;\nloadRoom(Road);\nlockRoom(Road);\nstartRoom(Road);\nint untouched;\n"
         result = retarget_upstream_bootstrap(source, "Harbor")

@@ -51,7 +51,49 @@ def inject_inventory_objects(source: str, icon_ids: tuple[str, ...]) -> str:
         '        state = 1;\n    }\n'
         for icon_id in icon_ids
     )
-    return source.replace(marker, marker + definitions, 1)
+    source = source.replace(marker, marker + definitions, 1)
+    if len(icon_ids) <= 8:
+        return source
+
+    # The upstream Road GUI defines eight inventory verbs and two arrow
+    # controls, but its inventory handler always renders slots 1..8. Extend
+    # only larger games with a page offset and wire the existing arrows.
+    global_marker = "int* invObj;\n"
+    inventory_marker = "    script inventoryHandler(int obj) {\n        int i, count;\n"
+    lookup_marker = "findInventory(hero,i+1)"
+    input_marker = "        // A verb was clicked\n"
+    if (source.count(global_marker) != 1 or source.count(inventory_marker) != 1
+            or source.count(lookup_marker) != 1 or source.count(input_marker) != 1):
+        raise ValueError("Unexpected upstream inventory paging layout")
+    source = source.replace(global_marker, global_marker + "int inventoryPage;\n", 1)
+    source = source.replace(inventory_marker,
+                            inventory_marker +
+                            "        if(inventoryPage * 8 >= getInventoryCount(hero)) inventoryPage = 0;\n", 1)
+    source = source.replace(lookup_marker, "findInventory(hero,inventoryPage*8+i+1)", 1)
+    source = source.replace(input_marker,
+                            "        if(cmd == invUp || cmd == invDown) {\n"
+                            "            if(cmd == invUp && inventoryPage > 0) inventoryPage--;\n"
+                            "            if(cmd == invDown && (inventoryPage + 1) * 8 < getInventoryCount(hero)) inventoryPage++;\n"
+                            "            inventoryHandler(0);\n"
+                            "            return;\n"
+                            "        }\n" + input_marker, 1)
+    # ScummC resolves script symbols while parsing, so the arrow dispatcher
+    # must be preceded by the full inventory handler and its icon helper.
+    helper_marker = "    script setInventoryIcon(int icon, int slot) {\n"
+    dialog_marker = "    //\n    // Dialogs stuff\n"
+    handler_marker = "    script inputHandler(int area,int cmd, int btn) {\n"
+    if any(source.count(marker) != 1 for marker in
+           (helper_marker, dialog_marker, handler_marker)):
+        raise ValueError("Unexpected upstream inventory script ordering")
+    helper_start = source.index(helper_marker)
+    helper_end = source.index(dialog_marker, helper_start)
+    input_start = source.index(handler_marker)
+    if not input_start < helper_start < helper_end:
+        raise ValueError("Unexpected upstream inventory script ordering")
+    helper_scripts = source[helper_start:helper_end]
+    source = source[:helper_start] + source[helper_end:]
+    source = source[:input_start] + helper_scripts + source[input_start:]
+    return source
 
 
 def inject_multilingual_charset(source: str) -> str:
