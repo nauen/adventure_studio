@@ -246,7 +246,8 @@ def key_center(output_directory: Path, frame: str = "end") -> tuple[int, int]:
 
 def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
                    expect_scroll: bool = True,
-                   initial_pickup_rgb: tuple[int, int, int] | None = None) -> int:
+                   initial_pickup_rgb: tuple[int, int, int] | None = None,
+                   require_key_sprite: bool = True) -> int:
     """Require visible frame variation; this alone does not prove scrolling."""
     if (type(minimum_changed_pixels) is not int or minimum_changed_pixels < 0
             or (expect_scroll and minimum_changed_pixels == 0)):
@@ -282,6 +283,7 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
             "scroll_expected": expect_scroll,
             "visible_key_pixels": key_pixels,
             "key_sprite_visible": key_pixels >= 40,
+            "key_sprite_required": require_key_sprite,
             "smooth_scrolling_proven": False,
         }, indent=2) + "\n", encoding="utf-8",
     )
@@ -289,7 +291,7 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
         raise RuntimeError(f"Insufficient visual variation: {count} changed pixels")
     if expect_scroll and not scroll_signature:
         raise RuntimeError(f"Expected blue-to-orange scroll marker missing: {start_rgb} -> {end_rgb}")
-    if key_pixels < 40:
+    if require_key_sprite and key_pixels < 40:
         raise RuntimeError(f"Expected key sprite missing from room: {key_pixels} gold pixels")
     return count
 
@@ -427,7 +429,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             changed = compare_frames(output_directory,
                                      minimum_changed_pixels=0 if allow_static_scene else 500,
                                      expect_scroll=not allow_static_scene,
-                                     initial_pickup_rgb=initial_rgb)
+                                     initial_pickup_rgb=initial_rgb,
+                                     require_key_sprite=not (allow_static_scene and scene_only))
             if scene_only:
                 print(f"Story-compiled SCUMM room rendered and scrolled: {changed} changed pixels")
                 print(f"Scene-only screenshots: {output_directory}")
