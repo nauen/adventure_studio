@@ -103,16 +103,32 @@ Ressourcen/Positionen außer den untersuchten Parametern bereit:
 `scumm_room_visual_probe` kompiliert und linkt jede Variante mit ScummC,
 startet sie getrennt in stock ScummVM, prüft die Raumdarstellung und
 zählt dunkle Kostümpixel in einem festgelegten Schauspieler-Ausschnitt.
-Die GitHub-Action speichert Screenshots und JSON-Messwerte. Diese Werte
-sind vorerst **diagnostisch**: die Figur kann während der Aufnahme eine
-andere Animationspose haben. Erst reproduzierbare, plausibel unterschiedliche
-Messungen mit visuell geprüften Bildern dürfen die zwei offenen Gates
-schließen. Der Kontrolllauf trennt Masken- von Skalierungseffekt, statt
-beides aus einem einzelnen Endbild zu behaupten.
+Die GitHub-Action speichert Screenshots und JSON-Messwerte. Der Kontrolllauf
+trennt Masken- von Skalierungseffekt, statt beides aus einem einzigen Bild
+zu behaupten.
 
 Der erste Kontrolllauf zeigte identische Kostümpixelzahlen trotz unterschiedlicher
 Masken- und Skalierungsparameter. Ursache im Generator: Der Raumeinstieg
 rief noch `setActorIgnoreBoxes()` auf und schaltete damit beide Features
 für den Demo-Actor aus. Der Export ruft nun bei Räumen mit Walkboxen
 `setActorFollowBoxes()` auf; Räume ohne Walkboxmodell behalten ihr
-bisheriges Verhalten. Diese Korrektur muss erneut nativ geprüft werden.
+bisheriges Verhalten. Diese Korrektur wurde in der anschließenden
+Stock-ScummVM-Probe nativ geprüft.
+
+**Bestätigte Beobachtung:** Im Stock-ScummVM-Lauf
+[42399470202](https://github.com/nauen/adventure_studio/actions/runs/42399470202)
+zeigt die Maskenvariante 0 statt 488 dunkler Actor-Pixel bei identischem
+Boxmaßstab 180. Der Vergleichspixel an Bildschirmposition (670,360) ist
+ohne Maske schwarz, mit Maske in der Hintergrundfarbe. Ohne Maske erhöht
+Scale 255 die gemessene Kostümsilhouette von 488 auf 1476 Pixel.
+Damit sind eine **funktionierende Z-Plane-Verdeckung und die konstante
+Walkbox-Skalierung** für diesen Fixture-Pfad visuell nachgewiesen.
+
+Die Vergleichswerte werden nun mit konservativen Toleranzen als echte
+CI-Gates geprüft: der unmaskierte Schauspieler muss sichtbar sein, die
+Maske mindestens zwei Drittel seiner dunklen Pixel verdecken, und die
+255er Skalierung muss gegenüber Scale 180 mindestens 50 % mehr dunkle
+Pixel ergeben. Bildvariationen außerhalb dieser Schwellen brechen den
+Workflow ab. **Offen bleiben** der Nachweis dynamischer SCAL-Kurven,
+weiterer Maskenebenen und komplexer Walkbox-Routen; `smooth_scrolling_proven`
+ist in der verwendeten Szenenprobe weiterhin `false`.

@@ -42,6 +42,28 @@ def black_costume_pixels(screenshot: Path) -> int:
     return total
 
 
+def verify_visual_effects(masked: int, unmasked: int, fullscale: int) -> dict:
+    """Accept only a strong, controlled occlusion and actor-size difference.
+
+    The fixture's colored background and fixed crop have already been checked
+    independently by launch_smoke; this compares only the costume silhouette.
+    """
+    if any(type(value) is not int or value < 0 for value in (masked, unmasked, fullscale)):
+        raise ValueError("Invalid costume histogram counts")
+    if unmasked < 100:
+        raise RuntimeError("Unmasked actor not visible enough for a mask comparison")
+    if masked > unmasked // 3:
+        raise RuntimeError("Z-plane mask did not visibly occlude the actor")
+    if fullscale < (unmasked * 3) // 2:
+        raise RuntimeError("Walkbox scale did not visibly increase costume size")
+    return {
+        "occlusion_pixels_removed": unmasked - masked,
+        "scale_pixels_added": fullscale - unmasked,
+        "occlusion_passed": True,
+        "walkbox_constant_scale_passed": True,
+    }
+
+
 def run_visual_comparison(upstream: Path, generated: Path, destination: Path) -> dict:
     """Build and capture mask-on, mask-off and differently scaled variants."""
     compiler = _tool(upstream, "scc")
@@ -81,13 +103,11 @@ def run_visual_comparison(upstream: Path, generated: Path, destination: Path) ->
             "dark_costume_pixels": black_costume_pixels(end),
             "frame_report": json.loads((images / "scummvm-frame-report.json").read_text()),
         }
-    results["comparison"] = {
-        "occlusion_difference": results["unmasked"]["dark_costume_pixels"] -
-                                results["masked"]["dark_costume_pixels"],
-        "scale_difference": results["fullscale"]["dark_costume_pixels"] -
-                            results["unmasked"]["dark_costume_pixels"],
-        "status": "diagnostic; differences require visual review before acceptance",
-    }
+    results["comparison"] = verify_visual_effects(
+        results["masked"]["dark_costume_pixels"],
+        results["unmasked"]["dark_costume_pixels"],
+        results["fullscale"]["dark_costume_pixels"],
+    )
     (destination / "native-room-visual-comparison.json").write_text(
         json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
