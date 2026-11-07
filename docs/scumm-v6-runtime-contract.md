@@ -4,6 +4,12 @@ Status: erste **quellenbasierte technische Bestandsaufnahme**, 2026-11-07.
 Zugehöriger Anforderungskatalog:
 [`scumm-adventure-mechanics.md`](scumm-adventure-mechanics.md).
 
+**Weiterführende Quellcodeprüfung:**
+[`scumm-v6-source-audit.md`](scumm-v6-source-audit.md) verfolgt die konkreten
+Interpreter- und Compilerfunktionen. Sie präzisiert insbesondere, dass
+`waitForAnimation` in ScummVM auf `_needRedraw` prüft, und identifiziert
+`COUNT` im originalen Costume-Format als möglichen Synchronisationsweg.
+
 ## 1. Ziel und Evidenzstufen
 
 **Wir erzeugen originale SCUMM-v6-Spielressourcen und -Skripte für eine
@@ -93,7 +99,9 @@ Unter `0xA9` sind in ScummC unter anderem beschrieben:
 - `waitForCamera`: bis Kamerabewegung endet (`0xA9AA`).
 - `waitForSentence`: bis Sentence-Skript endet (`0xA9AB`).
 - `waitForAnimation`: in ScummC dokumentiert (`0xA9E2`), dort jedoch
-  **mit Fragezeichen** bei der Semantik; separat im Zielinterpreter prüfen.
+  **mit Fragezeichen** bei der Semantik. Im untersuchten ScummVM-Quellstand
+  wartet der Befehl tatsächlich, solange der Actor im aktuellen Raum ist
+  und `_needRedraw` gesetzt ist – **nicht** explizit bis zum Animationsende.
 
 **Wichtig:** Ein frei definierbares `on_frame(45)` oder `on_marker("contact")`
 ist **nicht** als Standard-v6-Callback nachgewiesen. Wir dürfen diese

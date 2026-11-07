@@ -10,6 +10,8 @@ Kompatibilitätsfragen steht in
 [`scumm-v6-runtime-contract.md`](scumm-v6-runtime-contract.md).
 Diese Dokumente sind Forschungs-/Entwurfsstände, keine als implementiert
 markierten Produktfeatures.
+Die vertiefte Prüfung konkreter ScummVM- und ScummC-Quellcodepfade ist in
+[`scumm-v6-source-audit.md`](scumm-v6-source-audit.md) dokumentiert.
 
 ## Produktziel
 
