@@ -1,5 +1,49 @@
 # Adventure Studio – Produkt- und Entwicklungsroadmap
 
+> **Aktive Steuerung, Stand 2026-11-07:**
+> [Produktvision](PRODUCT_VISION.md) · [Projektstatus und nächstes Arbeitspaket](PROJECT_STATUS.md) ·
+> [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md) · [Arbeitsvertrag](../AGENTS.md).
+> Die nachstehenden älteren Checkboxen dokumentieren historische Teilnachweise.
+> Sie bedeuten **nicht**, dass die entsprechende vollständige SCUMM-v6-Funktion
+> fertig ist. Für die aktuelle Abdeckung gilt die Funktionsmatrix.
+
+## Aktuelle Produktphasen und Abnahme
+
+1. **P1 – Vollständiger nativer SCUMM-v6-Generator (jetzt):**
+   Raumgrafiken, Masken, Walkboxen, Objekte, Actors/Costumes, Animation,
+   zeitabhängige Aktionen, Rätsel, Kamera, Cutscenes, Dialog, Audio und
+   Persistenz werden als native Ressourcen/Skripte exportiert.
+   Abnahme: pro erforderlicher Mechanik ein Compiler-/Format-Gate und
+   ein konkreter ScummVM-Gameplay-Nachweis.
+2. **P2 – Durchgängiger visueller Adventure-Editor:**
+   Alle unterstützten P1-Daten aus dem Projektmodell authorbar.
+3. **P3 – Cineastischer Shot-/Cutscene-Editor:**
+   Filmbegriffe auf native Kamera-/Raum-/Costume-/Script-Bausteine abgebildet.
+4. **P4 – KI-gestützte Spieleentwicklung:**
+   Validierte, nachvollziehbare Änderungen statt unkontrolliertem Code.
+5. **P5 – Produktreife:** Distribution, Bedienbarkeit, Stabilität, Qualität.
+
+### Aktueller Arbeitsvorrat (P1)
+
+- [ ] **P0.1:** Binär-Roundtrip-Parser für ScummC-Raumdaten
+      (RMIM/SMAP/ZPxx/OBIM/OBCD), mit Test-Fixture und Größen-/Offset-/ID-Prüfungen.
+- [ ] **P0.2:** Z-Plane-/Maskenbilder in RoomAsset, JSON, Validierung und
+      ScummC-Export; sichtbare Verdeckung in stock ScummVM.
+- [ ] **P0.3:** Native Walkboxen, BOXM, SCAL und Perspektive;
+      Actor-Weg und Maskenzuordnung in ScummVM geprüft.
+- [ ] **P0.4:** Bewegte, zustandsabhängige, klickbare Objekte einschließlich
+      Parent-State und aktualisierter Hitbox.
+- [ ] **P0.5:** Native Actor-/Costume-Ressourcen, Animation, COUNT-Marker
+      und zeitabhängige Skriptreaktionen.
+- [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
+      Kontrollfluss mit Skip-Endzustand.
+
+Detaillierte Abhängigkeiten: [Export-Lückenanalyse](scumm-v6-export-gap-analysis.md).
+Diese Liste ist **kein Abschluss** des v6-Funktionsumfangs; weitere
+Funktionen werden anhand der Capability-Matrix priorisiert.
+
+## Historische, detaillierte Entwicklungsmeilensteine
+
 Stand: 2026-11-04. Dieses Dokument ist die Arbeitsgrundlage für die Umsetzung.
 
 **Mechanik-Erweiterung (2026-11-07):** Der vollständige Anforderungskatalog
