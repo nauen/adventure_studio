@@ -15,7 +15,9 @@ from adventure_studio.scumm_project import GameDocument, canonical_json, parse_d
 def native_room():
     original = scrolling_fixture()
     w, h = original.geometry.room_width, original.geometry.room_height
-    mask = bytes(1 if x > w // 2 and 50 < y < 110 else 0
+    # The stock SCUMM costume stands above the actor's walking baseline;
+    # this band intentionally intersects its torso at the end of the walk.
+    mask = bytes(1 if x > w // 2 and 120 < y < 190 else 0
                  for y in range(h) for x in range(w))
     boxes = (Walkbox(((0, 70), (120, 70), (120, 150), (0, 150))),
              Walkbox(((120, 70), (639, 70), (639, 150), (120, 150)),

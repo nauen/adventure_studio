@@ -73,7 +73,18 @@ Die bestehende experimentelle GitHub-Action
 Compiler-/Linker-/Binärstruktur-Smoke für die neuen Raumdaten erweitert.
 Der reine Compiler-/Binärschritt ist in
 [Run 42395881760](https://github.com/nauen/adventure_studio/actions/runs/42395881760)
-erfolgreich durchgelaufen. Ein nachfolgender, eigenständiger stock-ScummVM-
-Szenenlauf mit Screenshot-Artefakten ist ergänzt. Bis dessen Ergebnis
-vorliegt, bleibt die Laufzeitabnahme offen; ein erfolgreiches Scrollen
-allein beweist außerdem keine pixelgenaue Verdeckung oder Skalierung.
+erfolgreich durchgelaufen. Auch der eigenständige stock-ScummVM-Szenenlauf
+in [Run 42397192131](https://github.com/nauen/adventure_studio/actions/runs/42397192131)
+hat die Compilierung, die Ressourcentags und die Szenenprüfung bestanden.
+Die Screenshots und der Bericht sind als Artifact
+`native-room-scummvm-screenshots` abgelegt. Der Bericht weist 133168
+geänderte Pixel und den erwarteten Raumfarbwechsel aus; das Feld
+`smooth_scrolling_proven` steht jedoch ausdrücklich auf **false**.
+
+**Wichtig:** Die beiden Screenshots zeigen einen sichtbaren Actor auch in
+der zweiten Walkbox. Sie belegen noch **nicht**, dass sich die Vordergrund-
+Z-Maske tatsächlich über den Actor legt oder dass die Skalierung der
+Kostümfigur aus `SCAL` korrekt wirkt. Diese visuellen Assertions bleiben
+für die finale P0.2/P0.3-Abnahme offen. Insbesondere darf eine nur
+erfolgreiche Compiler- und Szenenprobe nicht als volle Featurefreigabe
+ausgegeben werden.
