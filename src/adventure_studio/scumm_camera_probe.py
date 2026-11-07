@@ -40,7 +40,8 @@ def run_camera_probe(upstream: Path, generated: Path, destination: Path) -> dict
     results = {}
     for name, cues in scenes.items():
         results[name] = render_native_room(replace(base, camera_cues=cues), upstream,
-                                           generated, destination, name)
+                                           generated, destination, name,
+                                           allow_static_scene=True)
     differences = changed_camera_pixels(
         destination / "camera_static-screenshots" / "scummvm-end.png",
         destination / "camera_panned-screenshots" / "scummvm-end.png",

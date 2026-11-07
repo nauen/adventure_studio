@@ -149,7 +149,7 @@ class ScummLaunchTests(unittest.TestCase):
     def test_static_scene_exception_requires_full_chain_verification(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)
-            with self.assertRaisesRegex(ValueError, "only for the chain"):
+        with self.assertRaisesRegex(ValueError, "requires a chain or isolated scene fixture"):
                 launch_smoke(path, path / "out", allow_static_scene=True)
 
 
