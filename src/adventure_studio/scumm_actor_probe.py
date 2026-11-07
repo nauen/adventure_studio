@@ -21,7 +21,7 @@ from .scumm_toolchain import _tool, compile_story_game
 def actor_count_room_source(source: str, required: int) -> str:
     """Add a native COUNT observer to the isolated generated-room fixture."""
     marker = "        animateActor(Companion,24);\n"
-    if source.count(marker) != 1 or type(required) is not int or required not in (2, 3):
+    if source.count(marker) != 1 or type(required) is not int or required not in (0, 1, 2, 3):
         raise ValueError("Invalid native Actor COUNT probe source or event threshold")
     injection = (
         "        setCameraAt(480);\n"
@@ -89,16 +89,18 @@ def run_actor_count_probe(upstream: Path, actor_build: Path, destination: Path) 
                      allow_static_scene=True)
         return visible_key_pixels(target / "screenshots")
 
+    baseline = run_variant(destination / "zero_counts", 0)
+    first = run_variant(destination / "one_count", 1)
     positive = run_variant(destination / "two_counts", 2)
     control = run_variant(destination / "three_counts", 3)
-    if positive >= 40:
-        raise RuntimeError(f"Authored Actor's two COUNT events did not hide key: {positive}")
-    if control < 40:
-        raise RuntimeError(f"Three-COUNT control unexpectedly hid key: {control}")
-    report = {"authored_actor_count_verified": True, "expected_events": 2,
+    passed = baseline < 40 and first < 40 and positive < 40 and control >= 40
+    report = {"authored_actor_count_verified": passed, "expected_events": 2,
+              "zero_count_key_pixels": baseline, "one_count_key_pixels": first,
               "positive_key_pixels": positive, "control_key_pixels": control}
     (destination / "actor-count-report.json").write_text(json.dumps(report, indent=2) + "\n",
                                                                encoding="utf-8")
+    if not passed:
+        raise RuntimeError(f"Authored Actor COUNT thresholds failed: {report}")
     return report
 
 

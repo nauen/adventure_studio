@@ -93,8 +93,9 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertLess(positive.index('delaySeconds(2);'),
                         positive.index('animateActor(Companion,24);'))
         self.assertNotIn('getActorAnimCounter1(VAR_EGO)', positive)
+        self.assertIn('getActorAnimCounter1(Companion) < 0', actor_count_room_source(source, 0))
         with self.assertRaises(ValueError):
-            actor_count_room_source(source, 0)
+            actor_count_room_source(source, -1)
         with self.assertRaises(ValueError):
             actor_count_room_source('room Harbor {}', 2)
 

@@ -219,6 +219,10 @@ jobs:
           name: native-v6-authored-actor-count
           path: |
             /tmp/native-actor-count/actor-count-report.json
+            /tmp/native-actor-count/zero_counts/Harbor.scc
+            /tmp/native-actor-count/zero_counts/screenshots/scummvm-end.png
+            /tmp/native-actor-count/one_count/Harbor.scc
+            /tmp/native-actor-count/one_count/screenshots/scummvm-end.png
             /tmp/native-actor-count/two_counts/Harbor.scc
             /tmp/native-actor-count/two_counts/screenshots/scummvm-end.png
             /tmp/native-actor-count/three_counts/Harbor.scc
