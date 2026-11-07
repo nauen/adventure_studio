@@ -41,9 +41,20 @@ Kodierung selbst eingeben muss.
 `scumm_scal_probe.py` erzeugt mit identischer Kurve drei Räume, in denen
 die Figur zu verschiedenen Y-Tiefen läuft (100/125/145). Ein echter
 ScummC-/Linker-Lauf und stock ScummVM zeichnen die Endbilder auf. Der
-Vergleich zählt dunkle Kostümpixel in einem Ausschnitt, der alle gewählten
-Y-Positionen abdeckt. Die erste Durchführung ist diagnostisch. Nach
-Prüfung der Bilder werden sinnvolle Pass-Schwellen festgesetzt.
+Vergleich zählt dunkle Kostümpixel im festen Spielbildausschnitt
+`170x155+480+310`, der die Figur in allen drei Endpositionen enthält und
+Bedienleiste sowie schwarzen Letterbox-Rand ausschließt. Die erste native
+Durchführung (Actions 42403019595) ergab nach **Korrektur** des fehlerhaften
+ursprünglichen Ausschnitts lokal an denselben CI-Screenshots **724, 1020,
+1124** dunkle Pixel. Der ursprüngliche Ausschnitt hatte die kleinste Figur
+ausgeschnitten und daher fälschlich 0 gezählt. Nun schlägt der native
+Regressionstest fehl, wenn die kleinste Silhouette weniger als 300 Pixel
+hat oder die Zuwächse unter 100 beziehungsweise 75 Pixel liegen.
+
+Dieser Bildvergleich belegt eine sichtbare Skalenzunahme im originalen
+ScummVM. Er beweist **keine pixelgenaue numerische Übereinstimmung** der
+im Interpreter intern berechneten Skalierung; die theoretischen Werte
+141/193/234 werden separat mit der originalen Interpolationsformel geprüft.
 
 **Nicht impliziert:** horizontale Skalierung, SCUMM v7/v8-Slots,
 unbegrenzte Slotzahlen, automatische Walkbox-Routenerzeugung oder eine
