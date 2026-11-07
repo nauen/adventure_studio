@@ -105,6 +105,24 @@ für noch nicht typisierte Compilerfälle wird die allgemeine Ablehnung
 zurückgegeben. Diese Fähigkeiten gehören zu den nächsten vertikalen
 SCUMM-Paketen, nicht zum abgeschlossenen A0-Stabilisierungsgate.
 
+## Verbindlicher SCUMM-v6-Referenzvertrag (2026-11-07)
+
+Die [Referenzbibliothek](scumm-v6-reference/README.md) verbindet den
+**einen** [64-ID-Funktionskatalog](SCUMM_V6_CAPABILITIES.md) mit
+[technischen ScummC-/ScummVM-Primitiven](scumm-v6-reference/NATIVE_PRIMITIVES.md),
+[konkreten Abnahmeszenarien](scumm-v6-reference/SCENARIOS.md) und einem
+[maschinenlesbaren Quellenindex](scumm-v6-reference/capability_sources.json).
+Das Produktziel ist damit für die Implementierung festgelegt. Vorhandene
+Source-Audits werden wiederverwendet; neue Quellcodeanalyse ist nur bei
+fehlendem v6-Encoder-/Decoder-/Sonderfallbeleg oder Versionswechsel nötig.
+Die Referenz beschreibt den Zielumfang, **nicht** 64 bereits fertige
+Funktionen. Ein kleines natives Test-Fixture pro Grundbaustein genügt;
+ein großes neues Konformitätsspiel ist kein Gate.
+
+**Nächster Implementierungsschritt bleibt P0.1** (nativer Binär-Roundtrip),
+dann P0.2/0.3. Neue Features werden anhand des Katalogs und der
+Szenarien abgenommen, nicht anhand zusätzlicher spontaner Demo-Limits.
+
 ## Nächste drei priorisierte Pakete
 
 1. **P0.1 – Binär-Roundtrip-Prüfer für ScummC-Räume; bestehende Modellgrenzen sind initial durch Regressionstests charakterisiert.**

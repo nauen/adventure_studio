@@ -5,6 +5,15 @@ typische vollständige SCUMM-v6-Adventures benötigen.** Die Matrix ist
 ein fortzuschreibender Katalog und noch kein Anspruch, sämtliche
 proprietären Varianten und Sonderfälle vollständig erfasst zu haben.
 
+**Verbindlicher Referenzvertrag:** [SCUMM-v6-Referenzbibliothek](scumm-v6-reference/README.md)
+mit [nativen Primitiven](scumm-v6-reference/NATIVE_PRIMITIVES.md),
+[Abnahmeszenarien](scumm-v6-reference/SCENARIOS.md) und einem
+[maschinenlesbaren Quellenindex](scumm-v6-reference/capability_sources.json).
+Diese **Matrix bleibt die einzige Quelle** für Funktions-IDs und
+Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
+`tests/test_scumm_reference_contract.py` prüft den Quellenindex auf
+Vollständigkeit gegenüber den 64 IDs.
+
 ## Statusmodell
 
 | Status | Bedeutung |
