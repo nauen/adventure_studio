@@ -196,6 +196,16 @@ Lauf belegt diese konkrete COUNT-Integration; sichtbare Animationsphasen,
 Eingaben während der Animation und eine allgemeine Ereignis-IR bleiben
 gesonderte offene Gates.
 
+**Aktueller roter Lauf `42420046842`:** Der Raumscript-Pfad funktioniert
+(bei COUNT-Schwelle 0 verschwindet der Schlüssel, 0 Pixel). Bei Schwellen
+1, 2 und 3 bleiben dagegen jeweils 112 Schlüsselpixel sichtbar. Damit
+ist noch **kein einziges COUNT-Ereignis** für den projektdefinierten
+Actor belegt, obwohl die separate Ego-COST-Probe weiterhin grün ist.
+Auch die an den externen Road-Bootstrap angeglichene Actor-Animations-
+geschwindigkeit behebt dies nicht. Nächster Debug-Schritt ist die native
+Actor-/Costume-Laufzeitbindung und der Animation-Lifecycle, nicht eine
+Lockerung des roten Gameplay-Gates.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
