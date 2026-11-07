@@ -22,8 +22,9 @@ _PALETTE = ((70, 130, 190), (95, 60, 35), (240, 175, 95),
             (255, 220, 75), (60, 220, 90), (50, 220, 220), (120, 70, 180),
             (225, 80, 180), (160, 230, 55))
 _PICKUP_COLORS = (3, 7, 8)
-_RECIPE_COLORS = (3, 7, 8, 9, 10)
-_RECIPE_EXTRA_PALETTE = ((245, 100, 60), (85, 95, 245))
+_RECIPE_COLORS = (3, 7, 8, 9, 10, 11, 12)
+_RECIPE_EXTRA_PALETTE = ((245, 100, 60), (85, 95, 245),
+                         (255, 155, 35), (175, 80, 240))
 
 
 def _text(value: str) -> str:
@@ -156,10 +157,10 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
 
 
 def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument:
-    """Bounded recipe room with up to two composable inventory recipes."""
+    """Compile an acyclic inventory-recipe graph into a bounded room."""
     if (len(story.chapters) != 1 or len(story.scenes) != 2 or len(story.puzzles) != 1
-            or not 1 <= len(story.recipes) <= 2 or story.characters):
-        raise ValueError("Recipe SCUMM adapter supports up to two recipes, one door and two scenes")
+            or not story.recipes or story.characters):
+        raise ValueError("Recipe SCUMM adapter supports one chapter, one door and two scenes")
     puzzle = story.puzzles[0]
     recipes = story.recipes
     produced = {recipe.result_item_id for recipe in recipes}
@@ -207,7 +208,7 @@ def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument
                                     *_item_xy(story, item.id, 355 + index * 26, 100, 640), 16, 16, True,
                                     _sprite(_RECIPE_COLORS[index], 2)))
     hotspots.append(RoomHotspot("Door", "the exit", _text(puzzle.title),
-                                450, 100, 16, 16, False, _sprite(4, 1),
+                                500 if len(inventory_items) > 5 else 450, 100, 16, 16, False, _sprite(4, 1),
                                 open_sprite_pixels=_sprite(5, 2),
                                 exit_destination=puzzle.opens_scene_id))
     start_image = _room_image(provider, story.starting_scene_id, 640, False)
@@ -215,7 +216,7 @@ def _compile_recipe_story(story: Story, provider: ImageProvider) -> GameDocument
     if len(inventory_items) > len(_PICKUP_COLORS):
         if len(start_image.palette) != len(_PALETTE):
             raise ValueError("Chained recipe rooms require the nine-color base palette")
-        start_palette = start_image.palette + _RECIPE_EXTRA_PALETTE
+        start_palette = start_image.palette + _RECIPE_EXTRA_PALETTE[:len(inventory_items) - len(_PICKUP_COLORS)]
     else:
         start_palette = start_image.palette
     start_room = RoomAsset(story.starting_scene_id, RoomGeometry(640, 200, 320, 200),

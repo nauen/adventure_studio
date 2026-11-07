@@ -16,6 +16,7 @@ on:
       - 'src/adventure_studio/scumm_launch.py'
       - 'examples/recipe_story.json'
       - 'examples/recipe_chain_story.json'
+      - 'examples/recipe_graph_story.json'
       - 'tests/test_scumm_dialogue_probe.py'
       - 'tests/test_story_v4.py'
   pull_request:
@@ -30,6 +31,7 @@ on:
       - 'src/adventure_studio/scumm_launch.py'
       - 'examples/recipe_story.json'
       - 'examples/recipe_chain_story.json'
+      - 'examples/recipe_graph_story.json'
       - 'tests/test_scumm_dialogue_probe.py'
       - 'tests/test_story_v4.py'
 
@@ -107,6 +109,19 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-chain-game /tmp/recipe-chain-evidence --recipe-chain-only
+      - name: Build converging three-recipe graph from story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/recipe_graph_story.json /tmp/recipe-graph-story
+          python -m adventure_studio.scumm_toolchain /tmp/recipe-graph-story /tmp/scummc-upstream /tmp/recipe-graph-game
+          test -s /tmp/recipe-graph-game/tentacle.000
+          test -s /tmp/recipe-graph-game/tentacle.001
+      - name: Play both recipe branches and the final combination in ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-graph-game /tmp/recipe-graph-evidence --recipe-graph-only
       - name: Upload playable dialogue game
         if: always()
         uses: actions/upload-artifact@v4
@@ -143,3 +158,6 @@ jobs:
             /tmp/recipe-chain-evidence/*.png
             /tmp/recipe-chain-evidence/*.json
             /tmp/recipe-chain-evidence/scummvm.log
+            /tmp/recipe-graph-evidence/*.png
+            /tmp/recipe-graph-evidence/*.json
+            /tmp/recipe-graph-evidence/scummvm.log
