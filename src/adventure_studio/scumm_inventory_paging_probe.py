@@ -47,6 +47,7 @@ def verify_inventory_paging(game: Path, output: Path) -> None:
             else:
                 raise RuntimeError("Inventory probe room did not become visible")
             time.sleep(8)
+            pickup_history = []
             for index, color in enumerate(INVENTORY_COLORS):
                 rgb = tuple(color)
                 click(328, 506)  # Stock PickUp verb.
@@ -76,7 +77,16 @@ def verify_inventory_paging(game: Path, output: Path) -> None:
                         click(retry_x, retry_y)
                     time.sleep(0.35)
                 if not acquired:
+                    (output / "scummvm-pickup-history.json").write_text(
+                        json.dumps({"completed": pickup_history, "failed_index": index,
+                                    "last_click": [x, y], "retried": retried,
+                                    "remaining_pixels": colored_item_pixels(output, frame, rgb)},
+                                   indent=2) + "\n", encoding="utf-8")
                     raise RuntimeError(f"Inventory item {index} was not picked up")
+                pickup_history.append({"item": index, "click": [x, y], "retried": retried})
+                # The SCUMM sentence thread and actor movement may still be
+                # finishing even after the object has left the room image.
+                time.sleep(2)
             capture("paging-first-page")
             first_visible = colored_item_pixels(output, "paging-first-page", INVENTORY_COLORS[0],
                                                 inventory=True) >= 40
