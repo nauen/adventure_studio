@@ -21,7 +21,8 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
     costume = replace(gesture_fixture(), name="StudioCompanionCostume")
     document = GameDocument("NativeActorProbe", (scrolling_fixture(), destination_fixture()),
                             (costume,), (
-                                ActorAsset("Companion", costume.name, "Harbor", 410, 110, "W", "Companion"),
+                                ActorAsset("Companion", costume.name, "Harbor", 410, 110, "S", "Companion",
+                                           "gesture"),
                                 ActorAsset("Guide", costume.name, "Harbor", 470, 110, "E", "Guide"),
                             ))
     encoded = canonical_json(document)
@@ -31,7 +32,9 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
     launch_smoke(game, destination / "screenshots", scene_only=True)
     result = {"native_actor_link_passed": True, "stock_scummvm_launch_passed": True,
               "actor_count": len(document.actors), "shared_costume_count": len(document.costumes),
-              "actors": [actor.id for actor in document.actors]}
+              "actors": [actor.id for actor in document.actors],
+              "initial_animation_compiled": True,
+              "animation_gameplay_verified": False}
     (destination / "native-actor-report.json").write_text(json.dumps(result, indent=2) + "\n",
                                                              encoding="utf-8")
     return result

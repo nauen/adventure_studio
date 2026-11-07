@@ -311,6 +311,7 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
         f'    cost {name}Cost = "{name}.cost";\n' for name in sorted(needed))
     source = source.replace(cost_marker, cost_marker + definitions, 1)
     directions = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}
+    costume_by_name = {costume.name: costume for costume in costumes}
     setup = []
     for actor in actors:
         setup.extend((f"        setCurrentActor({actor.id});\n",
@@ -321,6 +322,15 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
         setup.extend((f"        putActorAt({actor.id}, {actor.x}, {actor.y}, {actor.room});\n",
                       f"        setActorDirection({directions[actor.direction]});\n",
                       "        setActorStanding();\n"))
+        if actor.initial_animation is not None:
+            costume = costume_by_name.get(actor.costume)
+            if costume is None:
+                raise ValueError(f"Unknown native actor costume: {actor.costume}")
+            animation = next((item for item in costume.animations
+                              if item.name == actor.initial_animation), None)
+            if animation is None or animation.index is None:
+                raise ValueError(f"Actor {actor.id} requires an explicitly indexed native animation")
+            setup.append(f"        animateActor({actor.id},{animation.index});\n")
     source = source.replace(setup_marker, ''.join(setup) + setup_marker, 1)
     return source, header
 

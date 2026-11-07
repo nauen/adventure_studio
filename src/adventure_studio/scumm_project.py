@@ -32,6 +32,7 @@ class ActorAsset:
     y: int
     direction: str = "S"
     display_name: str | None = None
+    initial_animation: str | None = None
 
 
 @dataclass(frozen=True)
@@ -85,7 +86,8 @@ def document_dict(document: GameDocument) -> dict:
         } for costume in document.costumes]} if document.costumes else {}),
         **({"actors": [{"id": actor.id, "costume": actor.costume, "room": actor.room,
                        "x": actor.x, "y": actor.y, "direction": actor.direction,
-                       **({"display_name": actor.display_name} if actor.display_name is not None else {})}
+                       **({"display_name": actor.display_name} if actor.display_name is not None else {}),
+                       **({"initial_animation": actor.initial_animation} if actor.initial_animation is not None else {})}
                       for actor in document.actors]} if document.actors else {}),
         "rooms": [{
             "name": room.name,
@@ -153,11 +155,13 @@ def _validate_document(document: GameDocument) -> None:
     if len(set(room_names)) != len(room_names):
         raise ValueError("Duplicate room name")
     costume_names = set()
+    costumes_by_name = {}
     for costume in document.costumes:
         validate_costume(costume)
         if costume.name in costume_names or costume.name in room_names:
             raise ValueError("Duplicate or conflicting costume name")
         costume_names.add(costume.name)
+        costumes_by_name[costume.name] = costume
     actor_ids = set()
     for actor in document.actors:
         if (not isinstance(actor.id, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", actor.id)
@@ -166,6 +170,15 @@ def _validate_document(document: GameDocument) -> None:
         actor_ids.add(actor.id)
         if actor.costume not in costume_names:
             raise ValueError(f"Actor {actor.id} references unknown costume: {actor.costume}")
+        if actor.initial_animation is not None:
+            animations = [animation for animation in costumes_by_name[actor.costume].animations
+                          if animation.name == actor.initial_animation]
+            if not animations:
+                raise ValueError(f"Actor {actor.id} references unknown animation: {actor.initial_animation}")
+            if animations[0].index is None:
+                raise ValueError(f"Actor {actor.id} initial animation requires an explicit native index")
+            if actor.direction not in {direction.direction for direction in animations[0].directions}:
+                raise ValueError(f"Actor {actor.id} initial animation lacks direction {actor.direction}")
         if actor.room not in room_names:
             raise ValueError(f"Actor {actor.id} references unknown room: {actor.room}")
         room = next(room for room in document.rooms if room.name == actor.room)
@@ -247,11 +260,11 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Actors must be a list")
     actors = []
     for raw_actor in raw_actors:
-        actor = _only(raw_actor, {"id", "costume", "room", "x", "y", "direction", "display_name"},
+        actor = _only(raw_actor, {"id", "costume", "room", "x", "y", "direction", "display_name", "initial_animation"},
                       {"id", "costume", "room", "x", "y"})
         actors.append(ActorAsset(actor["id"], actor["costume"], actor["room"],
                                  actor["x"], actor["y"], actor.get("direction", "S"),
-                                 actor.get("display_name")))
+                                 actor.get("display_name"), actor.get("initial_animation")))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",

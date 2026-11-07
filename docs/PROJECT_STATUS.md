@@ -173,6 +173,18 @@ echte Spielgrafik-Evidenz für jede Figur, Animations-Cues, Action/Condition-IR
 und Interaktion während laufender Animation. Der externe Bootstrap wird
 nicht zur Produktarchitektur erklärt.
 
+**Nächster P0.5-Teilbaustein (noch kein vollständiges Animations-Gate):**
+`ActorAsset.initial_animation` referenziert optional eine benannte,
+explizit numerierte native COST-Animation mit passender Startrichtung.
+GameDocument-v1-JSON bleibt rückwärtskompatibel; der Forschungsadapter
+erzeugt `animateActor(actor,index)` nach der Actor-Initialisierung.
+Der Mehr-Actor-CI-Probe startet eine solche Animation. Ein grüner Start
+beweist weder die tatsächlich abgespielten Frames noch COUNT-Verhalten
+oder Spielerinteraktion. **Nächster Nachweis:** sichtbare Phasen und
+Ereignisse dieses *projektgebundenen* Actors während der laufenden
+Animation in stock ScummVM überprüfen; erst danach den Capability-Status
+anheben.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

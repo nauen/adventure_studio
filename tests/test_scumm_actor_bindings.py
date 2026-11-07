@@ -5,6 +5,9 @@ import unittest
 from adventure_studio.scumm_bootstrap import inject_actor_bindings
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import ActorAsset
+from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
+from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture
+from dataclasses import replace
 
 
 class ActorBootstrapTests(unittest.TestCase):
@@ -37,6 +40,41 @@ class ActorBootstrapTests(unittest.TestCase):
             inject_actor_bindings('source', 'header',
                                   (ActorAsset('hero', 'NativeGesture', 'Harbor', 2, 3),),
                                   (gesture_fixture(),), ('Harbor',))
+
+    def test_named_initial_animation_maps_to_native_costume_index(self):
+        source = ('room Harbor;\nroom ResRoom {\n'
+                  '    cost egoCost = "devil.cost";\n'
+                  '    script setupActors() {\n'
+                  '        // set VAR_EGO so we can use the *Ego* functions\n'
+                  '    }\n}\n')
+        header = '// define an actor for our hero\nactor hero;\n'
+        actor = ActorAsset('Guide', 'NativeGesture', 'Harbor', 280, 110,
+                           initial_animation='gesture')
+        document = GameDocument('AnimationTest', (scrolling_fixture(), destination_fixture()),
+                                (gesture_fixture(),), (actor,))
+        restored = parse_document(canonical_json(document))
+        self.assertEqual(restored, document)
+        generated, _ = inject_actor_bindings(source, header, restored.actors,
+                                              restored.costumes, ('Harbor', 'Cellar'))
+        self.assertIn('setActorStanding();\n        animateActor(Guide,24);', generated)
+
+    def test_initial_animation_rejects_unknown_unindexed_and_missing_direction(self):
+        costume = gesture_fixture()
+        rooms = (scrolling_fixture(), destination_fixture())
+        actor = ActorAsset('Guide', costume.name, rooms[0].name, 20, 100)
+        for changed, message in (
+            (replace(actor, initial_animation='missing'), 'unknown animation'),
+            (replace(actor, initial_animation='stand'), 'explicit native index'),
+            (replace(actor, direction='N', initial_animation='gesture'), 'lacks direction'),
+        ):
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                canonical_json(GameDocument('AnimationTest', rooms, (costume,), (changed,)))
+
+    def test_old_actor_json_does_not_gain_animation_field(self):
+        actor = ActorAsset('Guide', 'NativeGesture', 'Harbor', 20, 100)
+        document = GameDocument('LegacyActor', (scrolling_fixture(), destination_fixture()),
+                                (gesture_fixture(),), (actor,))
+        self.assertNotIn('initial_animation', canonical_json(document))
 
 
 if __name__ == '__main__':
