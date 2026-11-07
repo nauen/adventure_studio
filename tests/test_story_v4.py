@@ -162,8 +162,11 @@ class StoryV4Tests(unittest.TestCase):
         preview = catalog_view(raw)
         self.assertEqual(len(preview[7]), 1)  # dialogue list
         self.assertEqual(len(preview[10]), 2)  # asset references
-        self.assertEqual(preview[11], [])  # no fake game frame
-        self.assertIsNone(safe_render_scene(raw, "Harbor"))
+        # Authoring preview is now independent of native exportability.
+        import importlib.util
+        has_pillow = importlib.util.find_spec("PIL") is not None
+        self.assertEqual(len(preview[11]), 3 if has_pillow else 0)
+        self.assertEqual(safe_render_scene(raw, "Harbor") is not None, has_pillow)
         edit = change_scene(raw, "Harbor", "Neuer Hafen", "Andere Beschreibung")
         self.assertIn("SCUMM-Export noch nicht möglich", report_text(edit.report))
         self.assertEqual(parse_story_document(edit.story_json).scenes[0].title, "Neuer Hafen")
