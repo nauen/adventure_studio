@@ -10,6 +10,7 @@ import shutil
 
 from .scumm_binary import verify_room_binary
 from .scumm_launch import launch_smoke
+from .scumm_room_visual_probe import black_costume_pixels
 
 from .scumm_costume import (CostumeAnimation, CostumeAsset, CostumeDirection,
                             CostumeFrame, write_costume_sources)
@@ -79,7 +80,12 @@ def run_costume_playback(upstream: Path, generated: Path, destination: Path) -> 
     verify_room_binary((destination / "tentacle.001").read_bytes(), xor_key=0x69)
     shutil.copyfile(generated / "game-goal.json", destination / "game-goal.json")
     launch_smoke(destination, destination / "screenshots", scene_only=True)
-    report = {**costume, "linked_in_scummvm": True}
+    silhouette = black_costume_pixels(destination / "screenshots" / "scummvm-end.png",
+                                      "40x56+568+272")
+    if silhouette < 1200:
+        raise RuntimeError(f"Native authored costume silhouette not visible: {silhouette}")
+    report = {**costume, "linked_in_scummvm": True,
+              "visible_costume_pixels": silhouette, "visual_costume_passed": True}
     (destination / "native-costume-report.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8")
     return report

@@ -31,15 +31,24 @@ in ScummVM ausgeführtes Actor-Timing.**
 - `write_costume_sources` schreibt deterministisch `.scost` und unabhängige
   8-Bit-BMPs. Es erzeugt **keinen eigenen Interpreter**. Erst der originale
   ScummC-`cost`-Compiler erzeugt den binären `COST`-Chunk.
-- Das isolierte Testasset `NativeGesture` führt `Pose0, COUNT, Pose1,
-  COUNT, Pose2` aus. Ein GitHub-Actions-Gate ruft ScummC auf und prüft
-  Chunk-Signatur und Länge.
+- Das isolierte Testasset `NativeGesture` enthält vollständige N/E/S/W-
+  `walk`, `stand` und `init`-Animationen und zusätzlich `Pose0, COUNT,
+  Pose1, COUNT, Pose2` in einer separaten Gesture-Animation. Ein
+  GitHub-Actions-Gate ruft ScummC auf und prüft Chunk-Signatur und Länge.
+- Der Ressourcen-Integrationstest ersetzt *ausschließlich in der isolierten
+  Probe* das Costume des externen GPL-Game-Bootstraps, kompiliert und linkt
+  neu und startet das Spiel in stock ScummVM. Die in der Screenshotprobe
+  tatsächlich gezeichnete Figur muss mindestens 1.200 dunkle Pixel in der
+  definierten Costume-Region besitzen. Im ersten nativen Lauf wurden
+  1.536 Pixel gemessen (Actions `42407361581`). Dies ist ein **sichtbarer
+  COST-Resource-Nachweis**, nicht bereits ein Animations-Counter-Test.
 
 ## Noch offen für die eigentliche Gameplay-Abnahme
 
-1. Die generierte COST-Ressource in einen **eigenständig exportierten**
-   ScummC-Actor einbinden und in stock ScummVM sichtbar animieren.
-2. `getActorAnimCounter` bzw. den v6-Laufzeitpfad der Counterabfrage
+1. Die generierte COST-Ressource im allgemeinen Projektmodell einem
+   **eigenständig exportierten** Actor zuweisen, statt im Fixture den
+   externen Bootstrap auszutauschen; Animationen gezielt auslösen.
+2. `getActorAnimCounter1` und dessen v6-Laufzeitpfad
    quellenbasiert verifizieren und die beiden Ereignisse im Spielzustand
    nachweisen; **kein** `waitForAnimation` als Frame-Ereignis missbrauchen.
 3. Mehrere Actors, gegenseitige Scripts, Eingabe-Zeitfenster, Skip- und
