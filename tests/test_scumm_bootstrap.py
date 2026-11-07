@@ -143,12 +143,14 @@ class BootstrapTests(unittest.TestCase):
         source = (
             "int* invObj;\nroom ResRoom {\n"
             "    // the inventory icons\n"
+            "    script inputHandler(int area,int cmd, int btn) {\n"
+            "        // A verb was clicked\n"
+            "    }\n"
+            "    script setInventoryIcon(int icon, int slot) {\n    }\n"
             "    script inventoryHandler(int obj) {\n"
             "        obj = findInventory(hero,i+1);\n"
             "    }\n"
-            "    script inputHandler(int area,int cmd, int btn) {\n"
-            "        // A verb was clicked\n"
-            "    }\n}"
+            "    //\n    // Dialogs stuff\n}"
         )
         small = inject_inventory_objects(source, tuple(f"Item{i}" for i in range(8)))
         self.assertNotIn("inventoryPage", small)
@@ -159,6 +161,7 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn("if(inventoryPage * 8 >= getInventoryCount(hero)) inventoryPage = 0;", extended)
         self.assertIn("if(cmd == invUp && inventoryPage > 0) inventoryPage--;", extended)
         self.assertIn("if(cmd == invDown && (inventoryPage + 1) * 8 < getInventoryCount(hero)) inventoryPage++;", extended)
+        self.assertLess(extended.index("script inventoryHandler"), extended.index("script inputHandler"))
         with self.assertRaisesRegex(ValueError, "paging layout"):
             inject_inventory_objects(source.replace("findInventory(hero,i+1)", "findInventory(hero,i)"),
                                      tuple(f"Item{i}" for i in range(9)))
