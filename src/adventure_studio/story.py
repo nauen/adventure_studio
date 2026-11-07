@@ -162,9 +162,12 @@ def validate_story(story: Story) -> None:
     for placement in placements.values():
         if placement.item_id not in items or items[placement.item_id].role == "crafted":
             raise ValueError(f"Placement needs a physical item: {placement.item_id}")
+        # Story coordinates are authored in world/room space. The current
+        # fixture's 640x200 raster and 16px hotspot are export constraints,
+        # not limits on the authoring model.
         if (type(placement.x) is not int or type(placement.y) is not int
-                or not 0 <= placement.x <= 624 or not 0 <= placement.y <= 184):
-            raise ValueError(f"Placement outside the SCUMM room: {placement.item_id}")
+                or placement.x < 0 or placement.y < 0):
+            raise ValueError(f"Placement needs non-negative integer coordinates: {placement.item_id}")
     for puzzle in story.puzzles:
         if puzzle.scene_id not in scenes:
             raise ValueError(f"Unknown puzzle scene: {puzzle.scene_id}")
