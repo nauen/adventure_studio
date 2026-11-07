@@ -54,9 +54,34 @@ Codebelege im Repository: `src/adventure_studio/scumm_assets.py`,
   unkritischen, abgeschlossenen Änderungen kann der Agent wie gewünscht
   selbstständig mergen.
 
+## Architektur-Audit und künftige Qualitätsregeln (2026-11-07)
+
+Der [Architekturaudit](architecture-audit.md) hat konkrete
+Demo-/Adapter-Grenzen und Verantwortungskonflikte dokumentiert.
+Wesentliche Befunde: begrenzte lineare Story-Routen,
+fixe Pickup-Farben/Platzierungen, harte Dialog-/Regelquoten,
+absolute Koordinaten im Story-Fachmodell und die Kopplung
+zwischen Authoring- und Exportvalidierung.
+
+**Wichtig:** Das zweistellige Rezept `Use A with B` ist als
+binäre Interaktion fachlich plausibel. Allgemeine Rätsel dürfen
+aber mehr als zwei Bedingungen besitzen. Native SCUMM-Limits
+sind von künstlichen Demo-/Layout-Limits getrennt zu führen.
+
+Gültige Architekturleitlinien:
+[Architekturverträge](architecture-contracts.md),
+[ADR-0001](adr/0001-domain-and-export-boundaries.md),
+[ADR-0002](adr/0002-limits-evidence-and-compatibility.md).
+Eine [PR-Checkliste](../.github/pull_request_template.md) sichert
+Regression, Versionsverträglichkeit und native Nachweise ab.
+
+**Noch nicht implementiert:** Der allgemeine Action-/Condition-Vertrag,
+strukturierte Export-Blocker und Geometrieentkopplung sind geplante
+Refactorings, kein bereits abgeschlossener Generatorfortschritt.
+
 ## Nächste drei priorisierte Pakete
 
-1. **P0.1 – Binär-Roundtrip-Prüfer für ScummC-Räume.**
+1. **A0 + P0.1 – Bestehende Modellgrenzen charakterisieren und Binär-Roundtrip-Prüfer für ScummC-Räume.**
    Chunk-Baum, Tag-/Größenprüfung, SMAP-/ZPxx-Offsets,
    OBIM/OBCD-IDs; erst wenn das bestehende Fixture valide parsebar
    ist, als erledigt markieren.
