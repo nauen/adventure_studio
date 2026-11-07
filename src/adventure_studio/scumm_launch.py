@@ -125,6 +125,24 @@ def colored_item_center(output_directory: Path, frame: str,
     return parse_key_bounds(result.stdout)
 
 
+def authored_item_center(output_directory: Path, frame: str,
+                         rgb: tuple[int, int, int], inventory: bool = False) -> tuple[int, int]:
+    """Locate a story-authored object without assuming a specific palette entry.
+
+    Rendered colors can be slightly shifted by ScummVM. Prefer a tight match
+    that excludes similarly colored backgrounds, widening only if it finds no
+    sprite pixels at all.
+    """
+    try:
+        return colored_item_center(output_directory, frame, rgb, inventory=inventory,
+                                   fuzz_percent=4)
+    except ValueError as error:
+        if "Unexpected sprite bounds" not in str(error):
+            raise
+        return colored_item_center(output_directory, frame, rgb, inventory=inventory,
+                                   fuzz_percent=8)
+
+
 def door_pixels(output_directory: Path, frame: str, open_state: bool = False) -> int:
     if frame not in ("pickup", "door", "exit", "return", "locked-before", "locked-after",
                      "gated-use", "chain-second", "chain-second-open", "chain-arrival",
@@ -445,8 +463,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError(f"Mouse input failed: {verb_click.stderr}")
             time.sleep(0.3)
             capture_frame("pre-pickup")
-            key_x, key_y = (colored_item_center(output_directory, "pre-pickup", initial_rgb,
-                                               fuzz_percent=4) if initial_rgb is not None
+            key_x, key_y = (authored_item_center(output_directory, "pre-pickup", initial_rgb)
+                            if initial_rgb is not None
                             else key_center(output_directory, "pre-pickup"))
             click = subprocess.run(
                 ["xdotool", "mousemove", str(key_x), str(key_y), "click", "1"],
@@ -486,8 +504,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     )
                     time.sleep(0.3)
                     capture_frame("pre-pickup-retry")
-                    retry_x, retry_y = (colored_item_center(output_directory, "pre-pickup-retry", initial_rgb,
-                                                            fuzz_percent=4) if initial_rgb is not None
+                    retry_x, retry_y = (authored_item_center(output_directory, "pre-pickup-retry", initial_rgb)
+                                        if initial_rgb is not None
                                         else key_center(output_directory, "pre-pickup-retry"))
                     subprocess.run(
                         ["xdotool", "mousemove", str(retry_x), str(retry_y), "click", "1"],
@@ -840,8 +858,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                         time.sleep(0.3)
                         frame = f"auto-before-{recipe_index}-{ingredient_index}"
                         capture_frame(frame)
-                        item_x, item_y = colored_item_center(output_directory, frame, rgb,
-                                                             fuzz_percent=4)
+                        item_x, item_y = authored_item_center(output_directory, frame, rgb)
                         subprocess.run(["xdotool", "mousemove", str(item_x), str(item_y), "click", "1"],
                                        check=True, timeout=5)
                         acquired = False
@@ -861,8 +878,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                                check=True, timeout=5)
                                 time.sleep(0.3)
                                 capture_frame(frame)
-                                item_x, item_y = colored_item_center(output_directory, frame, rgb,
-                                                                     fuzz_percent=4)
+                                item_x, item_y = authored_item_center(output_directory, frame, rgb)
                                 subprocess.run(["xdotool", "mousemove", str(item_x), str(item_y), "click", "1"],
                                                check=True, timeout=5)
                             time.sleep(0.4)
