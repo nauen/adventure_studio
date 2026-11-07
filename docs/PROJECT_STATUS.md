@@ -185,6 +185,16 @@ Ereignisse dieses *projektgebundenen* Actors während der laufenden
 Animation in stock ScummVM überprüfen; erst danach den Capability-Status
 anheben.
 
+**COUNT-Folgegate im PR ergänzt, noch nicht abgenommen:** Eine isolierte
+positive und negative ScummVM-Probe beobachtet nun
+`getActorAnimCounter1(Companion)` des projektdefinierten Actors. Bei zwei
+COUNT-Ereignissen muss der native Schlüsselzustand wechseln; die
+Drei-Ereignis-Kontrolle darf ihn nicht wechseln. Die CI-Artefakte enthalten
+beide Raumskripte, Screenshots und den Pixelbericht. Erst ein grüner
+Lauf belegt diese konkrete COUNT-Integration; sichtbare Animationsphasen,
+Eingaben während der Animation und eine allgemeine Ereignis-IR bleiben
+gesonderte offene Gates.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

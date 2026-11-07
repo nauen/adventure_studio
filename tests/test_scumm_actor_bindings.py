@@ -3,6 +3,7 @@
 import unittest
 
 from adventure_studio.scumm_bootstrap import inject_actor_bindings
+from adventure_studio.scumm_actor_probe import actor_count_room_source
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import ActorAsset
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
@@ -75,6 +76,19 @@ class ActorBootstrapTests(unittest.TestCase):
         document = GameDocument('LegacyActor', (scrolling_fixture(), destination_fixture()),
                                 (gesture_fixture(),), (actor,))
         self.assertNotIn('initial_animation', canonical_json(document))
+
+    def test_count_probe_uses_authored_actor_and_negative_control(self):
+        source = 'room Harbor {\n        ResRoom::showCursor();\n}\n'
+        positive = actor_count_room_source(source, 2)
+        control = actor_count_room_source(source, 3)
+        self.assertIn('getActorAnimCounter1(Companion) < 2', positive)
+        self.assertIn('getActorAnimCounter1(Companion) < 3', control)
+        self.assertIn('setObjectState(Key, 0);', positive)
+        self.assertNotIn('getActorAnimCounter1(VAR_EGO)', positive)
+        with self.assertRaises(ValueError):
+            actor_count_room_source(source, 0)
+        with self.assertRaises(ValueError):
+            actor_count_room_source('room Harbor {}', 2)
 
 
 if __name__ == '__main__':
