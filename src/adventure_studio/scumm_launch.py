@@ -858,7 +858,32 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                         time.sleep(0.3)
                         frame = f"auto-before-{recipe_index}-{ingredient_index}"
                         capture_frame(frame)
-                        item_x, item_y = authored_item_center(output_directory, frame, rgb)
+                        try:
+                            item_x, item_y = authored_item_center(output_directory, frame, rgb)
+                        except ValueError as missing:
+                            if "Unexpected sprite bounds" not in str(missing):
+                                raise
+                            # The actor can occlude a nearby ground sprite after
+                            # the preceding pickup. Walk away, then re-scan the
+                            # rendered scene rather than guessing a world offset.
+                            for walk_x in (575, 245):
+                                subprocess.run(["xdotool", "mousemove", str(walk_x), "355", "click", "1"],
+                                               check=True, timeout=5)
+                                time.sleep(2.5)
+                                subprocess.run(["xdotool", "mousemove", "328", "506", "click", "1"],
+                                               check=True, timeout=5)
+                                time.sleep(0.3)
+                                capture_frame(frame)
+                                try:
+                                    item_x, item_y = authored_item_center(output_directory, frame, rgb)
+                                    break
+                                except ValueError as retry_missing:
+                                    if "Unexpected sprite bounds" not in str(retry_missing):
+                                        raise
+                            else:
+                                raise RuntimeError(
+                                    f"Could not locate ground ingredient {item['item_id']} "
+                                    "after moving actor to reveal occluded sprites") from missing
                         subprocess.run(["xdotool", "mousemove", str(item_x), str(item_y), "click", "1"],
                                        check=True, timeout=5)
                         acquired = False
