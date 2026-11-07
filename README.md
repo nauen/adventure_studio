@@ -2,6 +2,11 @@
 
 Story-first adventure creation, with a strictly data-driven, testable engine.
 
+**Documentation:** [Start here – thematic documentation index](docs/scumm-v6-reference/DOCUMENTATION_INDEX.md)
+(German). Find source audits, the room/export contract, the canonical
+[SCUMM-v6 capability matrix](docs/SCUMM_V6_CAPABILITIES.md), and the
+[current project status](docs/PROJECT_STATUS.md) there.
+
 Project milestones and acceptance criteria: [`docs/roadmap.md`](docs/roadmap.md).
 
 ## Product target
