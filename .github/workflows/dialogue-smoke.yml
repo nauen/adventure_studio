@@ -122,6 +122,11 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-graph-game /tmp/recipe-graph-evidence --recipe-graph-only
+      - name: Autoplan converging recipe graph and replay in ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-graph-game /tmp/recipe-graph-auto-evidence --recipe-auto-only
       - name: Upload playable dialogue game
         if: always()
         uses: actions/upload-artifact@v4
@@ -161,3 +166,5 @@ jobs:
             /tmp/recipe-graph-evidence/*.png
             /tmp/recipe-graph-evidence/*.json
             /tmp/recipe-graph-evidence/scummvm.log
+            /tmp/recipe-graph-auto-evidence/*.png
+            /tmp/recipe-graph-auto-evidence/*.json
