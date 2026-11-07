@@ -6,10 +6,22 @@ from unittest.mock import patch
 from subprocess import CompletedProcess
 from pathlib import Path
 
-from adventure_studio.scumm_launch import close_rgb, colored_item_center, compare_frames, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, key_center, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
+from adventure_studio.scumm_launch import authored_item_center, close_rgb, colored_item_center, compare_frames, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, key_center, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
 
 
 class ScummLaunchTests(unittest.TestCase):
+    def test_story_item_locator_widens_tolerance_only_when_no_pixels_match(self):
+        with patch("adventure_studio.scumm_launch.colored_item_center",
+                   side_effect=[ValueError("Unexpected sprite bounds: '1x1-1-1'"), (450, 400)]) as locate:
+            self.assertEqual(authored_item_center(Path("/tmp"), "auto-before-0-1", (255, 220, 75)),
+                             (450, 400))
+            self.assertEqual([call.kwargs["fuzz_percent"] for call in locate.call_args_list], [4, 8])
+        with patch("adventure_studio.scumm_launch.colored_item_center",
+                   side_effect=ValueError("Invalid inventory icon bounds")) as locate:
+            with self.assertRaisesRegex(ValueError, "Invalid inventory"):
+                authored_item_center(Path("/tmp"), "auto-ready-0", (225, 80, 180), inventory=True)
+            self.assertEqual(locate.call_count, 1)
+
     def test_scrolling_probe_uses_manifest_color_instead_of_gold_for_auto_recipe(self):
         with tempfile.TemporaryDirectory() as tmp:
             with (patch("adventure_studio.scumm_launch.subprocess.run",
