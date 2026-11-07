@@ -23,6 +23,18 @@
    Validierte, nachvollziehbare Änderungen statt unkontrolliertem Code.
 5. **P5 – Produktreife:** Distribution, Bedienbarkeit, Stabilität, Qualität.
 
+### Verbindlicher SCUMM-v6-Funktionsvertrag
+
+Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
+technische Zugang zu ScummC-/ScummVM-Primitiven und
+[Abnahmeszenarien](scumm-v6-reference/SCENARIOS.md). Die
+[Funktionsmatrix](SCUMM_V6_CAPABILITIES.md) bleibt **einziger**
+64-ID-Katalog für Scope und I/T/V-Status. Der
+[Quellenindex](scumm-v6-reference/capability_sources.json) wird gegen
+die Matrix getestet; bereits analysierte Primitive werden wiederverwendet.
+Die nächsten vertikalen Pakete bleiben P0.1–P0.3; wir ersetzen sie nicht
+durch ein großes vorgeschaltetes Konformitätsspiel.
+
 ### Architektur- und Regression-Gates
 
 [Architekturaudit](architecture-audit.md) ·
