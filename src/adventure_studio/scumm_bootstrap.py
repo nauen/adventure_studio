@@ -59,7 +59,7 @@ def inject_inventory_objects(source: str, icon_ids: tuple[str, ...]) -> str:
     # controls, but its inventory handler always renders slots 1..8. Extend
     # only larger games with a page offset and wire the existing arrows.
     global_marker = "int* invObj;\n"
-    inventory_marker = "    script inventoryHandler(int obj) {\n"
+    inventory_marker = "    script inventoryHandler(int obj) {\n        int i, count;\n"
     lookup_marker = "findInventory(hero,i+1)"
     input_marker = "        // A verb was clicked\n"
     if (source.count(global_marker) != 1 or source.count(inventory_marker) != 1
