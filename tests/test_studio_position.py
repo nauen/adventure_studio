@@ -31,7 +31,7 @@ class StudioPositionTests(unittest.TestCase):
         self.assertEqual(canonical_story_json(story), result.story_json)
 
     def test_invalid_positions_fail_without_changing_story(self):
-        for x, y in ((-1, 50), (630, 100), (20, 190), (20, True)):
+        for x, y in ((-1, 50), (20, -1), (20, True), (True, 20)):
             with self.subTest(x=x, y=y), self.assertRaises(ValueError):
                 change_position(SAMPLE, "Key", x, y)
         with self.assertRaises(ValueError):
@@ -41,10 +41,22 @@ class StudioPositionTests(unittest.TestCase):
         from adventure_studio.studio_service import add_decoration
 
         decorated = add_decoration(SAMPLE, "Archive", "Lamp", "Lamp", "Old lamp")
+        authored = change_position(decorated.story_json, "Lamp", 410, 120)
+        self.assertIn("geometry", authored.report.export_warning)
+        self.assertEqual(item_position(authored.story_json, "Lamp"), (410, 120))
         with self.assertRaisesRegex(ValueError, "geometry"):
-            change_position(decorated.story_json, "Lamp", 410, 120)
+            compile_story_to_scumm(parse_story_document(authored.story_json))
         self.assertEqual(item_position(change_position(decorated.story_json, "Lamp", 100, 120).story_json, "Lamp"),
                          (100, 120))
+
+    def test_fixture_boundaries_do_not_limit_story_coordinates(self):
+        for x, y in ((630, 100), (20, 190), (1000, 300)):
+            with self.subTest(x=x, y=y):
+                edited = change_position(SAMPLE, "Key", x, y)
+                self.assertEqual(item_position(edited.story_json, "Key"), (x, y))
+                self.assertIn("geometry", edited.report.export_warning)
+                with self.assertRaisesRegex(ValueError, "geometry"):
+                    compile_story_to_scumm(parse_story_document(edited.story_json))
 
     def test_consolidation_removes_placement_with_unused_pickup(self):
         from dataclasses import replace
