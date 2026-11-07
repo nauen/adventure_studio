@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Callable
 
 from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_objects,
-                              inject_actor_bindings,
+                              inject_actor_bindings, inject_actor_room_animations,
                               inject_language_keys, inject_language_room_probe, inject_multilingual_charset,
                               inject_screen_language_verbs, retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
@@ -146,6 +146,10 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
     include_args = ["-I", str(upstream / "include"), "-I", str(resources), "-I", str(road)]
     objects = []
     for room in document.rooms:
+        room_source = resources / f"{room.name}.scc"
+        room_source.write_text(inject_actor_room_animations(
+            room_source.read_text(encoding="utf-8"), room.name,
+            document.actors, document.costumes), encoding="utf-8")
         target = resources / f"{room.name}.roobj"
         runner([str(compiler), "-V", "6", *include_args, "-R", str(resources),
                 "-o", str(target), str(resources / f"{room.name}.scc")], check=True)

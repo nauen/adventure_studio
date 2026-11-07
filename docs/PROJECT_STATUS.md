@@ -173,6 +173,38 @@ echte Spielgrafik-Evidenz für jede Figur, Animations-Cues, Action/Condition-IR
 und Interaktion während laufender Animation. Der externe Bootstrap wird
 nicht zur Produktarchitektur erklärt.
 
+**P0.5-Teilbaustein (COUNT-Laufzeitgate erfolgreich, kein vollständiges Animations-Gate):**
+`ActorAsset.initial_animation` referenziert optional eine benannte,
+explizit numerierte native COST-Animation mit passender Startrichtung.
+GameDocument-v1-JSON bleibt rückwärtskompatibel; der Forschungsadapter
+erzeugt `animateActor(actor,index)` im Einstiegsscript des Startraums
+nach der Actor-Initialisierung (nicht vor `startRoom`).
+Der Mehr-Actor-CI-Probe startet eine solche Animation. Der eigenständige
+COUNT-Laufzeitnachweis ist inzwischen erfolgreich; vollständige
+Frame-Phasen, Spielerinteraktion und allgemeine Animations-Choreografie
+sind damit noch nicht belegt.
+
+**COUNT-Folgegate in ScummVM abgenommen (`42421713939`):** Eine isolierte
+positive und negative ScummVM-Probe beobachtet nun
+`getActorAnimCounter1(Companion)` des projektdefinierten Actors. Bei zwei
+COUNT-Ereignissen muss der native Schlüsselzustand wechseln; die
+Drei-Ereignis-Kontrolle darf ihn nicht wechseln. Die CI-Artefakte enthalten
+beide Raumskripte, Screenshots und den Pixelbericht. Die positive und
+negative Kontrolle sind im unveränderten ScummVM grün. Sichtbare
+Animationsphasen, Eingaben während der Animation und eine allgemeine
+Ereignis-IR bleiben gesonderte offene Gates.
+
+**Behobener Fixture-Fehler (zuvor rot `42420046842`):** Der Raumscript-Pfad funktionierte
+(bei COUNT-Schwelle 0 verschwindet der Schlüssel, 0 Pixel). Bei Schwellen
+1, 2 und 3 bleiben dagegen jeweils 112 Schlüsselpixel sichtbar. Damit
+ist noch **kein einziges COUNT-Ereignis** für den projektdefinierten
+Actor belegt, obwohl die separate Ego-COST-Probe weiterhin grün war.
+Raumzuordnung, Costume und aktiver Frame 24 wurden daraufhin separat
+nachgewiesen. Die Ursache lag in der nur für `S` vorhandenen COUNT-Geste
+des Mehr-Actor-Test-Costumes. Die vollständige N/E/S/W-Sequenz liefert
+nun die erwarteten nativen Ereignisse. Die fixierte Testfixture ist
+kein Beleg für beliebige Richtungswechsel während einer Animation.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

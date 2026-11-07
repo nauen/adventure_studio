@@ -311,11 +311,16 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
         f'    cost {name}Cost = "{name}.cost";\n' for name in sorted(needed))
     source = source.replace(cost_marker, cost_marker + definitions, 1)
     directions = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}
+    # The external Road hero setup explicitly initializes its animation
+    # speed to 2. Apply the same fixture default to newly authored Actors;
+    # this is not a claimed native speed limit or a domain-level constant.
+    road_initial_animation_speed = 2
     setup = []
     for actor in actors:
         setup.extend((f"        setCurrentActor({actor.id});\n",
                       "        initActor();\n",
-                      f"        setActorCostume({actor.costume}Cost);\n"))
+                      f"        setActorCostume({actor.costume}Cost);\n",
+                      f"        setActorAnimSpeed({road_initial_animation_speed});\n"))
         if actor.display_name is not None:
             setup.append(f'        setActorName("{actor.display_name}");\n')
         setup.extend((f"        putActorAt({actor.id}, {actor.x}, {actor.y}, {actor.room});\n",
@@ -323,6 +328,29 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
                       "        setActorStanding();\n"))
     source = source.replace(setup_marker, ''.join(setup) + setup_marker, 1)
     return source, header
+
+
+def inject_actor_room_animations(source: str, room_name: str, actors, costumes) -> str:
+    """Start explicitly indexed actor animations after their native room loads."""
+    active = [actor for actor in actors if actor.room == room_name
+              and actor.initial_animation is not None]
+    if not active:
+        return source
+    marker = "        ResRoom::showCursor();\n"
+    if source.count(marker) != 1:
+        raise ValueError(f"Unexpected entry script for Actor animation room {room_name}")
+    costumes_by_name = {costume.name: costume for costume in costumes}
+    calls = []
+    for actor in active:
+        costume = costumes_by_name.get(actor.costume)
+        if costume is None:
+            raise ValueError(f"Unknown native Actor costume: {actor.costume}")
+        animation = next((item for item in costume.animations
+                          if item.name == actor.initial_animation), None)
+        if animation is None or animation.index is None:
+            raise ValueError(f"Actor {actor.id} requires an explicitly indexed native animation")
+        calls.append(f"        animateActor({actor.id},{animation.index});\n")
+    return source.replace(marker, marker + "".join(calls), 1)
 
 
 def read_icon_ids(argument: str) -> tuple[str, ...]:

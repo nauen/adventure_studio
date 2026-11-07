@@ -3,25 +3,80 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import sys
 from dataclasses import replace
 from pathlib import Path
 
 from .scumm_assets import destination_fixture, scrolling_fixture
 from .scumm_costume_probe import gesture_fixture
+from .scumm_costume import CostumeDirection
 from .scumm_launch import launch_smoke
+from .scumm_launch import visible_key_pixels
+from .scumm_binary import verify_room_binary
 from .scumm_project import ActorAsset, GameDocument, canonical_json, export_document, parse_document
-from .scumm_toolchain import compile_story_game
+from .scumm_toolchain import _tool, compile_story_game
+
+
+def actor_count_room_source(source: str, required: int) -> str:
+    """Add a native COUNT observer to the isolated generated-room fixture."""
+    marker = "        animateActor(Companion,24);\n"
+    if source.count(marker) != 1 or type(required) is not int or required not in (0, 1, 2, 3):
+        raise ValueError("Invalid native Actor COUNT probe source or event threshold")
+    injection = (
+        f"        while(getActorAnimCounter1(Companion) < {required}) {{\n"
+        "            breakScript();\n"
+        "        }\n"
+        "        setObjectState(Key, 0);\n"
+    )
+    camera_and_actor = (
+        "        delaySeconds(2);\n"
+        "        setCameraAt(480);\n"
+        "        putActorAt(Companion, 430, 100, Harbor);\n"
+    )
+    return source.replace(marker, camera_and_actor + marker + injection, 1)
+
+
+def actor_binding_room_source(source: str, check: str) -> str:
+    """Isolate native Actor identity, Costume assignment and active frame."""
+    expressions = {
+        "room": "getActorRoom(Companion) == Harbor",
+        "costume": "getActorCostume(Companion) != 0",
+        "frame": "getActorFrame(Companion) == 24",
+    }
+    marker = "        animateActor(Companion,24);\n"
+    if check not in expressions or source.count(marker) != 1:
+        raise ValueError("Invalid native Actor binding probe")
+    return source.replace(
+        marker,
+        "        delaySeconds(2);\n"
+        "        setCameraAt(480);\n"
+        "        putActorAt(Companion, 430, 100, Harbor);\n"
+        + marker
+        + f"        if({expressions[check]}) setObjectState(Key, 0);\n", 1)
 
 
 def run_actor_probe(upstream: Path, destination: Path) -> dict:
     build = destination / "build"
     resources = build / "resources"
     resources.mkdir(parents=True, exist_ok=True)
-    costume = replace(gesture_fixture(), name="StudioCompanionCostume")
+    base_costume = gesture_fixture()
+    # The extra Actor may have a different facing than the upstream hero.
+    # Exercise the same two COUNT events in every native costume direction.
+    gesture = next(animation for animation in base_costume.animations
+                   if animation.name == "gesture")
+    commands = gesture.directions[0].commands
+    directions = tuple(CostumeDirection(direction, commands, loop=False)
+                       for direction in ("N", "E", "S", "W"))
+    costume = replace(base_costume, name="StudioCompanionCostume",
+                      animations=tuple(replace(animation, directions=directions)
+                                       if animation.name == "gesture" else animation
+                                       for animation in base_costume.animations))
     document = GameDocument("NativeActorProbe", (scrolling_fixture(), destination_fixture()),
                             (costume,), (
-                                ActorAsset("Companion", costume.name, "Harbor", 410, 110, "W", "Companion"),
+                                ActorAsset("Companion", costume.name, "Harbor", 410, 110, "S", "Companion",
+                                           "gesture"),
                                 ActorAsset("Guide", costume.name, "Harbor", 470, 110, "E", "Guide"),
                             ))
     encoded = canonical_json(document)
@@ -31,13 +86,67 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
     launch_smoke(game, destination / "screenshots", scene_only=True)
     result = {"native_actor_link_passed": True, "stock_scummvm_launch_passed": True,
               "actor_count": len(document.actors), "shared_costume_count": len(document.costumes),
-              "actors": [actor.id for actor in document.actors]}
+              "actors": [actor.id for actor in document.actors],
+              "initial_animation_compiled": True,
+              "animation_gameplay_verified": False}
     (destination / "native-actor-report.json").write_text(json.dumps(result, indent=2) + "\n",
                                                              encoding="utf-8")
     return result
 
 
+def run_actor_count_probe(upstream: Path, actor_build: Path, destination: Path) -> dict:
+    """Prove two authored-Actor COUNT events, with a three-event control."""
+    # Reuse the validated link probe's compiler inputs; its COST was already
+    # staged in the external Road fixture and must not be copied a second time.
+    resources = actor_build / "build" / "resources"
+    for name in ("bootstrap.roobj", "Harbor.scc", "Cellar.roobj", "game-goal.json"):
+        if not (resources / name).is_file():
+            raise ValueError(f"Missing compiled Actor fixture resource: {name}")
+    source = (resources / "Harbor.scc").read_text(encoding="utf-8")
+    road = upstream / "examples" / "road"
+
+    def run_variant(target: Path, generated_source: str) -> int:
+        target.mkdir(parents=True, exist_ok=True)
+        room_source = target / "Harbor.scc"
+        room_source.write_text(generated_source, encoding="utf-8")
+        room_object = target / "Harbor.roobj"
+        subprocess.run([str(_tool(upstream, "scc")), "-V", "6",
+                        "-I", str(upstream / "include"), "-I", str(resources),
+                        "-I", str(road), "-R", str(resources),
+                        "-o", str(room_object), str(room_source)], check=True, timeout=120)
+        subprocess.run([str(_tool(upstream, "sld")), "-o", str(target / "tentacle"),
+                        "-key", "0x69", str(resources / "bootstrap.roobj"),
+                        str(room_object), str(resources / "Cellar.roobj")],
+                       cwd=road, check=True, timeout=120)
+        verify_room_binary((target / "tentacle.001").read_bytes(), xor_key=0x69)
+        shutil.copyfile(resources / "game-goal.json", target / "game-goal.json")
+        launch_smoke(target, target / "screenshots", scene_only=True,
+                     allow_static_scene=True)
+        return visible_key_pixels(target / "screenshots")
+
+    baseline = run_variant(destination / "zero_counts", actor_count_room_source(source, 0))
+    first = run_variant(destination / "one_count", actor_count_room_source(source, 1))
+    positive = run_variant(destination / "two_counts", actor_count_room_source(source, 2))
+    control = run_variant(destination / "three_counts", actor_count_room_source(source, 3))
+    binding_pixels = {check: run_variant(destination / f"binding_{check}",
+                                         actor_binding_room_source(source, check))
+                      for check in ("room", "costume", "frame")}
+    passed = baseline < 40 and first < 40 and positive < 40 and control >= 40
+    report = {"authored_actor_count_verified": passed, "expected_events": 2,
+              "zero_count_key_pixels": baseline, "one_count_key_pixels": first,
+              "positive_key_pixels": positive, "control_key_pixels": control,
+              "actor_binding_key_pixels": binding_pixels}
+    (destination / "actor-count-report.json").write_text(json.dumps(report, indent=2) + "\n",
+                                                               encoding="utf-8")
+    if not passed:
+        raise RuntimeError(f"Authored Actor COUNT thresholds failed: {report}")
+    return report
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit("Usage: python -m adventure_studio.scumm_actor_probe SCUMMC_DIR OUTPUT_DIR")
-    print(run_actor_probe(Path(sys.argv[1]), Path(sys.argv[2])))
+    if len(sys.argv) == 3:
+        print(run_actor_probe(Path(sys.argv[1]), Path(sys.argv[2])))
+    elif len(sys.argv) == 5 and sys.argv[1] == "--count":
+        print(run_actor_count_probe(Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4])))
+    else:
+        raise SystemExit("Usage: python -m adventure_studio.scumm_actor_probe SCUMMC_DIR OUTPUT_DIR | --count SCUMMC_DIR ACTOR_BUILD OUTPUT_DIR")

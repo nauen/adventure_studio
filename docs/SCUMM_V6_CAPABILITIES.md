@@ -61,11 +61,11 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | ID | Fähigkeit | Analyse | Studio | Test | ScummVM | Nächstes Gate |
 | --- | --- | --- | --- | --- | --- | --- |
 | A01 | Native Actor-Costume-Ressourcen | A | I (COST + Projekt-JSON/Actor-Bindung) | T | V (Fixture) | Actor-Spielbindung via externem Bootstrap; unabhängigere Ausgabe offen |
-| A02 | Actor-Platzierung/Richtung/Teleport | A (Teil) | I (Anfangsposition/Richtung) | T (Quelltext) | – | Mehr-Actor-ScummVM-Gate und Umplatzieren zur Laufzeit |
+| A02 | Actor-Platzierung/Richtung/Teleport | A (Teil) | I (Anfangsposition/Richtung) | T | V (Mehr-Actor-Fixture) | Allgemeiner Laufzeit-Teleport und Spieler-Actor |
 | A03 | Actor-Walk/Pathfinding/Speed | A | I (Demo) | T (Teil) | V (Teil) | Modell + Walkboxen |
-| A04 | Stand-/Walk-/Talk-Costume-Frames | A | I (Frames/Richtungen) | T | V (Teil) | Animationssteuerung im Projektmodell |
+| A04 | Stand-/Walk-/Talk-Costume-Frames | A | I (Frames/Richtungen, benannte Startanimation) | T | V (Teil) | Weitere Animations- und Talk-Cues |
 | A05 | Actor-Skalierung/Z-Clip/Verdeckung | A | – | – | – | R06/R10 + Actor |
-| A06 | Costume-`COUNT` und Abfrage | A | I (COST-Cues) | T | V (Fixture) | Allgemeiner Action-/Condition-Export |
+| A06 | Costume-`COUNT` und Abfrage | A | I (COST-Cues) | T | V (Ego- und Projekt-Actor-Fixtures) | Allgemeiner Action-/Condition-Export |
 | A07 | Aktion während laufender Animation | A (Teil) | – | – | – | Script/Cue + Zähler |
 | A08 | Mehrere synchronisierte Actors | A (Teil) | – | – | – | Koordinierte Scriptslots |
 | A09 | Figur/Objekt-Einstieg, Abfahrt, Reaktion | A (Konzept) | – | – | – | Filmische End-to-End-Sequenz |
