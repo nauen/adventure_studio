@@ -125,6 +125,23 @@ Szenarien abgenommen, nicht anhand zusätzlicher spontaner Demo-Limits.
 
 ## Nächste drei priorisierte Pakete
 
+**Fortschritt 2026-11-07 nach den ursprünglichen P0.x-Planungen:**
+Der SCUMM-v6-Raumparser (P0.1), native Z-Masken (P0.2) sowie Walkboxen,
+BOXM und vertikale SCAL-Slots (P0.3) wurden in nachfolgenden vertikalen
+Paketen umgesetzt und im unveränderten ScummVM geprüft; für konkrete
+Nachweise siehe `scumm-v6-perspective-scal-contract.md` und die GitHub-
+Actions-Läufe von PR #26/#27. Ein weiterer Teilbaustein der cineastischen
+Funktionen ist das typisierte `camera_cues`-Raummodell mit nativem
+`setCameraAt`, `panCameraTo`, `waitForCamera` und `cameraFollowActor`.
+Die unabhängigen ScummVM-Bildkompositionen sind im Actions-Lauf
+`42405122040` verifiziert ([Kamera-Vertrag](scumm-v6-camera-cue-contract.md)).
+**Das nächste noch offene Schwerpunktpaket ist P0.4/P0.5:** native
+bewegte Objekte und Actor-/Costume-Animationen mit zeitlichen Phasen;
+vollständige Cutscene-Skip-Zustände bleiben P1.1 offen.
+
+Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
+ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
+
 1. **P0.1 – Binär-Roundtrip-Prüfer für ScummC-Räume; bestehende Modellgrenzen sind initial durch Regressionstests charakterisiert.**
    Chunk-Baum, Tag-/Größenprüfung, SMAP-/ZPxx-Offsets,
    OBIM/OBCD-IDs; erst wenn das bestehende Fixture valide parsebar
