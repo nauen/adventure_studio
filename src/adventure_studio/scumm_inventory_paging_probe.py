@@ -56,7 +56,7 @@ def verify_inventory_paging(game: Path, output: Path) -> None:
                 capture(frame)
                 if colored_item_pixels(output, frame, rgb) < 40:
                     raise RuntimeError(f"Inventory item {index} not visible in the room")
-                x, y = colored_item_center(output, frame, rgb, fuzz_percent=0)
+                x, y = colored_item_center(output, frame, rgb, fuzz_percent=4)
                 click(x, y)
                 acquired = False
                 pickup_started = time.monotonic()
@@ -73,7 +73,7 @@ def verify_inventory_paging(game: Path, output: Path) -> None:
                         click(328, 506)
                         time.sleep(0.35)
                         capture(frame)
-                        retry_x, retry_y = colored_item_center(output, frame, rgb, fuzz_percent=0)
+                        retry_x, retry_y = colored_item_center(output, frame, rgb, fuzz_percent=4)
                         click(retry_x, retry_y)
                     time.sleep(0.35)
                 if not acquired:
