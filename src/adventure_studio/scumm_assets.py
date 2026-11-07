@@ -81,6 +81,17 @@ class Walkbox:
     mask: int = 0
     flags: int = 0
     scale: int = 255
+    scale_slot: int | None = None
+
+
+@dataclass(frozen=True)
+class ScaleCurve:
+    """Native SCUMM-v6 vertical perspective curve in one SCAL slot (1..4)."""
+    slot: int
+    scale1: int
+    y1: int
+    scale2: int
+    y2: int
 
 
 @dataclass(frozen=True)
@@ -101,6 +112,8 @@ class RoomAsset:
     walkboxes: tuple[Walkbox, ...] = ()
     box_routes: tuple[tuple[int | None, ...], ...] = ()
     scale_slots: bytes | None = None
+    scale_curves: tuple[ScaleCurve, ...] = ()
+    demo_walk_to_y: int | None = None
 
 
 def _scumm_string(value: str) -> str:
@@ -143,6 +156,25 @@ def _validate(room: RoomAsset) -> None:
         if any(type(value) is not int or not 0 <= value <= limit
                for value, limit in ((box.mask, 255), (box.flags, 255), (box.scale, 65535))):
             raise ValueError("Invalid native walkbox mask, flags or scale")
+        if box.scale_slot is not None and (
+            type(box.scale_slot) is not int or not 1 <= box.scale_slot <= 4
+            or box.scale != 255
+        ):
+            raise ValueError("Walkbox scale slot requires slot 1..4 and default constant scale 255")
+    if len(room.scale_curves) > 4 or len({curve.slot for curve in room.scale_curves}) != len(room.scale_curves):
+        raise ValueError("SCAL supports at most four distinct scale curves")
+    for curve in room.scale_curves:
+        if (type(curve.slot) is not int or not 1 <= curve.slot <= 4
+            or any(type(v) is not int for v in (curve.scale1, curve.y1, curve.scale2, curve.y2))
+            or not 1 <= curve.scale1 <= 255 or not 1 <= curve.scale2 <= 255
+            or not 0 <= curve.y1 < curve.y2 < height):
+            raise ValueError("Invalid SCAL curve endpoint or slot")
+    if room.scale_slots is not None and room.scale_curves:
+        raise ValueError("Raw SCAL bytes and typed curves cannot be combined")
+    curve_slots = {curve.slot for curve in room.scale_curves}
+    if any(box.scale_slot is not None and box.scale_slot not in curve_slots
+           for box in room.walkboxes):
+        raise ValueError("Walkbox references an undefined SCAL curve")
     count = len(room.walkboxes) + 1
     if room.box_routes:
         if not room.walkboxes or len(room.box_routes) != count or any(len(row) != count for row in room.box_routes):
@@ -157,6 +189,11 @@ def _validate(room: RoomAsset) -> None:
         or not 0 <= room.demo_walk_to_x < width
     ):
         raise ValueError("Demo walk target outside room bounds")
+    if room.demo_walk_to_y is not None and (
+        room.demo_walk_to_x is None or type(room.demo_walk_to_y) is not int
+        or not 0 <= room.demo_walk_to_y < height
+    ):
+        raise ValueError("Demo walk Y target requires a valid X target and room Y coordinate")
     if room.goal_text is not None:
         _scumm_string(room.goal_text)
     ids: set[str] = set()
@@ -533,7 +570,8 @@ def scummc_room_source(room: RoomAsset, catalog=None,
     if room.music_id is not None:
         parts.append(f"        startMusic({room.music_id});\n")
     if room.demo_walk_to_x is not None:
-        parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, 100);\n")
+        target_y = room.demo_walk_to_y if room.demo_walk_to_y is not None else 100
+        parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, {target_y});\n")
     if room.goal_text is not None:
         parts.append(say(f"room.{room.name.lower()}.goal", room.goal_text, 8))
     parts.append("    }\n")
@@ -599,7 +637,8 @@ def _native_box_file(room: RoomAsset) -> bytes:
     for box in room.walkboxes:
         coordinates = [number for point in box.corners for number in point]
         boxes.append(0)  # empty name; named box format still uses a length byte
-        boxes.extend(struct.pack("<8hBBH", *coordinates, box.mask, box.flags, box.scale))
+        native_scale = (0x8000 | (box.scale_slot - 1)) if box.scale_slot is not None else box.scale
+        boxes.extend(struct.pack("<8hBBH", *coordinates, box.mask, box.flags, native_scale))
     boxd = _chunk(b"boxd", bytes(boxes))
     if room.box_routes:
         routes = room.box_routes
@@ -622,7 +661,14 @@ def _native_box_file(room: RoomAsset) -> bytes:
             matrix.extend((index, last, destination))
             index = last + 1
         matrix.append(255)
-    scal = room.scale_slots if room.scale_slots is not None else bytes(32)
+    if room.scale_curves:
+        fields = bytearray(32)
+        for curve in room.scale_curves:
+            struct.pack_into("<HHHH", fields, (curve.slot - 1) * 8,
+                             curve.scale1, curve.y1, curve.scale2, curve.y2)
+        scal = bytes(fields)
+    else:
+        scal = room.scale_slots if room.scale_slots is not None else bytes(32)
     return boxd + _chunk(b"BOXM", bytes(matrix)) + _chunk(b"SCAL", scal)
 
 
