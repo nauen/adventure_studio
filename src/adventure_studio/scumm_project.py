@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .palette_animation import PaletteCycle
+from .scumm_costume import (CostumeAnimation, CostumeAsset, CostumeDirection,
+                           CostumeFrame, validate_costume, write_costume_sources)
 from .scumm_assets import (CameraCue, CombineRule, RoomAsset, RoomHotspot, ScaleCurve, TalkChoice,
                            TalkRule, UseRule, Walkbox, ZPlane, _validate, write_game_sources)
 from .targets import RoomGeometry
@@ -23,6 +25,7 @@ from .targets import RoomGeometry
 class GameDocument:
     id: str
     rooms: tuple[RoomAsset, ...]
+    costumes: tuple[CostumeAsset, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -49,6 +52,23 @@ def document_dict(document: GameDocument) -> dict:
     return {
         "format_version": 1,
         "id": document.id,
+        **({"costumes": [{
+            "name": costume.name,
+            "palette": [list(rgb) for rgb in costume.palette],
+            "palette_first": costume.palette_first,
+            "palette_last": costume.palette_last,
+            "frames": [{"id": frame.id, "width": frame.width, "height": frame.height,
+                        "pixels": _encode_pixels(frame.pixels),
+                        "offset_x": frame.offset_x, "offset_y": frame.offset_y}
+                       for frame in costume.frames],
+            "animations": [{"name": animation.name,
+                            **({"index": animation.index} if animation.index is not None else {}),
+                            "directions": [{"direction": direction.direction,
+                                            "commands": list(direction.commands),
+                                            "loop": direction.loop}
+                                           for direction in animation.directions]}
+                           for animation in costume.animations],
+        } for costume in document.costumes]} if document.costumes else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -114,6 +134,12 @@ def _validate_document(document: GameDocument) -> None:
     room_names = [r.name for r in document.rooms]
     if len(set(room_names)) != len(room_names):
         raise ValueError("Duplicate room name")
+    costume_names = set()
+    for costume in document.costumes:
+        validate_costume(costume)
+        if costume.name in costume_names or costume.name in room_names:
+            raise ValueError("Duplicate or conflicting costume name")
+        costume_names.add(costume.name)
     for room in document.rooms:
         _validate(room)
         for destination in (r.destination_room for r in room.use_rules):
@@ -132,13 +158,50 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms"}, {"format_version", "id", "rooms"})
+    data = _only(root, {"format_version", "id", "rooms", "costumes"}, {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
     if not isinstance(data["rooms"], list):
         raise ValueError("Rooms must be a list")
     if len(data["rooms"]) > 64:
         raise ValueError("Too many rooms")
+    raw_costumes = data.get("costumes", [])
+    if not isinstance(raw_costumes, list):
+        raise ValueError("Costumes must be a list")
+    costumes = []
+    for raw_costume in raw_costumes:
+        costume = _only(raw_costume, {"name", "palette", "palette_first", "palette_last",
+                                     "frames", "animations"},
+                        {"name", "palette", "frames", "animations"})
+        if not isinstance(costume["frames"], list) or not isinstance(costume["animations"], list):
+            raise ValueError("Costume frames and animations must be lists")
+        frames = []
+        for raw_frame in costume["frames"]:
+            frame = _only(raw_frame, {"id", "width", "height", "pixels", "offset_x", "offset_y"},
+                          {"id", "width", "height", "pixels"})
+            frames.append(CostumeFrame(frame["id"], frame["width"], frame["height"],
+                                      _decode_pixels(frame["pixels"]),
+                                      frame.get("offset_x", 0), frame.get("offset_y", 0)))
+        animations = []
+        for raw_animation in costume["animations"]:
+            animation = _only(raw_animation, {"name", "index", "directions"},
+                              {"name", "directions"})
+            if not isinstance(animation["directions"], list):
+                raise ValueError("Costume directions must be a list")
+            directions = []
+            for raw_direction in animation["directions"]:
+                direction = _only(raw_direction, {"direction", "commands", "loop"},
+                                  {"direction", "commands"})
+                if not isinstance(direction["commands"], list):
+                    raise ValueError("Costume commands must be a list")
+                directions.append(CostumeDirection(direction["direction"],
+                                                   tuple(direction["commands"]),
+                                                   direction.get("loop", True)))
+            animations.append(CostumeAnimation(animation["name"], tuple(directions),
+                                               animation.get("index")))
+        costumes.append(CostumeAsset(costume["name"], tuple(tuple(rgb) for rgb in costume["palette"]),
+                                     tuple(frames), tuple(animations),
+                                     costume.get("palette_first", 16), costume.get("palette_last", 47)))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",
@@ -278,7 +341,7 @@ def parse_document(source: str) -> GameDocument:
             tuple(talk_rules),
             tuple(planes), tuple(boxes), routes, scale, tuple(curves), room.get("demo_walk_to_y"), tuple(camera_cues),
         ))
-    document = GameDocument(data["id"], tuple(rooms))
+    document = GameDocument(data["id"], tuple(rooms), tuple(costumes))
     _validate_document(document)
     return document
 
@@ -291,6 +354,8 @@ def export_document(document: GameDocument, directory: Path) -> None:
     """Generate identical files for identical inputs; never interpret code."""
     _validate_document(document)
     write_game_sources(document.rooms, directory)
+    for costume in document.costumes:
+        write_costume_sources(costume, directory)
 
 
 def main() -> int:

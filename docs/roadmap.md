@@ -75,6 +75,9 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Native Darstellung in ScummVM und positive/negative
         `getActorAnimCounter1`-Gameplay-Probe belegt
         ([COST-Vertrag](scumm-v6-native-costume-count-contract.md)).
+  - [x] Teil-Gate: COST-Frames und Animationen in `GameDocument`-JSON v1
+        authorbar, verlustfrei roundtrip-fähig und als ScummC-Inputs exportiert;
+        native Actor-Symbol-/Spielbindung ist weiterhin offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
