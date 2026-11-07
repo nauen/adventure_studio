@@ -1,0 +1,73 @@
+name: SCUMM inventory page gameplay smoke
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/scumm-inventory-paging.yml'
+      - 'src/adventure_studio/scumm_bootstrap.py'
+      - 'src/adventure_studio/scumm_inventory_paging_demo.py'
+      - 'src/adventure_studio/scumm_inventory_paging_probe.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'tests/test_scumm_bootstrap.py'
+  pull_request:
+    paths:
+      - '.github/workflows/scumm-inventory-paging.yml'
+      - 'src/adventure_studio/scumm_bootstrap.py'
+      - 'src/adventure_studio/scumm_inventory_paging_demo.py'
+      - 'src/adventure_studio/scumm_inventory_paging_probe.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'tests/test_scumm_bootstrap.py'
+
+jobs:
+  inventory-pages:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check inventory bootstrap contracts
+        run: PYTHONPATH=src python -m unittest discover -s tests -p test_scumm_bootstrap.py -v
+      - name: Install ScummC tools and headless interaction dependencies
+        timeout-minutes: 18
+        run: |
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick
+      - name: Build compatible upstream ScummC tools
+        run: |
+          git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
+          test -f /tmp/scummc-upstream/man/tools/scc.xml
+          sed -i 's@$(SRCDIR)/man/%.xml@$(SRCDIR)/man/tools/%.xml@g; s@$(SRCDIR)/man/header.xslt@$(SRCDIR)/man/tools/header.xslt@g' /tmp/scummc-upstream/Makefile.target
+          cd /tmp/scummc-upstream
+          ./configure
+          make -j2
+      - name: Prepare upstream character resources
+        working-directory: /tmp/scummc-upstream/examples/road
+        run: |
+          make
+          test -s vera-gui.char
+      - name: Compile nine-inventory-object SCUMM v6 game
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.scumm_inventory_paging_demo /tmp/paging-story
+          python -m adventure_studio.scumm_toolchain /tmp/paging-story /tmp/scummc-upstream /tmp/paging-game
+          test -s /tmp/paging-game/tentacle.000
+          test -s /tmp/paging-game/tentacle.001
+      - name: Collect nine objects and verify both inventory arrows in ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_inventory_paging_probe /tmp/paging-game /tmp/paging-evidence
+      - name: Upload inventory paging screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inventory-paging-evidence
+          if-no-files-found: ignore
+          path: |
+            /tmp/paging-evidence/*.png
+            /tmp/paging-evidence/*.json
+            /tmp/paging-evidence/scummvm.log
