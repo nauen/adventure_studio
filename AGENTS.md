@@ -6,10 +6,12 @@ Dieses Dokument gilt für Arbeit am Repository `nauen/adventure_studio`.
 
 1. `docs/PRODUCT_VISION.md` – unveränderliches Hauptziel.
 2. `docs/PROJECT_STATUS.md` – aktueller Projektstand und nächstes Paket.
-3. `docs/SCUMM_V6_CAPABILITIES.md` – genaue Funktionsabdeckung.
-4. `docs/roadmap.md` – Abhängigkeiten, Phasen, Akzeptanzkriterien.
-5. `docs/architecture-contracts.md` und relevante ADRs – Modell-/Exportgrenzen. 
-6. Die für das konkrete Thema einschlägigen Source-Audits.
+3. `docs/SCUMM_V6_CAPABILITIES.md` – **einziger** Funktionskatalog und Status.
+4. `docs/scumm-v6-reference/README.md` – verbindlicher technischer Referenzvertrag,
+   Grundprimitiven und Szenario-Abnahmen.
+5. `docs/roadmap.md` – Abhängigkeiten, Phasen, Akzeptanzkriterien.
+6. `docs/architecture-contracts.md` und relevante ADRs – Modell-/Exportgrenzen.
+7. Nur die für eine **noch offene** Frage einschlägigen Source-Audits.
 
 Vor Änderungen außerdem `git status`, aktuelle PRs/CI und die betroffenen
 Tests prüfen. Vorhandene Änderungen respektieren; keinen fremden
@@ -49,8 +51,12 @@ nachweisen. Kein neuer Engine-Befehl ohne Versions-/Bytecode-Beweis.
   deterministischer Test → Interpreternachweis, soweit erforderlich.
 - Keine neue Architekturschicht einführen, bevor der native
   Compiler-/Interpreterpfad untersucht ist.
-- Bei unklarer Semantik die entsprechende Primärquelle lesen und
-  Unsicherheit ausdrücklich dokumentieren.
+- Bereits dokumentierte ScummC-/ScummVM-Semantik aus
+  `docs/scumm-v6-reference/NATIVE_PRIMITIVES.md` wiederverwenden.
+  Quellcode nur für fehlende Encoder-/Decoder-/v6-Varianten-Beweise oder
+  Versionswechsel erneut analysieren; Unsicherheit ausdrücklich dokumentieren.
+- Den verbindlichen Scope nicht durch eine neue kleine Demo neu definieren.
+  Die Referenz-Szenarien werden aus wiederverwendbaren nativen Bausteinen erfüllt.
 
 ## Evidenz- und Statusregeln
 
