@@ -227,7 +227,8 @@ def key_center(output_directory: Path, frame: str = "end") -> tuple[int, int]:
 
 
 def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
-                   expect_scroll: bool = True) -> int:
+                   expect_scroll: bool = True,
+                   initial_pickup_rgb: tuple[int, int, int] | None = None) -> int:
     """Require visible frame variation; this alone does not prove scrolling."""
     if (type(minimum_changed_pixels) is not int or minimum_changed_pixels < 0
             or (expect_scroll and minimum_changed_pixels == 0)):
@@ -248,7 +249,8 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
     # 1024x768 Xvfb screen. The fixture's sky is blue in the first half and
     # orange in the second. This tests the *visible* camera pan signature.
     scroll_signature = close_rgb(start_rgb, (70, 130, 190)) and close_rgb(end_rgb, (240, 175, 95))
-    key_pixels = visible_key_pixels(output_directory)
+    key_pixels = (colored_item_pixels(output_directory, "end", initial_pickup_rgb)
+                  if initial_pickup_rgb is not None else visible_key_pixels(output_directory))
     (output_directory / "scummvm-frame-report.json").write_text(
         json.dumps({
             "changed_pixels": count,
@@ -347,6 +349,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 {item["item_id"] for item in combinations[3]["ingredients"]}):
             raise ValueError("Fourth recipe must consume the combined branch result")
     recipe_plan = plan_recipes(combinations, route[0]["item_id"]) if auto_recipe else ()
+    initial_ingredient = recipe_plan[0]["ingredients"][0] if auto_recipe else None
+    initial_rgb = tuple(initial_ingredient["rgb"]) if initial_ingredient is not None else None
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("A virtual X display is required")
 
@@ -399,7 +403,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             final_snapshot = capture_frame("end")
             changed = compare_frames(output_directory,
                                      minimum_changed_pixels=0 if allow_static_scene else 500,
-                                     expect_scroll=not allow_static_scene)
+                                     expect_scroll=not allow_static_scene,
+                                     initial_pickup_rgb=initial_rgb)
             if scene_only:
                 print(f"Story-compiled SCUMM room rendered and scrolled: {changed} changed pixels")
                 print(f"Scene-only screenshots: {output_directory}")
@@ -440,7 +445,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError(f"Mouse input failed: {verb_click.stderr}")
             time.sleep(0.3)
             capture_frame("pre-pickup")
-            key_x, key_y = key_center(output_directory, "pre-pickup")
+            key_x, key_y = (colored_item_center(output_directory, "pre-pickup", initial_rgb,
+                                               fuzz_percent=4) if initial_rgb is not None
+                            else key_center(output_directory, "pre-pickup"))
             click = subprocess.run(
                 ["xdotool", "mousemove", str(key_x), str(key_y), "click", "1"],
                 capture_output=True, text=True, timeout=5, check=False,
@@ -448,7 +455,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             if click.returncode:
                 raise RuntimeError(f"Key mouse input failed: {click.stderr}")
             picked_up = False
-            remaining = visible_key_pixels(output_directory)
+            remaining = (colored_item_pixels(output_directory, "pre-pickup", initial_rgb)
+                         if initial_rgb is not None else visible_key_pixels(output_directory))
             inventory_pixels = 0
             pickup_start = time.monotonic()
             pickup_deadline = pickup_start + 20.0
@@ -457,8 +465,11 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit during pickup (exit={process.returncode})")
                 capture_frame("pickup")
-                remaining = visible_key_pixels(output_directory, "pickup")
-                inventory_pixels = inventory_key_pixels(output_directory)
+                remaining = (colored_item_pixels(output_directory, "pickup", initial_rgb)
+                             if initial_rgb is not None else visible_key_pixels(output_directory, "pickup"))
+                inventory_pixels = (colored_item_pixels(output_directory, "pickup", initial_rgb,
+                                                       inventory=True)
+                                    if initial_rgb is not None else inventory_key_pixels(output_directory))
                 if remaining < 10 and inventory_pixels >= 40:
                     picked_up = True
                     break
@@ -475,7 +486,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     )
                     time.sleep(0.3)
                     capture_frame("pre-pickup-retry")
-                    retry_x, retry_y = key_center(output_directory, "pre-pickup-retry")
+                    retry_x, retry_y = (colored_item_center(output_directory, "pre-pickup-retry", initial_rgb,
+                                                            fuzz_percent=4) if initial_rgb is not None
+                                        else key_center(output_directory, "pre-pickup-retry"))
                     subprocess.run(
                         ["xdotool", "mousemove", str(retry_x), str(retry_y), "click", "1"],
                         check=True, timeout=5,
@@ -810,14 +823,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                                                  final_rgb, inventory=True)
                 capture_frame("pickup")
             if verify_recipe and auto_recipe:
-                # The shared pickup prelude collected the uniquely gold first
-                # ingredient. All subsequent actions follow the topologically
-                # sorted manifest, not a fixed number of recipe branches.
-                gold = [item["item_id"] for recipe in recipe_plan for item in recipe["ingredients"]
-                        if tuple(item["rgb"]) == (255, 220, 75)]
-                if len(set(gold)) != 1:
-                    raise ValueError("Automatic replay needs exactly one gold starting ingredient")
-                owned = {gold[0]}
+                # The common pickup prelude collected the first physical
+                # ingredient selected by the planner, regardless of palette.
+                owned = {initial_ingredient["item_id"]}
                 produced_ids = {recipe["result"]["item_id"] for recipe in recipe_plan}
                 completed_recipes = []
                 for recipe_index, recipe in enumerate(recipe_plan):
