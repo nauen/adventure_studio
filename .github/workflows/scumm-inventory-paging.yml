@@ -82,6 +82,11 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/nine-recipe-game /tmp/nine-recipe-evidence --scene-only
+      - name: Complete all four recipes and enter the goal room in ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/nine-recipe-game /tmp/nine-recipe-full-evidence --recipe-four-only
       - name: Print inventory interaction diagnostics on failure
         if: failure()
         run: |
@@ -103,3 +108,5 @@ jobs:
             /tmp/paging-evidence/scummvm.log
             /tmp/nine-recipe-evidence/*.png
             /tmp/nine-recipe-evidence/*.json
+            /tmp/nine-recipe-full-evidence/*.png
+            /tmp/nine-recipe-full-evidence/*.json
