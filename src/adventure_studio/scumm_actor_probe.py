@@ -60,11 +60,14 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
     return result
 
 
-def run_actor_count_probe(upstream: Path, destination: Path) -> dict:
+def run_actor_count_probe(upstream: Path, actor_build: Path, destination: Path) -> dict:
     """Prove two authored-Actor COUNT events, with a three-event control."""
-    base = destination / "base"
-    run_actor_probe(upstream, base)
-    resources = base / "build" / "resources"
+    # Reuse the validated link probe's compiler inputs; its COST was already
+    # staged in the external Road fixture and must not be copied a second time.
+    resources = actor_build / "build" / "resources"
+    for name in ("bootstrap.roobj", "Harbor.scc", "Cellar.roobj", "game-goal.json"):
+        if not (resources / name).is_file():
+            raise ValueError(f"Missing compiled Actor fixture resource: {name}")
     source = (resources / "Harbor.scc").read_text(encoding="utf-8")
     road = upstream / "examples" / "road"
 
@@ -103,7 +106,7 @@ def run_actor_count_probe(upstream: Path, destination: Path) -> dict:
 if __name__ == "__main__":
     if len(sys.argv) == 3:
         print(run_actor_probe(Path(sys.argv[1]), Path(sys.argv[2])))
-    elif len(sys.argv) == 4 and sys.argv[1] == "--count":
-        print(run_actor_count_probe(Path(sys.argv[2]), Path(sys.argv[3])))
+    elif len(sys.argv) == 5 and sys.argv[1] == "--count":
+        print(run_actor_count_probe(Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4])))
     else:
-        raise SystemExit("Usage: python -m adventure_studio.scumm_actor_probe [--count] SCUMMC_DIR OUTPUT_DIR")
+        raise SystemExit("Usage: python -m adventure_studio.scumm_actor_probe SCUMMC_DIR OUTPUT_DIR | --count SCUMMC_DIR ACTOR_BUILD OUTPUT_DIR")
