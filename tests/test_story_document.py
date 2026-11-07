@@ -15,9 +15,32 @@ THREE_ITEMS = EXAMPLE.with_name("mini_story_three_items.json")
 CHAIN = EXAMPLE.with_name("mini_story_chain.json")
 RECIPE = EXAMPLE.with_name("recipe_story.json")
 RECIPE_CHAIN = EXAMPLE.with_name("recipe_chain_story.json")
+RECIPE_GRAPH = EXAMPLE.with_name("recipe_graph_story.json")
 
 
 class StoryDocumentTests(unittest.TestCase):
+    def test_three_recipe_converging_graph_compiles_from_json(self):
+        from adventure_studio.story import verify_story
+        from adventure_studio.story_to_scumm import compile_story_to_scumm
+        from adventure_studio.scumm_project import canonical_json, parse_document
+        story = parse_story_document(RECIPE_GRAPH.read_text(encoding="utf-8"))
+        route = verify_story(story)
+        self.assertEqual(len(route), 8)
+        self.assertIn("combine:MixJuice", route)
+        self.assertIn("combine:MixCatalyst", route)
+        self.assertIn("combine:MixElixir", route)
+        game = compile_story_to_scumm(story)
+        self.assertEqual(len(game.rooms[0].combine_rules), 3)
+        self.assertEqual(game.rooms[0].combine_rules[-1].result_id, "Elixir")
+        self.assertEqual(len(game.rooms[0].palette), 13)
+        self.assertEqual(parse_document(canonical_json(game)), game)
+        with tempfile.TemporaryDirectory() as tmp:
+            result = build_story_document(RECIPE_GRAPH.read_text(encoding="utf-8"), Path(tmp))
+            source = (result.resource_directory / "Kitchen.scc").read_text()
+            for index in range(3):
+                self.assertIn(f"script combine_{index}()", source)
+            self.assertIn("pickupObject(Elixir, VAR_ROOM)", source)
+
     def test_two_stage_recipe_chain_compiles_and_reaches_goal(self):
         from adventure_studio.story import verify_story
         from adventure_studio.story_to_scumm import compile_story_to_scumm
