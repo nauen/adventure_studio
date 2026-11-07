@@ -13,6 +13,8 @@ on:
       - 'src/adventure_studio/scumm_room_visual_probe.py'
       - 'src/adventure_studio/scumm_scal_probe.py'
       - 'src/adventure_studio/scumm_camera_probe.py'
+      - 'src/adventure_studio/scumm_costume.py'
+      - 'src/adventure_studio/scumm_costume_probe.py'
       - 'src/adventure_studio/palette_animation.py'
       - 'src/adventure_studio/palette_demo.py'
       - 'src/adventure_studio/scumm_palette_probe.py'
@@ -41,6 +43,7 @@ on:
       - 'tests/test_scumm_room_primitives.py'
       - 'tests/test_scumm_scal_probe.py'
       - 'tests/test_scumm_camera_cues.py'
+      - 'tests/test_scumm_costume.py'
       - 'tests/test_palette_animation.py'
       - 'tests/test_palette_demo.py'
       - 'tests/test_scumm_palette_probe.py'
@@ -103,6 +106,21 @@ jobs:
           ./configure
           make -j2
           find . -type f \( -name scc -o -name sld \) -print
+      - name: Compile authored SCUMM v6 COST with two explicit COUNT events
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.scumm_costume_probe /tmp/scummc-upstream /tmp/native-costume
+      - name: Retain generated native COST research evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-costume-count
+          path: |
+            /tmp/native-costume/native-costume-report.json
+            /tmp/native-costume/NativeGesture.scost
+            /tmp/native-costume/NativeGesture.cost
+          if-no-files-found: ignore
       - name: Build upstream road example
         working-directory: /tmp/scummc-upstream/examples/road
         run: make
