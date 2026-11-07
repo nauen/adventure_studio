@@ -43,9 +43,9 @@ class RoomNativePrimitiveTests(unittest.TestCase):
                              (room.geometry.room_width, room.geometry.room_height))
             self.assertEqual(struct.unpack_from("<I", mask, 46)[0], 2)
             data = (Path(directory) / "Harbor.box").read_bytes()
-            self.assertEqual(data[:4], b"BOXD")
+            self.assertEqual(data[:4], b"boxd")
             boxd_length = struct.unpack_from(">I", data, 4)[0]
-            self.assertEqual(boxd_length, 8 + 2 + 20 * 3)
+            self.assertEqual(boxd_length, 8 + 21 * 2)
             self.assertEqual(data[boxd_length:boxd_length + 4], b"BOXM")
             boxm_length = struct.unpack_from(">I", data, boxd_length + 4)[0]
             self.assertEqual(data[boxd_length + boxm_length:boxd_length + boxm_length + 4], b"SCAL")

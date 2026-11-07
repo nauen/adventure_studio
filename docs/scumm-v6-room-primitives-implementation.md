@@ -12,8 +12,10 @@ von tatsächlich nachgewiesenem ScummVM-Verhalten.
   `scc_roobj_gen_rmim` interpretiert jeden nichtnull Bildindex als
   gesetztes Maskenbit und schreibt `ZP01` usw. in `IM00`.
 - `scc_roobj.c` `scc_roobj_set_boxd`: `boxd = "Room.box";`
-  liest einen `BOXD`-Block (u16 LE Boxanzahl, anschließend je 20 Bytes
-  pro Box) und optionale `BOXM`-/`SCAL`-Blöcke aus derselben Datei.
+  liest hier einen **kleingeschriebenen** `boxd`-Block (ein Byte Namenslänge,
+  anschließend 20 Bytes pro Box), fügt Box 0 selbst hinzu und übernimmt
+  `BOXM`-/`SCAL`-Blöcke aus derselben Datei. Die alternative **großgeschriebene**
+  `BOXD`-Form lädt die folgenden Matrix-/Skalenblöcke dagegen nicht mit.
   Ein Boxeintrag hat vier Ecken (je x/y als i16 LE), danach je ein Byte
   Maske und Flags, danach u16 LE Scale.
 - `write.c` `scc_write_boxm`: eine Matrixzeile besteht aus

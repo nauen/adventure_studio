@@ -586,19 +586,21 @@ def _chunk(tag: bytes, payload: bytes) -> bytes:
 
 
 def _native_box_file(room: RoomAsset) -> bytes:
-    """ScummC scc_roobj_set_boxd input: BOXD plus BOXM and SCAL.
+    """ScummC scc_roobj_set_boxd input: named `boxd` plus BOXM and SCAL.
 
-    The BOXD form starts with a reserved number-zero box; ScummC reads the
-    remaining chunks verbatim.  Each BOXM row is run-length encoded as
+    The lowercase `boxd` format contains name-prefixed entries; ScummC adds
+    reserved box zero itself and then reads BOXM and SCAL from the same file.
+    The uppercase `BOXD` input form does *not* load these trailing chunks.
+    Each BOXM row is run-length encoded as
     (first destination, last destination, next-hop) triples, 0xff terminated.
     """
     _validate(room)
-    sentinel = struct.pack("<8hBBH", *([-32000] * 8), 0, 0, 255)
-    boxes = bytearray(sentinel)
+    boxes = bytearray()
     for box in room.walkboxes:
         coordinates = [number for point in box.corners for number in point]
+        boxes.append(0)  # empty name; named box format still uses a length byte
         boxes.extend(struct.pack("<8hBBH", *coordinates, box.mask, box.flags, box.scale))
-    boxd = _chunk(b"BOXD", struct.pack("<H", len(room.walkboxes) + 1) + boxes)
+    boxd = _chunk(b"boxd", bytes(boxes))
     if room.box_routes:
         routes = room.box_routes
     else:
