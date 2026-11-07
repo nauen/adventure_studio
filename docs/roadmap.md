@@ -70,6 +70,13 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
       Parent-State und aktualisierter Hitbox.
 - [ ] **P0.5:** Native Actor-/Costume-Ressourcen, Animation, COUNT-Marker
       und zeitabhängige Skriptreaktionen.
+  - [x] Teil-Gate: unabhängig erzeugte, original-v6-COST-Ressourcen mit
+        Richtungs-/Framefolgen und expliziten `COUNT`-Kommandos via ScummC.
+        Native Darstellung in ScummVM und positive/negative
+        `getActorAnimCounter1`-Gameplay-Probe belegt
+        ([COST-Vertrag](scumm-v6-native-costume-count-contract.md)).
+  - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
+        projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
       Kontrollfluss mit Skip-Endzustand.
   - [x] Teil-Gate: unbeschränkte native v6-Raum-Kamera-Cues

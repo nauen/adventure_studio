@@ -42,17 +42,32 @@ in ScummVM ausgeführtes Actor-Timing.**
   **horizontal bewegungstoleranten** Costume-Bildregion besitzen. Im ersten
   nativen Lauf wurden 1.536 Pixel gemessen (Actions `42407361581`). Dies ist ein **sichtbarer
   COST-Resource-Nachweis**, nicht bereits ein Animations-Counter-Test.
+- Die Bilddateien verwenden **lokale Palette-Indizes 0–31** und genau die
+  gewählte 32-Farben-COST-Palette. Dies vermeidet die zuvor beobachtete
+  ScummC-Warnung über unterschiedliche BMP-/COST-Palettengrößen.
+- Die isolierte `--count`-Probe verwendet dasselbe generierte Costume und
+  verifiziert in stock ScummVM einen Original-v6-Scriptpfad:
+  `animateActor(VAR_EGO,24)` → `getActorAnimCounter1(VAR_EGO)` →
+  `breakScript()` → `setObjectState(Key,0)`. Mit mindestens **zwei**
+  markierten COUNT-Ereignissen verschwindet der Schlüssel (0 sichtbare
+  Schlüsselpixel). Die **Negativkontrolle** verlangt drei Ereignisse;
+  dann bleiben 112 Schlüsselpixel sichtbar. Nachweis:
+  GitHub Actions `42408292339`; dieselben Gates wurden mit korrigierter
+  lokaler BMP-Palette im Lauf `42408510454` erneut bestanden.
 
 ## Noch offen für die eigentliche Gameplay-Abnahme
 
 1. Die generierte COST-Ressource im allgemeinen Projektmodell einem
    **eigenständig exportierten** Actor zuweisen, statt im Fixture den
    externen Bootstrap auszutauschen; Animationen gezielt auslösen.
-2. `getActorAnimCounter1` und dessen v6-Laufzeitpfad
-   quellenbasiert verifizieren und die beiden Ereignisse im Spielzustand
-   nachweisen; **kein** `waitForAnimation` als Frame-Ereignis missbrauchen.
+2. Den nachgewiesenen `getActorAnimCounter1`-Wartepfad als **allgemeinen
+   versionierten Action-/Condition-Baustein** im Projekt-/Story-Modell
+   verfügbar machen; der Proof verwendet derzeit noch ein isoliertes
+   natives Testscript statt einer beliebigen Editor-Aktion.
 3. Mehrere Actors, gegenseitige Scripts, Eingabe-Zeitfenster, Skip- und
    Save/Load-Zustand separat implementieren und als spielbare Abläufe prüfen.
 
 Bis diese Schritte bestanden sind, bleiben `A01`, `A04`, `A06`, `A07`
-in der Fähigkeitsmatrix **offen oder nur teilweise implementiert**.
+in der Fähigkeitsmatrix **nur teilweise implementiert**. Der native
+`COUNT`-Gameplay-Nachweis für das konkrete Fixture ist vorhanden; die
+allgemeine Autorenfunktion ist es noch nicht.
