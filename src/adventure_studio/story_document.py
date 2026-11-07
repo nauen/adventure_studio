@@ -61,7 +61,7 @@ def parse_story_document(raw: str) -> Story:
     entities: dict[str, tuple] = {}
     for key, entity_type in _ENTITY_TYPES.items():
         entries = story_data[key] if key in story_data else []
-        if not isinstance(entries, list) or len(entries) > 128:
+        if not isinstance(entries, list):
             raise ValueError(f"Invalid {key} collection")
         expected = {field.name for field in fields(entity_type)}
         parsed = []
@@ -70,7 +70,7 @@ def parse_story_document(raw: str) -> Story:
             for field_name, value in values.items():
                 if (entity_type is Puzzle and field_name == "requires"
                         or entity_type is Recipe and field_name == "ingredients"):
-                    if not isinstance(value, list) or len(value) > 32:
+                    if not isinstance(value, list):
                         raise ValueError("Invalid item requirements")
                     for item_id in value:
                         _text(item_id, field_name)
