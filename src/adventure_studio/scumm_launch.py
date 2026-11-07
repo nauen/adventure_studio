@@ -319,8 +319,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     if not isinstance(combinations, list) or len(combinations) > 16:
         raise ValueError("Invalid fixture combination manifest")
     if verify_recipe:
-        if not 1 <= len(combinations) <= 3 or gates or len(route) != 1:
-            raise ValueError("Recipe smoke requires one to three combinations and one exit")
+        if not 1 <= len(combinations) <= 4 or gates or len(route) != 1:
+            raise ValueError("Recipe smoke requires one to four combinations and one exit")
         for recipe in combinations:
             if (not isinstance(recipe, dict) or set(recipe) != {"room_id", "ingredients", "result"}
                 or not isinstance(recipe["ingredients"], list) or len(recipe["ingredients"]) != 2
@@ -333,10 +333,14 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 combinations[0]["result"]["item_id"] not in
                 [item["item_id"] for item in combinations[1]["ingredients"]]):
             raise ValueError("Recipe chain smoke requires dependent combinations in order")
-        if len(combinations) == 3 and (
+        if len(combinations) in (3, 4) and (
                 {item["item_id"] for item in combinations[2]["ingredients"]}
                 != {combinations[0]["result"]["item_id"], combinations[1]["result"]["item_id"]}):
             raise ValueError("Recipe graph smoke requires two branches feeding a final recipe")
+        if len(combinations) == 4 and (
+                combinations[2]["result"]["item_id"] not in
+                {item["item_id"] for item in combinations[3]["ingredients"]}):
+            raise ValueError("Fourth recipe must consume the combined branch result")
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("A virtual X display is required")
 
@@ -673,11 +677,11 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                         raise RuntimeError("Second recipe did not consume ingredients and produce result")
                     recipe_item_center = colored_item_center(output_directory, "recipe-chain-combined", final_rgb,
                                                              inventory=True)
-                if len(combinations) == 3:
+                if len(combinations) in (3, 4):
                     # Two disjoint ingredient branches are combined first;
                     # their outputs then form the final recipe. Only the
                     # initial branch was collected by the common path above.
-                    second_recipe, final_recipe = combinations[1:]
+                    second_recipe, final_recipe = combinations[1:3]
                     branch_items = second_recipe["ingredients"]
                     for item_index, item in enumerate(branch_items):
                         rgb = tuple(item["rgb"])
@@ -740,6 +744,64 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     recipe_item_center = colored_item_center(output_directory,
                                                              "recipe-graph-combined-1", output_rgb,
                                                              inventory=True)
+                    if len(combinations) == 4:
+                        fourth_recipe = combinations[3]
+                        prior_rgb = output_rgb
+                        extra = next(item for item in fourth_recipe["ingredients"]
+                                     if item["item_id"] != final_recipe["result"]["item_id"])
+                        extra_rgb = tuple(extra["rgb"])
+                        subprocess.run(["xdotool", "mousemove", "328", "506", "click", "1"],
+                                       check=True, timeout=5)
+                        time.sleep(0.3)
+                        capture_frame("recipe-four-before")
+                        extra_x, extra_y = colored_item_center(output_directory, "recipe-four-before",
+                                                               extra_rgb, fuzz_percent=4)
+                        subprocess.run(["xdotool", "mousemove", str(extra_x), str(extra_y), "click", "1"],
+                                       check=True, timeout=5)
+                        acquired = False
+                        deadline = time.monotonic() + 15
+                        while time.monotonic() < deadline:
+                            capture_frame("recipe-four-picked")
+                            if (colored_item_pixels(output_directory, "recipe-four-picked", extra_rgb) < 10
+                                    and colored_item_pixels(output_directory, "recipe-four-picked",
+                                                            extra_rgb, inventory=True) >= 40):
+                                acquired = True
+                                break
+                            time.sleep(0.4)
+                        if not acquired:
+                            raise RuntimeError("Fourth recipe's physical ingredient not picked up")
+                        prior_x, prior_y = colored_item_center(output_directory, "recipe-four-picked",
+                                                               prior_rgb, inventory=True)
+                        extra_x, extra_y = colored_item_center(output_directory, "recipe-four-picked",
+                                                               extra_rgb, inventory=True)
+                        for x, y in ((408, 506), (prior_x, prior_y), (extra_x, extra_y)):
+                            subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                                           check=True, timeout=5)
+                            time.sleep(0.3)
+                        final_rgb = tuple(fourth_recipe["result"]["rgb"])
+                        crafted = False
+                        deadline = time.monotonic() + 15
+                        while time.monotonic() < deadline:
+                            capture_frame("recipe-four-combined")
+                            final_pixels = colored_item_pixels(output_directory, "recipe-four-combined",
+                                                               final_rgb, inventory=True)
+                            prior_pixels = colored_item_pixels(output_directory, "recipe-four-combined",
+                                                               prior_rgb, inventory=True)
+                            extra_pixels = colored_item_pixels(output_directory, "recipe-four-combined",
+                                                               extra_rgb, inventory=True)
+                            if final_pixels >= 40 and prior_pixels < 10 and extra_pixels < 10:
+                                crafted = True
+                                break
+                            time.sleep(0.4)
+                        (output_directory / "scummvm-recipe-four-report.json").write_text(
+                            json.dumps({"crafted": crafted, "final_inventory_pixels": final_pixels,
+                                        "third_recipe_result_consumed": prior_pixels < 10,
+                                        "extra_ingredient_consumed": extra_pixels < 10}, indent=2) + "\n",
+                            encoding="utf-8")
+                        if not crafted:
+                            raise RuntimeError("Fourth recipe did not consume both ingredients")
+                        recipe_item_center = colored_item_center(output_directory, "recipe-four-combined",
+                                                                 final_rgb, inventory=True)
                 capture_frame("pickup")
             initial_door_pixels = door_pixels(output_directory, "pickup")
             if initial_door_pixels < 40:
@@ -1016,14 +1078,14 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
 
 def main() -> int:
-    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only")):
-        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only|--recipe-reverse-only|--recipe-chain-only|--recipe-graph-only]")
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] not in ("--scene-only", "--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only", "--recipe-four-only")):
+        print("Usage: python -m adventure_studio.scumm_launch GAME_DIRECTORY OUTPUT_DIRECTORY [--scene-only|--puzzle-only|--chain-only|--static-chain-only|--recipe-only|--recipe-reverse-only|--recipe-chain-only|--recipe-graph-only|--recipe-four-only]")
         return 2
     mode = sys.argv[3] if len(sys.argv) == 4 else ""
     launch_smoke(Path(sys.argv[1]), Path(sys.argv[2]),
-                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only"),
+                 scene_only=mode == "--scene-only", verify_return=mode not in ("--puzzle-only", "--chain-only", "--static-chain-only", "--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only", "--recipe-four-only"),
                  verify_chain=mode in ("--chain-only", "--static-chain-only"),
-                 verify_recipe=mode in ("--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only"),
+                 verify_recipe=mode in ("--recipe-only", "--recipe-reverse-only", "--recipe-chain-only", "--recipe-graph-only", "--recipe-four-only"),
                  reverse_recipe=mode == "--recipe-reverse-only",
                  allow_static_scene=mode == "--static-chain-only")
     return 0
