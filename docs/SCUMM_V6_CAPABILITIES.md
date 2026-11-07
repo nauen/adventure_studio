@@ -60,8 +60,8 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 
 | ID | Fähigkeit | Analyse | Studio | Test | ScummVM | Nächstes Gate |
 | --- | --- | --- | --- | --- | --- | --- |
-| A01 | Native Actor-Costume-Ressourcen | A | I (COST + Projekt-JSON/Export) | T | V (Fixture) | Actor-Symbolbindung/Link im Spiel offen |
-| A02 | Actor-Platzierung/Richtung/Teleport | A (Teil) | – | – | – | Native Actor-Daten im Modell |
+| A01 | Native Actor-Costume-Ressourcen | A | I (COST + Projekt-JSON/Actor-Bindung) | T | V (Fixture) | Actor-Spielbindung via externem Bootstrap; unabhängigere Ausgabe offen |
+| A02 | Actor-Platzierung/Richtung/Teleport | A (Teil) | I (Anfangsposition/Richtung) | T (Quelltext) | – | Mehr-Actor-ScummVM-Gate und Umplatzieren zur Laufzeit |
 | A03 | Actor-Walk/Pathfinding/Speed | A | I (Demo) | T (Teil) | V (Teil) | Modell + Walkboxen |
 | A04 | Stand-/Walk-/Talk-Costume-Frames | A | I (Frames/Richtungen) | T | V (Teil) | Animationssteuerung im Projektmodell |
 | A05 | Actor-Skalierung/Z-Clip/Verdeckung | A | – | – | – | R06/R10 + Actor |

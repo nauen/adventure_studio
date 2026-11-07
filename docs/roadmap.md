@@ -78,6 +78,9 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
   - [x] Teil-Gate: COST-Frames und Animationen in `GameDocument`-JSON v1
         authorbar, verlustfrei roundtrip-fähig und als ScummC-Inputs exportiert;
         native Actor-Symbol-/Spielbindung ist weiterhin offen.
+  - [ ] Teil-Gate: Mehrere Actor-Instanzen mit referenzierter COST, initialer
+        Position und Blickrichtung; Modell/ScummC-Bootstrap-Bindung vorhanden,
+        native ScummVM-Gameplay-Abnahme noch zu bestätigen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

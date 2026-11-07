@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Callable
 
 from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_objects,
+                              inject_actor_bindings,
                               inject_language_keys, inject_language_room_probe, inject_multilingual_charset,
                               inject_screen_language_verbs, retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
@@ -58,6 +59,24 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
     header = (road / "common.sch").read_text(encoding="utf-8")
     start = document.rooms[0].name
     bootstrap = retarget_upstream_bootstrap(original, start)
+    bootstrap, header = inject_actor_bindings(
+        bootstrap, header, document.actors, document.costumes,
+        tuple(room.name for room in document.rooms))
+    if document.actors:
+        cost_compiler = _tool(upstream, "cost")
+        for costume_name in sorted({actor.costume for actor in document.actors}):
+            source = resources / f"{costume_name}.scost"
+            target = resources / f"{costume_name}.cost"
+            if not source.is_file():
+                raise ValueError(f"Missing native costume source: {source.name}")
+            runner([str(cost_compiler), "-o", str(target), "-I", str(resources),
+                    str(source)], check=True)
+            if not target.is_file() or not target.read_bytes().startswith(b"COST"):
+                raise RuntimeError(f"ScummC did not produce native COST: {costume_name}")
+            target_in_bootstrap = road / target.name
+            if target_in_bootstrap.exists():
+                raise ValueError(f"Actor costume conflicts with upstream fixture: {target.name}")
+            shutil.copyfile(target, target_in_bootstrap)
     language_catalog = None
     custom_font = resources / "multilingual-font.char"
     if custom_font.exists():

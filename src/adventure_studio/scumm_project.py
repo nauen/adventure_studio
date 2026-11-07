@@ -22,10 +22,24 @@ from .targets import RoomGeometry
 
 
 @dataclass(frozen=True)
+class ActorAsset:
+    """An authored native Actor symbol with an initial room placement."""
+
+    id: str
+    costume: str
+    room: str
+    x: int
+    y: int
+    direction: str = "S"
+    display_name: str | None = None
+
+
+@dataclass(frozen=True)
 class GameDocument:
     id: str
     rooms: tuple[RoomAsset, ...]
     costumes: tuple[CostumeAsset, ...] = ()
+    actors: tuple[ActorAsset, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -69,6 +83,10 @@ def document_dict(document: GameDocument) -> dict:
                                            for direction in animation.directions]}
                            for animation in costume.animations],
         } for costume in document.costumes]} if document.costumes else {}),
+        **({"actors": [{"id": actor.id, "costume": actor.costume, "room": actor.room,
+                       "x": actor.x, "y": actor.y, "direction": actor.direction,
+                       **({"display_name": actor.display_name} if actor.display_name is not None else {})}
+                      for actor in document.actors]} if document.actors else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -140,6 +158,27 @@ def _validate_document(document: GameDocument) -> None:
         if costume.name in costume_names or costume.name in room_names:
             raise ValueError("Duplicate or conflicting costume name")
         costume_names.add(costume.name)
+    actor_ids = set()
+    for actor in document.actors:
+        if (not isinstance(actor.id, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", actor.id)
+                or actor.id in actor_ids or actor.id in room_names or actor.id in costume_names):
+            raise ValueError(f"Duplicate or invalid actor ID: {actor.id}")
+        actor_ids.add(actor.id)
+        if actor.costume not in costume_names:
+            raise ValueError(f"Actor {actor.id} references unknown costume: {actor.costume}")
+        if actor.room not in room_names:
+            raise ValueError(f"Actor {actor.id} references unknown room: {actor.room}")
+        room = next(room for room in document.rooms if room.name == actor.room)
+        if (type(actor.x) is not int or type(actor.y) is not int
+                or not 0 <= actor.x < room.geometry.room_width
+                or not 0 <= actor.y < room.geometry.room_height):
+            raise ValueError(f"Actor {actor.id} initial position outside room")
+        if actor.direction not in ("N", "E", "S", "W"):
+            raise ValueError(f"Actor {actor.id} has invalid initial direction")
+        if (actor.display_name is not None and (not isinstance(actor.display_name, str)
+                or not 1 <= len(actor.display_name) <= 80
+                or any(ord(c) < 32 or ord(c) > 126 or c in '\\"' for c in actor.display_name))):
+            raise ValueError(f"Actor {actor.id} has invalid display name")
     for room in document.rooms:
         _validate(room)
         for destination in (r.destination_room for r in room.use_rules):
@@ -158,7 +197,8 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes"}, {"format_version", "id", "rooms"})
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors"},
+                 {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
     if not isinstance(data["rooms"], list):
@@ -202,6 +242,16 @@ def parse_document(source: str) -> GameDocument:
         costumes.append(CostumeAsset(costume["name"], tuple(tuple(rgb) for rgb in costume["palette"]),
                                      tuple(frames), tuple(animations),
                                      costume.get("palette_first", 16), costume.get("palette_last", 47)))
+    raw_actors = data.get("actors", [])
+    if not isinstance(raw_actors, list):
+        raise ValueError("Actors must be a list")
+    actors = []
+    for raw_actor in raw_actors:
+        actor = _only(raw_actor, {"id", "costume", "room", "x", "y", "direction", "display_name"},
+                      {"id", "costume", "room", "x", "y"})
+        actors.append(ActorAsset(actor["id"], actor["costume"], actor["room"],
+                                 actor["x"], actor["y"], actor.get("direction", "S"),
+                                 actor.get("display_name")))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",
@@ -341,7 +391,7 @@ def parse_document(source: str) -> GameDocument:
             tuple(talk_rules),
             tuple(planes), tuple(boxes), routes, scale, tuple(curves), room.get("demo_walk_to_y"), tuple(camera_cues),
         ))
-    document = GameDocument(data["id"], tuple(rooms), tuple(costumes))
+    document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors))
     _validate_document(document)
     return document
 

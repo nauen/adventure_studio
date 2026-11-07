@@ -280,6 +280,51 @@ def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str
     return header.replace(marker, marker + "".join(f"    object {icon_id}Icon;\n" for icon_id in icon_ids), 1)
 
 
+def inject_actor_bindings(source: str, header: str, actors, costumes, room_names: tuple[str, ...]
+                          ) -> tuple[str, str]:
+    """Bind authored Actors through native ScummC symbols and ResRoom setup.
+
+    This adapter targets the verified upstream Road bootstrap. The project
+    model itself does not depend on its layout or reserved `hero` symbol.
+    """
+    if not actors:
+        return source, header
+    if any(actor.id == "hero" for actor in actors):
+        raise ValueError("Road fixture reserves the hero Actor; independent player bootstrap is pending")
+    header_marker = "// define an actor for our hero\n"
+    cost_marker = '    cost egoCost = "devil.cost";\n'
+    setup_marker = "        // set VAR_EGO so we can use the *Ego* functions\n"
+    if any(text.count(marker) != 1 for text, marker in
+           ((header, header_marker), (source, cost_marker), (source, setup_marker))):
+        raise ValueError("Unexpected upstream Actor bootstrap layout")
+    # The source declares the starting room; other destinations must also be
+    # known by symbol to putActorAt before the player enters those rooms.
+    main_room = 'room ' + room_names[0] + ';\n'
+    if source.count(main_room) != 1:
+        raise ValueError("Upstream start room declaration changed")
+    source = source.replace(main_room, main_room + ''.join(
+        f'room {name};\n' for name in room_names[1:]), 1)
+    header = header.replace(header_marker, header_marker + ''.join(
+        f'actor {actor.id};\n' for actor in actors), 1)
+    needed = {actor.costume for actor in actors}
+    definitions = ''.join(
+        f'    cost {name}Cost = "{name}.cost";\n' for name in sorted(needed))
+    source = source.replace(cost_marker, cost_marker + definitions, 1)
+    directions = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}
+    setup = []
+    for actor in actors:
+        setup.extend((f"        setCurrentActor({actor.id});\n",
+                      "        initActor();\n",
+                      f"        setActorCostume({actor.costume}Cost);\n"))
+        if actor.display_name is not None:
+            setup.append(f'        setActorName("{actor.display_name}");\n')
+        setup.extend((f"        putActorAt({actor.id}, {actor.x}, {actor.y}, {actor.room});\n",
+                      f"        setActorDirection({directions[actor.direction]});\n",
+                      "        setActorStanding();\n"))
+    source = source.replace(setup_marker, ''.join(setup) + setup_marker, 1)
+    return source, header
+
+
 def read_icon_ids(argument: str) -> tuple[str, ...]:
     if argument.startswith("@"):
         argument = Path(argument[1:]).read_text(encoding="ascii").strip()
