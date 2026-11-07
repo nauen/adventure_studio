@@ -126,6 +126,22 @@ jobs:
           test -s /tmp/generated-room/studio.001
           mkdir -p /tmp/studio-fixture
           cp /tmp/generated-room/studio.000 /tmp/generated-room/studio.001 /tmp/studio-fixture/
+        # The native-room variation must be accepted by upstream ScummC and
+        # its linked resource tree must contain the requested native chunks.
+        # This is NOT a visual ScummVM occlusion/walking acceptance test.
+        # Kept separate from the existing screenshot baseline.
+      - name: Compile and structurally verify generated Z-plane/BOXM/SCAL room
+        env:
+          PYTHONPATH: src:tests
+        run: |
+          python -c 'from pathlib import Path; from test_scumm_room_primitives import native_room; from adventure_studio.scumm_assets import write_room_sources; write_room_sources(native_room(), Path("/tmp/native-check"))'
+          SCC_BIN=$(find /tmp/scummc-upstream -type f -name scc -executable -print -quit)
+          SLD_BIN=$(find /tmp/scummc-upstream -type f -name sld -executable -print -quit)
+          "$SCC_BIN" -V 6 -I /tmp/scummc-upstream/include -I /tmp/generated-room -I /tmp/scummc-upstream/examples/road -R /tmp/native-check -o /tmp/native-check/Harbor.roobj /tmp/native-check/Harbor.scc
+          cd /tmp/scummc-upstream/examples/road
+          "$SLD_BIN" -o /tmp/native-check/tentacle -key 0x69 /tmp/generated-room/bootstrap.roobj /tmp/native-check/Harbor.roobj /tmp/generated-room/Cellar.roobj
+          cd "$GITHUB_WORKSPACE"
+          python -c 'from pathlib import Path; from adventure_studio.scumm_binary import verify_room_binary; binary=Path("/tmp/native-check/tentacle.001").read_bytes(); tree=verify_room_binary(binary,xor_key=0x69); rooms=[c for level in tree for group in level.children if group.tag=="LFLF" for c in group.children if c.tag=="ROOM"]; assert any(any(i.tag=="ZP01" for rmim in r.find("RMIM") for frame in rmim.find("IM00") for i in frame.children) and all(r.find(t) for t in ("BOXD","BOXM","SCAL")) for r in rooms), "native ZP01/BOXD/BOXM/SCAL chunks missing"; print("Native SCUMM v6 room resource chunks verified")'
       - name: Produce ScummC documented compatibility-only detection fixture
         # Research fixture only: this uses the Day of the Tentacle game ID
         # described by ScummC upstream. Never label it as native game support.

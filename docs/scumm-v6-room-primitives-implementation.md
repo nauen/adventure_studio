@@ -67,3 +67,9 @@ Als nächste *technische Abnahme* sind daher ein kleiner Compiler-/Runtime-
 Probe mit einer maskierten Vordergrundkante, zwei begehbaren Boxen und
 expliziten Next-Hop-Routen erforderlich. Ohne diesen Lauf wäre die Aussage
 „vollständig SCUMM-v6-kompatibel“ unbelegt.
+
+Die bestehende experimentelle GitHub-Action
+`.github/workflows/scummc-experiment.yml` ist um einen separaten
+Compiler-/Linker-/Binärstruktur-Smoke für die neuen Raumdaten erweitert.
+Der Job muss erst erfolgreich auf GitHub gelaufen sein, bevor dieser
+Compilerbeleg als bestanden gilt. Er ersetzt keine visuelle ScummVM-Probe.
