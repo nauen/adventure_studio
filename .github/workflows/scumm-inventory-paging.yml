@@ -92,6 +92,18 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/nine-recipe-game /tmp/nine-recipe-auto-evidence --recipe-auto-only
+      - name: Build shuffled recipe story with non-gold starting ingredient
+        env:
+          PYTHONPATH: src
+        run: |
+          python -c 'import json; from pathlib import Path; source = json.loads(Path("examples/recipe_nine_items_story.json").read_text()); recipes = source["story"]["recipes"]; recipes[0]["ingredients"].reverse(); recipes.reverse(); Path("/tmp/nine-recipe-shuffled.json").write_text(json.dumps(source))'
+          python -m adventure_studio.story_document /tmp/nine-recipe-shuffled.json /tmp/nine-recipe-shuffled-story
+          python -m adventure_studio.scumm_toolchain /tmp/nine-recipe-shuffled-story /tmp/scummc-upstream /tmp/nine-recipe-shuffled-game
+      - name: Autoplan reversed recipe declarations starting with pink Bottle
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/nine-recipe-shuffled-game /tmp/nine-recipe-shuffled-evidence --recipe-auto-only
       - name: Print inventory interaction diagnostics on failure
         if: failure()
         run: |
@@ -117,3 +129,5 @@ jobs:
             /tmp/nine-recipe-full-evidence/*.json
             /tmp/nine-recipe-auto-evidence/*.png
             /tmp/nine-recipe-auto-evidence/*.json
+            /tmp/nine-recipe-shuffled-evidence/*.png
+            /tmp/nine-recipe-shuffled-evidence/*.json
