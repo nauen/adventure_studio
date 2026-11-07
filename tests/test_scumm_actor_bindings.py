@@ -2,7 +2,7 @@
 
 import unittest
 
-from adventure_studio.scumm_bootstrap import inject_actor_bindings
+from adventure_studio.scumm_bootstrap import inject_actor_bindings, inject_actor_room_animations
 from adventure_studio.scumm_actor_probe import actor_count_room_source
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import ActorAsset
@@ -57,7 +57,13 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertEqual(restored, document)
         generated, _ = inject_actor_bindings(source, header, restored.actors,
                                               restored.costumes, ('Harbor', 'Cellar'))
-        self.assertIn('setActorStanding();\n        animateActor(Guide,24);', generated)
+        self.assertNotIn('animateActor(Guide,24);', generated)
+        room_source = 'room Harbor {\n        ResRoom::showCursor();\n}\n'
+        room_source = inject_actor_room_animations(room_source, 'Harbor',
+                                                   restored.actors, restored.costumes)
+        self.assertIn('ResRoom::showCursor();\n        animateActor(Guide,24);', room_source)
+        self.assertEqual(inject_actor_room_animations(room_source, 'Cellar',
+                                                       restored.actors, restored.costumes), room_source)
 
     def test_initial_animation_rejects_unknown_unindexed_and_missing_direction(self):
         costume = gesture_fixture()
@@ -78,7 +84,7 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertNotIn('initial_animation', canonical_json(document))
 
     def test_count_probe_uses_authored_actor_and_negative_control(self):
-        source = 'room Harbor {\n        ResRoom::showCursor();\n}\n'
+        source = 'room Harbor {\n        animateActor(Companion,24);\n}\n'
         positive = actor_count_room_source(source, 2)
         control = actor_count_room_source(source, 3)
         self.assertIn('getActorAnimCounter1(Companion) < 2', positive)

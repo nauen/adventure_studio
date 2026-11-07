@@ -177,7 +177,8 @@ nicht zur Produktarchitektur erklärt.
 `ActorAsset.initial_animation` referenziert optional eine benannte,
 explizit numerierte native COST-Animation mit passender Startrichtung.
 GameDocument-v1-JSON bleibt rückwärtskompatibel; der Forschungsadapter
-erzeugt `animateActor(actor,index)` nach der Actor-Initialisierung.
+erzeugt `animateActor(actor,index)` im Einstiegsscript des Startraums
+nach der Actor-Initialisierung (nicht vor `startRoom`).
 Der Mehr-Actor-CI-Probe startet eine solche Animation. Ein grüner Start
 beweist weder die tatsächlich abgespielten Frames noch COUNT-Verhalten
 oder Spielerinteraktion. **Nächster Nachweis:** sichtbare Phasen und

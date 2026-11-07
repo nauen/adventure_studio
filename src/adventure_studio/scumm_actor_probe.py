@@ -20,7 +20,7 @@ from .scumm_toolchain import _tool, compile_story_game
 
 def actor_count_room_source(source: str, required: int) -> str:
     """Add a native COUNT observer to the isolated generated-room fixture."""
-    marker = "        ResRoom::showCursor();\n"
+    marker = "        animateActor(Companion,24);\n"
     if source.count(marker) != 1 or type(required) is not int or required not in (2, 3):
         raise ValueError("Invalid native Actor COUNT probe source or event threshold")
     injection = (
