@@ -555,14 +555,23 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
     gates = []
     fixture_combinations = []
     fixture_route = []
+    fixture_rooms = {}
     for room in rooms:
+        fixture_rooms[room.name] = {
+            "width": room.geometry.room_width,
+            "viewport_width": room.geometry.viewport_width,
+        }
         pickups = {hotspot.id: hotspot for hotspot in room.hotspots if hotspot.pickup}
         for rule in room.combine_rules:
             fixture_combinations.append({"room_id": room.name,
-                "ingredients": [{"item_id": item_id, "rgb": list(room.palette[pickups[item_id].sprite_pixels[0]])}
+                "ingredients": [{"item_id": item_id,
+                                 "rgb": list(room.palette[pickups[item_id].sprite_pixels[0]]),
+                                 "world_x": pickups[item_id].x, "world_y": pickups[item_id].y}
                                 for item_id in (rule.first_id, rule.second_id)],
                 "result": {"item_id": rule.result_id,
-                           "rgb": list(room.palette[pickups[rule.result_id].sprite_pixels[0]])}})
+                           "rgb": list(room.palette[pickups[rule.result_id].sprite_pixels[0]]),
+                           "world_x": pickups[rule.result_id].x,
+                           "world_y": pickups[rule.result_id].y}})
         for rule in room.use_rules:
             source = pickups[rule.item_id]
             assert source.sprite_pixels is not None
@@ -579,6 +588,7 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
         json.dumps({"condition": "enter_room", "room_id": goal_room.name,
                     "description": goal_room.goal_text,
                     "fixture_probe_rgb": probe_rgb,
+                    "fixture_room_geometry": fixture_rooms,
                     "fixture_inventory_gates": gates,
                     "fixture_combinations": fixture_combinations,
                     "fixture_route": fixture_route}, sort_keys=True, indent=2) + "\n",
