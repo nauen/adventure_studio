@@ -349,9 +349,14 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         for recipe in combinations:
             if (not isinstance(recipe, dict) or set(recipe) != {"room_id", "ingredients", "result"}
                 or not isinstance(recipe["ingredients"], list) or len(recipe["ingredients"]) != 2
-                or not all(isinstance(item, dict) and set(item) == {"item_id", "rgb"}
+                or not all(isinstance(item, dict)
+                           and set(item) in ({"item_id", "rgb"},
+                                             {"item_id", "rgb", "world_x", "world_y"})
                            and isinstance(item["rgb"], list) and len(item["rgb"]) == 3
                            and all(type(c) is int and 0 <= c <= 255 for c in item["rgb"])
+                           and ("world_x" not in item or
+                                (type(item["world_x"]) is int and item["world_x"] >= 0
+                                 and type(item["world_y"]) is int and item["world_y"] >= 0))
                            for item in [*recipe["ingredients"], recipe["result"]])):
                 raise ValueError("Invalid recipe color probes")
         if not auto_recipe and len(combinations) == 2 and (
@@ -885,7 +890,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                             else:
                                 raise RuntimeError(
                                     f"Could not locate ground ingredient {item['item_id']} "
-                                    "after moving actor to reveal occluded sprites") from missing
+                                    f"at world position ({item.get('world_x', '?')}, "
+                                    f"{item.get('world_y', '?')}) after camera sweep") from missing
                         subprocess.run(["xdotool", "mousemove", str(item_x), str(item_y), "click", "1"],
                                        check=True, timeout=5)
                         acquired = False
