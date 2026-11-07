@@ -90,6 +90,8 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('getActorAnimCounter1(Companion) < 2', positive)
         self.assertIn('getActorAnimCounter1(Companion) < 3', control)
         self.assertIn('setObjectState(Key, 0);', positive)
+        self.assertLess(positive.index('delaySeconds(2);'),
+                        positive.index('animateActor(Companion,24);'))
         self.assertNotIn('getActorAnimCounter1(VAR_EGO)', positive)
         with self.assertRaises(ValueError):
             actor_count_room_source(source, 0)

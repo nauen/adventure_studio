@@ -24,14 +24,13 @@ def actor_count_room_source(source: str, required: int) -> str:
     if source.count(marker) != 1 or type(required) is not int or required not in (2, 3):
         raise ValueError("Invalid native Actor COUNT probe source or event threshold")
     injection = (
-        "        delaySeconds(2);\n"
         "        setCameraAt(480);\n"
         f"        while(getActorAnimCounter1(Companion) < {required}) {{\n"
         "            breakScript();\n"
         "        }\n"
         "        setObjectState(Key, 0);\n"
     )
-    return source.replace(marker, marker + injection, 1)
+    return source.replace(marker, "        delaySeconds(2);\n" + marker + injection, 1)
 
 
 def run_actor_probe(upstream: Path, destination: Path) -> dict:
