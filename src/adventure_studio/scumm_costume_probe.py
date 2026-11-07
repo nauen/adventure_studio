@@ -108,6 +108,9 @@ def run_costume_count_gameplay(upstream: Path, generated: Path, destination: Pat
     def run_variant(target: Path, required_events: int) -> int:
         target.mkdir(parents=True, exist_ok=True)
         injection = (
+            "        delaySeconds(2);\n"
+            "        setCameraAt(480);\n"
+            "        putActorAt(VAR_EGO, 430, 100, Harbor);\n"
             "        animateActor(VAR_EGO, 24);\n"
             f"        while(getActorAnimCounter1(VAR_EGO) < {required_events}) {{\n"
             "            breakScript();\n"
