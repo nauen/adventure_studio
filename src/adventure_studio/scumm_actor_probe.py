@@ -37,6 +37,25 @@ def actor_count_room_source(source: str, required: int) -> str:
     return source.replace(marker, camera_and_actor + marker + injection, 1)
 
 
+def actor_binding_room_source(source: str, check: str) -> str:
+    """Isolate native Actor identity, Costume assignment and active frame."""
+    expressions = {
+        "room": "getActorRoom(Companion) == Harbor",
+        "costume": "getActorCostume(Companion) != 0",
+        "frame": "getActorFrame(Companion) == 24",
+    }
+    marker = "        animateActor(Companion,24);\n"
+    if check not in expressions or source.count(marker) != 1:
+        raise ValueError("Invalid native Actor binding probe")
+    return source.replace(
+        marker,
+        "        delaySeconds(2);\n"
+        "        setCameraAt(480);\n"
+        "        putActorAt(Companion, 430, 100, Harbor);\n"
+        + marker
+        + f"        if({expressions[check]}) setObjectState(Key, 0);\n", 1)
+
+
 def run_actor_probe(upstream: Path, destination: Path) -> dict:
     build = destination / "build"
     resources = build / "resources"
@@ -74,10 +93,10 @@ def run_actor_count_probe(upstream: Path, actor_build: Path, destination: Path) 
     source = (resources / "Harbor.scc").read_text(encoding="utf-8")
     road = upstream / "examples" / "road"
 
-    def run_variant(target: Path, required: int) -> int:
+    def run_variant(target: Path, generated_source: str) -> int:
         target.mkdir(parents=True, exist_ok=True)
         room_source = target / "Harbor.scc"
-        room_source.write_text(actor_count_room_source(source, required), encoding="utf-8")
+        room_source.write_text(generated_source, encoding="utf-8")
         room_object = target / "Harbor.roobj"
         subprocess.run([str(_tool(upstream, "scc")), "-V", "6",
                         "-I", str(upstream / "include"), "-I", str(resources),
@@ -93,14 +112,18 @@ def run_actor_count_probe(upstream: Path, actor_build: Path, destination: Path) 
                      allow_static_scene=True)
         return visible_key_pixels(target / "screenshots")
 
-    baseline = run_variant(destination / "zero_counts", 0)
-    first = run_variant(destination / "one_count", 1)
-    positive = run_variant(destination / "two_counts", 2)
-    control = run_variant(destination / "three_counts", 3)
+    baseline = run_variant(destination / "zero_counts", actor_count_room_source(source, 0))
+    first = run_variant(destination / "one_count", actor_count_room_source(source, 1))
+    positive = run_variant(destination / "two_counts", actor_count_room_source(source, 2))
+    control = run_variant(destination / "three_counts", actor_count_room_source(source, 3))
+    binding_pixels = {check: run_variant(destination / f"binding_{check}",
+                                         actor_binding_room_source(source, check))
+                      for check in ("room", "costume", "frame")}
     passed = baseline < 40 and first < 40 and positive < 40 and control >= 40
     report = {"authored_actor_count_verified": passed, "expected_events": 2,
               "zero_count_key_pixels": baseline, "one_count_key_pixels": first,
-              "positive_key_pixels": positive, "control_key_pixels": control}
+              "positive_key_pixels": positive, "control_key_pixels": control,
+              "actor_binding_key_pixels": binding_pixels}
     (destination / "actor-count-report.json").write_text(json.dumps(report, indent=2) + "\n",
                                                                encoding="utf-8")
     if not passed:

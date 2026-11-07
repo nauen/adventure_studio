@@ -3,7 +3,7 @@
 import unittest
 
 from adventure_studio.scumm_bootstrap import inject_actor_bindings, inject_actor_room_animations
-from adventure_studio.scumm_actor_probe import actor_count_room_source
+from adventure_studio.scumm_actor_probe import actor_count_room_source, actor_binding_room_source
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import ActorAsset
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
@@ -102,6 +102,16 @@ class ActorBootstrapTests(unittest.TestCase):
             actor_count_room_source(source, -1)
         with self.assertRaises(ValueError):
             actor_count_room_source('room Harbor {}', 2)
+
+    def test_binding_probe_checks_room_costume_and_native_frame(self):
+        source = 'room Harbor {\n        animateActor(Companion,24);\n}\n'
+        for kind, expression in (("room", "getActorRoom(Companion) == Harbor"),
+                                 ("costume", "getActorCostume(Companion) != 0"),
+                                 ("frame", "getActorFrame(Companion) == 24")):
+            with self.subTest(kind=kind):
+                self.assertIn(expression, actor_binding_room_source(source, kind))
+        with self.assertRaises(ValueError):
+            actor_binding_room_source(source, "unknown")
 
 
 if __name__ == '__main__':

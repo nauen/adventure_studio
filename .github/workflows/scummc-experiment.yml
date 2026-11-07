@@ -223,6 +223,12 @@ jobs:
             /tmp/native-actor-count/zero_counts/screenshots/scummvm-end.png
             /tmp/native-actor-count/one_count/Harbor.scc
             /tmp/native-actor-count/one_count/screenshots/scummvm-end.png
+            /tmp/native-actor-count/binding_room/Harbor.scc
+            /tmp/native-actor-count/binding_room/screenshots/scummvm-end.png
+            /tmp/native-actor-count/binding_costume/Harbor.scc
+            /tmp/native-actor-count/binding_costume/screenshots/scummvm-end.png
+            /tmp/native-actor-count/binding_frame/Harbor.scc
+            /tmp/native-actor-count/binding_frame/screenshots/scummvm-end.png
             /tmp/native-actor-count/two_counts/Harbor.scc
             /tmp/native-actor-count/two_counts/screenshots/scummvm-end.png
             /tmp/native-actor-count/three_counts/Harbor.scc
