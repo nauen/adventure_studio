@@ -16,9 +16,31 @@ CHAIN = EXAMPLE.with_name("mini_story_chain.json")
 RECIPE = EXAMPLE.with_name("recipe_story.json")
 RECIPE_CHAIN = EXAMPLE.with_name("recipe_chain_story.json")
 RECIPE_GRAPH = EXAMPLE.with_name("recipe_graph_story.json")
+RECIPE_NINE_ITEMS = EXAMPLE.with_name("recipe_nine_items_story.json")
 
 
 class StoryDocumentTests(unittest.TestCase):
+    def test_four_recipes_with_nine_inventory_objects_export(self):
+        from adventure_studio.story import verify_story
+        from adventure_studio.story_to_scumm import compile_story_to_scumm
+        from adventure_studio.scumm_project import canonical_json, parse_document
+        story = parse_story_document(RECIPE_NINE_ITEMS.read_text(encoding="utf-8"))
+        route = verify_story(story)
+        self.assertEqual(len(route), 10)
+        self.assertEqual(route[-1], "solve:OpenLaboratory")
+        game = compile_story_to_scumm(story)
+        self.assertEqual(len(game.rooms[0].combine_rules), 4)
+        self.assertEqual(len([item for item in game.rooms[0].hotspots if item.pickup]), 9)
+        self.assertEqual(len(game.rooms[0].palette), 15)
+        self.assertEqual(parse_document(canonical_json(game)), game)
+        with tempfile.TemporaryDirectory() as tmp:
+            result = build_story_document(RECIPE_NINE_ITEMS.read_text(encoding="utf-8"), Path(tmp))
+            resources = result.resource_directory
+            source = (resources / "Kitchen.scc").read_text()
+            self.assertIn("script combine_3()", source)
+            self.assertIn("pickupObject(Elixir, VAR_ROOM)", source)
+            self.assertEqual(len((resources / "inventory-ids.txt").read_text().strip().split(",")), 9)
+
     def test_three_recipe_converging_graph_compiles_from_json(self):
         from adventure_studio.story import verify_story
         from adventure_studio.story_to_scumm import compile_story_to_scumm
