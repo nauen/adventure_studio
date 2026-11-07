@@ -31,6 +31,7 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('putActorAt(Guide, 80, 100, Cellar);', generated)
         self.assertIn('room Cellar;', generated)
         self.assertIn('setActorName("Companion");', generated)
+        self.assertEqual(generated.count('setActorAnimSpeed(2);'), 2)
 
     def test_empty_actor_set_keeps_legacy_bootstrap_unchanged(self):
         self.assertEqual(inject_actor_bindings('source', 'header', (), (), ('Harbor',)),

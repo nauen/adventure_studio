@@ -311,11 +311,16 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
         f'    cost {name}Cost = "{name}.cost";\n' for name in sorted(needed))
     source = source.replace(cost_marker, cost_marker + definitions, 1)
     directions = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}
+    # The external Road hero setup explicitly initializes its animation
+    # speed to 2. Apply the same fixture default to newly authored Actors;
+    # this is not a claimed native speed limit or a domain-level constant.
+    road_initial_animation_speed = 2
     setup = []
     for actor in actors:
         setup.extend((f"        setCurrentActor({actor.id});\n",
                       "        initActor();\n",
-                      f"        setActorCostume({actor.costume}Cost);\n"))
+                      f"        setActorCostume({actor.costume}Cost);\n",
+                      f"        setActorAnimSpeed({road_initial_animation_speed});\n"))
         if actor.display_name is not None:
             setup.append(f'        setActorName("{actor.display_name}");\n')
         setup.extend((f"        putActorAt({actor.id}, {actor.x}, {actor.y}, {actor.room});\n",
