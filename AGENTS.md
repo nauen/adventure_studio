@@ -2,6 +2,34 @@
 
 Dieses Dokument gilt für Arbeit am Repository `nauen/adventure_studio`.
 
+## Übergeordnete Entwicklungsrichtlinien
+
+Dieses Projekt übernimmt die allgemeinen Regeln aus dem privaten Repository
+[`nauen/ai-development-guidelines`](https://github.com/nauen/ai-development-guidelines):
+[AGENTS.md](https://github.com/nauen/ai-development-guidelines/blob/main/AGENTS.md),
+[Entwicklungsprinzipien](https://github.com/nauen/ai-development-guidelines/blob/main/DEVELOPMENT_PRINCIPLES.md),
+[Qualitätsgates](https://github.com/nauen/ai-development-guidelines/blob/main/QUALITY_GATES.md),
+[Technische Schulden](https://github.com/nauen/ai-development-guidelines/blob/main/TECHNICAL_DEBT.md),
+[Produktfokus](https://github.com/nauen/ai-development-guidelines/blob/main/PROJECT_FOCUS.md)
+und [Workflow](https://github.com/nauen/ai-development-guidelines/blob/main/WORKFLOW.md).
+
+**Arbeitsregel:** Vor größeren Entwicklungsarbeiten die zentrale `AGENTS.md`
+lesen, **sofern der konfigurierte GitHub-Zugriff es erlaubt**. Ein privates
+Repository wird nicht automatisch in den Arbeitskontext geladen; ein
+fehlender Zugriff ist kein Anlass, Berechtigungen zu umgehen oder die
+Produktarbeit zu blockieren. In diesem Fall gelten mindestens diese lokalen
+Regeln: Produktziel zuerst, bestehende Änderungen respektieren, fachliche
+0/1/2/N-Fälle statt Demo-Limits modellieren, Versionen/Regressionen schützen,
+keine stillen Fallbacks, konkrete technische Schulden bewerten,
+Abnahmekriterien und CI prüfen sowie abgeschlossene Teilaufgaben nicht als
+fertige Arbeitspakete ausgeben.
+
+**Priorität:** Nutzer- und Sicherheitsvorgaben sowie die folgenden
+Adventure-Studio-spezifischen SCUMM-v6-Verträge haben bei Konflikten Vorrang.
+Die zentrale Sammlung ist der allgemeine Qualitätsstandard, **nicht** eine
+zweite Produkt-Roadmap. Allgemeine Regeln im zentralen Repository pflegen;
+projektspezifische Entscheidungen hier dokumentieren.
+
 ## Reihenfolge vor jeder Entwicklungsaufgabe
 
 1. `docs/PRODUCT_VISION.md` – unveränderliches Hauptziel.
