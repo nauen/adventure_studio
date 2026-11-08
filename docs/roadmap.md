@@ -36,8 +36,8 @@ Synchronisierung bleibt offen (D03/D04/U03).
 **Aktuelles NPC-Dialog-VOC-Paket (2026-11-08):** Studio-Import von VOCs
 auf Gesprächs-Öffnungs- und Antwortzeilen mit Sprachvariante,
 versioniertem Quelltext-Schutz und nativer `GameLanguage`-Ausgabe.
-Gezielte Modell-/SCUMM-Tests grün; die echte NPC-Klick-/Antwort-/Audioprobe
-ist als weiteres Gate der Dialogue-CI ergänzt. Vollständige zyklische
+Gezielte Modell-/SCUMM-Tests und echte NPC-Klick-/Antwort-/Audioprobe in
+stock ScummVM grün (CI `42533774527`). Vollständige zyklische
 Gesprächsgraphen, mehrere Sprecher und Actor-Lippensync bleiben offen.
 
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
