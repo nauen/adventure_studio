@@ -141,9 +141,22 @@ class MusicCueStep:
 
 
 @dataclass(frozen=True)
+class SoundEffectStep:
+    sound_id: str
+    operation: str  # start or stop a native VOC/SOUN effect
+
+
+@dataclass(frozen=True)
 class MusicAsset:
     id: str
     midi: bytes
+
+
+@dataclass(frozen=True)
+class SoundAsset:
+    id: str
+    room: str
+    voc: bytes
 
 
 @dataclass(frozen=True)
@@ -153,7 +166,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -170,6 +183,7 @@ class GameDocument:
     animation_triggers: tuple[AnimationTrigger, ...] = ()
     interaction_sequences: tuple[InteractionSequence, ...] = ()
     music_assets: tuple[MusicAsset, ...] = ()
+    sound_assets: tuple[SoundAsset, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -260,6 +274,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, ChangeRoomStep)
                                                    else {"type": "music_cue", **vars(step)}
                                                    if isinstance(step, MusicCueStep)
+                                                   else {"type": "sound_effect", **vars(step)}
+                                                   if isinstance(step, SoundEffectStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
                                        for sequence in document.interaction_sequences]}
@@ -267,6 +283,10 @@ def document_dict(document: GameDocument) -> dict:
         **({"music_assets": [{"id": asset.id, "midi": _encode_pixels(asset.midi)}
                               for asset in document.music_assets]}
            if document.music_assets else {}),
+        **({"sound_assets": [{"id": asset.id, "room": asset.room,
+                               "voc": _encode_pixels(asset.voc)}
+                              for asset in document.sound_assets]}
+           if document.sound_assets else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -339,6 +359,17 @@ def _validate_document(document: GameDocument) -> None:
                 or not asset.midi.startswith(b"MThd\x00\x00\x00\x06")):
             raise ValueError("Invalid or duplicate MIDI music asset")
         music_ids.add(asset.id)
+    sound_ids = set()
+    for asset in document.sound_assets:
+        if (not isinstance(asset, SoundAsset) or not isinstance(asset.id, str)
+                or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", asset.id)
+                or asset.id in sound_ids or asset.id in room_names or asset.id in music_ids
+                or not isinstance(asset.room, str) or asset.room not in room_names
+                or not isinstance(asset.voc, bytes) or not 27 <= len(asset.voc) <= 1_000_000
+                or not asset.voc.startswith(b"Creative Voice File\x1a")
+                or int.from_bytes(asset.voc[22:24], "little") != 266):
+            raise ValueError("Invalid or duplicate VOC sound asset")
+        sound_ids.add(asset.id)
     if len(set(room_names)) != len(room_names):
         raise ValueError("Duplicate room name")
     costume_names = set()
@@ -381,6 +412,9 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError(f"Actor {actor.id} has invalid display name")
     for room in document.rooms:
         _validate(room)
+        if any(asset.id in {hotspot.id for hotspot in room.hotspots}
+               for asset in document.sound_assets if asset.room == room.name):
+            raise ValueError(f"Sound symbol conflicts with hotspot in {room.name}")
         if room.music_id is not None and room.music_id in {
                 hotspot.id for hotspot in room.hotspots}:
             raise ValueError(f"Room music symbol conflicts with hotspot: {room.music_id}")
@@ -536,6 +570,11 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Invalid interaction music operation")
                 if step.operation == "start" and room.music_id is None:
                     raise ValueError("Interaction music start requires music in the sequence room")
+            elif isinstance(step, SoundEffectStep):
+                if (step.operation not in ("start", "stop") or not isinstance(step.sound_id, str)
+                        or step.sound_id not in {asset.id for asset in document.sound_assets
+                                                 if asset.room == room.name}):
+                    raise ValueError("Interaction sound effect requires a room VOC resource and start/stop operation")
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")
@@ -572,7 +611,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets", "sound_assets"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -714,6 +753,10 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "music_cue":
                 step = _only(raw_step, {"type", "operation"}, {"type", "operation"})
                 steps.append(MusicCueStep(step["operation"]))
+            elif kind == "sound_effect":
+                step = _only(raw_step, {"type", "sound_id", "operation"},
+                             {"type", "sound_id", "operation"})
+                steps.append(SoundEffectStep(step["sound_id"], step["operation"]))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],
@@ -867,9 +910,16 @@ def parse_document(source: str) -> GameDocument:
     for raw_asset in raw_music:
         asset = _only(raw_asset, {"id", "midi"}, {"id", "midi"})
         music_assets.append(MusicAsset(asset["id"], _decode_pixels(asset["midi"])))
+    raw_sounds = data.get("sound_assets", [])
+    if not isinstance(raw_sounds, list):
+        raise ValueError("Sound assets must be a list")
+    sound_assets = []
+    for raw_asset in raw_sounds:
+        asset = _only(raw_asset, {"id", "room", "voc"}, {"id", "room", "voc"})
+        sound_assets.append(SoundAsset(asset["id"], asset["room"], _decode_pixels(asset["voc"])))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
                             tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers),
-                            tuple(interaction_sequences), tuple(music_assets))
+                            tuple(interaction_sequences), tuple(music_assets), tuple(sound_assets))
     _validate_document(document)
     return document
 
@@ -885,6 +935,8 @@ def export_document(document: GameDocument, directory: Path) -> None:
     write_game_sources(rooms, directory)
     for asset in document.music_assets:
         (directory / f"{asset.id}.mid").write_bytes(asset.midi)
+    for asset in document.sound_assets:
+        (directory / f"{asset.id}.voc").write_bytes(asset.voc)
     for costume in costumes:
         write_costume_sources(costume, directory)
 

@@ -93,7 +93,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | S01 | Native Script-/Objektscript-Lifetime | A | I (Teil: Studio-Verbfolgen mit Zustandsalternativen und optionalem Escape-Skip) | T (Teil: JSON-/ScummC-Vertrag und Skip-Commit) | V (Teil: drei Klicks desselben Verbs schalten native Objektzustände 1 → 2 → 1 → 2, CI `42506834029`) | Raumwechsel-/Slot-Test und allgemeinere Abbruchfälle |
 | S02 | Parallele Scripts/`breakHere`/Wait/Freeze | A | – | – | – | Scheduler-Szenarien |
 | S03 | Cutscene-Stack/`begin`/`end` | A | – | – | – | Native Sequenz |
-| S04 | Skip-/Override-Endzustand | A | I (Teil: Studio-Verbsequenz mit Objekt-/Actor-/Inventar-/Raum-Endzustand und letztem Musik-Cue) | T (Teil: ScummC-`try`/`override`, JSON-Roundtrip, terminales `startRoom`, Musik-Commit) | V (Teil: Escape mit Actor-/Inventareffekt, `Harbor → Cellar → Harbor` und MIDI-Stop/Wiederstart mit PCM-Gate, CI `42517572328`) | Allgemeinere Abbrüche und Soundeffekte |
+| S04 | Skip-/Override-Endzustand | A | I (Teil: Studio-Verbsequenz mit Objekt-/Actor-/Inventar-/Raum-Endzustand, letztem Musik-Cue und letztem Cue je VOC-Sound-ID) | T (Teil: ScummC-`try`/`override`, JSON-Roundtrip, terminales `startRoom`, Musik- und Sound-Commit) | V (Teil: Escape mit Actor-/Inventareffekt, `Harbor → Cellar → Harbor` und MIDI-Stop/Wiederstart mit PCM-Gate, CI `42517572328`; VOC-Soundstop per PCM-Gate, CI `42522610786`) | Allgemeinere Abbrüche |
 | S05 | Kamerasprung `setCameraAt` | A | I (Raum-Cues) | T | V (Raum) | Allgemeiner Shot-/Cutscene-Export |
 | S06 | Horizontaler Pan + `waitForCamera` | A | I (Raum-Cues) | T | V (Raum) | Multi-Track-/Cutscene-Synchronisation |
 | S07 | Camera-Follows-Actor | A | – | – | – | Follow/Abbruch |
@@ -111,7 +111,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | D04 | Mehrsprachige Textressourcen | A (Teil) | I (Probe) | T (Teil) | offen | Alle Sprachen im Spiel |
 | U01 | MIDI-/Soundresource | A (Teil) | I (Teil: Studio-MIDI-Import, SOUN-Export, Raumreferenz) | T (Teil: JSON-/Exporter-Test) | V (Teil: Studio-MIDI als native SOUN mit Stop/Start-PCM-Gate in stock ScummVM, CI `42517572328`) | Weitere Soundformate und allgemeines iMUSE |
 | U02 | iMUSE-/Music-State-Übergänge | A (Teil) | I (Plan) | T (Plan) | – | Hook-/Beat-Nachweis |
-| U03 | VOC-Sprache und Soundeffekte | A (Teil) | – | – | – | Ressourcen/Timing |
+| U03 | VOC-Sprache und Soundeffekte | A (Teil) | I (Teil: VOC-Import pro Raum, Sound-Start/-Stop in Studio-Sequenzen, `soun -voc`) | T (Teil: zwei unabhängige Escape-Endzustände, JSON-/Exporter-Tests, 289 lokale Tests gesamt) | V (Teil: Original-VOC-SOUN aus realem Hotspot-Klick, PCM-Aktivität vor/während/nach Escape `0,0000`/`0,8558`/`0,0000`, CI `42522610786`) | Sprachvarianten, Untertitel und Actor-Lipsync |
 | P01 | Globale Variablen/Objektzustände | A | I (Teil) | T | V (Teil) | Langzeit-/Room-Scope |
 | P02 | Save/Load kompletter Spielzustand | A (Teil) | I (Probe) | T (Teil) | offen | Raum+Inventar+Actors |
 | P03 | Spielziel/Quest-Fortschritt | A (Projekt) | I (Teil) | T | V (Teil) | Verschiedene Enden |

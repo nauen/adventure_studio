@@ -51,7 +51,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
     manifest = (resources / "inventory-ids.txt").read_text(encoding="ascii").strip()
     if manifest != ",".join(icon_ids):
         raise ValueError("Inventory manifest does not match validated project")
-    if document.music_assets:
+    if document.music_assets or document.sound_assets:
         soun_compiler = _tool(upstream, "soun")
         for asset in document.music_assets:
             target = resources / f"{asset.id}.soun"
@@ -59,6 +59,12 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                     "-o", str(target)], check=True)
             if not target.is_file() or target.stat().st_size == 0:
                 raise RuntimeError(f"ScummC did not produce native sound: {asset.id}")
+        for asset in document.sound_assets:
+            target = resources / f"{asset.id}.soun"
+            runner([str(soun_compiler), "-voc", str(resources / f"{asset.id}.voc"),
+                    "-o", str(target)], check=True)
+            if not target.is_file() or target.stat().st_size == 0:
+                raise RuntimeError(f"ScummC did not produce native VOC sound: {asset.id}")
     for room in document.rooms:
         for suffix in (".scc", ".bmp"):
             if not (resources / f"{room.name}{suffix}").is_file():
@@ -172,7 +178,8 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                                                    document.actors, document.costumes)
         rendered = inject_interaction_sequences(rendered, room.name,
                                                 document.interaction_sequences,
-                                                document.actors, document.costumes, room)
+                                                document.actors, document.costumes, room,
+                                                document.sound_assets)
         room_source.write_text(rendered, encoding="utf-8")
         target = resources / f"{room.name}.roobj"
         runner([str(compiler), "-V", "6", *include_args, "-R", str(resources),

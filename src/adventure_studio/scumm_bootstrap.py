@@ -487,15 +487,17 @@ def inject_actor_animation_triggers(source: str, room_name: str, triggers, actor
 
 
 def inject_interaction_sequences(source: str, room_name: str, sequences, actors, costumes,
-                                 room_asset=None) -> str:
+                                 room_asset=None, sound_assets=()) -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
-                                PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep)
+                                PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
+                                SoundEffectStep)
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
         return source
+    room_sounds = tuple(asset for asset in sound_assets if asset.room == room_name)
     actors_by_id = {actor.id: actor for actor in actors}
     costumes_by_name = {costume.name: costume for costume in costumes}
     recipes = {rule.result_id: rule for rule in room_asset.combine_rules} if room_asset else {}
@@ -510,6 +512,11 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     if first < 0 or any(source.find(f"    object {sequence.hotspot_id} {{\n") < 0
                         for sequence in active):
         raise ValueError(f"Missing native interaction hotspot in {room_name}")
+    if room_sounds:
+        # ScummC parses room parameters (image/boxd/zplanes) before resource
+        # declarations: sound resources therefore belong before the objects.
+        declarations += [f'    sound {asset.id} = "{asset.id}.soun";\n'
+                         for asset in sorted(room_sounds, key=lambda item: item.id)]
     source = source[:first] + "".join(declarations) + source[first:]
     grouped = {}
     for sequence in active:
@@ -562,6 +569,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, MusicCueStep):
                 instructions.append(f"            startMusic({room_asset.music_id});\n"
                                     if step.operation == "start" else "            stopMusic();\n")
+            elif isinstance(step, SoundEffectStep):
+                instructions.append(f"            {step.operation}Sound({step.sound_id});\n")
             else:
                 raise ValueError("Unsupported native interaction step")
         return "".join(instructions)
@@ -580,6 +589,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_directions = {}
         inventory_steps = []
         final_music = None
+        final_sounds = {}
         for step in sequence.steps:
             if isinstance(step, ObjectStateStep):
                 end_states[step.hotspot_id] = step.state
@@ -594,6 +604,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 inventory_steps.append(step)
             elif isinstance(step, MusicCueStep):
                 final_music = step.operation
+            elif isinstance(step, SoundEffectStep):
+                final_sounds[step.sound_id] = step.operation
         commit = ""
         for step in inventory_steps:
             commit += inventory_action(step, "                ")
@@ -609,6 +621,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         if final_music is not None:
             commit += (f"                startMusic({room_asset.music_id});\n"
                        if final_music == "start" else "                stopMusic();\n")
+        for sound_id, operation in final_sounds.items():
+            commit += f"                {operation}Sound({sound_id});\n"
         return ("            cutscene(0) {\n"
                 + "                try {\n"
                 + "".join("        " + line for line in actions.splitlines(True))

@@ -174,6 +174,15 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         SOUN-Kompilierung und gemessene PCM-Aktivität vor Stopp, nach Stopp und
         nach Neustart; dieses Ergebnis ist ein Pflichtgate. Der vollständige
         native CI-Lauf `42517572328` hat es erneut erfolgreich ausgeführt.
+  - [x] Produkt-Implementierung/lokale Tests: Raumspezifische VOC-Dateien
+        lassen sich im Studio importieren, als `Sound starten`/`Sound stoppen`
+        in Sequenzen verwenden und im regulären Export durch ScummC `soun -voc`
+        in native SOUN-Ressourcen übersetzen. Escape übernimmt pro Sound-ID
+        den letzten Zustand. JSON-Roundtrip, UI-Services und Fake-Exporter
+        getestet (289 lokale Tests). Das native Hotspot-Klick-/Escape-Gate
+        bestätigt echtes VOC-Audio und dessen Stopp in stock ScummVM
+        (PCM `0,0000` vor / `0,8558` während / `0,0000` nach Escape,
+        CI `42522610786`).
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

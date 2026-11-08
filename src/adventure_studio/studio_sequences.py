@@ -9,6 +9,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             FaceActorStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
+                            SoundAsset, SoundEffectStep,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -34,6 +35,26 @@ def import_room_music(raw: str, room_name: str, music_id: str, midi_path: str) -
                             music_assets=(*document.music_assets, MusicAsset(music_id, midi))))
 
 
+def import_room_sound(raw: str, room_name: str, sound_id: str, voc_path: str) -> str:
+    """Attach a native Creative Voice File effect to one authored room."""
+    document = parse_document(raw)
+    if room_name not in {room.name for room in document.rooms}:
+        raise ValueError("Bitte einen vorhandenen Soundraum wählen")
+    if sound_id in {asset.id for asset in document.sound_assets}:
+        raise ValueError("Sound-ID existiert bereits")
+    path = Path(voc_path)
+    if path.suffix.lower() != ".voc":
+        raise ValueError("Bitte eine Creative-Voice-Datei (.voc) wählen")
+    voc = path.read_bytes()
+    return _checked(replace(document, sound_assets=(
+        *document.sound_assets, SoundAsset(sound_id, room_name, voc))))
+
+
+def room_sound_ids(raw: str, room_name: str) -> tuple[str, ...]:
+    return tuple(asset.id for asset in parse_document(raw).sound_assets
+                 if asset.room == room_name)
+
+
 def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
     """Combine current authored Story rooms with typed native Actor and verb actions.
 
@@ -53,7 +74,8 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                        animation_input_rules=native.animation_input_rules,
                        animation_triggers=native.animation_triggers,
                        interaction_sequences=native.interaction_sequences,
-                       music_assets=native.music_assets)
+                       music_assets=native.music_assets,
+                       sound_assets=native.sound_assets)
     return canonical_json(composed)
 
 
@@ -159,6 +181,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Raumwechsel: {step.room}"
     if isinstance(step, MusicCueStep):
         return "Musik starten" if step.operation == "start" else "Musik stoppen"
+    if isinstance(step, SoundEffectStep):
+        return f"Sound {step.sound_id}: {'starten' if step.operation == 'start' else 'stoppen'}"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -202,6 +226,10 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         step = MusicCueStep("start")
     elif kind == "Musik stoppen":
         step = MusicCueStep("stop")
+    elif kind == "Sound starten":
+        step = SoundEffectStep(target_id, "start")
+    elif kind == "Sound stoppen":
+        step = SoundEffectStep(target_id, "stop")
     elif kind == "Warten":
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Wartezeit muss eine ganze Zahl sein")
@@ -313,6 +341,9 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
     if isinstance(step, MusicCueStep):
         return ("Musik starten" if step.operation == "start" else "Musik stoppen",
                 None, None, None, 1, 320, 100, "S")
+    if isinstance(step, SoundEffectStep):
+        return ("Sound starten" if step.operation == "start" else "Sound stoppen",
+                None, None, step.sound_id, 1, 320, 100, "S")
     return ("Objektzustand setzen", None, None, step.hotspot_id, step.state, 320, 100, "S")
 
 
