@@ -103,10 +103,11 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         danach bleibt die Initialanimation über einen echten
         `Harbor → Cellar → Harbor`-Rückweg gesperrt. Stock-ScummVM-
         CI `42477804196` grün; laufende Animationen separat.
-  - [ ] Produktfunktion in CI-Prüfung: `animation_triggers` startet benannte
+  - [x] Produkt-Teilgate: `animation_triggers` startet benannte
         Costume-Animationen bei jedem zugeordneten Hotspot-Verb erneut.
-        Modell, JSON und ScummC-Ausgabe implementiert; native Fixture
-        kompiliert mit, Interaktion noch nicht im Interpreter belegt.
+        Modell, JSON und ScummC-Ausgabe implementiert; native Fixture mit
+        zweitem Actor erfolgreich kompiliert und gestartet (CI `42481225873`).
+        Wiederholte Spielerinteraktion noch nicht gesondert visuell belegt.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
