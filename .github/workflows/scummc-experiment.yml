@@ -226,6 +226,10 @@ jobs:
             /tmp/native-actor-sequence/screenshots/scummvm-second.png
             /tmp/native-actor-sequence/screenshots/scummvm-before-third.png
             /tmp/native-actor-sequence/screenshots/scummvm-third.png
+            /tmp/native-actor-sequence/screenshots/scummvm-before-room-change.png
+            /tmp/native-actor-sequence/screenshots/scummvm-cellar-after-escape.png
+            /tmp/native-actor-sequence/screenshots/scummvm-stairs-after-escape.png
+            /tmp/native-actor-sequence/screenshots/scummvm-harbor-after-return.png
             /tmp/native-actor-sequence/screenshots/scummvm.log
           if-no-files-found: ignore
       - name: Compile Studio-imported PNG animation and launch native game
