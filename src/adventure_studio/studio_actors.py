@@ -315,3 +315,13 @@ def move_actor(raw: str, actor_id: str, room: str, x: int | float, y: int | floa
     if not any(actor.id == actor_id for actor in document.actors):
         raise ValueError("Unbekannter Actor")
     return canonical_json(replace(document, actors=actors))
+
+
+def set_actor_initial_animation(raw: str, actor_id: str, animation: str | None) -> str:
+    """Select a native COST animation to play when the Actor first enters the game."""
+    document = parse_document(raw)
+    if not any(actor.id == actor_id for actor in document.actors):
+        raise ValueError("Unbekannter Actor")
+    actors = tuple(replace(actor, initial_animation=animation or None)
+                   if actor.id == actor_id else actor for actor in document.actors)
+    return canonical_json(replace(document, actors=actors))

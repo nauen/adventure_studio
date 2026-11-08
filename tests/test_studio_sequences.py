@@ -18,7 +18,7 @@ from adventure_studio.studio_project import canonical_studio_project, parse_stud
 from adventure_studio.studio_actors import (add_actor, create_costume, move_actor,
                                            add_costume_frame, set_costume_animation,
                                            costume_timeline_images, edit_costume_timeline,
-                                           render_costume_preview)
+                                           render_costume_preview, set_actor_initial_animation)
 from test_scumm_toolchain import fake_upstream
 
 
@@ -94,6 +94,8 @@ class NativeSequenceEditorTests(unittest.TestCase):
             raw = add_costume_frame(raw, "PixelCostume", str(second), "Pose1")
             raw = set_costume_animation(raw, "PixelCostume", "wave", 28, "E",
                                         "Pose0, COUNT, Pose1", False)
+            raw = set_actor_initial_animation(raw, "PixelHero", "wave")
+            self.assertEqual(parse_document(raw).actors[-1].initial_animation, "wave")
             gallery = costume_timeline_images(raw, "PixelCostume", "wave", "E")
             self.assertEqual([label for _, label in gallery],
                              ["1. Pose0", "2. COUNT", "3. Pose1"])
