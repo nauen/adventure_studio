@@ -77,8 +77,13 @@ def run_actor_save_probe(game: Path, output: Path) -> dict:
             if process.poll() is not None:
                 raise RuntimeError("ScummVM exited before Actor COUNT")
             capture("initial")
-            if door_pixels(output, "initial", open_state=True) >= 40:
-                break
+            try:
+                if door_pixels(output, "initial", open_state=True) >= 40:
+                    break
+            except ValueError:
+                # The first captured frame may still be ScummVM's launcher.
+                # Only a valid room frame can prove the COUNT marker.
+                pass
             time.sleep(0.15)
         else:
             raise RuntimeError("Actor COUNT never opened the door")
