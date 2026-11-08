@@ -13,6 +13,7 @@ from adventure_studio.studio_sequences import (append_sequence_step, modify_sequ
                                                 project_choices, sequence_choices, sequence_steps,
                                                 compose_story_project)
 from adventure_studio.studio_export import export_native_project
+from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
 from test_scumm_toolchain import fake_upstream
 
 
@@ -52,6 +53,18 @@ class NativeSequenceEditorTests(unittest.TestCase):
         self.assertTrue(combined.rooms[0].use_rules)
         with self.assertRaisesRegex(ValueError, "Interaction sequence requires an existing room hotspot"):
             compose_story_project(story.replace('"Key"', '"NewKey"'), raw)
+
+        studio_file = canonical_studio_project(story, raw)
+        restored_story, restored_native = parse_studio_project(studio_file)
+        self.assertEqual(restored_story, canonical_story_json(parse_story_document(story)))
+        self.assertEqual(parse_document(restored_native).interaction_sequences,
+                         parse_document(raw).interaction_sequences)
+        restored_native = append_sequence_step(restored_native, "Harbor", "Key", "Close",
+                                               "Warten", None, None, None, 3)
+        saved_again = canonical_studio_project(restored_story, restored_native)
+        self.assertEqual(len(parse_document(parse_studio_project(saved_again)[1])
+                             .interaction_sequences[0].steps), 3)
+        self.assertEqual(canonical_studio_project(*parse_studio_project(saved_again)), saved_again)
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

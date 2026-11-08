@@ -1,5 +1,27 @@
 # Versioniertes SCUMM-Projektformat (experimentell)
 
+## Gemeinsame Adventure-Studio-Projektdatei
+
+Im Gradio-Studio kann das vollständige Authoring-Projekt als
+`adventure.studio.json` gespeichert und wieder geöffnet werden. Die Datei
+hat eine eigene, explizite `format_version: 1` und enthält zwei Bereiche:
+
+- `story` enthält eine vollständige gültige Story-Dokument-Hülle
+  (Version 1–4).
+- `native` enthält ausschließlich die zusätzlichen optionalen Felder
+  `costumes`, `actors`, `animation_rules`, `animation_input_rules`,
+  `animation_triggers` und `interaction_sequences` aus dem `GameDocument`.
+  Das Objekt darf leer sein, solange keine nativen Daten angelegt wurden.
+Generierte Raumbilder und Hotspots werden aus der Story erneut erzeugt;
+sie werden nicht redundant als zweite editierbare Quelle gespeichert.
+
+Beim Laden und Speichern validiert der Studio-Editor alle nativen Referenzen
+gegen die jeweils aktuelle Story-Übersetzung. Nicht unterstützte Felder oder
+ungültige Referenzen verhindern den Export sichtbar. Das native
+`GameDocument`-JSON und die bisherigen Story-JSON-Versionen bleiben separat
+lesbar. Ein `.studio.json` ist **kein** direktes ScummC-Eingabeformat; der
+Studio-Export erzeugt daraus weiterhin das native `project.json`.
+
 ## Geordnete Interaktionsfolgen (P0.5)
 
 `GameDocument` v1 unterstützt optional `interaction_sequences`. Ein
