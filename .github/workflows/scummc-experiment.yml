@@ -222,6 +222,10 @@ jobs:
             /tmp/native-actor-sequence/build/resources/Harbor.scc
             /tmp/native-actor-sequence/screenshots/scummvm-before.png
             /tmp/native-actor-sequence/screenshots/scummvm-after.png
+            /tmp/native-actor-sequence/screenshots/scummvm-before-second.png
+            /tmp/native-actor-sequence/screenshots/scummvm-second.png
+            /tmp/native-actor-sequence/screenshots/scummvm-before-third.png
+            /tmp/native-actor-sequence/screenshots/scummvm-third.png
             /tmp/native-actor-sequence/screenshots/scummvm.log
           if-no-files-found: ignore
       - name: Compile Studio-imported PNG animation and launch native game

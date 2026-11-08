@@ -36,8 +36,10 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
 
 def sequence_choices(raw: str) -> tuple[tuple[str, str], ...]:
     document = parse_document(raw)
-    return tuple((f"{item.room} / {item.hotspot_id} / {item.verb}",
-                  f"{item.room}|{item.hotspot_id}|{item.verb}")
+    return tuple((f"{item.room} / {item.hotspot_id} / {item.verb}"
+                  + (f" [wenn {item.condition_hotspot_id}={item.condition_state}]"
+                     if item.condition_hotspot_id is not None else " [sonst/immer]"),
+                  _identity(item))
                  for item in document.interaction_sequences)
 
 
@@ -75,8 +77,24 @@ def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
 
 
+def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
+                               state: int | float | None) -> str:
+    """Copy the selected action sequence as an independently editable state branch."""
+    document = parse_document(raw)
+    original = next((item for item in document.interaction_sequences
+                     if _identity(item) == identity), None)
+    if original is None:
+        raise ValueError("Bitte eine vorhandene Interaktion wählen")
+    if hotspot_id is None or state is None or type(state) not in (int, float) or int(state) != state:
+        raise ValueError("Alternative benötigt ein Objekt und einen ganzen Zustand")
+    variant = replace(original, condition_hotspot_id=hotspot_id, condition_state=int(state))
+    return _checked(replace(document, interaction_sequences=(*document.interaction_sequences, variant)))
+
+
 def _identity(sequence: InteractionSequence) -> str:
-    return f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
+    base = f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
+    return (base if sequence.condition_hotspot_id is None else
+            f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
 def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep) -> str:
@@ -157,7 +175,8 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
     key = (room, hotspot_id, verb)
     sequences = list(document.interaction_sequences)
     index = next((index for index, item in enumerate(sequences)
-                  if (item.room, item.hotspot_id, item.verb) == key), None)
+                  if (item.room, item.hotspot_id, item.verb) == key
+                  and item.condition_hotspot_id is None), None)
     if index is None:
         sequences.append(InteractionSequence(room, hotspot_id, verb, (step,)))
     else:

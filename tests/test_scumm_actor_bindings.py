@@ -60,6 +60,16 @@ class ActorBootstrapTests(unittest.TestCase):
                                                       document.actors, document.costumes)
         self.assertIn('case Close:\n            if(getObjectState(Door) != 1) return;\n'
                       '            animateActor(Companion,24);', guarded_source)
+        alternate = InteractionSequence('Harbor', 'Key', 'Close',
+                                        (ObjectStateStep('Door', 1),), 'Door', 2)
+        alternatives = replace(document, interaction_sequences=(guarded, alternate))
+        self.assertEqual(parse_document(canonical_json(alternatives)), alternatives)
+        branched = inject_interaction_sequences(source, 'Harbor', alternatives.interaction_sequences,
+                                                document.actors, document.costumes)
+        self.assertEqual(branched.count('case Close:'), 1)
+        self.assertIn('if(getObjectState(Door) == 1) {', branched)
+        self.assertIn('if(getObjectState(Door) == 2) {', branched)
+        self.assertIn('setObjectState(Door,1);', branched)
         with self.assertRaisesRegex(ValueError, 'Duplicate'):
             canonical_json(replace(document, animation_triggers=(
                 AnimationTrigger('Guide', 'Harbor', 'Key', 'Close', 'gesture'),)))

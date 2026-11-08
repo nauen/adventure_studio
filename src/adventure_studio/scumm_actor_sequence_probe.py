@@ -13,7 +13,9 @@ from pathlib import Path
 from .scumm_launch import colored_item_center, colored_item_pixels
 from .scumm_project import canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
-from .studio_sequences import append_sequence_step, set_sequence_condition
+from .studio_sequences import (append_sequence_step, set_sequence_condition,
+                               duplicate_sequence_variant, modify_sequence_step,
+                               replace_sequence_step)
 
 
 def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Path) -> dict:
@@ -40,6 +42,12 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
         raw = append_sequence_step(raw, "Harbor", "Key", "Close", kind, actor,
                                    animation, target, amount, x, y, direction)
     raw = set_sequence_condition(raw, "Harbor|Key|Close", "Door", 1)
+    raw = duplicate_sequence_variant(raw, "Harbor|Key|Close|Door|1", "Door", 2)
+    alternate = "Harbor|Key|Close|Door|2"
+    for _ in range(len(actions) - 1):
+        raw = modify_sequence_step(raw, alternate, 0, "Entfernen")
+    raw = replace_sequence_step(raw, alternate, 0, "Objektzustand setzen",
+                                None, None, "Door", 1)
     build = destination / "build"
     build.mkdir(parents=True, exist_ok=True)
     (build / "project.json").write_text(raw, encoding="utf-8")
@@ -88,9 +96,14 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
             closed_door = colored_item_pixels(screenshot_dir, "before", (50, 220, 220))
 
             # Road's native Close verb is at (10,184); Xvfb scales the game 2x.
-            for x, y in ((234, 563), key_center):
-                subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
-                               check=True, timeout=10)
+            def click_close_key(sample: str) -> None:
+                frame(sample)
+                current_key = colored_item_center(screenshot_dir, sample, (255, 220, 75))
+                for x, y in ((234, 563), current_key):
+                    subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                                   check=True, timeout=10)
+
+            click_close_key("before")
             started = time.monotonic()
             open_pixels = 0
             while time.monotonic() - started < 15:
@@ -101,16 +114,44 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 if open_pixels >= 40:
                     break
                 time.sleep(0.25)
+            if open_pixels < 40:
+                raise RuntimeError("First conditional branch did not open Door")
+            time.sleep(2)
+            click_close_key("before-second")
+            closed_again = False
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                frame("second")
+                key_visible = colored_item_pixels(screenshot_dir, "second", (255, 220, 75)) >= 5
+                if (key_visible and
+                        colored_item_pixels(screenshot_dir, "second", (50, 220, 220)) < 40):
+                    closed_again = True
+                    break
+                time.sleep(0.25)
+            if not closed_again:
+                raise RuntimeError("Second conditional branch did not close Door")
+            time.sleep(2)
+            click_close_key("before-third")
+            reopened = False
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline:
+                frame("third")
+                if colored_item_pixels(screenshot_dir, "third", (50, 220, 220)) >= 40:
+                    reopened = True
+                    break
+                time.sleep(0.25)
             report = {
                 "studio_interaction": "Harbor / Key / Close",
                 "actions": [action[0] for action in actions],
                 "door_closed_before_click": closed_door < 40,
                 "door_open_after_click": open_pixels >= 40,
+                "door_closed_after_second_click": closed_again,
+                "door_reopened_after_third_click": reopened,
                 "response_seconds": round(time.monotonic() - started, 2),
             }
             (destination / "actor-sequence-report.json").write_text(
                 json.dumps(report, indent=2) + "\n", encoding="utf-8")
-            if not report["door_open_after_click"]:
+            if not (report["door_open_after_click"] and closed_again and reopened):
                 raise RuntimeError(f"Studio native Actor choreography did not finish: {report}")
             return report
         finally:

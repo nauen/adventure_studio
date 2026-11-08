@@ -13,6 +13,7 @@ from adventure_studio.story_document import canonical_story_json, parse_story_do
 from adventure_studio.studio_sequences import (append_sequence_step, modify_sequence_step,
                                                 replace_sequence_step, sequence_step_fields,
                                                 sequence_condition_fields, set_sequence_condition,
+                                                duplicate_sequence_variant,
                                                 project_choices, sequence_choices, sequence_steps,
                                                 compose_story_project)
 from adventure_studio.studio_export import export_native_project
@@ -45,8 +46,16 @@ class NativeSequenceEditorTests(unittest.TestCase):
                          ("Actor Guide: zu (450, 112) laufen lassen", "Auf Actor Guide warten"))
         self.assertEqual(len(parse_document(raw).interaction_sequences), 1)
         raw = set_sequence_condition(raw, identity, "Door", 1)
-        self.assertEqual(sequence_condition_fields(raw, identity), ("Door", 1))
-        raw = set_sequence_condition(raw, identity, None, 0)
+        guarded_identity = identity + "|Door|1"
+        self.assertEqual(sequence_condition_fields(raw, guarded_identity), ("Door", 1))
+        raw = duplicate_sequence_variant(raw, guarded_identity, "Door", 2)
+        variant_identity = identity + "|Door|2"
+        raw = replace_sequence_step(raw, variant_identity, 0, "Warten", None, None, None, 1)
+        self.assertEqual(sequence_steps(raw, variant_identity)[0], "Warten: 1 s")
+        self.assertEqual(len(sequence_choices(raw)), 2)
+        with self.assertRaisesRegex(ValueError, "distinct states"):
+            duplicate_sequence_variant(raw, guarded_identity, "Door", 2)
+        raw = set_sequence_condition(raw, guarded_identity, None, 0)
         self.assertEqual(sequence_condition_fields(raw, identity), (None, 0))
         with self.assertRaisesRegex(ValueError, "Schritt existiert nicht"):
             replace_sequence_step(raw, identity, 3, "Warten", None, None, None, 2)

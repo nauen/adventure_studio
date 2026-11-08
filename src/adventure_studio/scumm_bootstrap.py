@@ -506,20 +506,11 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                         for sequence in active):
         raise ValueError(f"Missing native interaction hotspot in {room_name}")
     source = source[:first] + "".join(declarations) + source[first:]
+    grouped = {}
     for sequence in active:
-        marker = f"    object {sequence.hotspot_id} {{\n"
-        if source.count(marker) != 1:
-            raise ValueError(f"Missing native interaction hotspot: {sequence.hotspot_id}")
-        start = source.index(marker) + len(marker)
-        end = source.find("    object ", start)
-        if end == -1:
-            end = source.find("    local script entry()", start)
-        if end == -1:
-            raise ValueError(f"Cannot isolate native interaction hotspot: {sequence.hotspot_id}")
-        segment = source[start:end]
-        verb_marker = "        verb(int vrb, int objA, int objB) {\n"
-        if segment.count(verb_marker) != 1 or f"        case {sequence.verb}:\n" in segment:
-            raise ValueError(f"Conflicting native interaction verb on {sequence.hotspot_id}")
+        grouped.setdefault((sequence.hotspot_id, sequence.verb), []).append(sequence)
+
+    def instructions_for(sequence):
         instructions = []
         for step in sequence.steps:
             if isinstance(step, AnimateActorStep):
@@ -544,11 +535,40 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                      "            setCurrentActor(VAR_EGO);\n"))
             else:
                 raise ValueError("Unsupported native interaction step")
-        guard = (f"            if(getObjectState({sequence.condition_hotspot_id}) != "
-                 f"{sequence.condition_state}) return;\n"
-                 if sequence.condition_hotspot_id is not None else "")
-        native = (f"        case {sequence.verb}:\n" + guard
-                  + "".join(instructions) + "            return;\n")
+        return "".join(instructions)
+
+    for group in grouped.values():
+        sequence = group[0]
+        marker = f"    object {sequence.hotspot_id} {{\n"
+        if source.count(marker) != 1:
+            raise ValueError(f"Missing native interaction hotspot: {sequence.hotspot_id}")
+        start = source.index(marker) + len(marker)
+        end = source.find("    object ", start)
+        if end == -1:
+            end = source.find("    local script entry()", start)
+        if end == -1:
+            raise ValueError(f"Cannot isolate native interaction hotspot: {sequence.hotspot_id}")
+        segment = source[start:end]
+        verb_marker = "        verb(int vrb, int objA, int objB) {\n"
+        if segment.count(verb_marker) != 1 or f"        case {sequence.verb}:\n" in segment:
+            raise ValueError(f"Conflicting native interaction verb on {sequence.hotspot_id}")
+        if len(group) == 1:
+            guard = (f"            if(getObjectState({sequence.condition_hotspot_id}) != "
+                     f"{sequence.condition_state}) return;\n"
+                     if sequence.condition_hotspot_id is not None else "")
+            native = (f"        case {sequence.verb}:\n" + guard
+                      + instructions_for(sequence) + "            return;\n")
+        else:
+            native = f"        case {sequence.verb}:\n"
+            for branch in (item for item in group if item.condition_hotspot_id is not None):
+                native += (f"            if(getObjectState({branch.condition_hotspot_id}) == "
+                           f"{branch.condition_state}) {{\n"
+                           + "".join("    " + line for line in instructions_for(branch).splitlines(True))
+                           + "                return;\n            }\n")
+            fallback = next((item for item in group if item.condition_hotspot_id is None), None)
+            if fallback is not None:
+                native += instructions_for(fallback)
+            native += "            return;\n"
         source = source[:start] + segment.replace(verb_marker, verb_marker + native, 1) + source[end:]
     return source
 

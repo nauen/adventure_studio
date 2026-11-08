@@ -22,6 +22,7 @@ from .studio_export import export_playable, export_native_project
 from .studio_sequences import (actor_animations, append_sequence_step, modify_sequence_step,
                                replace_sequence_step, sequence_step_fields,
                                sequence_condition_fields, set_sequence_condition,
+                               duplicate_sequence_variant,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -565,6 +566,8 @@ def make_app():
                 native_condition_state = gr.Number(label="Erforderlicher Zustand (0–2)",
                                                    value=0, precision=0)
                 native_condition_save = gr.Button("Bedingung speichern")
+                native_variant_add = gr.Button("Alternative Zustandsvariante duplizieren")
+            gr.Markdown("Mehrere Varianten desselben Verbs dürfen unterschiedliche Zustände **desselben Raumobjekts** abdecken. Eine Variante ohne Bedingung dient als Fallback. Nach dem Duplizieren die Schritte der neuen Variante bearbeiten.")
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
             with gr.Row():
@@ -795,6 +798,10 @@ def make_app():
                                     [native_state, native_sequence, native_condition_object,
                                      native_condition_state],
                                     [native_state, *native_outputs, native_report])
+        native_variant_add.click(lambda *args: native_edit(duplicate_sequence_variant, *args),
+                                 [native_state, native_sequence, native_condition_object,
+                                  native_condition_state],
+                                 [native_state, *native_outputs, native_report])
         def native_step_update(raw, identity, number):
             fields = sequence_step_fields(raw, identity, number)
             sequence_room = identity.split("|", 1)[0] if identity else None
