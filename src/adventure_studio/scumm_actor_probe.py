@@ -184,11 +184,16 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                                      ObjectStateEffect("Harbor", "Door", 2))
     source = inject_actor_count_rules(source, "Harbor", (first_count_rule,),
                                       document.actors, document.costumes)
+    walk_marker = "        walkActorTo(VAR_EGO, 540, 100);\n"
+    if source.count(walk_marker) != 1:
+        raise ValueError("Missing fixture hero walk for input probe")
+    source = source.replace(walk_marker, "", 1)
     if source.count("        animateActor(Companion,24);\n") != 1:
         raise ValueError("Missing native Actor animation for input probe")
     # Slow only the isolated fixture's Actor, leaving the authored project and
     # exporter timing unchanged. The first COUNT is observable as a cyan door.
     source = source.replace("        animateActor(Companion,24);\n",
+                            "        putActorAt(VAR_EGO, 430, 100, Harbor);\n"
                             "        setCameraAt(480);\n"
                             "        setCurrentActor(Companion);\n"
                             "        setActorAnimSpeed(30);\n"
@@ -250,7 +255,7 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                     time.sleep(6)
                 door_x, door_y = open_door_center(output, "door")
                 click(door_x, door_y)
-                time.sleep(0.8)
+                time.sleep(2.5)
                 frame("end")
                 gold = visible_key_pixels(output)
                 cyan = colored_item_pixels(output, "end", (50, 220, 220))
