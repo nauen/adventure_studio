@@ -57,7 +57,14 @@ wählt einen Schritt, der per Button versetzt, entfernt oder durch eine
 weitere Frame-ID bzw. ein natives Kommando ergänzt werden kann. Die Timeline
 ändert die zugrunde liegenden `CostumeDirection.commands` direkt; es gibt
 keine separate Vorschau-Runtime und keine neuen SCUMM-Operationen.
-Bewegte Wiedergabe und die echte ScummVM-Ansicht sind noch offen.
+Der Button **Animation abspielen** erzeugt zusätzlich eine animierte
+GIF-Vorschau aus den tatsächlich importierten Costume-Frames. Die relative
+Actor-Ursprungsposition der einzelnen Frames bleibt erhalten; die
+Millisekunden pro Bild sind nur eine frei einstellbare Editor-
+Vorschaugeschwindigkeit und werden nicht in das native COST-Script
+geschrieben. Die Vorschau zeigt die Bildfolge, simuliert jedoch keine
+SCUMM-Script-Slots, `COUNT`-/`SHOW`-/`HIDE`-Effekte oder Interpreter-Ticks.
+Der Gameplay-Nachweis in ScummVM ist davon getrennt.
 
 ## Geordnete Interaktionsfolgen (P0.5)
 

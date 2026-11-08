@@ -196,6 +196,59 @@ def costume_timeline_images(raw: str, costume_name: str | None,
     return results
 
 
+def render_costume_preview(raw: str, costume_name: str, animation_name: str,
+                           direction: str, frame_duration_ms: int | float,
+                           destination: Path) -> Path:
+    """Render authored frame order as a preview GIF, not a SCUMM runtime simulation."""
+    from PIL import Image
+
+    if (type(frame_duration_ms) not in (int, float) or int(frame_duration_ms) != frame_duration_ms
+            or not 40 <= frame_duration_ms <= 2000):
+        raise ValueError("Vorschau-Framezeit muss zwischen 40 und 2000 Millisekunden liegen")
+    document = parse_document(raw)
+    costume = next((item for item in document.costumes if item.name == costume_name), None)
+    if costume is None:
+        raise ValueError("Bitte eine Costume auswählen")
+    animation = next((item for item in costume.animations if item.name == animation_name), None)
+    if animation is None:
+        raise ValueError("Bitte eine Animation auswählen")
+    selected = next((item for item in animation.directions if item.direction == direction), None)
+    if selected is None:
+        raise ValueError("Diese Animation hat keine Frames für die gewählte Richtung")
+    by_id = {frame.id: frame for frame in costume.frames}
+    frames = [by_id[command] for command in selected.commands if command in by_id]
+    if not frames:
+        raise ValueError("Die Animationsfolge enthält keine darstellbaren Frames")
+
+    # All poses share the same native actor origin. A fixed canvas and nearest-
+    # neighbor scaling retain the relative frame offsets and pixel-art edges.
+    left = min(frame.offset_x for frame in frames)
+    top = min(frame.offset_y for frame in frames)
+    right = max(frame.offset_x + frame.width for frame in frames)
+    bottom = max(frame.offset_y + frame.height for frame in frames)
+    scale = min(8, 224 / max(right - left, bottom - top))
+    rendered = []
+    for frame in frames:
+        rgba = bytes(channel for value in frame.pixels for channel in
+                     ((*costume.palette[costume.palette_first + value], 255)
+                      if value else (0, 0, 0, 0)))
+        original = Image.frombytes("RGBA", (frame.width, frame.height), rgba)
+        image = original.resize((max(1, round(frame.width * scale)),
+                                 max(1, round(frame.height * scale))), Image.Resampling.NEAREST)
+        canvas = Image.new("RGB", (256, 256), (36, 40, 48))
+        x = round((256 - (right - left) * scale) / 2 + (frame.offset_x - left) * scale)
+        y = round((256 - (bottom - top) * scale) / 2 + (frame.offset_y - top) * scale)
+        canvas.paste(image, (x, y), image)
+        rendered.append(canvas)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    options = {"save_all": True, "append_images": rendered[1:],
+               "duration": int(frame_duration_ms), "optimize": False, "disposal": 2}
+    if selected.loop:
+        options["loop"] = 0
+    rendered[0].save(destination, format="GIF", **options)
+    return destination
+
+
 def edit_costume_timeline(raw: str, costume_name: str, animation_name: str,
                           direction: str, step_number: int | float | None,
                           operation: str, command: str | None = None) -> str:

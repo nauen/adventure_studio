@@ -27,7 +27,8 @@ from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
                             create_costume, add_costume_frame, set_costume_animation,
                             move_actor, costume_animation_names, costume_animation_steps,
-                            costume_timeline_images, edit_costume_timeline)
+                            costume_timeline_images, edit_costume_timeline,
+                            render_costume_preview)
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
@@ -334,6 +335,21 @@ def make_app():
         except (ValueError, OSError, RuntimeError, subprocess.CalledProcessError) as error:
             raise gr.Error(f"Nativer SCUMM-Export fehlgeschlagen: {error}") from error
 
+    def native_animation_preview(raw, costume, animation, direction, frame_duration):
+        if raw is None:
+            raise gr.Error("Bitte zuerst eine native Costume erstellen oder laden")
+        path = Path(tempfile.mkdtemp(prefix="adventure-studio-costume-preview-")) / "animation.gif"
+        try:
+            rendered = render_costume_preview(raw, costume, animation, direction,
+                                              frame_duration, path)
+            steps = costume_animation_steps(raw, costume, animation, direction)
+            pictures = sum(step not in ("COUNT", "SHOW", "HIDE", "NOP") for step in steps)
+            return (str(rendered),
+                    f"{pictures} Bildframes · {int(frame_duration)} ms pro Bild (nur Editor-Vorschau). "
+                    "COUNT/SHOW/HIDE/NOP werden nicht als Engine-Timing simuliert.")
+        except (ValueError, OSError) as error:
+            raise gr.Error(f"Costume-Vorschau nicht möglich: {error}") from error
+
     def studio_load(file_path):
         if not file_path:
             raise gr.Error("Bitte eine Studio-Projektdatei auswählen")
@@ -491,6 +507,13 @@ def make_app():
                         native_timeline_up = gr.Button("Nach links")
                         native_timeline_down = gr.Button("Nach rechts")
                         native_timeline_remove = gr.Button("Entfernen")
+                    with gr.Row():
+                        native_preview_duration = gr.Number(label="Vorschau-Millisekunden pro Bild",
+                                                            value=180, precision=0)
+                        native_preview_button = gr.Button("Animation abspielen")
+                    native_preview_image = gr.Image(label="Animierte Costume-Vorschau (GIF)",
+                                                    interactive=False, format="gif")
+                    native_preview_report = gr.Markdown()
                 with gr.Row():
                     native_actor_id = gr.Textbox(label="Actor-ID")
                     native_actor_name = gr.Textbox(label="Anzeigename")
@@ -668,6 +691,10 @@ def make_app():
                          op=operation: timeline_edit(raw, name, animation, direction,
                                                      step, op, command),
                          [*timeline_inputs, native_timeline_command], timeline_outputs)
+        native_preview_button.click(native_animation_preview,
+                                    [native_state, native_costume_select, native_timeline_animation,
+                                     native_anim_direction, native_preview_duration],
+                                    [native_preview_image, native_preview_report])
         native_actor_button.click(lambda raw, actor_id, costume, room, x, y, direction, name:
                                   native_asset_edit(add_actor, raw, actor_id, costume, room,
                                                     x, y, direction, name),
