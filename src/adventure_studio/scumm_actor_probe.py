@@ -14,7 +14,8 @@ from pathlib import Path
 from .scumm_assets import destination_fixture, scrolling_fixture
 from .scumm_costume_probe import gesture_fixture
 from .scumm_costume import CostumeDirection
-from .scumm_launch import launch_smoke, door_pixels, open_door_center, visible_key_pixels
+from .scumm_launch import (launch_smoke, colored_item_pixels, door_pixels,
+                           open_door_center, visible_key_pixels)
 from .scumm_binary import verify_room_binary
 from .scumm_project import (ActorAsset, ActorCountCondition, AnimationRule, AnimationInputRule,
                             GameDocument, ObjectStateEffect, canonical_json,
@@ -105,7 +106,7 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
                             ), animation_input_rules=(
                                 AnimationInputRule("Companion", "Harbor", "Door", "Push", 2,
                                                    ObjectStateEffect("Harbor", "Key", 0),
-                                                   ObjectStateEffect("Harbor", "Key", 1)),
+                                                   ObjectStateEffect("Harbor", "Door", 0)),
                             ))
     encoded = canonical_json(document)
     (build / "project.json").write_text(encoded, encoding="utf-8")
@@ -250,7 +251,9 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                 time.sleep(0.8)
                 frame("end")
                 gold = visible_key_pixels(output)
-                return {"key_pixels": gold, "first_count_time": round(first_count - started, 3),
+                cyan = colored_item_pixels(output, "end", (50, 220, 220))
+                return {"key_pixels": gold, "open_door_pixels": cyan,
+                        "first_count_time": round(first_count - started, 3),
                         "door_click": [door_x, door_y]}
             finally:
                 game.terminate()
@@ -262,8 +265,10 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
 
     early = run_click("early")
     late = run_click("late")
-    report = {"native_early_late_input_verified": early["key_pixels"] < 40
-              and late["key_pixels"] >= 40, "early": early, "late": late}
+    report = {"native_early_late_input_verified": (
+              early["key_pixels"] < 40 and early["open_door_pixels"] >= 40
+              and late["key_pixels"] >= 40 and late["open_door_pixels"] < 40),
+              "early": early, "late": late}
     (destination / "actor-input-report.json").write_text(json.dumps(report, indent=2) + "\n",
                                                           encoding="utf-8")
     if not report["native_early_late_input_verified"]:
