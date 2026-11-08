@@ -135,15 +135,17 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 raise RuntimeError(f"Talk to did not reveal answers: {report}")
             # The two identical-colored answer sprites must not be treated as
             # one ImageMagick bounding box: its center can lie in the gap.
-            # Choose the first fixture answer at story-space (240,130).
-            answer_x, answer_y = 192 + 240 * 2 + 16, 184 + 130 * 2 + 16
+            # The historical flat fixture remains at y=130; nested story
+            # fixtures place their first row at y=120 to allow redraws.
+            answer_x = 192 + 240 * 2 + 16
+            answer_y = 184 + (120 if nested else 130) * 2 + 16
             _click(330, 560)  # Re-select Talk to; SCUMM may reset the verb.
             _click(answer_x, answer_y)
             if nested:
                 nested_visible = False
                 for _ in range(35):
                     _capture(output, "nested")
-                    if (_answer_row_count(output, "nested", 130) < 10
+                    if (_answer_row_count(output, "nested", 120) < 10
                             and _answer_row_count(output, "nested", 100) >= 50):
                         nested_visible = True
                         break
@@ -156,7 +158,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 returned = False
                 for _ in range(35):
                     _capture(output, "returned")
-                    if (_answer_row_count(output, "returned", 130) >= 50
+                    if (_answer_row_count(output, "returned", 120) >= 50
                             and _answer_row_count(output, "returned", 100) < 10):
                         returned = True
                         break

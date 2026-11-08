@@ -143,9 +143,9 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                         answer_id = (f"Answer{actor.id}{choice_index + 1}" if node_id == entry_choice_node
                                      else f"Answer{actor.id}N{stage_numbers[node_id]}C{choice_index + 1}")
                         answer_x = 240 + choice_index * 24
-                        # SCUMM v6's room viewport ends at y=144. A second
-                        # row below the entry answers would crash ScummVM.
-                        answer_y = 130 if node_id == entry_choice_node else 100
+                        # Both answer rows must fit the 144px room viewport,
+                        # including the full 16px sprite on redraw.
+                        answer_y = 120 if node_id == entry_choice_node else 100
                         if answer_x + 16 > room_width or not _ID.fullmatch(answer_id):
                             raise ValueError("Dialogue answer hotspot exceeds room exporter limits")
                         result.append(RoomHotspot(answer_id, _text(choice.text), _text(choice.text),
