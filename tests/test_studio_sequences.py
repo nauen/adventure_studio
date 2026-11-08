@@ -8,8 +8,10 @@ from zipfile import ZipFile
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import ActorAsset, GameDocument, canonical_json, parse_document
+from adventure_studio.story_document import canonical_story_json, parse_story_document
 from adventure_studio.studio_sequences import (append_sequence_step, modify_sequence_step,
-                                                project_choices, sequence_choices, sequence_steps)
+                                                project_choices, sequence_choices, sequence_steps,
+                                                compose_story_project)
 from adventure_studio.studio_export import export_native_project
 from test_scumm_toolchain import fake_upstream
 
@@ -41,6 +43,16 @@ class NativeSequenceEditorTests(unittest.TestCase):
             append_sequence_step(raw, "Harbor", "Key", "Pull", "Objektzustand setzen",
                                  None, None, "MissingObject", 2)
 
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        combined = parse_document(compose_story_project(story, raw))
+        self.assertEqual(combined.actors, document.actors)
+        self.assertEqual(combined.interaction_sequences, parse_document(raw).interaction_sequences)
+        self.assertEqual(len(combined.rooms), 3)
+        self.assertTrue(combined.rooms[0].use_rules)
+        with self.assertRaisesRegex(ValueError, "Interaction sequence requires an existing room hotspot"):
+            compose_story_project(story.replace('"Key"', '"NewKey"'), raw)
+
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             fake_upstream(root / "scummc")
@@ -71,7 +83,10 @@ class NativeSequenceEditorTests(unittest.TestCase):
                                         source.index("setObjectState(Door,2);"))
                     target.write_bytes(b"COST" if target.suffix == ".cost" else b"compiled")
 
-            result = export_native_project(raw, root / "scummc", root / "game.zip", fake_runner)
+            result = export_native_project(raw, root / "scummc", root / "game.zip", fake_runner,
+                                           story_raw=story)
             with ZipFile(result) as archive:
                 restored = parse_document(archive.read("project.json").decode("utf-8"))
                 self.assertEqual(restored.interaction_sequences, parse_document(raw).interaction_sequences)
+                self.assertEqual(archive.read("story.json").decode("utf-8"),
+                                 canonical_story_json(parse_story_document(story)))

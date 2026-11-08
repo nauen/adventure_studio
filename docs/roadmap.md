@@ -114,7 +114,13 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
   - [x] Produkt-Implementierung: Interaktionsfolgen aus einem geladenen nativen
         `GameDocument` im Gradio-Studio anlegen, Schritte anhängen, umordnen,
         entfernen und JSON bzw. natives SCUMM-ZIP exportieren. Service-Test
-        grün; Gradio-UI- und Interaktionsnachweis in ScummVM noch offen.
+        grün; Gradio-Start-Smoke CI `42486144774` grün, vollständige
+        UI-Interaktion und Interaktionsnachweis in ScummVM noch offen.
+  - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
+        nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
+        Storyänderungen neu validieren, Story und Projekt gemeinsam in das
+        Spiel-ZIP legen. Kein dauerhafter gemeinsamer Authoring-Datentyp;
+        Gameplay-Nachweis offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

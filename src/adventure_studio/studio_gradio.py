@@ -20,7 +20,8 @@ from .studio_service import (accept_proposal, add_decoration, change_item,
 from .story_document import canonical_story_json, parse_story_document
 from .studio_export import export_playable, export_native_project
 from .studio_sequences import (actor_animations, append_sequence_step, modify_sequence_step,
-                               project_choices, sequence_choices, sequence_steps)
+                               project_choices, sequence_choices, sequence_steps,
+                               compose_story_project)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 
 
@@ -259,9 +260,18 @@ def make_app():
             raise gr.Error("Bitte native Projekt-JSON-Datei auswählen")
         try:
             raw = canonical_project_json(parse_document(Path(file_path).read_text(encoding="utf-8")))
-            return raw, *native_selectors(raw), "Natives Projekt geladen und validiert"
+            return raw, False, *native_selectors(raw), "Natives Projekt geladen und validiert"
         except (OSError, ValueError) as error:
             raise gr.Error(str(error)) from error
+
+    def native_sync(story_raw, native_raw):
+        try:
+            raw = compose_story_project(story_raw, native_raw)
+            return (raw, True, *native_selectors(raw),
+                    "Story-Räume übernommen; native Actors und Aktionen geprüft. "
+                    "Beim Export wird stets die aktuelle Story neu übersetzt.")
+        except ValueError as error:
+            raise gr.Error(f"Story und native Aktionen sind nicht kompatibel: {error}") from error
 
     def native_edit(action, raw, *args):
         if raw is None:
@@ -279,19 +289,24 @@ def make_app():
         except ValueError as error:
             raise gr.Error(str(error)) from error
 
-    def native_download(raw):
+    def native_download(raw, linked, story_raw):
         if raw is None:
             raise gr.Error("Bitte zuerst eine native Projektdatei laden")
+        try:
+            project = compose_story_project(story_raw, raw) if linked else canonical_project_json(parse_document(raw))
+        except ValueError as error:
+            raise gr.Error(f"Aktuelle Story ist nicht mit nativen Aktionen kompatibel: {error}") from error
         path = Path(tempfile.mkdtemp(prefix="adventure-studio-project-")) / "project.json"
-        path.write_text(canonical_project_json(parse_document(raw)), encoding="utf-8")
+        path.write_text(project, encoding="utf-8")
         return str(path)
 
-    def native_game(raw, scummc_path):
+    def native_game(raw, scummc_path, linked, story_raw):
         if raw is None or not scummc_path.strip():
             raise gr.Error("Native Projektdatei und ScummC-Pfad sind erforderlich")
         path = Path(tempfile.mkdtemp(prefix="adventure-studio-native-game-")) / "adventure.zip"
         try:
-            return str(export_native_project(raw, Path(scummc_path.strip()), path))
+            return str(export_native_project(raw, Path(scummc_path.strip()), path,
+                                             story_raw=story_raw if linked else None))
         except (ValueError, OSError, RuntimeError, subprocess.CalledProcessError) as error:
             raise gr.Error(f"Nativer SCUMM-Export fehlgeschlagen: {error}") from error
 
@@ -390,9 +405,11 @@ def make_app():
                 imported_json = gr.Textbox(label="Deklarative Operations-JSON", lines=5)
                 import_button = gr.Button("JSON-Vorschlag deterministisch prüfen")
         with gr.Tab("Native Interaktionsabläufe"):
-            gr.Markdown("Native `GameDocument`-Projekte bearbeiten: Objekt-Verben mit Actor-Animationen, Pausen und Objektzuständen verknüpfen. Dieses Projektformat ist vom Storyformat getrennt; es wird nichts stillschweigend konvertiert.")
+            gr.Markdown("Objekt-Verben mit Actor-Animationen, Pausen und Objektzuständen verknüpfen. **Story synchronisieren** erzeugt Räume aus deiner aktuellen Story und überträgt ausdrücklich nur Actors, Costumes und native Aktionsregeln aus dem geladenen Projekt. Andere native Raumänderungen werden dabei nicht übernommen. Bei inkompatiblen Referenzen wird abgebrochen.")
             native_state = gr.State(None)
+            native_linked = gr.State(False)
             native_file = gr.File(label="Native Projekt-JSON öffnen", file_types=[".json"], type="filepath")
+            native_sync_button = gr.Button("Aktuelle Story als natives Projekt übernehmen / aktualisieren")
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
@@ -470,7 +487,10 @@ def make_app():
         game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])
         native_outputs = [native_room, native_hotspot, native_actor, native_animation,
                           native_target, native_sequence, native_step, native_steps]
-        native_file.change(native_load, [native_file], [native_state, *native_outputs, native_report])
+        native_file.change(native_load, [native_file], [native_state, native_linked,
+                                                       *native_outputs, native_report])
+        native_sync_button.click(native_sync, [state, native_state],
+                                 [native_state, native_linked, *native_outputs, native_report])
         def native_room_update(raw, room):
             if raw is None:
                 return gr.update(), gr.update(), gr.update(), gr.update()
@@ -506,8 +526,9 @@ def make_app():
                 modify_sequence_step, raw, identity, step, op),
                 [native_state, native_sequence, native_step],
                 [native_state, *native_outputs, native_report])
-        native_json_button.click(native_download, [native_state], [native_json_download])
-        native_game_button.click(native_game, [native_state, scummc_path], [native_game_download])
+        native_json_button.click(native_download, [native_state, native_linked, state], [native_json_download])
+        native_game_button.click(native_game, [native_state, scummc_path, native_linked, state],
+                                 [native_game_download])
     return app
 
 

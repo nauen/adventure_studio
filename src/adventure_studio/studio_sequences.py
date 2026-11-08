@@ -7,9 +7,30 @@ from dataclasses import replace
 from .scumm_project import (AnimateActorStep, DelayStep, GameDocument,
                             InteractionSequence, ObjectStateStep,
                             canonical_json, parse_document)
+from .story_document import parse_story_document
+from .story_to_scumm import compile_story_to_scumm
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
+
+
+def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
+    """Combine current authored Story rooms with typed native Actor and verb actions.
+
+    The Story owns the room resources. Only the explicitly supported native
+    Actor/Costume/action fields are carried across; all references are validated
+    against the freshly compiled Story rooms before a project is returned.
+    """
+    project = compile_story_to_scumm(parse_story_document(story_raw))
+    if native_raw is None:
+        return canonical_json(project)
+    native = parse_document(native_raw)
+    composed = replace(project, costumes=native.costumes, actors=native.actors,
+                       animation_rules=native.animation_rules,
+                       animation_input_rules=native.animation_input_rules,
+                       animation_triggers=native.animation_triggers,
+                       interaction_sequences=native.interaction_sequences)
+    return canonical_json(composed)
 
 
 def sequence_choices(raw: str) -> tuple[tuple[str, str], ...]:
