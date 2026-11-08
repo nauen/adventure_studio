@@ -2,6 +2,7 @@
 
 import unittest
 import tempfile
+import importlib.util
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -14,6 +15,7 @@ from adventure_studio.studio_sequences import (append_sequence_step, modify_sequ
                                                 compose_story_project)
 from adventure_studio.studio_export import export_native_project
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
+from adventure_studio.studio_actors import add_actor, create_costume, move_actor
 from test_scumm_toolchain import fake_upstream
 
 
@@ -68,6 +70,22 @@ class NativeSequenceEditorTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            if importlib.util.find_spec("PIL") is None:
+                return  # The Studio CI runs this PNG path with its optional Pillow dependency.
+            from PIL import Image
+            sprite = root / "hero.png"
+            image = Image.new("RGBA", (8, 12), (0, 0, 0, 0))
+            for x in range(2, 6):
+                for y in range(2, 11):
+                    image.putpixel((x, y), (40, 130, 220, 255))
+            image.save(sprite)
+            raw = create_costume(raw, str(sprite), "PixelCostume")
+            raw = add_actor(raw, "PixelHero", "PixelCostume", "Harbor", 220, 100, "S", "Pixel Hero")
+            raw = move_actor(raw, "PixelHero", "Harbor", 240, 106, "E")
+            created = parse_document(raw)
+            self.assertEqual((created.actors[-1].x, created.actors[-1].direction), (240, "E"))
+            self.assertEqual(created.costumes[-1].frames[0].pixels.count(1), 36)
+            self.assertEqual(created.costumes[-1].animations[-1].index, 24)
             fake_upstream(root / "scummc")
             road = root / "scummc" / "examples" / "road"
             source = road / "common.scc"
@@ -94,6 +112,8 @@ class NativeSequenceEditorTests(unittest.TestCase):
                         self.assertIn("case Close:", source)
                         self.assertLess(source.index("animateActor(Guide,24);"),
                                         source.index("setObjectState(Door,2);"))
+                    if target.name == "PixelCostume.cost":
+                        self.assertIn("anim gesture @ 24", Path(args[-1]).read_text(encoding="utf-8"))
                     target.write_bytes(b"COST" if target.suffix == ".cost" else b"compiled")
 
             result = export_native_project(raw, root / "scummc", root / "game.zip", fake_runner,

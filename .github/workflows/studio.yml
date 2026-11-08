@@ -73,6 +73,7 @@ jobs:
           python -m unittest discover -s tests -p test_studio_position.py -v
           python -m unittest discover -s tests -p test_story_ai.py -v
           python -m unittest discover -s tests -p test_studio_catalog.py -v
+          python -m unittest discover -s tests -p test_studio_sequences.py -v
           python -m unittest discover -s tests -p test_story_protocol.py -v
           python -m unittest discover -s tests -p test_story_v4.py -v
       - name: Instantiate real Gradio Blocks and callbacks

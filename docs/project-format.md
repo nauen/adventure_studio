@@ -22,6 +22,24 @@ ungültige Referenzen verhindern den Export sichtbar. Das native
 lesbar. Ein `.studio.json` ist **kein** direktes ScummC-Eingabeformat; der
 Studio-Export erzeugt daraus weiterhin das native `project.json`.
 
+## Native Actor-/Costume-Erstellung im Studio
+
+Im Studio-Tab für native Interaktionen können nun neue Costumes direkt aus
+PNG-Bildern erstellt werden. Aus einem sichtbaren Bild mit ganzzahliger
+Transparenz (`Alpha` 0 oder 255) erzeugt der Adapter einen palettierten
+`CostumeFrame` mit lokaler Transparenzfarbe und maximal 31 sichtbaren Farben.
+Wenn das Bild mehr Farben enthält, wird es **sichtbar dokumentiert** auf
+31 Farben reduziert. Halbdurchsichtige Bilder oder Frames größer als
+255 × 255 Pixel werden mit einem konkreten Fehler abgelehnt.
+
+Ein neu erzeugtes Costume besitzt zunächst eine Standpose in allen vier
+Richtungen sowie dieselbe Pose als benannte, nicht-loopende Animation
+`gesture` mit dem bereits belegten nativen Index 24. Actors lassen sich
+mit stabiler ID, Raumauswahl, Position und Blickrichtung anlegen oder
+verschieben. Das gemeinsame Studio-Projekt speichert diese Assets und
+übergibt sie an den regulären ScummC-/COST-Export. Mehrere Frames, individuell
+gezeichnete Richtungen und Animations-Timelines sind noch offen.
+
 ## Geordnete Interaktionsfolgen (P0.5)
 
 `GameDocument` v1 unterstützt optional `interaction_sequences`. Ein
