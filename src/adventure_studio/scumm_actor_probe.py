@@ -192,11 +192,17 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
     source = source.replace(walk_marker, "", 1)
     if source.count("        animateActor(Companion,24);\n") != 1:
         raise ValueError("Missing native Actor animation for input probe")
+    entry_guard = "        if(!__studioActorInitial0) {\n"
+    if source.count(entry_guard) != 1:
+        raise ValueError("Missing first-entry animation guard in native input probe")
+    # The fixture camera/hero setup is needed on *every* entry. It must not
+    # accidentally be hidden inside the production once-only animation guard.
+    source = source.replace(entry_guard,
+                            "        putActorAt(VAR_EGO, 375, 100, Harbor);\n"
+                            "        setCameraAt(480);\n" + entry_guard, 1)
     # Slow only the isolated fixture's Actor, leaving the authored project and
     # exporter timing unchanged. The first COUNT is observable as a cyan door.
     source = source.replace("        animateActor(Companion,24);\n",
-                            "        putActorAt(VAR_EGO, 375, 100, Harbor);\n"
-                            "        setCameraAt(480);\n"
                             "        setCurrentActor(Companion);\n"
                             "        setActorAnimSpeed(30);\n"
                             "        setCurrentActor(VAR_EGO);\n"
