@@ -83,9 +83,16 @@ def count_cyan_pixels(histogram: str) -> int:
     return count_color_pixels(histogram, (50, 220, 220))
 
 
+def screenshot_frame(output_directory: Path, frame: str) -> Path:
+    """Resolve any safe fixture frame name without a scenario-specific allowlist."""
+    if not isinstance(frame, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", frame):
+        raise ValueError("Invalid screenshot frame name")
+    return output_directory / f"scummvm-{frame}.png"
+
+
 def colored_item_pixels(output_directory: Path, frame: str,
                         rgb: tuple[int, int, int], inventory: bool = False) -> int:
-    screenshot = output_directory / f"scummvm-{frame}.png"
+    screenshot = screenshot_frame(output_directory, frame)
     # Inventory icons occupy a fixed strip on the right; the verb and
     # sentence labels have similar colors and must not affect item detection.
     crop = "304x40+528+500" if inventory else "640x288+192+184"
@@ -103,7 +110,7 @@ def colored_item_center(output_directory: Path, frame: str,
                         fuzz_percent: int = 8) -> tuple[int, int]:
     if type(fuzz_percent) is not int or not 0 <= fuzz_percent <= 8:
         raise ValueError("Invalid item color matching tolerance")
-    screenshot = output_directory / f"scummvm-{frame}.png"
+    screenshot = screenshot_frame(output_directory, frame)
     color_hex = "#" + "".join(f"{channel:02X}" for channel in rgb)
     crop = "304x40+528+500" if inventory else "640x288+192+184"
     result = subprocess.run(
@@ -144,11 +151,7 @@ def authored_item_center(output_directory: Path, frame: str,
 
 
 def door_pixels(output_directory: Path, frame: str, open_state: bool = False) -> int:
-    if frame not in ("pickup", "door", "exit", "return", "locked-before", "locked-after",
-                     "gated-use", "chain-second", "chain-second-open", "chain-arrival",
-                     "chain-middle-state", "chain-first-return"):
-        raise ValueError("Invalid door frame")
-    screenshot = output_directory / f"scummvm-{frame}.png"
+    screenshot = screenshot_frame(output_directory, frame)
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
          "-format", "%c", "histogram:info:"],
@@ -160,9 +163,7 @@ def door_pixels(output_directory: Path, frame: str, open_state: bool = False) ->
 
 
 def door_center(output_directory: Path, frame: str = "pickup") -> tuple[int, int]:
-    if frame not in ("pickup", "locked-before", "exit", "chain-second", "chain-arrival"):
-        raise ValueError("Invalid closed-door screenshot frame")
-    screenshot = output_directory / f"scummvm-{frame}.png"
+    screenshot = screenshot_frame(output_directory, frame)
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
          "-fuzz", "8%", "-fill", "white", "-opaque", "#3CDC5A",
@@ -175,9 +176,7 @@ def door_center(output_directory: Path, frame: str = "pickup") -> tuple[int, int
 
 
 def open_door_center(output_directory: Path, frame: str = "door") -> tuple[int, int]:
-    if frame not in ("door", "exit", "chain-second-open"):
-        raise ValueError("Invalid opened-door screenshot frame")
-    screenshot = output_directory / f"scummvm-{frame}.png"
+    screenshot = screenshot_frame(output_directory, frame)
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
          "-fuzz", "8%", "-fill", "white", "-opaque", "#32DCDC",
@@ -191,9 +190,7 @@ def open_door_center(output_directory: Path, frame: str = "door") -> tuple[int, 
 
 def visible_key_pixels(output_directory: Path, frame: str = "end") -> int:
     """Inspect the cropped game viewport, excluding the SCUMM verb GUI."""
-    if frame not in ("end", "pickup", "return"):
-        raise ValueError("Invalid screenshot frame")
-    screenshot = output_directory / f"scummvm-{frame}.png"
+    screenshot = screenshot_frame(output_directory, frame)
     result = subprocess.run(
         ["convert", str(screenshot), "-crop", "640x288+192+184", "+repage",
          "-format", "%c", "histogram:info:"],
