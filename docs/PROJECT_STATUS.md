@@ -406,6 +406,17 @@ Animationsindex aus. Es ist keine neue Runtime-Funktion. Native Wiedergabe
 von importierten PNG-Mehrframe-Costumes bleibt bis zum echten
 ScummVM-Bildnachweis offen.
 
+**Actor zur Laufzeit versetzen (2026-11-08):** In einer geordneten
+Studio-Objektinteraktion lässt sich jetzt ein Actor an eine neue X-/Y-Position
+im selben Raum setzen. Der typisierte `move_actor`-Schritt wird im
+versionierten Projekt-JSON gespeichert und als natives
+`putActorAt(actor, x, y, room)` zusammen mit den bisherigen Animations-,
+Warte- und Objektzustandsschritten ausgegeben. Der Studio-Editor bietet
+die Aktion direkt an. Geprüft sind Modell-/Exportpfad und die bestehende
+Regression; **die interaktive Auslösung im stock ScummVM ist noch offen**.
+Nächstes Produktpaket: tatsächliches Mehrframe- und Actor-Bewegungs-
+Gameplay im nativen Compiler-/Interpreterpfad nachweisen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

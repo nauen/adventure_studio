@@ -544,11 +544,14 @@ def make_app():
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen", choices=["Actor animieren", "Warten", "Objektzustand setzen"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen", choices=["Actor animieren", "Actor versetzen", "Warten", "Objektzustand setzen"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt")
                 native_amount = gr.Number(label="Sekunden / Objektzustand (0–2)", value=1, precision=0)
+            with gr.Row():
+                native_move_x = gr.Number(label="Actor-Ziel X (bei Versetzen)", value=320, precision=0)
+                native_move_y = gr.Number(label="Actor-Ziel Y (bei Versetzen)", value=100, precision=0)
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
             native_step = gr.Dropdown(label="Schritt auswählen")
@@ -766,7 +769,8 @@ def make_app():
                                [native_step, native_steps])
         native_add.click(lambda *args: native_edit(append_sequence_step, *args),
                          [native_state, native_room, native_hotspot, native_verb,
-                          native_kind, native_actor, native_animation, native_target, native_amount],
+                          native_kind, native_actor, native_animation, native_target, native_amount,
+                          native_move_x, native_move_y],
                          [native_state, *native_outputs, native_report])
         for button, operation in ((native_up, "Nach oben"), (native_down, "Nach unten"),
                                   (native_remove, "Entfernen")):
