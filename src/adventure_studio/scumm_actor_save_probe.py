@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 from .scumm_launch import (close_rgb, colored_item_center, colored_item_pixels,
-                           door_center, door_pixels, scene_pixel)
+                           door_center, scene_pixel)
 from .scumm_save_load_probe import open_native_global_menu, verify_global_menu_ready
 
 
@@ -76,13 +76,8 @@ def run_actor_save_probe(game: Path, output: Path) -> dict:
             if process.poll() is not None:
                 raise RuntimeError("ScummVM exited before Actor COUNT")
             capture("initial")
-            try:
-                if door_pixels(output, "initial", open_state=True) >= 40:
-                    break
-            except ValueError:
-                # The first captured frame may still be ScummVM's launcher.
-                # Only a valid room frame can prove the COUNT marker.
-                pass
+            if colored_item_pixels(output, "initial", (50, 220, 220)) >= 40:
+                break
             time.sleep(0.15)
         else:
             raise RuntimeError("Actor COUNT never opened the door")
