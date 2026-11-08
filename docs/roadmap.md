@@ -117,6 +117,11 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         bzw. natives SCUMM-ZIP exportieren. Service-Test
         grün; Gradio-Start-Smoke CI `42486144774` grün, vollständige
         UI-Interaktion und Interaktionsnachweis in ScummVM noch offen.
+  - [ ] Native End-to-End-Abnahme: Eine mit denselben Studio-Aktionsoperationen
+        erstellte Actor-Folge (Versetzen, Laufen, Warten, Drehen, Animation,
+        Türzustand) über einen realen Hotspot-Verb-Klick in stock ScummVM
+        ausführen. Die CI-Probe und Bild-/Zustandsevidenz sind angelegt;
+        vor grünem Interpreterlauf bleibt die Abnahme offen.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

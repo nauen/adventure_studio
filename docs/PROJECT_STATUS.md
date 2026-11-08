@@ -487,6 +487,14 @@ und erneutes Anhängen und verändert nicht das auslösende Hotspot-Verb.
 Actor-Lauf-/Wait-/Dreh-/Animationsfolge durch einen tatsächlichen
 ScummVM-Verb-Klick nachweisen.
 
+**Native Klick-Choreografie (Implementierung, CI ausstehend):** Ein
+End-to-End-Spiel wird aus dem gleichen `append_sequence_step`-Pfad wie der
+Studio-Editor erzeugt. Der reale `Close`-Klick auf den Schlüssel soll
+`Guide` versetzen, laufen lassen, auf die Ankunft warten, drehen,
+animieren und anschließend die Tür öffnen. Die Actions-Probe archiviert
+Projekt-JSON, generierten SCUMM-Quelltext, Bilder vor/nach dem Klick und
+den Zustandsbericht. **Bis zum erfolgreichen ScummVM-Lauf kein V-Status.**
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
