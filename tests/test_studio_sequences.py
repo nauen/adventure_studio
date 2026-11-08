@@ -62,6 +62,10 @@ class NativeSequenceEditorTests(unittest.TestCase):
                                                   parse_document(raw).sound_assets)
             self.assertIn('sound BellSound = "BellSound.soun";', native)
             self.assertIn('sound WindSound = "WindSound.soun";', native)
+            self.assertLess(native.index('image = "Harbor.bmp";'),
+                            native.index('sound BellSound = "BellSound.soun";'))
+            self.assertLess(native.index('sound BellSound = "BellSound.soun";'),
+                            native.index('object Key {'))
             self.assertEqual(native.count("startSound(BellSound);"), 1)
             self.assertEqual(native.count("stopSound(BellSound);"), 2)
             self.assertEqual(native.count("startSound(WindSound);"), 2)

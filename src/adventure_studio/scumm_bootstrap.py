@@ -498,13 +498,6 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     if not active:
         return source
     room_sounds = tuple(asset for asset in sound_assets if asset.room == room_name)
-    if room_sounds:
-        marker = f"room {room_name} {{\n"
-        if source.count(marker) != 1:
-            raise ValueError(f"Missing native room declaration for sound effects: {room_name}")
-        declarations = "".join(f'    sound {asset.id} = "{asset.id}.soun";\n'
-                               for asset in sorted(room_sounds, key=lambda item: item.id))
-        source = source.replace(marker, marker + declarations, 1)
     actors_by_id = {actor.id: actor for actor in actors}
     costumes_by_name = {costume.name: costume for costume in costumes}
     recipes = {rule.result_id: rule for rule in room_asset.combine_rules} if room_asset else {}
@@ -519,6 +512,11 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     if first < 0 or any(source.find(f"    object {sequence.hotspot_id} {{\n") < 0
                         for sequence in active):
         raise ValueError(f"Missing native interaction hotspot in {room_name}")
+    if room_sounds:
+        # ScummC parses room parameters (image/boxd/zplanes) before resource
+        # declarations: sound resources therefore belong before the objects.
+        declarations += [f'    sound {asset.id} = "{asset.id}.soun";\n'
+                         for asset in sorted(room_sounds, key=lambda item: item.id)]
     source = source[:first] + "".join(declarations) + source[first:]
     grouped = {}
     for sequence in active:
