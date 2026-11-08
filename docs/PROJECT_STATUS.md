@@ -468,7 +468,11 @@ gebundenen Actors über einen gemeinsamen, deterministischen Indexplan ab
 und ergänzt die Räume, ohne das Authoring-JSON zu verändern. Belegte
 Room-Artwork-Indizes bleiben reserviert; bei erschöpften Plätzen wird der
 Exporter-Blocker ausdrücklich gemeldet. Ein gezielter BMP-Palettenvergleich
-ist grün, **der erneute native Gameplaylauf bleibt noch ausstehend**.
+ist grün. Im erneuten nativen Lauf `42493988461` sind beide Costume-Farben
+in 26 ScummVM-Aufnahmen sichtbar und wechseln ihre Dominanz. Die
+Abnahme fordert nun ausdrücklich diesen zeitlichen Wechsel statt nur
+zweier irgendwann vorhandener Farben. **Der finale Lauf dieser
+verschärften Abnahme und die gesamte experimentelle CI bleiben offen.**
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.

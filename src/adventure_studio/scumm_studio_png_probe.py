@@ -40,7 +40,7 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
         raw = set_costume_animation(raw, "StudioPngCostume", "wave", 28,
                                     direction, "Pose0, WavePose, Pose0, WavePose", True)
     raw = add_actor(raw, "StudioPngActor", "StudioPngCostume", "Harbor",
-                    430, 110, "S", "Studio PNG Actor")
+                    500, 120, "S", "Studio PNG Actor")
     document = parse_document(raw)
     document = replace(document, actors=(replace(document.actors[0],
                                                   initial_animation="wave"),))
@@ -60,7 +60,10 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
             counts = [sum(all(abs(channel - expected) <= 20
                               for channel, expected in zip(pixel, color))
                           for pixel in pixels) for color in colors]
-        observed = [found or count >= 20 for found, count in zip(observed, counts)]
+        # Each pose must dominate at a different moment. Merely finding both
+        # colors somewhere in a scrolling scene is not a frame-change proof.
+        observed = [observed[0] or (counts[0] >= 20 and counts[0] > 2 * counts[1]),
+                    observed[1] or (counts[1] >= 20 and counts[1] > 2 * counts[0])]
     if not all(observed):
         raise RuntimeError(f"Studio PNG native animation frames not both visible: "
                            f"observed={observed}, samples={len(samples)}")

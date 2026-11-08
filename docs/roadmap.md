@@ -151,7 +151,9 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         tatsächlich aufgenommene Bilder auf beide native Frame-Farben.
         Erster nativer Lauf `42493144908` zeigte fehlende COST-Farben;
         die Raum-/Costume-Palettenzuordnung ist im Export korrigiert, die
-        erneute ScummVM-Bildprüfung bleibt bis zu grüner CI offen.
+        erneute ScummVM-Bildprüfung `42493988461` zeigt beide Farbphasen;
+        die verschärfte Prüfung verlangt wechselnde dominante Farben und
+        bleibt bis zum erneuten vollständigen CI-Lauf offen.
   - [x] Produkt-Implementierung: Im Gradio-Studio kann eine native
         Animation eines Actors als Startanimation ausgewählt oder deaktiviert
         werden. JSON und SCUMM-Export verwenden die bereits bestehende
