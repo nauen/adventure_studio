@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep, GameDocument,
+from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep,
+                            FaceActorStep, GameDocument,
                             InteractionSequence, ObjectStateStep,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
@@ -51,7 +52,7 @@ def _identity(sequence: InteractionSequence) -> str:
     return f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -62,6 +63,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Actor {step.actor_id}: zu ({step.x}, {step.y}) laufen lassen"
     if isinstance(step, WaitActorStep):
         return f"Auf Actor {step.actor_id} warten"
+    if isinstance(step, FaceActorStep):
+        return f"Actor {step.actor_id}: Richtung {step.direction}"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -88,7 +91,8 @@ def actor_animations(raw: str, actor_id: str | None) -> tuple[str, ...]:
 def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
                          kind: str, actor_id: str | None, animation: str | None,
                          target_id: str | None, amount: int | float | None,
-                         x: int | float | None = None, y: int | float | None = None) -> str:
+                         x: int | float | None = None, y: int | float | None = None,
+                         direction: str | None = None) -> str:
     """Append to an existing verb sequence or create it; never silently replace another binding."""
     document = parse_document(raw)
     if verb not in VERBS:
@@ -111,6 +115,8 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
                 else WalkActorStep(actor_id, int(x), int(y)))
     elif kind == "Auf Actor warten":
         step = WaitActorStep(actor_id)
+    elif kind == "Actor drehen":
+        step = FaceActorStep(actor_id, direction)
     else:
         raise ValueError("Unbekannter Aktionstyp")
     key = (room, hotspot_id, verb)

@@ -165,6 +165,11 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         weitere Aktionen beginnen erst, wenn der Actor nicht mehr läuft.
         Signatur in den unveränderten ScummC-Beispielen belegt; die neue
         Studio-Choreografie ist noch nicht in stock ScummVM vorgeführt.
+  - [x] Produkt-Implementierung: `face_actor` dreht einen Projekt-Actor
+        als native Interaktionsaktion über `setCurrentActor` und
+        `setActorDirection` in N/E/S/W; die vorherige Actor-Auswahl wird
+        auf `VAR_EGO` zurückgesetzt. Studio/JSON/Exporter sind verbunden,
+        die visuelle ScummVM-Probe dieser Zusammensetzung bleibt offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

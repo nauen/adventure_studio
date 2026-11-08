@@ -15,7 +15,7 @@ from adventure_studio.scumm_project import (ActorAsset, ActorCountCondition, Obj
                                             AnimationRule, AnimationInputRule, AnimationTrigger)
 from adventure_studio.scumm_project import (InteractionSequence, AnimateActorStep,
                                             ObjectStateStep, DelayStep, MoveActorStep, WalkActorStep,
-                                            WaitActorStep)
+                                            WaitActorStep, FaceActorStep)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture, scummc_room_source
 from dataclasses import replace
@@ -30,6 +30,7 @@ class ActorBootstrapTests(unittest.TestCase):
             MoveActorStep('Guide', 450, 110),
             WalkActorStep('Guide', 480, 100),
             WaitActorStep('Guide'),
+            FaceActorStep('Guide', 'W'),
             AnimateActorStep('Guide', 'gesture'), ObjectStateStep('Door', 2)))
         document = GameDocument('Scene', (scrolling_fixture(), destination_fixture()),
                                 (gesture_fixture(),), actors, interaction_sequences=(sequence,))
@@ -45,6 +46,8 @@ class ActorBootstrapTests(unittest.TestCase):
                         'putActorAt(Guide, 450, 110, Harbor);',
                         'walkActorTo(Guide, 480, 100);',
                         'waitForActor(Guide);',
+                        'setCurrentActor(Guide);', 'setActorDirection(WEST);',
+                        'setCurrentActor(VAR_EGO);',
                         'animateActor(Guide,24);', 'setObjectState(Door,2);')
         offsets = [compiled.index(instruction) for instruction in instructions]
         self.assertEqual(offsets, sorted(offsets))
