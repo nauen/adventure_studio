@@ -48,6 +48,9 @@ class NestedDialogueTests(unittest.TestCase):
         self.assertIn("setObjectState(AnswerHarborKeeperN2C1,1);", source)
         self.assertIn("setObjectState(AnswerHarborKeeper1,1);", source)
         self.assertIn("setObjectState(AnswerHarborKeeper2,0);", source)
+        # Stage changes clear every old answer after the spoken response as
+        # well as immediately when the answer is clicked.
+        self.assertGreaterEqual(source.count("setObjectState(AnswerHarborKeeper2,0);"), 4)
         self.assertEqual(canonical_json(parse_document(canonical_json(document))),
                          canonical_json(document))
         keys = story_text_inventory(document)

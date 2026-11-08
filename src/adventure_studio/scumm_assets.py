@@ -566,6 +566,12 @@ def scummc_room_source(room: RoomAsset, catalog=None,
             for line_index, line in enumerate(selected.reply_lines):
                 parts.append(spoken(f"{prefix}.choice.{selected_index}.reply.{line_index}", line, 12))
             if selected.next_stage_id is not None:
+                # Redraws during spoken replies can leave an old choice
+                # sprite visible in the SCUMM object layer. Invalidate the
+                # previous menu again at the exact stage transition.
+                for group in (rule, *rule.stages):
+                    for choice in group.choices:
+                        parts.append(f"            setObjectState({choice.object_id},0);\n")
                 next_stage = (rule if selected.next_stage_id == "Entry" else
                               next(item for item in rule.stages if item.id == selected.next_stage_id))
                 next_prefix = (base if next_stage is rule else
