@@ -142,6 +142,11 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Costume-Frames und ihren Ursprungspositionen, mit frei gewählter
         Vorschaugeschwindigkeit. Keine behauptete SCUMM-Tick-Semantik;
         nativer Gameplay-Nachweis weiter offen.
+  - [ ] Native Verifikation: Der experimentelle Actor-Workflow erzeugt jetzt
+        zusätzlich über die echten Studio-PNG-Aktionen eine zweiframeige
+        `wave`-COST samt Actor-Startanimation und archiviert Compiler-/
+        ScummVM-Artefakte. Ein grüner Workflowlauf und ein beobachteter
+        Framewechsel fehlen noch; reiner Spielstart genügt nicht für V.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

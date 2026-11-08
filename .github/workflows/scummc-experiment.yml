@@ -16,6 +16,7 @@ on:
       - 'src/adventure_studio/scumm_costume.py'
       - 'src/adventure_studio/scumm_costume_probe.py'
       - 'src/adventure_studio/scumm_actor_probe.py'
+      - 'src/adventure_studio/scumm_studio_png_probe.py'
       - 'src/adventure_studio/scumm_actor_save_probe.py'
       - 'src/adventure_studio/palette_animation.py'
       - 'src/adventure_studio/palette_demo.py'
@@ -198,6 +199,25 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe /tmp/scummc-upstream /tmp/native-actors
+      - name: Compile Studio-imported PNG animation and launch native game
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install Pillow
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_studio_png_probe /tmp/scummc-upstream /tmp/native-studio-png
+      - name: Retain native Studio PNG gameplay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-png-costume
+          path: |
+            /tmp/native-studio-png/studio-png-report.json
+            /tmp/native-studio-png/build/project.json
+            /tmp/native-studio-png/build/resources/StudioPngCostume.scost
+            /tmp/native-studio-png/screenshots/scummvm-start.png
+            /tmp/native-studio-png/screenshots/scummvm-end.png
+            /tmp/native-studio-png/screenshots/scummvm-launch.log
+          if-no-files-found: ignore
       - name: Retain project-authored native Actor link evidence
         if: always()
         uses: actions/upload-artifact@v4
