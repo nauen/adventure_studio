@@ -48,6 +48,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install multilingual native font renderer
+        run: |
+          python -m pip install 'Pillow>=10,<12' 'fonttools>=4,<5'
       - name: Verify deterministic compiler and probe contracts
         run: |
           PYTHONPATH=src:tests python -m unittest discover -s tests -p test_story_v4.py -v
@@ -56,7 +59,7 @@ jobs:
         timeout-minutes: 18
         run: |
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 update
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core
       - name: Build compatible upstream ScummC tools
         run: |
           git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
