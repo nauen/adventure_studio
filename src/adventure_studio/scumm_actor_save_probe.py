@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -33,10 +34,12 @@ def run_actor_save_probe(game: Path, output: Path) -> dict:
 
     def capture(name: str) -> None:
         raw = output / f"{name}.xwd"
+        png = output / f"scummvm-{name}.png"
         subprocess.run(["xwd", "-root", "-silent", "-out", str(raw)],
                        check=True, stdout=subprocess.DEVNULL, timeout=10)
-        subprocess.run(["convert", str(raw), str(output / f"{name}.png")],
+        subprocess.run(["convert", str(raw), str(png)],
                        check=True, stdout=subprocess.DEVNULL, timeout=10)
+        shutil.copyfile(png, output / f"{name}.png")
 
     def click(x: int, y: int) -> None:
         subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
