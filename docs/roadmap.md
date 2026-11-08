@@ -44,8 +44,10 @@ Gesprächsgraphen, mehrere Sprecher und Actor-Lippensync bleiben offen.
 aus vorhandenen Gesprächsknoten neue Antwortzweige und Rückverbindungen
 authoren. Der native Compiler projiziert Wahlstufen auf getrennte,
 zustandsabhängige SCUMM-Objekte; alte einstufige Projekte bleiben gültig.
-Die neue stock-ScummVM-Abnahme muss zwei Auswahlebenen, den Rückweg und
-den endgültigen Gesprächsabschluss durch echte Klicks bestätigen.
+Die native stock-ScummVM-Abnahme bestätigt zwei Auswahlebenen, den Rückweg
+und den endgültigen Gesprächsabschluss durch echte Klicks (CI
+`42536777733`, `native-v6-studio-nested-dialogue`). Eine echte klassische
+SCUMM-Gesprächsmenü-UI und Sprecherwechsel bleiben weitere Produktpakete.
 
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und

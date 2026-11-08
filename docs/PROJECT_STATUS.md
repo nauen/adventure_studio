@@ -708,8 +708,13 @@ mit einer neuen Sprechzeile fortsetzen. Die vorhandene JSON-v1-
 Raumstruktur bleibt ohne Stage-Felder identisch, zusätzliche Stufen werden
 als optionale `stages` und `next_stage_id` serialisiert. Dialog-Audiobindungen
 und der Sprachkatalog berücksichtigen auch Zeilen nach der ersten Stufe.
-297 lokale Tests sind grün; die native Mehrstufen-/Rückweg-Klickprobe in
-stock ScummVM ist vorbereitet, **Laufzeitergebnis noch offen**. Die native
+297 lokale Tests sind grün. Die native Mehrstufen-/Rückweg-Klickprobe in
+stock ScummVM ist erfolgreich (CI `42536777733`, Artefakt
+`native-v6-studio-nested-dialogue`): Einstiegsantworten eingeblendet,
+zweite Stufe sichtbar, Rückkehr zur ersten Stufe und sauberes Schließen
+(`passed = true`, `answer_pixels_dismissed = 0`). Während des Übergangs
+werden die bisherigen Antwortobjekte nach gesprochenen Zeilen erneut
+ausgeblendet; beide Reihen bleiben im 144-Pixel-Viewport. Die native
 UI verwendet weiterhin klickbare Antwortobjekte statt eines echten
 SCUMM-Gesprächsmenüs; Sprecherwechsel und völlig freie Layouts bleiben offen.
 
