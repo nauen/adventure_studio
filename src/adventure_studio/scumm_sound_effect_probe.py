@@ -21,7 +21,8 @@ from .scumm_project import SoundAsset
 def run_sound_effect_probe(upstream: Path, destination: Path) -> dict:
     """A real hotspot click plays a VOC; Escape applies the final stop cue."""
     document = GameDocument("SoundEffects", (scrolling_fixture(), destination_fixture()),
-                            sound_assets=(SoundAsset("BellSound", "Harbor", original_voc_effect()),))
+                            sound_assets=(SoundAsset("BellSound", "Harbor",
+                                                     original_voc_effect(duration_ms=5000)),))
     raw = canonical_json(document)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound starten",
                                None, None, "BellSound", None)
@@ -66,7 +67,9 @@ def run_sound_effect_probe(upstream: Path, destination: Path) -> dict:
                 subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                                check=True, timeout=10)
             start_at = time.monotonic()
-            time.sleep(0.9)
+            # The actor first walks to the clicked hotspot (~1.5 s), then
+            # the sequence starts. Skip only after native sound is playing.
+            time.sleep(3.1)
             subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
             stop_at = time.monotonic()
             time.sleep(3)
@@ -94,10 +97,10 @@ def run_sound_effect_probe(upstream: Path, destination: Path) -> dict:
 
     report = {
         "native_sound_id": "BellSound",
-        "escape_stopped_sound": True,
+        "escape_sent": True,
         "pcm_bytes": len(pcm),
         "before_click": round(activity(start_at - 1.4, start_at - 0.2), 4),
-        "during_sound": round(activity(start_at + 0.2, stop_at - 0.15), 4),
+        "during_sound": round(activity(start_at + 2.0, stop_at - 0.15), 4),
         "after_escape": round(activity(stop_at + 1.0, stop_at + 2.6), 4),
     }
     report["sound_effect_audible_and_stopped"] = bool(
