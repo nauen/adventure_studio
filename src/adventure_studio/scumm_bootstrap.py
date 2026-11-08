@@ -491,7 +491,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
-                                PickupObjectStep, CombineInventoryStep, ChangeRoomStep)
+                                PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep)
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
@@ -559,6 +559,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.extend((f"            setCurrentActor({step.actor_id});\n",
                                      f"            setActorDirection({direction});\n",
                                      "            setCurrentActor(VAR_EGO);\n"))
+            elif isinstance(step, MusicCueStep):
+                instructions.append(f"            startMusic({room_asset.music_id});\n"
+                                    if step.operation == "start" else "            stopMusic();\n")
             else:
                 raise ValueError("Unsupported native interaction step")
         return "".join(instructions)
@@ -576,6 +579,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_positions = {}
         end_directions = {}
         inventory_steps = []
+        final_music = None
         for step in sequence.steps:
             if isinstance(step, ObjectStateStep):
                 end_states[step.hotspot_id] = step.state
@@ -588,6 +592,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_states[step.hotspot_id] = 0
             elif isinstance(step, CombineInventoryStep):
                 inventory_steps.append(step)
+            elif isinstance(step, MusicCueStep):
+                final_music = step.operation
         commit = ""
         for step in inventory_steps:
             commit += inventory_action(step, "                ")
@@ -600,6 +606,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += (f"                setCurrentActor({actor});\n"
                        f"                setActorDirection({native_direction});\n"
                        "                setCurrentActor(VAR_EGO);\n")
+        if final_music is not None:
+            commit += (f"                startMusic({room_asset.music_id});\n"
+                       if final_music == "start" else "                stopMusic();\n")
         return ("            cutscene(0) {\n"
                 + "                try {\n"
                 + "".join("        " + line for line in actions.splitlines(True))

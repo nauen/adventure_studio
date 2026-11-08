@@ -11,9 +11,10 @@ from dataclasses import replace
 from pathlib import Path
 
 from .scumm_assets import RoomHotspot, CombineRule
+from .music_demo import original_midi_theme
 from .scumm_launch import (close_rgb, colored_item_center, colored_item_pixels,
                            door_center, scene_pixel)
-from .scumm_project import canonical_json, export_document, parse_document
+from .scumm_project import MusicAsset, canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
 from .studio_sequences import (append_sequence_step, set_sequence_condition,
                                duplicate_sequence_variant, modify_sequence_step,
@@ -34,7 +35,7 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
     badge_sprite = bytes(5 if (3 <= x <= 12 and 3 <= y <= 12) else 2
                          for y in range(16) for x in range(16))
     harbor = original.rooms[0]
-    harbor = replace(harbor, hotspots=(
+    harbor = replace(harbor, music_id="StudioSequenceTheme", hotspots=(
         *harbor.hotspots,
         RoomHotspot("Token", "the token", "A small token.", 610, 100, 16, 16, True, token_sprite),
         RoomHotspot("Shard", "the shard", "A small shard.", 585, 100, 16, 16, True, token_sprite),
@@ -45,7 +46,8 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                       actors=tuple(replace(actor, costume=costume.name)
                                    for actor in original.actors),
                       animation_input_rules=(), animation_triggers=(),
-                      animation_rules=(), interaction_sequences=())
+                      animation_rules=(), interaction_sequences=(),
+                      music_assets=(MusicAsset("StudioSequenceTheme", original_midi_theme()),))
     raw = canonical_json(project)
     actions = (
         ("Actor versetzen", "Guide", None, None, None, 425, 110, None),
@@ -74,6 +76,8 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                                         None, None, "Shard", None)
     raw = append_selected_sequence_step(raw, alternate, "Inventar kombinieren",
                                         None, None, "Badge", None)
+    raw = append_selected_sequence_step(raw, alternate, "Musik stoppen",
+                                        None, None, None, None)
     raw = set_sequence_skippable(raw, alternate, True)
     # A separate real Door/Close interaction demonstrates a terminal scene
     # change after Escape, without altering the three existing Key variants.
@@ -81,6 +85,8 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                                None, None, None, 6)
     raw = append_sequence_step(raw, "Harbor", "Door", "Close", "Objektzustand setzen",
                                None, None, "Door", 2)
+    raw = append_sequence_step(raw, "Harbor", "Door", "Close", "Musik starten",
+                               None, None, None, None)
     raw = append_sequence_step(raw, "Harbor", "Door", "Close", "Raum wechseln",
                                None, None, "Cellar", None)
     raw = set_sequence_skippable(raw, "Harbor|Door|Close", True)
@@ -88,6 +94,8 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
     build.mkdir(parents=True, exist_ok=True)
     (build / "project.json").write_text(raw, encoding="utf-8")
     export_document(parse_document(raw), build / "resources")
+    # The ordinary compiler path builds this MIDI into a native SOUN resource.
+    # The real UI uses import_room_music rather than constructing this fixture.
     game_dir = compile_story_game(build, upstream, destination / "game")
     screenshot_dir = destination / "screenshots"
     screenshot_dir.mkdir(parents=True, exist_ok=True)

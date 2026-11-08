@@ -26,7 +26,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                duplicate_sequence_variant, sequence_skip_enabled,
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
-                               compose_story_project)
+                               compose_story_project, import_room_music)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -333,6 +333,16 @@ def make_app():
         except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
 
+    def native_music_import(raw, room, music_id, file_path):
+        if raw is None or not file_path:
+            raise gr.Error("Bitte zuerst ein Projekt und eine MIDI-Datei wählen")
+        try:
+            updated = import_room_music(raw, room, music_id, file_path)
+            return (updated, *native_selectors(updated, selected_room=room),
+                    f"MIDI {music_id} für {room} gespeichert; ScummC erstellt die native SOUN-Ressource beim Export")
+        except (ValueError, OSError) as error:
+            raise gr.Error(str(error)) from error
+
     def native_download(raw, linked, story_raw):
         if raw is None:
             raise gr.Error("Bitte zuerst eine native Projektdatei laden")
@@ -551,7 +561,11 @@ def make_app():
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln"], value="Actor animieren")
+                native_music_file = gr.File(label="Raummusik als MIDI importieren", file_types=[".mid", ".midi"], type="filepath")
+                native_music_id = gr.Textbox(label="Musik-ID", value="RoomTheme")
+                native_music_add = gr.Button("MIDI dem Raum zuweisen")
+            with gr.Row():
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
@@ -577,6 +591,7 @@ def make_app():
                 native_skippable = gr.Checkbox(label="Mit Escape überspringbar", value=False)
                 native_skip_save = gr.Button("Skip-Einstellung speichern")
             gr.Markdown("Beim Überspringen übernimmt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen sowie Inventaraufnahmen und -kombinationen** der Sequenz. Für *Inventar kombinieren* ein Ergebnisobjekt mit vorhandener Raum-Kombinationsregel wählen. *Raum wechseln* muss der letzte Schritt sein; der Wechsel erfolgt nach dem normalen Ablauf oder nach Escape und dem Setzen aller Endzustände.")
+            gr.Markdown("*Musik starten/stoppen* nutzt die MIDI-Ressource des Sequenzraums. Beim Escape wird der letzte Musikzustand der Folge ausgeführt. Die Raumzuweisung startet Musik auch beim normalen Betreten des Raums.")
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
             with gr.Row():
@@ -649,6 +664,9 @@ def make_app():
                                                        *native_outputs, native_report])
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])
+        native_music_add.click(native_music_import,
+                               [native_state, native_room, native_music_id, native_music_file],
+                               [native_state, *native_outputs, native_report])
         native_costume_button.click(lambda *args: native_asset_edit(create_costume, *args),
                                     [native_state, native_costume_file, native_costume_name],
                                     [native_state, *native_outputs, native_report])

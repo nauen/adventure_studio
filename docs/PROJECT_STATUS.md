@@ -566,6 +566,21 @@ Audio-Endzustände offen sind.
 **Nächstes Produktpaket:** Sequenz-Audio-Cues und ihr definierter Escape-
 Endzustand über Studio/JSON/ScummC/stock ScummVM nutzbar machen.
 
+**Sequenz-Audio-Produktpaket (2026-11-08, Implementierung):** Das Gradio-Studio
+nimmt echte MIDI-Dateien entgegen und bindet sie als versionierte, eingebettete
+`music_assets` an einen Raum. Der normale native ZIP-Export erzeugt mit
+ScummCs `soun -gmd` die benötigte SOUN-Ressource ohne eine externe Studio-
+Runtime; fehlende/ungültige Ressourcen werden nicht still übergangen.
+Interaktionssequenzen besitzen nun `Musik starten` und `Musik stoppen`, mit
+nativen `startMusic`/`stopMusic`-Schritten. Der Escape-Override übernimmt
+den **letzten** Musikeffekt vor einem möglichen terminalen Raumwechsel.
+JSON-v1-Projekte ohne Audio bleiben unverändert. 288 lokale Tests grün;
+die native Actor-Klickprobe ist um importiertes MIDI und Audio-Aktionen
+erweitert. **Native CI-/Audio-Laufzeitabnahme noch ausstehend**, insbesondere
+ein zeitlich abgegrenzter Hör-/PCM-Beleg des Stop/Start-Effekts.
+**Nächstes Produktpaket nach dieser Abnahme:** frei authorbare Soundeffekte
+mit eigenen Ressourcen und synchronisierten Spielereignissen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

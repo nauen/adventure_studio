@@ -220,6 +220,8 @@ jobs:
             /tmp/native-actor-sequence/actor-sequence-report.json
             /tmp/native-actor-sequence/build/project.json
             /tmp/native-actor-sequence/build/resources/Harbor.scc
+            /tmp/native-actor-sequence/build/resources/StudioSequenceTheme.mid
+            /tmp/native-actor-sequence/build/resources/StudioSequenceTheme.soun
             /tmp/native-actor-sequence/screenshots/scummvm-before.png
             /tmp/native-actor-sequence/screenshots/scummvm-after.png
             /tmp/native-actor-sequence/screenshots/scummvm-before-second.png
