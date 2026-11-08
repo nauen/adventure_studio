@@ -10,7 +10,7 @@ import base64
 import json
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .palette_animation import PaletteCycle
@@ -762,9 +762,64 @@ def canonical_json(document: GameDocument) -> str:
 def export_document(document: GameDocument, directory: Path) -> None:
     """Generate identical files for identical inputs; never interpret code."""
     _validate_document(document)
-    write_game_sources(document.rooms, directory)
-    for costume in document.costumes:
+    rooms, costumes = _align_costume_room_palettes(document)
+    write_game_sources(rooms, directory)
+    for costume in costumes:
         write_costume_sources(costume, directory)
+
+
+def _align_costume_room_palettes(document: GameDocument) -> tuple[tuple[RoomAsset, ...], tuple[CostumeAsset, ...]]:
+    """Give linked COSTs a shared 16..47 color map in the exported room resources.
+
+    The room and Costume authoring data remain unchanged. ScummC COST palette
+    entries are absolute *room* palette indices, not RGB entries of their own.
+    """
+    used_costumes = {actor.costume for actor in document.actors}
+    if not used_costumes:
+        return document.rooms, document.costumes
+    linked = [costume for costume in document.costumes if costume.name in used_costumes]
+    if any(costume.palette_first != 16 or costume.palette_last != 47 for costume in linked):
+        raise ValueError("Native Actor palette composition requires 16..47 COST slots")
+    reserved = set()
+    for room in document.rooms:
+        reserved.update(value for value in room.pixels if 16 <= value <= 47)
+        for hotspot in room.hotspots:
+            for pixels in (hotspot.sprite_pixels, hotspot.open_sprite_pixels):
+                if pixels is not None:
+                    reserved.update(value for value in pixels if 16 <= value <= 47)
+    free = (slot for slot in range(17, 48) if slot not in reserved)
+    global_colors: dict[tuple[int, int, int], int] = {}
+    revised = []
+    for costume in document.costumes:
+        if costume.name not in used_costumes:
+            revised.append(costume)
+            continue
+        mapping = {0: 0}
+        for frame in costume.frames:
+            for index in sorted(set(frame.pixels) - {0}):
+                if index in mapping:
+                    continue
+                rgb = costume.palette[costume.palette_first + index]
+                if rgb not in global_colors:
+                    slot = next(free, None)
+                    if slot is None:
+                        raise ValueError("Native room palette has no free COST color slots (exporter limit)")
+                    global_colors[rgb] = slot
+                mapping[index] = global_colors[rgb] - 16
+        palette = list(costume.palette)
+        for color, slot in global_colors.items():
+            palette[slot] = color
+        revised.append(replace(costume, palette=tuple(palette),
+                               frames=tuple(replace(frame, pixels=bytes(mapping[p] for p in frame.pixels))
+                                            for frame in costume.frames)))
+    rooms = []
+    for room in document.rooms:
+        palette = list(room.palette)
+        palette.extend([(0, 0, 0)] * max(0, 48 - len(palette)))
+        for rgb, slot in global_colors.items():
+            palette[slot] = rgb
+        rooms.append(replace(room, palette=tuple(palette)))
+    return tuple(rooms), tuple(revised)
 
 
 def main() -> int:

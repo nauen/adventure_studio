@@ -8,6 +8,8 @@ from adventure_studio.scumm_costume import (CostumeAnimation, CostumeDirection,
                                            CostumeFrame, costume_source,
                                            validate_costume, write_costume_sources)
 from adventure_studio.scumm_costume_probe import gesture_fixture
+from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture
+from adventure_studio.scumm_project import ActorAsset, GameDocument, export_document
 
 
 class NativeCostumeTests(unittest.TestCase):
@@ -25,6 +27,22 @@ class NativeCostumeTests(unittest.TestCase):
             self.assertTrue(all(path.read_bytes().startswith(b"BM") for path in images))
             self.assertTrue(all(struct.unpack_from("<I", path.read_bytes(), 46)[0] == 32
                                 for path in images))
+
+    def test_linked_costume_colors_are_present_in_exported_room_palette(self):
+        costume = gesture_fixture()
+        colors = list(costume.palette)
+        colors[17], colors[18] = (245, 40, 75), (180, 40, 245)
+        costume = replace(costume, palette=tuple(colors))
+        document = GameDocument("PaletteLinked", (scrolling_fixture(), destination_fixture()),
+                                (costume,), (ActorAsset("Guide", costume.name, "Harbor", 400, 100),))
+        with TemporaryDirectory() as tmp:
+            export_document(document, Path(tmp))
+            room_bmp = (Path(tmp) / "Harbor.bmp").read_bytes()
+            frame_bmp = (Path(tmp) / "NativeGesture_Pose0.bmp").read_bytes()
+            for slot, rgb in ((17, (245, 40, 75)), (18, (180, 40, 245))):
+                expected = bytes((rgb[2], rgb[1], rgb[0], 0))
+                self.assertEqual(room_bmp[54 + slot * 4:58 + slot * 4], expected)
+                self.assertEqual(frame_bmp[54 + (slot - 16) * 4:58 + (slot - 16) * 4], expected)
 
     def test_invalid_frames_and_native_commands_are_rejected(self):
         base = gesture_fixture()
