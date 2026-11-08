@@ -11,7 +11,8 @@ from dataclasses import replace
 from pathlib import Path
 
 from .scumm_assets import RoomHotspot, CombineRule
-from .scumm_launch import colored_item_center, colored_item_pixels
+from .scumm_launch import (close_rgb, colored_item_center, colored_item_pixels,
+                           door_center, scene_pixel)
 from .scumm_project import canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
 from .studio_sequences import (append_sequence_step, set_sequence_condition,
@@ -74,6 +75,15 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
     raw = append_selected_sequence_step(raw, alternate, "Inventar kombinieren",
                                         None, None, "Badge", None)
     raw = set_sequence_skippable(raw, alternate, True)
+    # A separate real Door/Close interaction demonstrates a terminal scene
+    # change after Escape, without altering the three existing Key variants.
+    raw = append_sequence_step(raw, "Harbor", "Door", "Close", "Warten",
+                               None, None, None, 6)
+    raw = append_sequence_step(raw, "Harbor", "Door", "Close", "Objektzustand setzen",
+                               None, None, "Door", 2)
+    raw = append_sequence_step(raw, "Harbor", "Door", "Close", "Raum wechseln",
+                               None, None, "Cellar", None)
+    raw = set_sequence_skippable(raw, "Harbor|Door|Close", True)
     build = destination / "build"
     build.mkdir(parents=True, exist_ok=True)
     (build / "project.json").write_text(raw, encoding="utf-8")
@@ -176,6 +186,63 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                     reopened = True
                     break
                 time.sleep(0.25)
+            if not reopened:
+                raise RuntimeError("Third Key interaction did not reopen Door")
+            # Trigger the newly authored terminal transition through a real
+            # Close/ Door click. Escape must jump past the six-second wait,
+            # finish the override and only then invoke startRoom(Cellar).
+            frame("before-room-change")
+            door_x, door_y = colored_item_center(screenshot_dir, "before-room-change",
+                                                  (50, 220, 220))
+            for x, y in ((234, 563), (door_x - 12, door_y - 12)):
+                subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                               check=True, timeout=10)
+            time.sleep(1)
+            subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
+            cellar_after_escape = False
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline:
+                if game.poll() is not None:
+                    raise RuntimeError("ScummVM quit during skipped room transition")
+                frame("cellar-after-escape")
+                if close_rgb(scene_pixel(screenshot_dir, "cellar-after-escape"),
+                             (120, 70, 180)):
+                    cellar_after_escape = True
+                    break
+                time.sleep(0.3)
+            if not cellar_after_escape:
+                raise RuntimeError("Escape did not switch to Cellar")
+            # The regular Stairs/WalkTo route proves that the native scene
+            # remains playable after the overridden local object script.
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                frame("stairs-after-escape")
+                try:
+                    stairs_x, stairs_y = door_center(screenshot_dir, "stairs-after-escape")
+                    break
+                except ValueError:
+                    time.sleep(0.4)
+            else:
+                raise RuntimeError("Cellar stairs not visible after Escape")
+            subprocess.run(["xdotool", "mousemove", str(stairs_x), str(stairs_y),
+                            "click", "1"], check=True, timeout=10)
+            returned_to_harbor = False
+            deadline = time.monotonic() + 16
+            while time.monotonic() < deadline:
+                frame("harbor-after-return")
+                if close_rgb(scene_pixel(screenshot_dir, "harbor-after-return"),
+                             (240, 175, 95)):
+                    returned_to_harbor = True
+                    break
+                time.sleep(0.3)
+            if not returned_to_harbor:
+                raise RuntimeError("Stairs did not return to Harbor after Escape")
+            time.sleep(3)
+            frame("harbor-after-return")
+            door_persisted = (colored_item_pixels(screenshot_dir, "harbor-after-return",
+                                                  (50, 220, 220)) >= 40)
+            badge_persisted = (colored_item_pixels(screenshot_dir, "harbor-after-return",
+                                                   (50, 220, 220), inventory=True) >= 5)
             report = {
                 "studio_interaction": "Harbor / Key / Close",
                 "actions": [action[0] for action in actions],
@@ -185,12 +252,17 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 "door_closed_after_second_click": closed_again,
                 "badge_owned_after_second_escape": badge_in_inventory,
                 "door_reopened_after_third_click": reopened,
+                "cellar_reached_after_escape": cellar_after_escape,
+                "returned_to_harbor": returned_to_harbor,
+                "door_state_survived_room_return": door_persisted,
+                "badge_survived_room_return": badge_persisted,
                 "response_seconds": round(time.monotonic() - started, 2),
             }
             (destination / "actor-sequence-report.json").write_text(
                 json.dumps(report, indent=2) + "\n", encoding="utf-8")
             if not (report["door_open_after_click"] and closed_again and
-                    badge_in_inventory and reopened):
+                    badge_in_inventory and reopened and cellar_after_escape and
+                    returned_to_harbor and door_persisted and badge_persisted):
                 raise RuntimeError(f"Studio native Actor choreography did not finish: {report}")
             return report
         finally:
