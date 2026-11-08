@@ -108,6 +108,9 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Modell, JSON und ScummC-Ausgabe implementiert; native Fixture mit
         zweitem Actor erfolgreich kompiliert und gestartet (CI `42481225873`).
         Wiederholte Spielerinteraktion noch nicht gesondert visuell belegt.
+  - [x] Produkt-Implementierung: `interaction_sequences` kombiniert native
+        Actor-Cues, Pausen und Objektzustände in einem geordneten Verbablauf;
+        JSON und Exporter angebunden. Native CI und Gameplay-Nachweis offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
