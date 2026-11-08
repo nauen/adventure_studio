@@ -110,13 +110,18 @@ class WalkActorStep:
 
 
 @dataclass(frozen=True)
+class WaitActorStep:
+    actor_id: str
+
+
+@dataclass(frozen=True)
 class InteractionSequence:
     """Ordered native actions initiated by a room object verb."""
 
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep, ...]
 
 
 @dataclass(frozen=True)
@@ -203,6 +208,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, MoveActorStep)
                                                    else {"type": "walk_actor", **vars(step)}
                                                    if isinstance(step, WalkActorStep)
+                                                   else {"type": "wait_actor", **vars(step)}
+                                                   if isinstance(step, WaitActorStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
                                        for sequence in document.interaction_sequences]}
@@ -443,6 +450,10 @@ def _validate_document(document: GameDocument) -> None:
                         or not 0 <= step.x < room.geometry.room_width
                         or not 0 <= step.y < room.geometry.room_height):
                     raise ValueError("Interaction movement requires an Actor and position in the sequence room")
+            elif isinstance(step, WaitActorStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if actor is None or actor.room != room.name:
+                    raise ValueError("Interaction wait requires an Actor in the sequence room")
             else:
                 raise ValueError("Unsupported interaction sequence step")
 
@@ -575,6 +586,9 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "x", "y"},
                              {"type", "actor_id", "x", "y"})
                 steps.append(WalkActorStep(step["actor_id"], step["x"], step["y"]))
+            elif kind == "wait_actor":
+                step = _only(raw_step, {"type", "actor_id"}, {"type", "actor_id"})
+                steps.append(WaitActorStep(step["actor_id"]))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],

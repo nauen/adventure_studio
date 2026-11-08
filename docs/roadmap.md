@@ -160,6 +160,11 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Raumziel; anders als `move_actor` löst er eine Laufbewegung aus.
         Ein implizites Ankunfts-Wait wird nicht erfunden. ScummVM-Nachweis
         des projektdefinierten Actors bleibt offen.
+  - [x] Produkt-Implementierung: `wait_actor` als expliziter nächster
+        Interaktionsschritt mit nativer ScummC-Signatur `waitForActor(actor)`;
+        weitere Aktionen beginnen erst, wenn der Actor nicht mehr läuft.
+        Signatur in den unveränderten ScummC-Beispielen belegt; die neue
+        Studio-Choreografie ist noch nicht in stock ScummVM vorgeführt.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

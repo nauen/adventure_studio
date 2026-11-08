@@ -544,7 +544,7 @@ def make_app():
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Warten", "Objektzustand setzen"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Warten", "Objektzustand setzen"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt")
@@ -552,7 +552,7 @@ def make_app():
             with gr.Row():
                 native_move_x = gr.Number(label="Actor-Ziel X (Versetzen/Laufen)", value=320, precision=0)
                 native_move_y = gr.Number(label="Actor-Ziel Y (Versetzen/Laufen)", value=100, precision=0)
-            gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel; nachfolgende Schritte laufen ohne automatisches Warten auf die Ankunft weiter.")
+            gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
             native_step = gr.Dropdown(label="Schritt auswählen")

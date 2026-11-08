@@ -427,6 +427,17 @@ Spielprobe und eine später explizite `waitForActor`-Choreografie bleiben
 offen. Das nächste Produktgate bleibt echter ScummVM-Nachweis für
 Actor-Laufbewegung und die importierten Mehrframe-Costumes.
 
+**Warten auf Actor-Ankunft (2026-11-08):** Der Studio-Interaktionseditor
+hat nun einen expliziten `wait_actor`-Schritt. Auf einen
+`walk_actor`-Laufauftrag kann so ein natives `waitForActor(actor)` folgen,
+bevor weitere Animations- oder Objektaktionen ausgeführt werden.
+Das Projekt-JSON bewahrt die Reihenfolge; nur im selben Raum vorhandene
+Actors sind gültig. Die ScummC-Signatur ist im unveränderten upstream
+`examples/road/road.scc` und `examples/openquest/officeroom.scc` belegt.
+Ein interaktiver ScummVM-Nachweis der neu authorbaren Actor-Choreografie
+bleibt offen. Nächstes Gate: diese Abfolge und importierte Mehrframe-
+Costumes im echten Spiel beobachten.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, GameDocument,
+from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep, GameDocument,
                             InteractionSequence, ObjectStateStep,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
@@ -51,7 +51,7 @@ def _identity(sequence: InteractionSequence) -> str:
     return f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -60,6 +60,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Actor {step.actor_id}: zu ({step.x}, {step.y}) setzen"
     if isinstance(step, WalkActorStep):
         return f"Actor {step.actor_id}: zu ({step.x}, {step.y}) laufen lassen"
+    if isinstance(step, WaitActorStep):
+        return f"Auf Actor {step.actor_id} warten"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -107,6 +109,8 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
             raise ValueError("Actor-Ziel benötigt ganze Pixelkoordinaten")
         step = (MoveActorStep(actor_id, int(x), int(y)) if kind == "Actor versetzen"
                 else WalkActorStep(actor_id, int(x), int(y)))
+    elif kind == "Auf Actor warten":
+        step = WaitActorStep(actor_id)
     else:
         raise ValueError("Unbekannter Aktionstyp")
     key = (room, hotspot_id, verb)
