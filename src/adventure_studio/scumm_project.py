@@ -130,6 +130,7 @@ class InteractionSequence:
     steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
+    skippable: bool = False
 
 
 @dataclass(frozen=True)
@@ -211,6 +212,7 @@ def document_dict(document: GameDocument) -> dict:
                                         **({"condition_hotspot_id": sequence.condition_hotspot_id,
                                             "condition_state": sequence.condition_state}
                                            if sequence.condition_hotspot_id is not None else {}),
+                                        **({"skippable": True} if sequence.skippable else {}),
                                         "steps": [({"type": "animate_actor", **vars(step)}
                                                    if isinstance(step, AnimateActorStep)
                                                    else {"type": "set_object_state", **vars(step)}
@@ -439,6 +441,8 @@ def _validate_document(document: GameDocument) -> None:
         sequence_groups.setdefault(identity, []).append(sequence)
         if not isinstance(sequence.steps, tuple) or not sequence.steps:
             raise ValueError("Interaction sequence requires ordered steps")
+        if type(sequence.skippable) is not bool:
+            raise ValueError("Interaction skip setting must be boolean")
         if (sequence.condition_hotspot_id is None) != (sequence.condition_state is None):
             raise ValueError("Interaction condition requires both an object and a state")
         if sequence.condition_hotspot_id is not None and (
@@ -593,7 +597,7 @@ def parse_document(source: str) -> GameDocument:
     interaction_sequences = []
     for raw_sequence in raw_sequences:
         item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps",
-                                    "condition_hotspot_id", "condition_state"},
+                                    "condition_hotspot_id", "condition_state", "skippable"},
                      {"room", "hotspot_id", "verb", "steps"})
         if not isinstance(item["steps"], list):
             raise ValueError("Interaction steps must be a list")
@@ -633,7 +637,8 @@ def parse_document(source: str) -> GameDocument:
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],
                                                          item["verb"], tuple(steps),
                                                          item.get("condition_hotspot_id"),
-                                                         item.get("condition_state")))
+                                                         item.get("condition_state"),
+                                                         item.get("skippable", False)))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",

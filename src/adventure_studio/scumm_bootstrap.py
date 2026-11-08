@@ -537,6 +537,43 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 raise ValueError("Unsupported native interaction step")
         return "".join(instructions)
 
+    def playable_sequence(sequence):
+        actions = instructions_for(sequence)
+        if not sequence.skippable:
+            return actions
+        # ScummC's native try/override is backed by the SCUMM v6 override
+        # opcodes. Escape jumps to override; every persistent effect must be
+        # committed there even when the ordinary action list did not finish.
+        end_states = {}
+        end_positions = {}
+        end_directions = {}
+        for step in sequence.steps:
+            if isinstance(step, ObjectStateStep):
+                end_states[step.hotspot_id] = step.state
+            elif isinstance(step, (MoveActorStep, WalkActorStep)):
+                end_positions[step.actor_id] = (step.x, step.y)
+            elif isinstance(step, FaceActorStep):
+                end_directions[step.actor_id] = step.direction
+        commit = ""
+        for hotspot, state in end_states.items():
+            commit += f"                setObjectState({hotspot},{state});\n"
+        for actor, (x, y) in end_positions.items():
+            commit += f"                putActorAt({actor}, {x}, {y}, {room_name});\n"
+        for actor, direction in end_directions.items():
+            native_direction = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}[direction]
+            commit += (f"                setCurrentActor({actor});\n"
+                       f"                setActorDirection({native_direction});\n"
+                       "                setCurrentActor(VAR_EGO);\n")
+        return ("            cutscene(0) {\n"
+                + "                try {\n"
+                + "".join("        " + line for line in actions.splitlines(True))
+                + "                } override {\n"
+                + "                    if(VAR_OVERRIDE) {\n"
+                + "".join("        " + line for line in commit.splitlines(True))
+                + "                    }\n"
+                + "                }\n"
+                + "            }\n")
+
     for group in grouped.values():
         sequence = group[0]
         marker = f"    object {sequence.hotspot_id} {{\n"
@@ -557,17 +594,17 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                      f"{sequence.condition_state}) return;\n"
                      if sequence.condition_hotspot_id is not None else "")
             native = (f"        case {sequence.verb}:\n" + guard
-                      + instructions_for(sequence) + "            return;\n")
+                      + playable_sequence(sequence) + "            return;\n")
         else:
             native = f"        case {sequence.verb}:\n"
             for branch in (item for item in group if item.condition_hotspot_id is not None):
                 native += (f"            if(getObjectState({branch.condition_hotspot_id}) == "
                            f"{branch.condition_state}) {{\n"
-                           + "".join("    " + line for line in instructions_for(branch).splitlines(True))
+                           + "".join("    " + line for line in playable_sequence(branch).splitlines(True))
                            + "                return;\n            }\n")
             fallback = next((item for item in group if item.condition_hotspot_id is None), None)
             if fallback is not None:
-                native += instructions_for(fallback)
+                native += playable_sequence(fallback)
             native += "            return;\n"
         source = source[:start] + segment.replace(verb_marker, verb_marker + native, 1) + source[end:]
     return source

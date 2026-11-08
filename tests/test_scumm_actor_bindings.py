@@ -53,6 +53,18 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertEqual(offsets, sorted(offsets))
         self.assertIn('object Door;', compiled[:compiled.index('object Key {')])
         self.assertIn('case Close:', compiled)
+        skippable = replace(sequence, skippable=True)
+        self.assertEqual(parse_document(canonical_json(replace(
+            document, interaction_sequences=(skippable,)))).interaction_sequences[0], skippable)
+        native_skip = inject_interaction_sequences(source, 'Harbor', (skippable,),
+                                                   document.actors, document.costumes)
+        self.assertIn('cutscene(0) {', native_skip)
+        self.assertIn('try {', native_skip)
+        self.assertIn('} override {', native_skip)
+        self.assertIn('if(VAR_OVERRIDE)', native_skip)
+        self.assertIn('setObjectState(Door,2);', native_skip.split('} override {')[1])
+        self.assertIn('putActorAt(Guide, 480, 100, Harbor);', native_skip.split('} override {')[1])
+        self.assertIn('setActorDirection(WEST);', native_skip.split('} override {')[1])
         guarded = replace(sequence, condition_hotspot_id='Door', condition_state=1)
         guarded_document = replace(document, interaction_sequences=(guarded,))
         self.assertEqual(parse_document(canonical_json(guarded_document)), guarded_document)
