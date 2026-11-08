@@ -124,6 +124,12 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         geschlossene Tür nach realem Klick und der sechsstufigen Folge;
         Bilder/JSON im CI-Artefakt. Einzelne Actor-Zwischenpositionen und
         wiederholte/abgebrochene Sequenzen bleiben gesondert offen.
+  - [ ] Produkt- und Native-Abnahme: Eine Interaktionsfolge im Studio an
+        einen vorhandenen Objektzustand binden. `getObjectState` prüft im
+        nativen Verbscript die Voraussetzung, bevor Actor-/Objektaktionen
+        starten. Ein bestehendes ScummVM-Klickszenario verwendet das neue
+        Gate; dessen CI-Ergebnis und das Verhalten beim wiederholten Klick
+        nach dem Zustandswechsel bleiben bis zur Prüfung getrennt offen.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

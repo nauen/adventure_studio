@@ -12,6 +12,7 @@ from adventure_studio.scumm_project import ActorAsset, GameDocument, canonical_j
 from adventure_studio.story_document import canonical_story_json, parse_story_document
 from adventure_studio.studio_sequences import (append_sequence_step, modify_sequence_step,
                                                 replace_sequence_step, sequence_step_fields,
+                                                sequence_condition_fields, set_sequence_condition,
                                                 project_choices, sequence_choices, sequence_steps,
                                                 compose_story_project)
 from adventure_studio.studio_export import export_native_project
@@ -43,6 +44,10 @@ class NativeSequenceEditorTests(unittest.TestCase):
         self.assertEqual(sequence_steps(raw, identity),
                          ("Actor Guide: zu (450, 112) laufen lassen", "Auf Actor Guide warten"))
         self.assertEqual(len(parse_document(raw).interaction_sequences), 1)
+        raw = set_sequence_condition(raw, identity, "Door", 1)
+        self.assertEqual(sequence_condition_fields(raw, identity), ("Door", 1))
+        raw = set_sequence_condition(raw, identity, None, 0)
+        self.assertEqual(sequence_condition_fields(raw, identity), (None, 0))
         with self.assertRaisesRegex(ValueError, "Schritt existiert nicht"):
             replace_sequence_step(raw, identity, 3, "Warten", None, None, None, 2)
 

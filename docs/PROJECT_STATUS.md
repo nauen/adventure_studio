@@ -500,6 +500,17 @@ geketteten Verbablaufs**, kein Einzelbeweis für jeden Animationframe oder
 jede Walkbox-Position. Als nächstes sind solche visuellen Actor-
 Zwischenzustände und Wiederholung/Abbruch im Spiel gezielt zu prüfen.
 
+**Zustandsgebundene Interaktionsfolgen (2026-11-08, native Abnahme läuft):**
+Eine vorhandene Hotspot-/Verbfolge kann im Studio optional nur bei einem
+konkreten Raumobjektzustand (0–2 im derzeitigen Exportvertrag) ausgeführt
+werden. Modell, JSON-v1-Roundtrip und Gradio-Editor verwenden dieselbe
+Bedingung; der ScummC-Export setzt ein natives `getObjectState`-Gate vor
+die geordneten Aktionen. Ohne Bedingung bleibt die bisherige JSON-Ausgabe
+unverändert. Der bestehende reale Klick-Actor-Ablauf wird nun mit dem
+Türzustand 1 als Voraussetzung kompiliert und im stock ScummVM geprüft.
+**Offen:** Erneutes Klicken nach Statuswechsel und tatsächliche
+Unterbrechungs-/Skip-Semantik separat nachweisen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
