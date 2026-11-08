@@ -62,14 +62,17 @@ def dialogue_voice_lines(raw: str) -> tuple[tuple[str, str], ...]:
     result = []
     for room in document.rooms:
         for rule_index, rule in enumerate(room.talk_rules):
-            base = f"room.{room.name.lower()}.dialogue.{rule_index}"
-            for line_index, line in enumerate(rule.opening_lines):
-                result.append((f"{room.name} / {rule.speaker_id} / {line}",
-                               f"{base}.opening.{line_index}"))
-            for choice_index, choice in enumerate(rule.choices):
-                for line_index, line in enumerate(choice.reply_lines):
-                    result.append((f"{room.name} / {choice.caption} / {line}",
-                                   f"{base}.choice.{choice_index}.reply.{line_index}"))
+            for stage_index, stage in enumerate((rule, *rule.stages)):
+                base = f"room.{room.name.lower()}.dialogue.{rule_index}"
+                if stage_index:
+                    base += f".stage.{stage_index - 1}"
+                for line_index, line in enumerate(stage.opening_lines):
+                    result.append((f"{room.name} / {rule.speaker_id} / {line}",
+                                   f"{base}.opening.{line_index}"))
+                for choice_index, choice in enumerate(stage.choices):
+                    for line_index, line in enumerate(choice.reply_lines):
+                        result.append((f"{room.name} / {choice.caption} / {line}",
+                                       f"{base}.choice.{choice_index}.reply.{line_index}"))
     return tuple(result)
 
 
@@ -83,9 +86,12 @@ def edit_dialogue_voice(raw: str, line_id: str, language: str,
     room = next(room for room in document.rooms
                 if line_id.startswith(f"room.{room.name.lower()}."))
     rest = line_id.split(".dialogue.", 1)[1].split(".")
-    rule = room.talk_rules[int(rest[0])]
-    source = (rule.opening_lines[int(rest[2])] if rest[1] == "opening"
-              else rule.choices[int(rest[2])].reply_lines[int(rest[4])])
+    rule = room.talk_rules[int(rest.pop(0))]
+    stage = rule.stages[int(rest[1])] if rest[0] == "stage" else rule
+    if rest[0] == "stage":
+        rest = rest[2:]
+    source = (stage.opening_lines[int(rest[1])] if rest[0] == "opening"
+              else stage.choices[int(rest[1])].reply_lines[int(rest[3])])
     cues = {cue.line_id: cue for cue in document.dialogue_voice_cues}
     existing = cues.get(line_id)
     if language == document.default_voice_language:

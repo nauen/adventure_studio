@@ -40,6 +40,13 @@ Gezielte Modell-/SCUMM-Tests und echte NPC-Klick-/Antwort-/Audioprobe in
 stock ScummVM grün (CI `42533774527`). Vollständige zyklische
 Gesprächsgraphen, mehrere Sprecher und Actor-Lippensync bleiben offen.
 
+**Mehrstufige Dialoggraphen (2026-11-09):** Der Studio-Editor kann
+aus vorhandenen Gesprächsknoten neue Antwortzweige und Rückverbindungen
+authoren. Der native Compiler projiziert Wahlstufen auf getrennte,
+zustandsabhängige SCUMM-Objekte; alte einstufige Projekte bleiben gültig.
+Die neue stock-ScummVM-Abnahme muss zwei Auswahlebenen, den Rückweg und
+den endgültigen Gesprächsabschluss durch echte Klicks bestätigen.
+
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und
 [Abnahmeszenarien](scumm-v6-reference/SCENARIOS.md). Die

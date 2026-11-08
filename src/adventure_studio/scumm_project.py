@@ -376,8 +376,19 @@ def document_dict(document: GameDocument) -> dict:
                                  "opening_lines": list(rule.opening_lines),
                                  "choices": [{"object_id": c.object_id,
                                               "caption": c.caption,
-                                              "reply_lines": list(c.reply_lines)}
+                                              "reply_lines": list(c.reply_lines),
+                                              **({"next_stage_id": c.next_stage_id}
+                                                 if c.next_stage_id is not None else {})}
                                              for c in rule.choices]}
+                                | ({"stages": [{"id": stage.id,
+                                                "opening_lines": list(stage.opening_lines),
+                                                "choices": [{"object_id": choice.object_id,
+                                                             "caption": choice.caption,
+                                                             "reply_lines": list(choice.reply_lines),
+                                                             **({"next_stage_id": choice.next_stage_id}
+                                                                if choice.next_stage_id is not None else {})}
+                                                            for choice in stage.choices]}
+                                               for stage in rule.stages]} if rule.stages else {})
                                 for rule in room.talk_rules]} if room.talk_rules else {}),
         } for room in document.rooms],
     }
@@ -416,11 +427,14 @@ def _validate_document(document: GameDocument) -> None:
     for room in document.rooms:
         prefix = f"room.{room.name.lower()}.dialogue"
         for rule_index, rule in enumerate(room.talk_rules):
-            for line_index, line in enumerate(rule.opening_lines):
-                dialogue_lines[f"{prefix}.{rule_index}.opening.{line_index}"] = (room.name, line)
-            for choice_index, choice in enumerate(rule.choices):
-                for line_index, line in enumerate(choice.reply_lines):
-                    dialogue_lines[f"{prefix}.{rule_index}.choice.{choice_index}.reply.{line_index}"] = (room.name, line)
+            for stage_index, stage in enumerate((rule, *rule.stages)):
+                stage_prefix = (f"{prefix}.{rule_index}" if stage_index == 0 else
+                                f"{prefix}.{rule_index}.stage.{stage_index - 1}")
+                for line_index, line in enumerate(stage.opening_lines):
+                    dialogue_lines[f"{stage_prefix}.opening.{line_index}"] = (room.name, line)
+                for choice_index, choice in enumerate(stage.choices):
+                    for line_index, line in enumerate(choice.reply_lines):
+                        dialogue_lines[f"{stage_prefix}.choice.{choice_index}.reply.{line_index}"] = (room.name, line)
     seen_cues = set()
     for cue in document.dialogue_voice_cues:
         if (not isinstance(cue, DialogueVoiceCue) or not isinstance(cue.line_id, str)
@@ -943,7 +957,7 @@ def parse_document(source: str) -> GameDocument:
             raise ValueError("Invalid dialogue rules")
         talk_rules = []
         for raw_talk in raw_talk_rules:
-            talk = _only(raw_talk, {"speaker_id", "opening_lines", "choices"},
+            talk = _only(raw_talk, {"speaker_id", "opening_lines", "choices", "stages"},
                          {"speaker_id", "opening_lines", "choices"})
             if (not isinstance(talk["speaker_id"], str)
                     or not isinstance(talk["opening_lines"], list)
@@ -952,14 +966,37 @@ def parse_document(source: str) -> GameDocument:
                 raise ValueError("Invalid dialogue rule content")
             choices = []
             for raw_choice in talk["choices"]:
-                choice = _only(raw_choice, {"object_id", "caption", "reply_lines"},
+                choice = _only(raw_choice, {"object_id", "caption", "reply_lines", "next_stage_id"},
                                {"object_id", "caption", "reply_lines"})
                 if (not isinstance(choice["object_id"], str) or not isinstance(choice["caption"], str)
                         or not isinstance(choice["reply_lines"], list)
                         or not all(isinstance(x, str) for x in choice["reply_lines"])):
                     raise ValueError("Invalid dialogue choice content")
-                choices.append(TalkChoice(choice["object_id"], choice["caption"], tuple(choice["reply_lines"])))
-            talk_rules.append(TalkRule(talk["speaker_id"], tuple(talk["opening_lines"]), tuple(choices)))
+                choices.append(TalkChoice(choice["object_id"], choice["caption"],
+                                          tuple(choice["reply_lines"]), choice.get("next_stage_id")))
+            raw_stages = talk.get("stages", [])
+            if not isinstance(raw_stages, list):
+                raise ValueError("Invalid dialogue stages")
+            stages = []
+            from .scumm_assets import TalkStage
+            for raw_stage in raw_stages:
+                stage = _only(raw_stage, {"id", "opening_lines", "choices"},
+                              {"id", "opening_lines", "choices"})
+                if not isinstance(stage["opening_lines"], list) or not isinstance(stage["choices"], list):
+                    raise ValueError("Invalid dialogue stage lines or choices")
+                stage_choices = []
+                for raw_choice in stage["choices"]:
+                    choice = _only(raw_choice, {"object_id", "caption", "reply_lines", "next_stage_id"},
+                                   {"object_id", "caption", "reply_lines"})
+                    if not isinstance(choice["reply_lines"], list):
+                        raise ValueError("Invalid dialogue stage reply lines")
+                    stage_choices.append(TalkChoice(choice["object_id"], choice["caption"],
+                                                    tuple(choice["reply_lines"]),
+                                                    choice.get("next_stage_id")))
+                stages.append(TalkStage(stage["id"], tuple(stage["opening_lines"]),
+                                        tuple(stage_choices)))
+            talk_rules.append(TalkRule(talk["speaker_id"], tuple(talk["opening_lines"]),
+                                       tuple(choices), tuple(stages)))
         raw_cycles = room.get("palette_cycles", [])
         if not isinstance(raw_cycles, list) or len(raw_cycles) > 16:
             raise ValueError("Invalid palette cycles")

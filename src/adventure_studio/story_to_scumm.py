@@ -12,7 +12,7 @@ import unicodedata
 
 from .image_pipeline import ImageProvider, ImageRequest, IndexedImage
 from .story_fixture_image import DeterministicStoryImageProvider, _PALETTE
-from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, TalkChoice, TalkRule, UseRule
+from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, TalkChoice, TalkRule, TalkStage, UseRule
 from .scumm_project import GameDocument
 from .story import Story, verify_story
 from .targets import RoomGeometry
@@ -65,10 +65,10 @@ def _room_image(provider: ImageProvider, scene_id: str, width: int, goal: bool) 
 
 def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                                 ) -> tuple[tuple[RoomHotspot, ...], tuple[TalkRule, ...]]:
-    """One conversation per character; bounded terminal answer selection.
+    """Compile reachable branching dialogue stages into native answer hotspots.
 
-    Full dialogue branching, NPC actor costumes and speech voice resources
-    remain separate compiler tasks. Unsupported cases fail closed.
+    The authored graph may loop through a choice point; each stage owns distinct
+    clickable objects, and the room script changes their visibility natively.
     """
     result = []
     rules = []
@@ -78,56 +78,88 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
         dialogues = [d for d in story.dialogues if d.scene_id == scene_id and any(
             n.dialogue_id == d.id and n.speaker_id == actor.id for n in story.dialogue_nodes)]
         if len(dialogues) > 1:
-            raise ValueError(f"Only one linear dialogue per character is supported: {actor.id}")
+            raise ValueError(f"Only one dialogue per character is supported: {actor.id}")
         lines = []
         if dialogues:
             dialogue = dialogues[0]
             nodes = {n.id: n for n in story.dialogue_nodes if n.dialogue_id == dialogue.id}
+            by_node = {node_id: [c for c in story.dialogue_choices if c.node_id == node_id]
+                       for node_id in nodes}
+            entry_choice_node = None
+
+            def follow(start: str | None) -> tuple[tuple[str, ...], str | None]:
+                collected = []
+                visited = set()
+                current = start
+                while current is not None:
+                    if current in visited:
+                        raise ValueError("Dialogue line cycle without choice point")
+                    visited.add(current)
+                    node = nodes[current]
+                    if node.speaker_id != actor.id:
+                        raise ValueError("Current SCUMM compiler requires one speaker per dialogue")
+                    if by_node[current]:
+                        return tuple(collected), current
+                    collected.append(_text(node.text))
+                    if len(collected) > 16:
+                        raise ValueError("Dialogue text chain exceeds sixteen lines")
+                    current = node.next_node_id
+                return tuple(collected), None
+
             current = dialogue.entry_node_id
-            seen = set()
-            while current is not None:
-                if current in seen:
-                    raise ValueError("Cyclic SCUMM dialogue runtime is not supported")
-                seen.add(current)
+            visited = set()
+            while current is not None and not by_node[current]:
+                if current in visited:
+                    raise ValueError("Dialogue line cycle without choices")
+                visited.add(current)
                 node = nodes[current]
                 if node.speaker_id != actor.id:
-                    raise ValueError("Current SCUMM prototype requires one speaker per dialogue")
+                    raise ValueError("Current SCUMM compiler requires one speaker per dialogue")
                 lines.append(_text(node.text))
-                choices = [c for c in story.dialogue_choices if c.node_id == current]
-                if choices:
-                    if len(choices) > 3:
-                        raise ValueError("SCUMM dialogue supports at most three answers")
-                    compiled_choices = []
-                    for choice_index, choice in enumerate(choices):
-                        response = []
-                        next_id = choice.next_node_id
-                        answer_seen = set(seen)
-                        while next_id is not None:
-                            if next_id in answer_seen:
-                                raise ValueError("Cyclic dialogue answer is not supported")
-                            answer_seen.add(next_id)
-                            reply = nodes[next_id]
-                            if reply.speaker_id != actor.id or any(
-                                    c.node_id == next_id for c in story.dialogue_choices):
-                                raise ValueError("Nested answer or speaker change is not supported by SCUMM")
-                            response.append(_text(reply.text))
-                            if len(response) > 16:
-                                raise ValueError("Dialogue answer exceeds sixteen lines")
-                            next_id = reply.next_node_id
-                        answer_id = f"Answer{actor.id}{choice_index + 1}"
-                        answer_x = 240 + choice_index * 24
-                        if answer_x + 16 > room_width or not _ID.fullmatch(answer_id):
-                            raise ValueError("Dialogue choice hotspot exceeds room limits")
-                        result.append(RoomHotspot(answer_id, _text(choice.text),
-                                                  _text(choice.text), answer_x, 130,
-                                                  16, 16, sprite_pixels=_sprite(7, 3)))
-                        compiled_choices.append(TalkChoice(answer_id, _text(choice.text),
-                                                           tuple(response)))
-                    rules.append(TalkRule(actor.id, tuple(lines), tuple(compiled_choices)))
-                    break
                 current = node.next_node_id
+            if current is not None:
+                entry_choice_node = current
+                lines.append(_text(nodes[current].text))
                 if len(lines) > 16:
-                    raise ValueError("Current SCUMM prototype supports at most sixteen dialogue lines")
+                    raise ValueError("Dialogue opening exceeds sixteen lines")
+                stages = []
+                pending = [current]
+                processed = set()
+                stage_numbers = {node_id: number + 1 for number, node_id in enumerate(
+                    sorted(node_id for node_id in nodes if by_node[node_id]))}
+                while pending:
+                    node_id = pending.pop(0)
+                    if node_id in processed:
+                        continue
+                    processed.add(node_id)
+                    source_choices = by_node[node_id]
+                    if len(source_choices) > 3:
+                        raise ValueError("SCUMM dialogue UI supports at most three answers per stage")
+                    stage_choices = []
+                    for choice_index, choice in enumerate(source_choices):
+                        response, target = follow(choice.next_node_id)
+                        if target is not None:
+                            pending.append(target)
+                        answer_id = (f"Answer{actor.id}{choice_index + 1}" if node_id == entry_choice_node
+                                     else f"Answer{actor.id}N{stage_numbers[node_id]}C{choice_index + 1}")
+                        answer_x = 240 + choice_index * 24
+                        answer_y = 130 if node_id == entry_choice_node else 150
+                        if answer_x + 16 > room_width or not _ID.fullmatch(answer_id):
+                            raise ValueError("Dialogue answer hotspot exceeds room exporter limits")
+                        result.append(RoomHotspot(answer_id, _text(choice.text), _text(choice.text),
+                                                  answer_x, answer_y, 16, 16,
+                                                  sprite_pixels=_sprite(7, 3)))
+                        stage_choices.append(TalkChoice(answer_id, _text(choice.text), response,
+                                                        "Entry" if target == entry_choice_node else
+                                                        f"Stage{target}" if target is not None else None))
+                    if node_id == entry_choice_node:
+                        root_choices = tuple(stage_choices)
+                    else:
+                        stages.append(TalkStage(f"Stage{node_id}", (_text(nodes[node_id].text),),
+                                                tuple(stage_choices)))
+                rules.append(TalkRule(actor.id, tuple(lines), root_choices, tuple(stages)))
+            elif len(lines) > 16:
+                raise ValueError("Dialogue opening exceeds sixteen lines")
         x = 185 + index * 35
         if x + 16 > room_width:
             raise ValueError("Too many characters for automatic room layout")

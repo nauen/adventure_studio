@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from .story import Item, Placement, Story, verify_story
+from .story import DialogueNode, DialogueChoice, Item, Placement, Story, verify_story
 from .story_changes import PutEntity, StoryChangeReport, edit_story
 from .story_document import canonical_story_json, parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -65,7 +65,11 @@ def describe_story(raw: str) -> StudioView:
 
 
 def _commit(story: Story, operation: PutEntity) -> StudioEdit:
-    changed, report = edit_story(story, (operation,))
+    return _commit_many(story, (operation,))
+
+
+def _commit_many(story: Story, operations: tuple[PutEntity, ...]) -> StudioEdit:
+    changed, report = edit_story(story, operations)
     # Export support is a separate capability; authoring validity is checked
     # by edit_story and the strict JSON roundtrip below.
     warning = export_warning(changed)
@@ -132,6 +136,44 @@ def change_dialogue_line(raw: str, node_id: str, text: str) -> StudioEdit:
     if not text.strip() or len(text) > 4096:
         raise ValueError("Dialogue text must be 1..4096 characters")
     return _commit(story, PutEntity("dialogue_node", replace(node, text=text.strip())))
+
+
+def add_dialogue_choice(raw: str, node_id: str, choice_id: str, text: str,
+                        target_node_id: str | None = None) -> StudioEdit:
+    """Offer a new answer, optionally returning to an existing dialogue stage."""
+    story = parse_story_document(raw)
+    node = next((item for item in story.dialogue_nodes if item.id == node_id), None)
+    if node is None or node.next_node_id is not None:
+        raise ValueError("Select a dialogue node without an automatic successor")
+    if (not isinstance(choice_id, str) or not choice_id.isascii() or not choice_id.isidentifier()
+            or not choice_id[0].isalpha() or choice_id in {choice.id for choice in story.dialogue_choices}
+            or not isinstance(text, str) or not text.strip()):
+        raise ValueError("Answer requires a new ASCII ID and non-empty text")
+    if target_node_id == "":
+        target_node_id = None
+    if target_node_id is not None and (target_node_id not in {n.id for n in story.dialogue_nodes
+                                                                if n.dialogue_id == node.dialogue_id}):
+        raise ValueError("Answer target must be in the same dialogue")
+    return _commit(story, PutEntity("dialogue_choice", DialogueChoice(
+        choice_id, node_id, text.strip(), target_node_id)))
+
+
+def extend_dialogue_choice(raw: str, choice_id: str, new_node_id: str,
+                           text: str) -> StudioEdit:
+    """Atomically attach a new response node to a previously terminal answer."""
+    story = parse_story_document(raw)
+    choice = next((item for item in story.dialogue_choices if item.id == choice_id), None)
+    if choice is None or choice.next_node_id is not None:
+        raise ValueError("Select an answer without an existing target")
+    if (not isinstance(new_node_id, str) or not new_node_id.isascii()
+            or not new_node_id.isidentifier() or not new_node_id[0].isalpha()
+            or new_node_id in {node.id for node in story.dialogue_nodes}
+            or not isinstance(text, str) or not text.strip()):
+        raise ValueError("New dialogue node requires a new ASCII ID and non-empty text")
+    parent = next(node for node in story.dialogue_nodes if node.id == choice.node_id)
+    node = DialogueNode(new_node_id, parent.dialogue_id, parent.speaker_id, text.strip())
+    return _commit_many(story, (PutEntity("dialogue_node", node),
+                                PutEntity("dialogue_choice", replace(choice, next_node_id=new_node_id))))
 
 
 def item_position(raw: str, item_id: str) -> tuple[int, int]:

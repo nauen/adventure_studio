@@ -54,6 +54,13 @@ def _color_count(directory: Path, label: str, rgb: tuple[int, int, int]) -> int:
     return count_color_pixels(histogram, rgb)
 
 
+def _answer_row_count(directory: Path, label: str, y: int) -> int:
+    frame = directory / f"scummvm-{label}.png"
+    histogram = _run(["convert", str(frame), "-crop", f"640x34+192+{184 + y * 2}",
+                      "+repage", "-format", "%c", "histogram:info:"])
+    return count_color_pixels(histogram, ANSWER_RGB)
+
+
 def _color_center(directory: Path, label: str, rgb: tuple[int, int, int]) -> tuple[int, int]:
     frame = directory / f"scummvm-{label}.png"
     color = "#" + "".join(f"{value:02X}" for value in rgb)
@@ -68,13 +75,15 @@ def _click(x: int, y: int) -> None:
     _run(["xdotool", "mousemove", str(x), str(y), "click", "1"], timeout=5)
 
 
-def run(game_directory: Path, output: Path, voice: bool = False) -> dict:
+def run(game_directory: Path, output: Path, voice: bool = False,
+        nested: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Virtual X display required")
     if not all((game_directory / f"tentacle.{part}").is_file() for part in ("000", "001")):
         raise ValueError("Linked SCUMM dialogue game is missing")
     output.mkdir(parents=True, exist_ok=True)
-    report: dict = {"game": "dialogue-choices", "passed": False, "voice": voice}
+    report: dict = {"game": "dialogue-choices", "passed": False, "voice": voice,
+                    "nested": nested}
     pcm_path = output / "dialogue-voice.raw"
     with (output / "scummvm.log").open("w", encoding="utf-8") as log:
         process = subprocess.Popen(["scummvm", f"--path={game_directory.resolve()}", "tentacle"],
@@ -130,6 +139,33 @@ def run(game_directory: Path, output: Path, voice: bool = False) -> dict:
             answer_x, answer_y = 192 + 240 * 2 + 16, 184 + 130 * 2 + 16
             _click(330, 560)  # Re-select Talk to; SCUMM may reset the verb.
             _click(answer_x, answer_y)
+            if nested:
+                nested_visible = False
+                for _ in range(35):
+                    _capture(output, "nested")
+                    if (_answer_row_count(output, "nested", 130) < 10
+                            and _answer_row_count(output, "nested", 150) >= 50):
+                        nested_visible = True
+                        break
+                    time.sleep(0.35)
+                if not nested_visible:
+                    raise RuntimeError("Second-level answer objects did not replace first menu")
+                report["nested_stage_visible"] = True
+                _click(330, 560)
+                _click(answer_x, 184 + 150 * 2 + 16)  # Back to first stage
+                returned = False
+                for _ in range(35):
+                    _capture(output, "returned")
+                    if (_answer_row_count(output, "returned", 130) >= 50
+                            and _answer_row_count(output, "returned", 150) < 10):
+                        returned = True
+                        break
+                    time.sleep(0.35)
+                if not returned:
+                    raise RuntimeError("Nested conversation did not return to entry menu")
+                report["returned_to_first_stage"] = True
+                _click(330, 560)
+                _click(192 + 264 * 2 + 16, answer_y)  # Second root answer ends conversation
             dismissed = displayed
             for _ in range(35):
                 if process.poll() is not None:
@@ -169,11 +205,13 @@ def run(game_directory: Path, output: Path, voice: bool = False) -> dict:
 
 def main() -> int:
     voice = len(sys.argv) == 4 and sys.argv[1] == "--voice"
-    if (len(sys.argv) != 3 and not voice):
-        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice] GAME_DIR OUTPUT_DIR")
+    nested = len(sys.argv) == 4 and sys.argv[1] == "--nested"
+    if (len(sys.argv) != 3 and not voice and not nested):
+        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested] GAME_DIR OUTPUT_DIR")
         return 2
-    report = run(Path(sys.argv[2] if voice else sys.argv[1]),
-                 Path(sys.argv[3] if voice else sys.argv[2]), voice=voice)
+    report = run(Path(sys.argv[2] if voice or nested else sys.argv[1]),
+                 Path(sys.argv[3] if voice or nested else sys.argv[2]),
+                 voice=voice, nested=nested)
     print(json.dumps(report, sort_keys=True))
     return 0 if report["passed"] else 1
 

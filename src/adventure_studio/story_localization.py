@@ -52,6 +52,15 @@ def story_text_inventory(document: GameDocument) -> dict[str, str]:
                 add(f"{choice_base}.caption", choice.caption)
                 for line_index, line in enumerate(choice.reply_lines):
                     add(f"{choice_base}.reply.{line_index}", line)
+            for stage_index, stage in enumerate(dialogue.stages):
+                stage_base = f"{base}.stage.{stage_index}"
+                for line_index, line in enumerate(stage.opening_lines):
+                    add(f"{stage_base}.opening.{line_index}", line)
+                for choice_index, choice in enumerate(stage.choices):
+                    choice_base = f"{stage_base}.choice.{choice_index}"
+                    add(f"{choice_base}.caption", choice.caption)
+                    for line_index, line in enumerate(choice.reply_lines):
+                        add(f"{choice_base}.reply.{line_index}", line)
     return dict(sorted(result.items()))
 
 

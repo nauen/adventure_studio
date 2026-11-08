@@ -111,6 +111,28 @@ jobs:
             /tmp/dialogue-story/project.json
             /tmp/dialogue-story/resources/Harbor.scc
           if-no-files-found: ignore
+      - name: Play nested NPC answers and return to first menu in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-nested-story --nested
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-nested-story /tmp/scummc-upstream /tmp/dialogue-nested-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --nested /tmp/dialogue-nested-game /tmp/dialogue-nested-evidence
+      - name: Retain native nested dialogue and return evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-nested-dialogue
+          path: |
+            /tmp/dialogue-nested-evidence/dialogue-report.json
+            /tmp/dialogue-nested-evidence/scummvm-options.png
+            /tmp/dialogue-nested-evidence/scummvm-nested.png
+            /tmp/dialogue-nested-evidence/scummvm-returned.png
+            /tmp/dialogue-nested-evidence/scummvm-dismissed.png
+            /tmp/dialogue-nested-evidence/scummvm.log
+            /tmp/dialogue-nested-story/project.json
+            /tmp/dialogue-nested-story/resources/Harbor.scc
+          if-no-files-found: ignore
       - name: Build recipe adventure entirely from story JSON
         env:
           PYTHONPATH: src

@@ -14,7 +14,8 @@ from pathlib import Path
 from .studio_catalog import relationship_svg, story_catalog
 from .story_ai import preview_ai_response, propose_story_change
 from .studio_service import (accept_proposal, add_decoration, change_item,
-                             change_dialogue_line, change_position, change_puzzle, change_scene,
+                             change_dialogue_line, add_dialogue_choice, extend_dialogue_choice,
+                             change_position, change_puzzle, change_scene,
                              describe_story, item_position, prepare_proposal,
                              report_text, scene_preview, translation_draft, validate_translation_draft)
 from .story_document import canonical_story_json, parse_story_document
@@ -504,10 +505,22 @@ def make_app():
             puzzle_items = gr.Textbox(label="Benötigte Gegenstands-IDs, mit Komma getrennt")
             save_puzzle = gr.Button("Rätseländerung prüfen")
         with gr.Tab("Dialogzeilen"):
-            gr.Markdown("Vorhandene Gesprächszeilen bearbeiten. Neue Dialoge und Verzweigungen können über die KI-Story-Regie als geprüfte Datenoperationen entstehen.")
+            gr.Markdown("Gesprächszeilen bearbeiten und zusätzliche Antwortstufen anlegen. Antworten können zu einem vorhandenen Knoten (auch zum Gesprächseinstieg) zurückführen oder das Gespräch beenden. Änderungen werden vor der Übernahme auf Erreichbarkeit und einen möglichen Abschluss geprüft.")
             dialogue_node_select = gr.Dropdown(label="Dialogzeile")
             dialogue_text = gr.Textbox(label="Sprechtext", lines=4)
             save_dialogue = gr.Button("Dialogänderung prüfen")
+            gr.Markdown("**Neue Antwort am ausgewählten Dialogknoten:** Die Zielzeile kann auch eine bestehende Frage sein. Ohne Ziel beendet die Antwort das Gespräch.")
+            with gr.Row():
+                dialogue_answer_id = gr.Textbox(label="Neue Antwort-ID (z. B. AskAgain)")
+                dialogue_answer_text = gr.Textbox(label="Antworttext")
+                dialogue_answer_target = gr.Dropdown(label="Zielknoten", choices=[("Gespräch beenden", None)])
+            dialogue_answer_add = gr.Button("Antwort hinzufügen: Änderung prüfen")
+            gr.Markdown("**Antwort fortsetzen:** Eine bisher abschließende Antwort erhält eine neue gesprochene Zeile. Anschließend können an diese Zeile weitere Antworten angehängt werden.")
+            with gr.Row():
+                dialogue_terminal_choice = gr.Dropdown(label="Abschließende Antwort")
+                dialogue_new_node_id = gr.Textbox(label="Neue Dialogknoten-ID")
+                dialogue_new_node_text = gr.Textbox(label="Text der neuen Zeile")
+            dialogue_extend = gr.Button("Antwort mit neuem Knoten fortsetzen: Änderung prüfen")
         with gr.Tab("KI-Story-Regie"):
             gr.Markdown("Beschreibe die gewünschte Änderung. Die KI erzeugt nur Datenoperationen; Story-Solver und SCUMM-Compiler prüfen sie. **Erst der Button unten übernimmt Änderungen.** Für den kostenpflichtigen API-Aufruf müssen `OPENAI_API_KEY` und `pip install -e '.[studio,ai]'` konfiguriert sein.")
             ai_request = gr.Textbox(label="Was soll sich in der Story ändern?", lines=5,
@@ -694,6 +707,21 @@ def make_app():
                           [pending, report])
         save_dialogue.click(lambda *args: propose(change_dialogue_line, *args),
                             [state, dialogue_node_select, dialogue_text], [pending, report])
+        state.change(lambda raw: gr.update(
+            choices=[("Gespräch beenden", None)] + [(node.id, node.id)
+                for node in parse_story_document(raw).dialogue_nodes] if raw else [("Gespräch beenden", None)],
+            value=None), [state], [dialogue_answer_target])
+        state.change(lambda raw: gr.update(
+            choices=[(f"{choice.id}: {choice.text[:48]}", choice.id)
+                     for choice in parse_story_document(raw).dialogue_choices
+                     if choice.next_node_id is None] if raw else (), value=None),
+            [state], [dialogue_terminal_choice])
+        dialogue_answer_add.click(lambda *args: propose(add_dialogue_choice, *args),
+                                  [state, dialogue_node_select, dialogue_answer_id,
+                                   dialogue_answer_text, dialogue_answer_target], [pending, report])
+        dialogue_extend.click(lambda *args: propose(extend_dialogue_choice, *args),
+                              [state, dialogue_terminal_choice, dialogue_new_node_id,
+                               dialogue_new_node_text], [pending, report])
         save_position.click(propose_position, [state, position_item, position_x, position_y],
                             [pending, report])
         ai_button.click(propose_ai, [state, ai_request], [pending, report])
