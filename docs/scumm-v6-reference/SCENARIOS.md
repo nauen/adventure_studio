@@ -63,8 +63,14 @@ eine definierte Reaktion. Kein zufälliges Ergebnis durch Frame-Race.
   beide Ausgänge sind typisierte Objektzustandsänderungen. Die Eingabe
   wird nicht künstlich gesperrt. Roundtrip, Referenzen, Ablehnung fremder
   Script-Felder und generierter ScummC-Quelltext sind unit-getestet.
-  **Noch nicht bestanden:** ein reproduzierbarer echter Mausklick vor und
-  nach der Grenze im exportierten ScummVM-Spiel, Wiederholung und Save/Load.
+  **Native Probe:** Zwei getrennte stock-ScummVM-Läufe wählen den `Push`-Verb
+  in der Road-UI und klicken auf den Schlüssel: Beim ersten Lauf nach COUNT 1,
+  vor COUNT 2 verschwindet die Tür; beim zweiten Lauf nach COUNT 2 verschwindet
+  der Schlüssel. Bildschirmfarben der Tür und des Schlüssels sind die
+  expliziten Positiv-/Negativassertions. Die isolierte Probe hält die Figur
+  neben dem Interaktionsziel und verlangsamt ihre Costume-Animation; diese
+  Fixture-Parameter sind keine Editor-Limits. Noch offen sind Wiederholung,
+  Raumwechsel, Save/Load und das vollständige Fahrgeschäft-Szenario.
 
 ## C. Kinoartige Cutscene mit Totale, Nahaufnahme und Detail
 
