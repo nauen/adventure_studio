@@ -130,10 +130,12 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         starten. Ein bestehendes ScummVM-Klickszenario verwendet das neue
         Gate erfolgreich (CI `42505166878`). Wiederholte Zustandswechsel
         werden im folgenden Paket geprüft.
-  - [ ] Zustandsvarianten desselben Hotspot-Verbs: Studio kann eine Variante
+  - [x] Zustandsvarianten desselben Hotspot-Verbs: Studio kann eine Variante
         duplizieren und mit anderen Aktionen für einen anderen Zustand des
         selben Objekts belegen. Native `case`-Ausgabe vermeidet konkurrierende
-        Verbbindungen; echte Klickfolge Tür 1 → 2 → 1 → 2 in ScummVM prüfen.
+        Verbbindungen; echte Klickfolge Tür 1 → 2 → 1 → 2 in stock ScummVM
+        bestätigt (CI `42506834029`). Unterbrechung laufender Sequenzen
+        bleibt ein eigenständiges offenes Gameplay-Paket.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

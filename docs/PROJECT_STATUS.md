@@ -510,14 +510,18 @@ unverändert. Der bestehende reale Klick-Actor-Ablauf mit Türzustand 1 als
 Voraussetzung lief im unveränderten ScummVM erfolgreich (CI `42505166878`,
 PR #57 gemergt). Der negative Zustand und die Wiederholung waren noch offen.
 
-**Mehrere Zustandsvarianten je Verb (2026-11-08, CI ausstehend):** Im Studio
+**Mehrere Zustandsvarianten je Verb (2026-11-08, ScummVM nachgewiesen):** Im Studio
 können bestehende Folgen für einen weiteren Zustand desselben Raumobjekts
 dupliziert und unabhängig bearbeitet werden. Der Export führt sie unter
 einem einzigen nativen `case` mit disjunkten Zustandsvergleichen aus und
 akzeptiert optional eine bedingungslose Fallback-Folge. Mehrdeutige
 Varianten werden schon im Projektmodell abgewiesen. Der native
-Spielablauf prüft dieselbe `Close`-Aktion dreimal bei abwechselndem
-Türzustand 1/2/1, einschließlich Rückkehr zur ersten Aktionsfolge.
+Spielablauf führte dieselbe `Close`-Aktion dreimal aus: Türzustand
+1 → 2 → 1 → 2, einschließlich Rückkehr zur ersten Actor-Choreografie.
+CI `42506834029`, Artefakt `native-v6-studio-actor-sequence`. Beim ersten
+Lauf zeigte sich ein wandernder Kameraausschnitt; die Klickprobe bestimmt
+deshalb vor jeder Eingabe die aktuelle Hotspot-Position neu, ohne die
+Studio-Produktlogik zu ändern.
 **Noch offen:** tatsächliche Unterbrechungs-/Skip-Semantik laufender Scripts.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
