@@ -144,7 +144,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 for _ in range(35):
                     _capture(output, "nested")
                     if (_answer_row_count(output, "nested", 130) < 10
-                            and _answer_row_count(output, "nested", 150) >= 50):
+                            and _answer_row_count(output, "nested", 100) >= 50):
                         nested_visible = True
                         break
                     time.sleep(0.35)
@@ -152,12 +152,12 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     raise RuntimeError("Second-level answer objects did not replace first menu")
                 report["nested_stage_visible"] = True
                 _click(330, 560)
-                _click(answer_x, 184 + 150 * 2 + 16)  # Back to first stage
+                _click(answer_x, 184 + 100 * 2 + 16)  # Back to first stage
                 returned = False
                 for _ in range(35):
                     _capture(output, "returned")
                     if (_answer_row_count(output, "returned", 130) >= 50
-                            and _answer_row_count(output, "returned", 150) < 10):
+                            and _answer_row_count(output, "returned", 100) < 10):
                         returned = True
                         break
                     time.sleep(0.35)
