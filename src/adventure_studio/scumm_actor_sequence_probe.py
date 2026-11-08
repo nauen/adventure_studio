@@ -34,7 +34,7 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
         ("Auf Actor warten", "Guide", None, None, None, None, None, None),
         ("Actor drehen", "Guide", None, None, None, None, None, "W"),
         ("Actor animieren", "Guide", "gesture", None, None, None, None, None),
-        ("Objektzustand setzen", None, None, "Door", 0, None, None, None),
+        ("Objektzustand setzen", None, None, "Door", 2, None, None, None),
     )
     for kind, actor, animation, target, amount, x, y, direction in actions:
         raw = append_sequence_step(raw, "Harbor", "Key", "Close", kind, actor,
@@ -79,8 +79,15 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
             else:
                 raise RuntimeError("Key and initially closed Door not visible")
 
+            # The key can become visible while the opening camera pan is
+            # still in progress, before the fixed verb UI accepts clicks.
+            time.sleep(4)
+            frame("before")
+            key_center = colored_item_center(screenshot_dir, "before", (255, 220, 75))
+            closed_door = colored_item_pixels(screenshot_dir, "before", (50, 220, 220))
+
             # Road's native Close verb is at (10,184); Xvfb scales the game 2x.
-            for x, y in ((212, 552), key_center):
+            for x, y in ((234, 563), key_center):
                 subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                                check=True, timeout=10)
             started = time.monotonic()
