@@ -362,7 +362,8 @@ def indexed_bmp(room: RoomAsset) -> bytes:
 
 
 def scummc_room_source(room: RoomAsset, catalog=None,
-                       graphical_language_buttons: bool = False) -> str:
+                       graphical_language_buttons: bool = False,
+                       dialogue_voice_cues=()) -> str:
     _validate(room)
     if graphical_language_buttons and catalog is None:
         raise ValueError("Graphical language buttons require a language catalog")
@@ -376,6 +377,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         from .localization import scumm_language_dispatch, validate_catalog
         validate_catalog(catalog)
         translations = {line.id: dict(line.translations) for line in catalog.lines}
+    cues = {cue.line_id: cue for cue in dialogue_voice_cues}
 
     def say(key: str, original: str, indent: int) -> str:
         if catalog is None:
@@ -386,6 +388,31 @@ def scummc_room_source(room: RoomAsset, catalog=None,
             raise ValueError(f"Missing or stale SCUMM translation: {key}")
         return "".join(" " * indent + line + "\n"
                        for line in scumm_language_dispatch(catalog, key).splitlines())
+
+    def spoken(key: str, original: str, indent: int) -> str:
+        cue = cues.get(key)
+        if cue is None:
+            return say(key, original, indent) + " " * indent + "waitForMessage();\n"
+        if cue.source_text != original:
+            raise ValueError(f"Stale dialogue audio line: {key}")
+        pad = " " * indent
+
+        def sound(operation: str) -> str:
+            if not cue.variants:
+                return f"{pad}{operation}({cue.sound_id});\n"
+            branches = []
+            for index, (language, sound_id) in enumerate(cue.variants):
+                code = int.from_bytes(language.encode("ascii"), "big")
+                keyword = "if" if index == 0 else "else if"
+                branches.append(f"{pad}{keyword}(GameLanguage == {code}) "
+                                f"{operation}({sound_id});\n")
+            branches.append(f"{pad}else {operation}({cue.sound_id});\n")
+            return "".join(branches)
+
+        stops = "".join(f"{pad}stopSound({sound_id});\n" for sound_id in sorted(
+            {cue.sound_id, *(variant[1] for variant in cue.variants)}))
+        return sound("startSound") + say(key, original, indent) + \
+            f"{pad}waitForMessage();\n" + stops
     def localized_name(hotspot: RoomHotspot) -> str:
         if catalog is None:
             return ""
@@ -422,6 +449,9 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         parts.append(f'    boxd = "{room.name}.box";\n')
     if room.music_id is not None:
         parts.append(f'    sound {room.music_id} = "{room.music_id}.soun";\n')
+    for sound_id in sorted({sid for cue in cues.values()
+                            for sid in (cue.sound_id, *(variant[1] for variant in cue.variants))}):
+        parts.append(f'    sound {sound_id} = "{sound_id}.soun";\n')
     for cycle in room.palette_cycles:
         # ScummC scc_parse.y: cycle name = {delay, flags, start, end};
         # flags bit 1 reverses the direction of palette cycling.
@@ -478,8 +508,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         if speaker_rule:
             parts.append("        case TalkTo:\n")
             for line_index, line in enumerate(speaker_rule.opening_lines):
-                parts.extend([say(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(speaker_rule)}.opening.{line_index}", line, 12),
-                              "            waitForMessage();\n"])
+                parts.append(spoken(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(speaker_rule)}.opening.{line_index}", line, 12))
             for choice in speaker_rule.choices:
                 parts.append(f"            setObjectState({choice.object_id},1);\n")
             parts.append("            return;\n")
@@ -491,8 +520,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
             parts.extend([say(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(rule)}.choice.{rule.choices.index(selected)}.caption", selected.caption, 12),
                           "            waitForMessage();\n"])
             for line_index, line in enumerate(selected.reply_lines):
-                parts.extend([say(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(rule)}.choice.{rule.choices.index(selected)}.reply.{line_index}", line, 12),
-                              "            waitForMessage();\n"])
+                parts.append(spoken(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(rule)}.choice.{rule.choices.index(selected)}.reply.{line_index}", line, 12))
             parts.append("            return;\n")
         if hotspot.exit_destination is not None:
             parts.append("        case WalkTo:\n")
