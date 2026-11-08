@@ -388,6 +388,36 @@ def inject_actor_count_rules(source: str, room_name: str, rules, actors, costume
     return source
 
 
+def inject_actor_input_rules(source: str, room_name: str, rules) -> str:
+    """Add native verb branches for a bounded Actor COUNT input window."""
+    for rule in rules:
+        if rule.room != room_name:
+            continue
+        object_marker = f"    object {rule.hotspot_id} {{\n"
+        if source.count(object_marker) != 1:
+            raise ValueError(f"Missing native input hotspot: {rule.hotspot_id}")
+        start = source.index(object_marker) + len(object_marker)
+        end = source.find("    object ", start)
+        if end == -1:
+            end = source.find("    local script entry()", start)
+        if end == -1:
+            raise ValueError(f"Cannot isolate native hotspot: {rule.hotspot_id}")
+        segment = source[start:end]
+        marker = "        verb(int vrb, int objA, int objB) {\n"
+        if segment.count(marker) != 1 or f"        case {rule.verb}:\n" in segment:
+            raise ValueError(f"Conflicting native input verb on {rule.hotspot_id}")
+        native = (
+            f"        case {rule.verb}:\n"
+            f"            if(getActorAnimCounter1({rule.actor_id}) < {rule.before_count}) {{\n"
+            f"                setObjectState({rule.on_time.hotspot_id},{rule.on_time.state});\n"
+            "            } else {\n"
+            f"                setObjectState({rule.too_late.hotspot_id},{rule.too_late.state});\n"
+            "            }\n"
+            "            return;\n")
+        source = source[:start] + segment.replace(marker, marker + native, 1) + source[end:]
+    return source
+
+
 def read_icon_ids(argument: str) -> tuple[str, ...]:
     if argument.startswith("@"):
         argument = Path(argument[1:]).read_text(encoding="ascii").strip()

@@ -55,12 +55,26 @@ class AnimationRule:
 
 
 @dataclass(frozen=True)
+class AnimationInputRule:
+    """Branch on an object verb before/after a native costume COUNT marker."""
+
+    actor_id: str
+    room: str
+    hotspot_id: str
+    verb: str
+    before_count: int
+    on_time: ObjectStateEffect
+    too_late: ObjectStateEffect
+
+
+@dataclass(frozen=True)
 class GameDocument:
     id: str
     rooms: tuple[RoomAsset, ...]
     costumes: tuple[CostumeAsset, ...] = ()
     actors: tuple[ActorAsset, ...] = ()
     animation_rules: tuple[AnimationRule, ...] = ()
+    animation_input_rules: tuple[AnimationInputRule, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -115,6 +129,13 @@ def document_dict(document: GameDocument) -> dict:
                                             "hotspot_id": rule.effect.hotspot_id,
                                             "state": rule.effect.state}}
                                 for rule in document.animation_rules]} if document.animation_rules else {}),
+        **({"animation_input_rules": [{"actor_id": rule.actor_id, "room": rule.room,
+                                         "hotspot_id": rule.hotspot_id, "verb": rule.verb,
+                                         "before_count": rule.before_count,
+                                         "on_time": vars(rule.on_time),
+                                         "too_late": vars(rule.too_late)}
+                                        for rule in document.animation_input_rules]}
+           if document.animation_input_rules else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -256,6 +277,38 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError(f"COUNT effect references unknown room hotspot: {rule.effect.hotspot_id}")
         if type(rule.effect.state) is not int or not 0 <= rule.effect.state <= 2:
             raise ValueError("COUNT effect requires a supported SCUMM object state 0, 1 or 2")
+    seen_inputs = set()
+    for rule in document.animation_input_rules:
+        if not isinstance(rule, AnimationInputRule):
+            raise ValueError("Invalid typed animation input rule")
+        actor = actors_by_id.get(rule.actor_id) if isinstance(rule.actor_id, str) else None
+        if actor is None or actor.initial_animation is None:
+            raise ValueError("Animation input requires an Actor with an initial animation")
+        room = rooms_by_name.get(rule.room) if isinstance(rule.room, str) else None
+        if room is None or room.name != actor.room:
+            raise ValueError("Animation input Actor and hotspot must share a room")
+        if not isinstance(rule.hotspot_id, str) or rule.hotspot_id not in {h.id for h in room.hotspots}:
+            raise ValueError("Animation input references unknown hotspot")
+        if rule.verb not in ("Push", "Pull", "Open", "Close"):
+            raise ValueError("Unsupported animation input verb")
+        identity = (rule.room, rule.hotspot_id, rule.verb)
+        if identity in seen_inputs:
+            raise ValueError("Duplicate animation input verb binding")
+        seen_inputs.add(identity)
+        costume = costumes_by_name[actor.costume]
+        animation = next(a for a in costume.animations if a.name == actor.initial_animation)
+        direction = next(d for d in animation.directions if d.direction == actor.direction)
+        count = direction.commands.count("COUNT")
+        if (type(rule.before_count) is not int or rule.before_count < 1
+                or (not direction.loop and rule.before_count > count) or count == 0):
+            raise ValueError("Animation input COUNT boundary is unreachable")
+        for effect in (rule.on_time, rule.too_late):
+            if not isinstance(effect, ObjectStateEffect) or effect.room != room.name:
+                raise ValueError("Animation input effect must target its room")
+            if not isinstance(effect.hotspot_id, str) or effect.hotspot_id not in {h.id for h in room.hotspots}:
+                raise ValueError("Animation input effect references unknown hotspot")
+            if type(effect.state) is not int or not 0 <= effect.state <= 2:
+                raise ValueError("Animation input effect requires object state 0, 1 or 2")
 
 
 def parse_document(source: str) -> GameDocument:
@@ -264,7 +317,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -331,6 +384,20 @@ def parse_document(source: str) -> GameDocument:
                        {"room", "hotspot_id", "state"})
         animation_rules.append(AnimationRule(ActorCountCondition(**condition),
                                              ObjectStateEffect(**effect)))
+    raw_inputs = data.get("animation_input_rules", [])
+    if not isinstance(raw_inputs, list):
+        raise ValueError("Animation input rules must be a list")
+    animation_inputs = []
+    for raw_rule in raw_inputs:
+        item = _only(raw_rule, {"actor_id", "room", "hotspot_id", "verb", "before_count", "on_time", "too_late"},
+                     {"actor_id", "room", "hotspot_id", "verb", "before_count", "on_time", "too_late"})
+        effects = []
+        for key in ("on_time", "too_late"):
+            effect = _only(item[key], {"room", "hotspot_id", "state"}, {"room", "hotspot_id", "state"})
+            effects.append(ObjectStateEffect(**effect))
+        animation_inputs.append(AnimationInputRule(item["actor_id"], item["room"],
+                                                   item["hotspot_id"], item["verb"],
+                                                   item["before_count"], *effects))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",
@@ -471,7 +538,7 @@ def parse_document(source: str) -> GameDocument:
             tuple(planes), tuple(boxes), routes, scale, tuple(curves), room.get("demo_walk_to_y"), tuple(camera_cues),
         ))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
-                            tuple(animation_rules))
+                            tuple(animation_rules), tuple(animation_inputs))
     _validate_document(document)
     return document
 

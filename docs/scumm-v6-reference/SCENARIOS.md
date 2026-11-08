@@ -56,6 +56,16 @@ eine definierte Reaktion. Kein zufälliges Ergebnis durch Frame-Race.
   Scripts und Hitbox-Update im exportierten v6-Spiel beweisen. `waitForAnimation`
   ist laut Audit **kein** universeller Frame-Event-Trigger.
 
+  **Implementierungsstand:** Die optionale Projekt-JSON-Struktur
+  `animation_input_rules` bindet einen nativen Objekt-Verbfall (`Push`, `Pull`,
+  `Open`, `Close`) an einen Actor-`COUNT`-Grenzwert. `on_time` gilt bei
+  `getActorAnimCounter1(actor) < before_count`, `too_late` ab der Grenze;
+  beide Ausgänge sind typisierte Objektzustandsänderungen. Die Eingabe
+  wird nicht künstlich gesperrt. Roundtrip, Referenzen, Ablehnung fremder
+  Script-Felder und generierter ScummC-Quelltext sind unit-getestet.
+  **Noch nicht bestanden:** ein reproduzierbarer echter Mausklick vor und
+  nach der Grenze im exportierten ScummVM-Spiel, Wiederholung und Save/Load.
+
 ## C. Kinoartige Cutscene mit Totale, Nahaufnahme und Detail
 
 **Spielergebnis:** Totale → Actor bewegt sich → Perspektivschnitt/Detailbild

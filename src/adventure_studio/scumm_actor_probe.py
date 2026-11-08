@@ -15,7 +15,7 @@ from .scumm_costume import CostumeDirection
 from .scumm_launch import launch_smoke
 from .scumm_launch import visible_key_pixels
 from .scumm_binary import verify_room_binary
-from .scumm_project import (ActorAsset, ActorCountCondition, AnimationRule,
+from .scumm_project import (ActorAsset, ActorCountCondition, AnimationRule, AnimationInputRule,
                             GameDocument, ObjectStateEffect, canonical_json,
                             export_document, parse_document)
 from .scumm_bootstrap import inject_actor_count_rules
@@ -98,6 +98,10 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
                                 ActorAsset("Companion", costume.name, "Harbor", 410, 110, "S", "Companion",
                                            "gesture"),
                                 ActorAsset("Guide", costume.name, "Harbor", 470, 110, "E", "Guide"),
+                            ), animation_input_rules=(
+                                AnimationInputRule("Companion", "Harbor", "Key", "Push", 2,
+                                                   ObjectStateEffect("Harbor", "Door", 2),
+                                                   ObjectStateEffect("Harbor", "Door", 1)),
                             ))
     encoded = canonical_json(document)
     (build / "project.json").write_text(encoded, encoding="utf-8")
@@ -108,6 +112,7 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
               "actor_count": len(document.actors), "shared_costume_count": len(document.costumes),
               "actors": [actor.id for actor in document.actors],
               "initial_animation_compiled": True,
+              "animation_input_verb_compiled": True,
               "animation_gameplay_verified": False}
     (destination / "native-actor-report.json").write_text(json.dumps(result, indent=2) + "\n",
                                                              encoding="utf-8")
