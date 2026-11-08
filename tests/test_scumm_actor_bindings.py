@@ -199,7 +199,7 @@ class ActorBootstrapTests(unittest.TestCase):
         native = inject_actor_input_rules(scummc_room_source(document.rooms[0]),
                                           'Harbor', document.animation_input_rules)
         self.assertIn('case Push:', native)
-        self.assertIn('room Harbor {\n    object Door;\n', native)
+        self.assertLess(native.index('    object Door;\n'), native.index('    object Key {\n'))
         self.assertIn('if(getActorAnimCounter1(Companion) < 2)', native)
         self.assertIn('setObjectState(Door,2);', native)
         self.assertIn('setObjectState(Door,1);', native)

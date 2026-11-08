@@ -404,7 +404,12 @@ def inject_actor_input_rules(source: str, room_name: str, rules) -> str:
         marker = f"    object {hotspot_id};\n"
         if marker not in source:
             declarations.append(marker)
-    source = source.replace(room_marker, room_marker + "".join(declarations), 1)
+    first_definition = min((source.find(f"    object {rule.hotspot_id} {{\n")
+                            for rule in active), default=-1)
+    if first_definition < 0 or any(source.find(f"    object {rule.hotspot_id} {{\n") < 0
+                                   for rule in active):
+        raise ValueError(f"Missing native input hotspot definition in {room_name}")
+    source = source[:first_definition] + "".join(declarations) + source[first_definition:]
     for rule in active:
         object_marker = f"    object {rule.hotspot_id} {{\n"
         if source.count(object_marker) != 1:
