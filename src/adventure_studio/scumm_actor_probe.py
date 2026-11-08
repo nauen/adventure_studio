@@ -176,7 +176,7 @@ def run_actor_count_probe(upstream: Path, actor_build: Path, destination: Path) 
 
 
 def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) -> dict:
-    """Click the native Push verb between COUNT markers, then after both."""
+    """Prove native zero, early, late and repeated Push input outcomes."""
     resources = actor_build / "build" / "resources"
     source = (resources / "Harbor.scc").read_text(encoding="utf-8")
     document = parse_document((actor_build / "build" / "project.json").read_text(encoding="utf-8"))
@@ -250,18 +250,36 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                     time.sleep(0.08)
                 if first_count is None:
                     raise RuntimeError(f"Native first COUNT marker never opened door: {kind}")
-                click(392, 524)  # Upstream Road Push verb at logical (100, 170).
-                if kind == "late":
-                    time.sleep(6)
                 key_x, key_y = colored_item_center(output, "door", (255, 220, 75))
-                click(key_x, key_y)
+                if kind != "none":
+                    if kind == "late":
+                        time.sleep(6)
+                    click(392, 524)  # Upstream Road Push verb at logical (100, 170).
+                    click(key_x, key_y)
                 time.sleep(2.5)
+                first_result = None
+                if kind == "repeat":
+                    frame("after-first")
+                    first_result = {
+                        "key_pixels": colored_item_pixels(output, "after-first", (255, 220, 75)),
+                        "open_door_pixels": colored_item_pixels(output, "after-first", (50, 220, 220)),
+                    }
+                    # The first action hides the door but leaves the Key hotspot
+                    # reachable. A later click must re-evaluate COUNT, not
+                    # silently reuse the first branch or lose the input.
+                    time.sleep(6)
+                    click(392, 524)
+                    click(key_x, key_y)
+                    time.sleep(2.5)
+                elif kind == "none":
+                    time.sleep(6)
                 frame("end")
                 gold = visible_key_pixels(output)
                 cyan = colored_item_pixels(output, "end", (50, 220, 220))
                 return {"key_pixels": gold, "open_door_pixels": cyan,
                         "first_count_time": round(first_count - started, 3),
-                        "key_click": [key_x, key_y]}
+                        "key_click": [key_x, key_y],
+                        **({"after_first": first_result} if first_result is not None else {})}
             finally:
                 game.terminate()
                 try:
@@ -270,16 +288,23 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                     game.kill()
                     game.wait(timeout=5)
 
+    none = run_click("none")
     early = run_click("early")
     late = run_click("late")
-    report = {"native_early_late_input_verified": (
+    repeat = run_click("repeat")
+    report = {"native_early_late_and_repeated_input_verified": (
+              none["key_pixels"] >= 10 and none["open_door_pixels"] >= 40
+              and
               early["key_pixels"] >= 10 and early["open_door_pixels"] < 40
-              and late["key_pixels"] < 40 and late["open_door_pixels"] >= 40),
-              "early": early, "late": late}
+              and late["key_pixels"] < 40 and late["open_door_pixels"] >= 40
+              and repeat["after_first"]["key_pixels"] >= 10
+              and repeat["after_first"]["open_door_pixels"] < 40
+              and repeat["key_pixels"] < 40 and repeat["open_door_pixels"] < 40),
+              "none": none, "early": early, "late": late, "repeat": repeat}
     (destination / "actor-input-report.json").write_text(json.dumps(report, indent=2) + "\n",
                                                           encoding="utf-8")
-    if not report["native_early_late_input_verified"]:
-        raise RuntimeError(f"Native COUNT input window branches differ incorrectly: {report}")
+    if not report["native_early_late_and_repeated_input_verified"]:
+        raise RuntimeError(f"Native COUNT input window 0/1/2-click behavior differs: {report}")
     return report
 
 
