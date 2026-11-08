@@ -103,13 +103,20 @@ class MoveActorStep:
 
 
 @dataclass(frozen=True)
+class WalkActorStep:
+    actor_id: str
+    x: int
+    y: int
+
+
+@dataclass(frozen=True)
 class InteractionSequence:
     """Ordered native actions initiated by a room object verb."""
 
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep, ...]
 
 
 @dataclass(frozen=True)
@@ -194,6 +201,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, ObjectStateStep)
                                                    else {"type": "move_actor", **vars(step)}
                                                    if isinstance(step, MoveActorStep)
+                                                   else {"type": "walk_actor", **vars(step)}
+                                                   if isinstance(step, WalkActorStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
                                        for sequence in document.interaction_sequences]}
@@ -427,7 +436,7 @@ def _validate_document(document: GameDocument) -> None:
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")
-            elif isinstance(step, MoveActorStep):
+            elif isinstance(step, (MoveActorStep, WalkActorStep)):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or actor.room != room.name or type(step.x) is not int
                         or type(step.y) is not int
@@ -562,6 +571,10 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "x", "y"},
                              {"type", "actor_id", "x", "y"})
                 steps.append(MoveActorStep(step["actor_id"], step["x"], step["y"]))
+            elif kind == "walk_actor":
+                step = _only(raw_step, {"type", "actor_id", "x", "y"},
+                             {"type", "actor_id", "x", "y"})
+                steps.append(WalkActorStep(step["actor_id"], step["x"], step["y"]))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],

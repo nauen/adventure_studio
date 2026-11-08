@@ -488,7 +488,7 @@ def inject_actor_animation_triggers(source: str, room_name: str, triggers, actor
 
 def inject_interaction_sequences(source: str, room_name: str, sequences, actors, costumes) -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
-    from .scumm_project import AnimateActorStep, ObjectStateStep, DelayStep, MoveActorStep
+    from .scumm_project import AnimateActorStep, ObjectStateStep, DelayStep, MoveActorStep, WalkActorStep
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
@@ -532,6 +532,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            delaySeconds({step.seconds});\n")
             elif isinstance(step, MoveActorStep):
                 instructions.append(f"            putActorAt({step.actor_id}, {step.x}, {step.y}, {room_name});\n")
+            elif isinstance(step, WalkActorStep):
+                instructions.append(f"            walkActorTo({step.actor_id}, {step.x}, {step.y});\n")
             else:
                 raise ValueError("Unsupported native interaction step")
         native = f"        case {sequence.verb}:\n" + "".join(instructions) + "            return;\n"
