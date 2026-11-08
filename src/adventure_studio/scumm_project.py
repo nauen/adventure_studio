@@ -136,13 +136,24 @@ class ChangeRoomStep:
 
 
 @dataclass(frozen=True)
+class MusicCueStep:
+    operation: str  # start or stop the room's declared music
+
+
+@dataclass(frozen=True)
+class MusicAsset:
+    id: str
+    midi: bytes
+
+
+@dataclass(frozen=True)
 class InteractionSequence:
     """Ordered native actions initiated by a room object verb."""
 
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -158,6 +169,7 @@ class GameDocument:
     animation_input_rules: tuple[AnimationInputRule, ...] = ()
     animation_triggers: tuple[AnimationTrigger, ...] = ()
     interaction_sequences: tuple[InteractionSequence, ...] = ()
+    music_assets: tuple[MusicAsset, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -246,10 +258,15 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, CombineInventoryStep)
                                                    else {"type": "change_room", **vars(step)}
                                                    if isinstance(step, ChangeRoomStep)
+                                                   else {"type": "music_cue", **vars(step)}
+                                                   if isinstance(step, MusicCueStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
                                        for sequence in document.interaction_sequences]}
            if document.interaction_sequences else {}),
+        **({"music_assets": [{"id": asset.id, "midi": _encode_pixels(asset.midi)}
+                              for asset in document.music_assets]}
+           if document.music_assets else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -313,6 +330,15 @@ def _validate_document(document: GameDocument) -> None:
     if not document.rooms or len(document.rooms) > 64:
         raise ValueError("Project must contain between 1 and 64 rooms")
     room_names = [r.name for r in document.rooms]
+    music_ids = set()
+    for asset in document.music_assets:
+        if (not isinstance(asset, MusicAsset) or not isinstance(asset.id, str)
+                or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", asset.id)
+                or asset.id in music_ids or asset.id in room_names
+                or not isinstance(asset.midi, bytes) or not 14 <= len(asset.midi) <= 1_000_000
+                or not asset.midi.startswith(b"MThd\x00\x00\x00\x06")):
+            raise ValueError("Invalid or duplicate MIDI music asset")
+        music_ids.add(asset.id)
     if len(set(room_names)) != len(room_names):
         raise ValueError("Duplicate room name")
     costume_names = set()
@@ -355,6 +381,11 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError(f"Actor {actor.id} has invalid display name")
     for room in document.rooms:
         _validate(room)
+        if room.music_id is not None and room.music_id in {
+                hotspot.id for hotspot in room.hotspots}:
+            raise ValueError(f"Room music symbol conflicts with hotspot: {room.music_id}")
+        if room.music_id is not None and room.music_id in actor_ids | costume_names:
+            raise ValueError(f"Room music symbol conflicts with Actor/Costume: {room.music_id}")
         for destination in (r.destination_room for r in room.use_rules):
             if destination is not None and destination not in room_names:
                 raise ValueError(f"Unknown destination room: {destination}")
@@ -500,6 +531,11 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction room transition requires an existing destination room")
                 if step_index != len(sequence.steps) - 1:
                     raise ValueError("Interaction room transition must be the final step")
+            elif isinstance(step, MusicCueStep):
+                if step.operation not in ("start", "stop"):
+                    raise ValueError("Invalid interaction music operation")
+                if step.operation == "start" and room.music_id is None:
+                    raise ValueError("Interaction music start requires music in the sequence room")
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")
@@ -536,7 +572,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -675,6 +711,9 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "change_room":
                 step = _only(raw_step, {"type", "room"}, {"type", "room"})
                 steps.append(ChangeRoomStep(step["room"]))
+            elif kind == "music_cue":
+                step = _only(raw_step, {"type", "operation"}, {"type", "operation"})
+                steps.append(MusicCueStep(step["operation"]))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],
@@ -821,9 +860,16 @@ def parse_document(source: str) -> GameDocument:
             tuple(talk_rules),
             tuple(planes), tuple(boxes), routes, scale, tuple(curves), room.get("demo_walk_to_y"), tuple(camera_cues),
         ))
+    raw_music = data.get("music_assets", [])
+    if not isinstance(raw_music, list):
+        raise ValueError("Music assets must be a list")
+    music_assets = []
+    for raw_asset in raw_music:
+        asset = _only(raw_asset, {"id", "midi"}, {"id", "midi"})
+        music_assets.append(MusicAsset(asset["id"], _decode_pixels(asset["midi"])))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
                             tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers),
-                            tuple(interaction_sequences))
+                            tuple(interaction_sequences), tuple(music_assets))
     _validate_document(document)
     return document
 
@@ -837,6 +883,8 @@ def export_document(document: GameDocument, directory: Path) -> None:
     _validate_document(document)
     rooms, costumes = _align_costume_room_palettes(document)
     write_game_sources(rooms, directory)
+    for asset in document.music_assets:
+        (directory / f"{asset.id}.mid").write_bytes(asset.midi)
     for costume in costumes:
         write_costume_sources(costume, directory)
 

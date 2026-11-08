@@ -51,6 +51,14 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
     manifest = (resources / "inventory-ids.txt").read_text(encoding="ascii").strip()
     if manifest != ",".join(icon_ids):
         raise ValueError("Inventory manifest does not match validated project")
+    if document.music_assets:
+        soun_compiler = _tool(upstream, "soun")
+        for asset in document.music_assets:
+            target = resources / f"{asset.id}.soun"
+            runner([str(soun_compiler), "-gmd", str(resources / f"{asset.id}.mid"),
+                    "-o", str(target)], check=True)
+            if not target.is_file() or target.stat().st_size == 0:
+                raise RuntimeError(f"ScummC did not produce native sound: {asset.id}")
     for room in document.rooms:
         for suffix in (".scc", ".bmp"):
             if not (resources / f"{room.name}{suffix}").is_file():

@@ -7,6 +7,7 @@ from pathlib import Path
 from zipfile import ZipFile
 
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture
+from adventure_studio.music_demo import original_midi_theme
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import ActorAsset, GameDocument, canonical_json, parse_document
 from adventure_studio.story_document import canonical_story_json, parse_story_document
@@ -17,6 +18,7 @@ from adventure_studio.studio_sequences import (append_sequence_step, append_sele
                                                 duplicate_sequence_variant,
                                                 project_choices, sequence_choices, sequence_steps,
                                                 compose_story_project)
+from adventure_studio.studio_sequences import import_room_music, set_sequence_skippable
 from adventure_studio.studio_export import export_native_project
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
 from adventure_studio.studio_actors import (add_actor, create_costume, move_actor,
@@ -27,6 +29,69 @@ from test_scumm_toolchain import fake_upstream
 
 
 class NativeSequenceEditorTests(unittest.TestCase):
+    def test_imported_midi_controls_skippable_music_cue_and_survives_story_composition(self):
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import export_document
+        document = GameDocument("MusicProject", (scrolling_fixture(), destination_fixture()))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            midi = original_midi_theme()
+            (root / "theme.mid").write_bytes(midi)
+            raw = import_room_music(canonical_json(document), "Harbor", "HarborTheme",
+                                    str(root / "theme.mid"))
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Musik stoppen",
+                                       None, None, None, None)
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Warten",
+                                       None, None, None, 2)
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Musik starten",
+                                       None, None, None, None)
+            identity = "Harbor|Key|Close"
+            raw = set_sequence_skippable(raw, identity, True)
+            self.assertEqual(canonical_json(parse_document(raw)), raw)
+            self.assertEqual(parse_document(raw).music_assets[0].midi, midi)
+            export_document(parse_document(raw), root / "resources")
+            self.assertEqual((root / "resources" / "HarborTheme.mid").read_bytes(), midi)
+            source = (root / "resources" / "Harbor.scc").read_text(encoding="utf-8")
+            native = inject_interaction_sequences(source, "Harbor",
+                                                  parse_document(raw).interaction_sequences,
+                                                  (), (), parse_document(raw).rooms[0])
+            self.assertIn("stopMusic();", native)
+            self.assertEqual(native.count("startMusic(HarborTheme);"), 3)  # room entry, normal, skip
+            self.assertIn("if(VAR_OVERRIDE)", native)
+            with self.assertRaisesRegex(ValueError, "requires music"):
+                append_sequence_step(canonical_json(document), "Harbor", "Key", "Close",
+                                     "Musik starten", None, None, None, None)
+            with self.assertRaisesRegex(ValueError, "Musik-ID existiert"):
+                import_room_music(raw, "Cellar", "HarborTheme", str(root / "theme.mid"))
+            with self.assertRaisesRegex(ValueError, "conflicts with hotspot"):
+                import_room_music(canonical_json(document), "Harbor", "Key",
+                                  str(root / "theme.mid"))
+            fake_upstream(root / "scummc")
+            executable = root / "scummc" / "soun"
+            executable.write_text("fake executable", encoding="utf-8")
+            executable.chmod(0o755)
+            calls = []
+
+            def fake_runner(args, **_kwargs):
+                calls.append(args)
+                target = Path(args[args.index("-o") + 1])
+                if args[0].endswith("/sld"):
+                    target.with_suffix(".000").write_bytes(b"index")
+                    target.with_suffix(".001").write_bytes(b"data")
+                else:
+                    target.write_bytes(b"SOUN" if args[0].endswith("/soun") else b"compiled")
+
+            archive = export_native_project(raw, root / "scummc", root / "music.zip",
+                                            fake_runner)
+            self.assertTrue(archive.is_file())
+            self.assertEqual(sum(args[0].endswith("/soun") for args in calls), 1)
+            self.assertTrue(any("-gmd" in args for args in calls))
+            story = (Path(__file__).resolve().parents[1] / "examples" /
+                     "mini_story_chain.json").read_text(encoding="utf-8")
+            composed = parse_document(compose_story_project(story, raw))
+            self.assertEqual(composed.rooms[0].music_id, "HarborTheme")
+            self.assertEqual(composed.music_assets[0].midi, midi)
+
     def test_terminal_room_transition_survives_json_editor_and_native_export(self):
         document = GameDocument("RoomChange", (scrolling_fixture(), destination_fixture()))
         raw = canonical_json(document)

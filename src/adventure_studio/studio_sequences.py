@@ -3,17 +3,35 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
-                            CombineInventoryStep, ChangeRoomStep,
+                            CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
+
+
+def import_room_music(raw: str, room_name: str, music_id: str, midi_path: str) -> str:
+    """Attach a real MIDI asset to one room; the native exporter wraps it as GMD."""
+    document = parse_document(raw)
+    if room_name not in {room.name for room in document.rooms}:
+        raise ValueError("Bitte einen vorhandenen Musikraum wählen")
+    if music_id in {asset.id for asset in document.music_assets}:
+        raise ValueError("Musik-ID existiert bereits")
+    path = Path(midi_path)
+    if path.suffix.lower() not in (".mid", ".midi"):
+        raise ValueError("Bitte eine MIDI-Datei (.mid) wählen")
+    midi = path.read_bytes()
+    rooms = tuple(replace(room, music_id=music_id) if room.name == room_name else room
+                  for room in document.rooms)
+    return _checked(replace(document, rooms=rooms,
+                            music_assets=(*document.music_assets, MusicAsset(music_id, midi))))
 
 
 def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
@@ -27,11 +45,15 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
     if native_raw is None:
         return canonical_json(project)
     native = parse_document(native_raw)
-    composed = replace(project, costumes=native.costumes, actors=native.actors,
+    music_by_room = {room.name: room.music_id for room in native.rooms}
+    composed = replace(project, rooms=tuple(replace(room, music_id=music_by_room.get(room.name))
+                                            for room in project.rooms),
+                       costumes=native.costumes, actors=native.actors,
                        animation_rules=native.animation_rules,
                        animation_input_rules=native.animation_input_rules,
                        animation_triggers=native.animation_triggers,
-                       interaction_sequences=native.interaction_sequences)
+                       interaction_sequences=native.interaction_sequences,
+                       music_assets=native.music_assets)
     return canonical_json(composed)
 
 
@@ -135,6 +157,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Inventar: zu {step.result_id} kombinieren"
     if isinstance(step, ChangeRoomStep):
         return f"Raumwechsel: {step.room}"
+    if isinstance(step, MusicCueStep):
+        return "Musik starten" if step.operation == "start" else "Musik stoppen"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -174,6 +198,10 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         step = CombineInventoryStep(target_id)
     elif kind == "Raum wechseln":
         step = ChangeRoomStep(target_id)
+    elif kind == "Musik starten":
+        step = MusicCueStep("start")
+    elif kind == "Musik stoppen":
+        step = MusicCueStep("stop")
     elif kind == "Warten":
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Wartezeit muss eine ganze Zahl sein")
@@ -282,6 +310,9 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Inventar kombinieren", None, None, step.result_id, 1, 320, 100, "S")
     if isinstance(step, ChangeRoomStep):
         return ("Raum wechseln", None, None, step.room, 1, 320, 100, "S")
+    if isinstance(step, MusicCueStep):
+        return ("Musik starten" if step.operation == "start" else "Musik stoppen",
+                None, None, None, 1, 320, 100, "S")
     return ("Objektzustand setzen", None, None, step.hotspot_id, step.state, 320, 100, "S")
 
 

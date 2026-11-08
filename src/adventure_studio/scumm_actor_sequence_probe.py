@@ -11,9 +11,10 @@ from dataclasses import replace
 from pathlib import Path
 
 from .scumm_assets import RoomHotspot, CombineRule
+from .music_demo import original_midi_theme
 from .scumm_launch import (close_rgb, colored_item_center, colored_item_pixels,
                            door_center, scene_pixel)
-from .scumm_project import canonical_json, export_document, parse_document
+from .scumm_project import MusicAsset, canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
 from .studio_sequences import (append_sequence_step, set_sequence_condition,
                                duplicate_sequence_variant, modify_sequence_step,
@@ -34,7 +35,7 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
     badge_sprite = bytes(5 if (3 <= x <= 12 and 3 <= y <= 12) else 2
                          for y in range(16) for x in range(16))
     harbor = original.rooms[0]
-    harbor = replace(harbor, hotspots=(
+    harbor = replace(harbor, music_id="StudioSequenceTheme", hotspots=(
         *harbor.hotspots,
         RoomHotspot("Token", "the token", "A small token.", 610, 100, 16, 16, True, token_sprite),
         RoomHotspot("Shard", "the shard", "A small shard.", 585, 100, 16, 16, True, token_sprite),
@@ -45,7 +46,8 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                       actors=tuple(replace(actor, costume=costume.name)
                                    for actor in original.actors),
                       animation_input_rules=(), animation_triggers=(),
-                      animation_rules=(), interaction_sequences=())
+                      animation_rules=(), interaction_sequences=(),
+                      music_assets=(MusicAsset("StudioSequenceTheme", original_midi_theme()),))
     raw = canonical_json(project)
     actions = (
         ("Actor versetzen", "Guide", None, None, None, 425, 110, None),
@@ -54,6 +56,7 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
         ("Actor drehen", "Guide", None, None, None, None, None, "W"),
         ("Actor animieren", "Guide", "gesture", None, None, None, None, None),
         ("Warten", None, None, None, 6, None, None, None),
+        ("Musik stoppen", None, None, None, None, None, None, None),
         ("Objektzustand setzen", None, None, "Door", 2, None, None, None),
     )
     for kind, actor, animation, target, amount, x, y, direction in actions:
@@ -74,6 +77,8 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                                         None, None, "Shard", None)
     raw = append_selected_sequence_step(raw, alternate, "Inventar kombinieren",
                                         None, None, "Badge", None)
+    raw = append_selected_sequence_step(raw, alternate, "Musik starten",
+                                        None, None, None, None)
     raw = set_sequence_skippable(raw, alternate, True)
     # A separate real Door/Close interaction demonstrates a terminal scene
     # change after Escape, without altering the three existing Key variants.
@@ -81,6 +86,8 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                                None, None, None, 6)
     raw = append_sequence_step(raw, "Harbor", "Door", "Close", "Objektzustand setzen",
                                None, None, "Door", 2)
+    raw = append_sequence_step(raw, "Harbor", "Door", "Close", "Musik stoppen",
+                               None, None, None, None)
     raw = append_sequence_step(raw, "Harbor", "Door", "Close", "Raum wechseln",
                                None, None, "Cellar", None)
     raw = set_sequence_skippable(raw, "Harbor|Door|Close", True)
@@ -88,6 +95,8 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
     build.mkdir(parents=True, exist_ok=True)
     (build / "project.json").write_text(raw, encoding="utf-8")
     export_document(parse_document(raw), build / "resources")
+    # The ordinary compiler path builds this MIDI into a native SOUN resource.
+    # The real UI uses import_room_music rather than constructing this fixture.
     game_dir = compile_story_game(build, upstream, destination / "game")
     screenshot_dir = destination / "screenshots"
     screenshot_dir.mkdir(parents=True, exist_ok=True)
@@ -103,10 +112,18 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                        check=True, stdout=subprocess.DEVNULL, timeout=10)
         return path
 
+    soundfonts = sorted(Path("/usr/share/sounds").rglob("*.sf2"))
+    if not soundfonts:
+        raise RuntimeError("Native music cue probe needs a system SoundFont")
+    pcm_path = destination / "sequence-audio.raw"
     with (screenshot_dir / "scummvm.log").open("w", encoding="utf-8") as log:
-        game = subprocess.Popen(["scummvm", f"--path={game_dir.resolve()}", "tentacle"],
+        game = subprocess.Popen(["scummvm", f"--path={game_dir.resolve()}",
+                                 "--music-driver=fluidsynth", f"--soundfont={soundfonts[0]}",
+                                 "--music-volume=255", "tentacle"],
                                 stdout=log, stderr=subprocess.STDOUT,
-                                env={**os.environ, "SDL_AUDIODRIVER": "dummy"})
+                                env={**os.environ, "SDL_AUDIODRIVER": "disk",
+                                     "SDL_DISKAUDIOFILE": str(pcm_path)})
+        audio_epoch = time.monotonic()
         try:
             deadline = time.monotonic() + 20
             while time.monotonic() < deadline:
@@ -140,9 +157,11 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                                    check=True, timeout=10)
 
             click_close_key("before")
+            first_click_at = time.monotonic()
             started = time.monotonic()
             time.sleep(1)
             subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
+            first_skip_at = time.monotonic()
             open_pixels = 0
             while time.monotonic() - started < 15:
                 if game.poll() is not None:
@@ -156,8 +175,10 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 raise RuntimeError("First conditional branch did not open Door")
             time.sleep(2)
             click_close_key("before-second")
+            second_click_at = time.monotonic()
             time.sleep(1)
             subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
+            second_skip_at = time.monotonic()
             closed_again = False
             badge_in_inventory = False
             deadline = time.monotonic() + 10
@@ -178,6 +199,7 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 raise RuntimeError("Skipped second branch did not close Door and combine Badge")
             time.sleep(2)
             click_close_key("before-third")
+            third_click_at = time.monotonic()
             reopened = False
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
@@ -256,15 +278,19 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 "returned_to_harbor": returned_to_harbor,
                 "door_state_survived_room_return": door_persisted,
                 "badge_survived_room_return": badge_persisted,
+                "audio_event_seconds": {
+                    "first_click": round(first_click_at - audio_epoch, 2),
+                    "first_skip": round(first_skip_at - audio_epoch, 2),
+                    "second_click": round(second_click_at - audio_epoch, 2),
+                    "second_skip": round(second_skip_at - audio_epoch, 2),
+                    "third_click": round(third_click_at - audio_epoch, 2),
+                },
                 "response_seconds": round(time.monotonic() - started, 2),
             }
-            (destination / "actor-sequence-report.json").write_text(
-                json.dumps(report, indent=2) + "\n", encoding="utf-8")
             if not (report["door_open_after_click"] and closed_again and
                     badge_in_inventory and reopened and cellar_after_escape and
                     returned_to_harbor and door_persisted and badge_persisted):
                 raise RuntimeError(f"Studio native Actor choreography did not finish: {report}")
-            return report
         finally:
             game.terminate()
             try:
@@ -272,6 +298,33 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
             except subprocess.TimeoutExpired:
                 game.kill()
                 game.wait(timeout=5)
+    audio_duration = time.monotonic() - audio_epoch
+    pcm = pcm_path.read_bytes() if pcm_path.exists() else b""
+    def activity(start: float, end: float) -> float:
+        if end <= start or audio_duration <= 0 or len(pcm) < 8192:
+            return 0.0
+        first = int(max(0, start - audio_epoch) / audio_duration * len(pcm))
+        last = int(min(audio_duration, end - audio_epoch) / audio_duration * len(pcm))
+        segment = pcm[first:last]
+        return sum(value not in (0, 128) for value in segment) / len(segment) if segment else 0.0
+
+    report["audio_pcm"] = {
+        "bytes": len(pcm),
+        "before_stop": round(activity(first_click_at - 1.8, first_click_at - 0.2), 4),
+        "after_stop": round(activity(first_skip_at + 0.4, second_click_at - 0.2), 4),
+        "after_restart": round(activity(second_skip_at + 0.4, third_click_at - 0.2), 4),
+    }
+    audio = report["audio_pcm"]
+    report["music_stop_restart_audible"] = bool(
+        audio["bytes"] >= 8192
+        and audio["before_stop"] > audio["after_stop"] + 0.35
+        and audio["after_restart"] > audio["after_stop"] + 0.35
+    )
+    (destination / "actor-sequence-report.json").write_text(
+        json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    if not report["music_stop_restart_audible"]:
+        raise RuntimeError(f"Native music cue did not stop and restart audibly: {audio}")
+    return report
 
 
 if __name__ == "__main__":
