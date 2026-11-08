@@ -28,7 +28,7 @@ from .studio_actors import (add_actor, actor_summary, costume_names, costume_sum
                             create_costume, add_costume_frame, set_costume_animation,
                             move_actor, costume_animation_names, costume_animation_steps,
                             costume_timeline_images, edit_costume_timeline,
-                            render_costume_preview)
+                            render_costume_preview, set_actor_initial_animation)
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
@@ -243,7 +243,8 @@ def make_app():
         except (ValueError, OSError, RuntimeError, subprocess.CalledProcessError) as error:
             raise gr.Error(f"SCUMM-Export fehlgeschlagen: {error}") from error
 
-    def native_selectors(raw, selected_room=None, selected_sequence=None, selected_costume=None):
+    def native_selectors(raw, selected_room=None, selected_sequence=None,
+                         selected_costume=None, selected_actor=None):
         rooms, objects, actors = project_choices(raw, selected_room)
         costumes = costume_names(raw)
         chosen_costume = selected_costume if selected_costume in costumes else (
@@ -253,10 +254,13 @@ def make_app():
         identity = selected_sequence if selected_sequence in {value for _, value in sequences} else (
             sequences[0][1] if sequences else None)
         steps = sequence_steps(raw, identity) if identity else ()
-        animations = actor_animations(raw, actors[0] if actors else None)
+        chosen_actor = selected_actor if selected_actor in actors else (actors[0] if actors else None)
+        animations = actor_animations(raw, chosen_actor)
+        initial = next((actor.initial_animation for actor in parse_document(raw).actors
+                        if actor.id == chosen_actor), None)
         return (gr.update(choices=rooms, value=room),
                 gr.update(choices=objects, value=objects[0] if objects else None),
-                gr.update(choices=actors, value=actors[0] if actors else None),
+                gr.update(choices=actors, value=chosen_actor),
                 gr.update(choices=animations, value=animations[0] if animations else None),
                 gr.update(choices=objects, value=objects[0] if objects else None),
                 gr.update(choices=sequences, value=identity),
@@ -264,7 +268,9 @@ def make_app():
                           value=0 if steps else None),
                 "\n".join(f"{i+1}. {text}" for i, text in enumerate(steps)) or "Noch keine Schritte",
                 gr.update(choices=costumes, value=chosen_costume),
-                actor_summary(raw), costume_summary(raw, chosen_costume))
+                actor_summary(raw), costume_summary(raw, chosen_costume),
+                gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in animations]],
+                          value=initial))
 
     def native_load(file_path):
         if not file_path:
@@ -309,7 +315,13 @@ def make_app():
                       if action in (add_costume_frame, set_costume_animation,
                                     edit_costume_timeline) else
                       args[1] if action is add_actor else None)
-            return (updated, *native_selectors(updated, selected_costume=chosen),
+            selected_actor = args[0] if action is set_actor_initial_animation else (
+                args[0] if action is add_actor else None)
+            actor_room = next((actor.room for actor in parse_document(updated).actors
+                               if actor.id == selected_actor), None)
+            return (updated, *native_selectors(updated, selected_room=actor_room,
+                                              selected_costume=chosen,
+                                              selected_actor=selected_actor),
                     "Actor-/Costume-Daten geändert und validiert")
         except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
@@ -523,6 +535,10 @@ def make_app():
                 native_actor_button = gr.Button("Actor im gewählten Raum anlegen")
                 native_actor_move = gr.Button("Ausgewählten Actor an diese Position bewegen")
                 native_actor_list = gr.Textbox(label="Actors im Projekt", lines=4, interactive=False)
+                with gr.Row():
+                    native_actor_initial = gr.Dropdown(label="Startanimation des ausgewählten Actors",
+                                                       choices=[("Keine Startanimation", None)])
+                    native_actor_initial_save = gr.Button("Startanimation speichern")
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
@@ -600,7 +616,8 @@ def make_app():
         game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])
         native_outputs = [native_room, native_hotspot, native_actor, native_animation,
                           native_target, native_sequence, native_step, native_steps,
-                          native_costume_select, native_actor_list, native_costume_summary]
+                          native_costume_select, native_actor_list, native_costume_summary,
+                          native_actor_initial]
         native_file.change(native_load, [native_file], [native_state, native_linked,
                                                        *native_outputs, native_report])
         native_sync_button.click(native_sync, [state, native_state],
@@ -707,23 +724,38 @@ def make_app():
                                 [native_state, native_actor, native_room, native_actor_x,
                                  native_actor_y, native_actor_direction],
                                 [native_state, *native_outputs, native_report])
+        native_actor_initial_save.click(
+            lambda raw, actor_id, animation: native_asset_edit(
+                set_actor_initial_animation, raw, actor_id, animation),
+            [native_state, native_actor, native_actor_initial],
+            [native_state, *native_outputs, native_report])
         def native_room_update(raw, room):
             if raw is None:
-                return gr.update(), gr.update(), gr.update(), gr.update()
+                return gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
             _, objects, actors = project_choices(raw, room)
             animations = actor_animations(raw, actors[0] if actors else None)
+            initial = next((actor.initial_animation for actor in parse_document(raw).actors
+                            if actors and actor.id == actors[0]), None)
             return (gr.update(choices=objects, value=objects[0] if objects else None),
                     gr.update(choices=objects, value=objects[0] if objects else None),
                     gr.update(choices=actors, value=actors[0] if actors else None),
-                    gr.update(choices=animations, value=animations[0] if animations else None))
+                    gr.update(choices=animations, value=animations[0] if animations else None),
+                    gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in animations]],
+                              value=initial))
 
         native_room.change(native_room_update, [native_state, native_room],
-                           [native_hotspot, native_target, native_actor, native_animation])
+                           [native_hotspot, native_target, native_actor, native_animation,
+                            native_actor_initial])
         def native_actor_update(raw, actor):
             animations = actor_animations(raw, actor) if raw is not None else ()
-            return gr.update(choices=animations, value=animations[0] if animations else None)
+            initial = next((item.initial_animation for item in parse_document(raw).actors
+                            if item.id == actor), None) if raw is not None else None
+            return (gr.update(choices=animations, value=animations[0] if animations else None),
+                    gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in animations]],
+                              value=initial))
 
-        native_actor.change(native_actor_update, [native_state, native_actor], [native_animation])
+        native_actor.change(native_actor_update, [native_state, native_actor],
+                            [native_animation, native_actor_initial])
         def native_sequence_update(raw, identity):
             steps = sequence_steps(raw, identity) if raw is not None and identity else ()
             return (gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],

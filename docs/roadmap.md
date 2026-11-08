@@ -147,6 +147,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         `wave`-COST samt Actor-Startanimation und archiviert Compiler-/
         ScummVM-Artefakte. Ein grüner Workflowlauf und ein beobachteter
         Framewechsel fehlen noch; reiner Spielstart genügt nicht für V.
+  - [x] Produkt-Implementierung: Im Gradio-Studio kann eine native
+        Animation eines Actors als Startanimation ausgewählt oder deaktiviert
+        werden. JSON und SCUMM-Export verwenden die bereits bestehende
+        Actor-/Costume-Bindung; visuelle ScummVM-Verifikation unverändert offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

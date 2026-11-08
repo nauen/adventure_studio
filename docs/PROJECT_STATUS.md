@@ -397,6 +397,15 @@ nachgewiesen**. Das nächste Gate bleibt die Auswertung dieses nativen
 Laufs und ein tatsächlicher Framewechsel-Nachweis, bevor die Fähigkeit als
 in ScummVM verifiziert eingestuft wird.
 
+**Actor-Startanimation im Studio (2026-11-08):** Die Gradio-Oberfläche kann
+für einen bestehenden Actor jetzt eine seiner nativen COST-Animationen als
+einmalige Startanimation auswählen oder die Startanimation deaktivieren.
+Auswahl und Änderung bleiben im gemeinsamen Projekt-JSON erhalten; der
+bestehende SCUMM-v6-Exporter gibt `animateActor` mit dem bereits validierten
+Animationsindex aus. Es ist keine neue Runtime-Funktion. Native Wiedergabe
+von importierten PNG-Mehrframe-Costumes bleibt bis zum echten
+ScummVM-Bildnachweis offen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
