@@ -134,12 +134,20 @@ class StoryV4Tests(unittest.TestCase):
         from adventure_studio.scumm_project import canonical_json, parse_document
         self.assertEqual(parse_document(canonical_json(game)), game)
 
-    def test_nested_answer_is_explicitly_rejected(self):
+    def test_nested_answer_compiles_to_visible_second_stage(self):
         story = replace(dialogue_story(), assets=(),
                         dialogue_choices=(DialogueChoice("Ask", "Hello", "Frage", "Response"),
                                           DialogueChoice("Next", "Response", "Weitere Frage", None)))
-        with self.assertRaisesRegex(ValueError, "Nested answer"):
-            compile_story_to_scumm(story)
+        game = compile_story_to_scumm(story)
+        rule = game.rooms[0].talk_rules[0]
+        self.assertEqual(len(rule.stages), 1)
+        self.assertEqual(rule.choices[0].next_stage_id, "StageResponse")
+        from adventure_studio.scumm_assets import scummc_room_source
+        source = scummc_room_source(game.rooms[0])
+        self.assertIn("setObjectState(AnswerKeeperN2C1,1);", source)
+        self.assertIn('egoSay("Na dann.");', source)
+        from adventure_studio.scumm_project import canonical_json, parse_document
+        self.assertEqual(parse_document(canonical_json(game)), game)
 
     def test_answer_compiler_rejects_forged_script_and_over_limit_menu(self):
         from adventure_studio.scumm_assets import TalkChoice, scummc_room_source

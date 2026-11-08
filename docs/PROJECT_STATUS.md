@@ -698,6 +698,26 @@ Scope-Limit: Der aktuelle SCUMM-Dialog-Compiler unterstützt weiterhin
 nur flache, begrenzte Antwortzweige ohne Actor-Lippensynchronisation;
 vollständige beliebige Dialoggraphen bleiben offen.
 
+**Mehrstufige NPC-Gespräche mit Rückweg (2026-11-09, Implementierung):**
+Story-Dialogknoten mit Auswahlantworten können jetzt weitere Auswahlstufen
+öffnen oder zur Einstiegsstufe zurückführen; die native SCUMM-v6-Ausgabe
+blendet nur die gerade gültigen Antwortobjekte ein und setzt deren Zustand
+bei jeder Auswahl explizit. Der Studio-Dialogeditor kann neue Antworten
+mit optionalem Zielknoten hinzufügen und abschließende Antworten atomar
+mit einer neuen Sprechzeile fortsetzen. Die vorhandene JSON-v1-
+Raumstruktur bleibt ohne Stage-Felder identisch, zusätzliche Stufen werden
+als optionale `stages` und `next_stage_id` serialisiert. Dialog-Audiobindungen
+und der Sprachkatalog berücksichtigen auch Zeilen nach der ersten Stufe.
+297 lokale Tests sind grün. Die native Mehrstufen-/Rückweg-Klickprobe in
+stock ScummVM ist erfolgreich (CI `42536777733`, Artefakt
+`native-v6-studio-nested-dialogue`): Einstiegsantworten eingeblendet,
+zweite Stufe sichtbar, Rückkehr zur ersten Stufe und sauberes Schließen
+(`passed = true`, `answer_pixels_dismissed = 0`). Während des Übergangs
+werden die bisherigen Antwortobjekte nach gesprochenen Zeilen erneut
+ausgeblendet; beide Reihen bleiben im 144-Pixel-Viewport. Die native
+UI verwendet weiterhin klickbare Antwortobjekte statt eines echten
+SCUMM-Gesprächsmenüs; Sprecherwechsel und völlig freie Layouts bleiben offen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

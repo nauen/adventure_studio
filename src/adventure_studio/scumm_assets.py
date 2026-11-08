@@ -58,6 +58,14 @@ class TalkChoice:
     object_id: str
     caption: str
     reply_lines: tuple[str, ...]
+    next_stage_id: str | None = None
+
+
+@dataclass(frozen=True)
+class TalkStage:
+    id: str
+    opening_lines: tuple[str, ...]
+    choices: tuple[TalkChoice, ...]
 
 
 @dataclass(frozen=True)
@@ -65,6 +73,7 @@ class TalkRule:
     speaker_id: str
     opening_lines: tuple[str, ...]
     choices: tuple[TalkChoice, ...]
+    stages: tuple[TalkStage, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -256,20 +265,44 @@ def _validate(room: RoomAsset) -> None:
         used_speakers.add(dialogue.speaker_id)
         if not 1 <= len(dialogue.choices) <= 3 or len(dialogue.opening_lines) > 16:
             raise ValueError("Dialogue must offer one to three choices")
-        for line in dialogue.opening_lines:
-            _scumm_string(line)
-        for choice in dialogue.choices:
-            if choice.object_id not in ids or choice.object_id in used_choices or choice.object_id == dialogue.speaker_id:
-                raise ValueError("Invalid or reused answer hotspot")
-            used_choices.add(choice.object_id)
-            _scumm_string(choice.caption)
-            if len(choice.reply_lines) > 16:
-                raise ValueError("Dialogue answer exceeds sixteen lines")
-            for line in choice.reply_lines:
+        stages = {stage.id: stage for stage in dialogue.stages}
+        if (len(stages) != len(dialogue.stages)
+                or any(not isinstance(stage.id, str) or not _IDENTIFIER.fullmatch(stage.id)
+                       or not 1 <= len(stage.choices) <= 3 or len(stage.opening_lines) > 16
+                       for stage in dialogue.stages)):
+            raise ValueError("Invalid or duplicate dialogue stage")
+        for stage in (dialogue, *dialogue.stages):
+            for line in stage.opening_lines:
                 _scumm_string(line)
-            answer = next(h for h in room.hotspots if h.id == choice.object_id)
-            if answer.pickup or answer.exit_destination is not None:
-                raise ValueError("Answer hotspot cannot be a pickup or an exit")
+            for choice in stage.choices:
+                if (choice.object_id not in ids or choice.object_id in used_choices
+                        or choice.object_id == dialogue.speaker_id):
+                    raise ValueError("Invalid or reused answer hotspot")
+                used_choices.add(choice.object_id)
+                _scumm_string(choice.caption)
+                if len(choice.reply_lines) > 16:
+                    raise ValueError("Dialogue answer exceeds sixteen lines")
+                if choice.next_stage_id is not None and choice.next_stage_id != "Entry" and choice.next_stage_id not in stages:
+                    raise ValueError("Unknown next dialogue stage")
+                for line in choice.reply_lines:
+                    _scumm_string(line)
+                answer = next(h for h in room.hotspots if h.id == choice.object_id)
+                if answer.pickup or answer.exit_destination is not None:
+                    raise ValueError("Answer hotspot cannot be a pickup or an exit")
+        reachable = {None}
+        queue = [None]
+        while queue:
+            current = queue.pop()
+            choices = dialogue.choices if current in (None, "Entry") else stages[current].choices
+            for choice in choices:
+                target = choice.next_stage_id
+                if target == "Entry":
+                    continue
+                if target is not None and target not in reachable:
+                    reachable.add(target)
+                    queue.append(target)
+        if len(reachable) != len(stages) + 1:
+            raise ValueError("Unreachable dialogue stage")
     if any(h.id in used_speakers and h.talk_lines for h in room.hotspots):
         raise ValueError("A character cannot have both linear and branching dialogue")
     # Check cycles after hotspot validation so malformed sprite indices receive
@@ -458,14 +491,16 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         parts.append(f"    cycle {cycle.name} = {{{cycle.period_ticks},"
                      f"{2 if cycle.reverse else 0},{cycle.first},{cycle.last}}};\n")
     hidden = {rule.result_id for rule in room.combine_rules}
-    hidden.update(choice.object_id for rule in room.talk_rules for choice in rule.choices)
+    hidden.update(choice.object_id for rule in room.talk_rules
+                  for stage in (rule, *rule.stages) for choice in stage.choices)
     # ScummC resolves object symbols as it parses each script body. Explicit
     # forward declarations keep the generated helper independent of object
     # layout order (the complete object definitions follow below).
     for item_id in sorted({item for rule in room.combine_rules
                            for item in (rule.first_id, rule.second_id, rule.result_id)}):
         parts.append(f"    object {item_id};\n")
-    for item_id in sorted({choice.object_id for rule in room.talk_rules for choice in rule.choices}):
+    for item_id in sorted({choice.object_id for rule in room.talk_rules
+                           for stage in (rule, *rule.stages) for choice in stage.choices}):
         parts.append(f"    object {item_id};\n")
     for index, rule in enumerate(room.combine_rules):
         parts.extend([
@@ -479,7 +514,8 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         ])
     for hotspot in room.hotspots:
         speaker_rule = next((r for r in room.talk_rules if r.speaker_id == hotspot.id), None)
-        answer_pair = next(((r, c) for r in room.talk_rules for c in r.choices
+        answer_pair = next(((r, stage, c) for r in room.talk_rules
+                            for stage in (r, *r.stages) for c in stage.choices
                             if c.object_id == hotspot.id), None)
         parts.extend([
             f"    object {hotspot.id} {{\n",
@@ -507,20 +543,43 @@ def scummc_room_source(room: RoomAsset, catalog=None,
             parts.append("            return;\n")
         if speaker_rule:
             parts.append("        case TalkTo:\n")
+            for stage in (speaker_rule, *speaker_rule.stages):
+                for choice in stage.choices:
+                    parts.append(f"            setObjectState({choice.object_id},0);\n")
             for line_index, line in enumerate(speaker_rule.opening_lines):
                 parts.append(spoken(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(speaker_rule)}.opening.{line_index}", line, 12))
             for choice in speaker_rule.choices:
                 parts.append(f"            setObjectState({choice.object_id},1);\n")
             parts.append("            return;\n")
         if answer_pair:
-            rule, selected = answer_pair
+            rule, stage, selected = answer_pair
             parts.append("        case TalkTo:\n")
-            for choice in rule.choices:
-                parts.append(f"            setObjectState({choice.object_id},0);\n")
-            parts.extend([say(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(rule)}.choice.{rule.choices.index(selected)}.caption", selected.caption, 12),
+            for group in (rule, *rule.stages):
+                for choice in group.choices:
+                    parts.append(f"            setObjectState({choice.object_id},0);\n")
+            base = f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(rule)}"
+            prefix = (base if stage is rule else
+                      f"{base}.stage.{rule.stages.index(stage)}")
+            selected_index = stage.choices.index(selected)
+            parts.extend([say(f"{prefix}.choice.{selected_index}.caption", selected.caption, 12),
                           "            waitForMessage();\n"])
             for line_index, line in enumerate(selected.reply_lines):
-                parts.append(spoken(f"room.{room.name.lower()}.dialogue.{room.talk_rules.index(rule)}.choice.{rule.choices.index(selected)}.reply.{line_index}", line, 12))
+                parts.append(spoken(f"{prefix}.choice.{selected_index}.reply.{line_index}", line, 12))
+            if selected.next_stage_id is not None:
+                # Redraws during spoken replies can leave an old choice
+                # sprite visible in the SCUMM object layer. Invalidate the
+                # previous menu again at the exact stage transition.
+                for group in (rule, *rule.stages):
+                    for choice in group.choices:
+                        parts.append(f"            setObjectState({choice.object_id},0);\n")
+                next_stage = (rule if selected.next_stage_id == "Entry" else
+                              next(item for item in rule.stages if item.id == selected.next_stage_id))
+                next_prefix = (base if next_stage is rule else
+                               f"{base}.stage.{rule.stages.index(next_stage)}")
+                for line_index, line in enumerate(next_stage.opening_lines):
+                    parts.append(spoken(f"{next_prefix}.opening.{line_index}", line, 12))
+                for choice in next_stage.choices:
+                    parts.append(f"            setObjectState({choice.object_id},1);\n")
             parts.append("            return;\n")
         if hotspot.exit_destination is not None:
             parts.append("        case WalkTo:\n")
