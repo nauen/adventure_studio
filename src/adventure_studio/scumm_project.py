@@ -147,6 +147,13 @@ class SoundEffectStep:
 
 
 @dataclass(frozen=True)
+class VoiceLineStep:
+    sound_id: str
+    text: str
+    actor_id: str | None = None
+
+
+@dataclass(frozen=True)
 class MusicAsset:
     id: str
     midi: bytes
@@ -166,7 +173,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -276,6 +283,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, MusicCueStep)
                                                    else {"type": "sound_effect", **vars(step)}
                                                    if isinstance(step, SoundEffectStep)
+                                                   else {"type": "voice_line", **vars(step)}
+                                                   if isinstance(step, VoiceLineStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
                                        for sequence in document.interaction_sequences]}
@@ -575,6 +584,18 @@ def _validate_document(document: GameDocument) -> None:
                         or step.sound_id not in {asset.id for asset in document.sound_assets
                                                  if asset.room == room.name}):
                     raise ValueError("Interaction sound effect requires a room VOC resource and start/stop operation")
+            elif isinstance(step, VoiceLineStep):
+                if (not isinstance(step.sound_id, str)
+                        or step.sound_id not in {asset.id for asset in document.sound_assets
+                                                 if asset.room == room.name}
+                        or not isinstance(step.text, str) or not 1 <= len(step.text) <= 160
+                        or any(ord(char) < 32 or ord(char) > 126 or char in '\\"'
+                               for char in step.text)
+                        or (step.actor_id is not None and
+                            (not isinstance(step.actor_id, str)
+                             or step.actor_id not in {actor.id for actor in document.actors
+                                                     if actor.room == room.name}))):
+                    raise ValueError("Voice line requires a room VOC, safe ASCII subtitle and optional room Actor")
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")
@@ -757,6 +778,10 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "sound_id", "operation"},
                              {"type", "sound_id", "operation"})
                 steps.append(SoundEffectStep(step["sound_id"], step["operation"]))
+            elif kind == "voice_line":
+                step = _only(raw_step, {"type", "sound_id", "text", "actor_id"},
+                             {"type", "sound_id", "text"})
+                steps.append(VoiceLineStep(step["sound_id"], step["text"], step.get("actor_id")))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],

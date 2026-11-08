@@ -111,7 +111,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | D04 | Mehrsprachige Textressourcen | A (Teil) | I (Probe) | T (Teil) | offen | Alle Sprachen im Spiel |
 | U01 | MIDI-/Soundresource | A (Teil) | I (Teil: Studio-MIDI-Import, SOUN-Export, Raumreferenz) | T (Teil: JSON-/Exporter-Test) | V (Teil: Studio-MIDI als native SOUN mit Stop/Start-PCM-Gate in stock ScummVM, CI `42517572328`) | Weitere Soundformate und allgemeines iMUSE |
 | U02 | iMUSE-/Music-State-Übergänge | A (Teil) | I (Plan) | T (Plan) | – | Hook-/Beat-Nachweis |
-| U03 | VOC-Sprache und Soundeffekte | A (Teil) | I (Teil: VOC-Import pro Raum, Sound-Start/-Stop in Studio-Sequenzen, `soun -voc`) | T (Teil: zwei unabhängige Escape-Endzustände, JSON-/Exporter-Tests, 289 lokale Tests gesamt) | V (Teil: Original-VOC-SOUN aus realem Hotspot-Klick, PCM-Aktivität vor/während/nach Escape `0,0000`/`0,8558`/`0,0000`, CI `42522610786`) | Sprachvarianten, Untertitel und Actor-Lipsync |
+| U03 | VOC-Sprache und Soundeffekte | A (Teil) | I (Teil: VOC-Import pro Raum, Sound-Start/-Stop; `Gesprochene Zeile` mit Actor/Ego, Untertitel und VOC, `soun -voc`) | T (Teil: unabhängige Escape-Soundzustände, JSON-/Exporter- und Sprachzeilen-Tests, 290 lokal) | V (Teil: VOC-Effekt per Hotspot/PCM, CI `42522610786`; sichtbarer Untertitel und hörbare Sprachzeile mit Escape-Stopp, PCM `0,0000`/`0,8557`/`0,0000`, CI `42524819678`) | Sprachen-/Charset-Integration, Actor-Lipsync und Sprachvarianten |
 | P01 | Globale Variablen/Objektzustände | A | I (Teil) | T | V (Teil) | Langzeit-/Room-Scope |
 | P02 | Save/Load kompletter Spielzustand | A (Teil) | I (Probe) | T (Teil) | offen | Raum+Inventar+Actors |
 | P03 | Spielziel/Quest-Fortschritt | A (Projekt) | I (Teil) | T | V (Teil) | Verschiedene Enden |

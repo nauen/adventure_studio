@@ -492,7 +492,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
-                                SoundEffectStep)
+                                SoundEffectStep, VoiceLineStep)
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
@@ -571,6 +571,15 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                     if step.operation == "start" else "            stopMusic();\n")
             elif isinstance(step, SoundEffectStep):
                 instructions.append(f"            {step.operation}Sound({step.sound_id});\n")
+            elif isinstance(step, VoiceLineStep):
+                # The dialogue message owns the subtitle lifetime; the VOC
+                # plays alongside it and is stopped once the message ends.
+                say = (f"actorSay({step.actor_id},\"{step.text}\")" if step.actor_id
+                       else f"egoSay(\"{step.text}\")")
+                instructions.extend((f"            startSound({step.sound_id});\n",
+                                     f"            {say};\n",
+                                     "            waitForMessage();\n",
+                                     f"            stopSound({step.sound_id});\n"))
             else:
                 raise ValueError("Unsupported native interaction step")
         return "".join(instructions)
@@ -606,6 +615,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 final_music = step.operation
             elif isinstance(step, SoundEffectStep):
                 final_sounds[step.sound_id] = step.operation
+            elif isinstance(step, VoiceLineStep):
+                final_sounds[step.sound_id] = "stop"
         commit = ""
         for step in inventory_steps:
             commit += inventory_action(step, "                ")
