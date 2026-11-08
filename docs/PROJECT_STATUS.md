@@ -668,9 +668,13 @@ weist abweichende Quellsprachen sowie VOC-Sprachcodes außerhalb des
 Story-Katalogs sichtbar zurück. Die vorhandenen getrennten Exporte bleiben
 erhalten; historische Projekt-JSONs benötigen keine Migration. Im nativen
 Studio-ZIP-Export kann eine vollständige `language-catalog.json` direkt
-geladen werden. Ein neuer
-gezielter integrierter Exporttest ist vorhanden, die kombinierte native
-ScummVM-Probe läuft erst nach dem CI-Upload. Offen bleiben insbesondere
+geladen werden. 293 lokale Tests sind grün. Die kombinierte native
+stock-ScummVM-Probe CI `42531065406` zeigt **gleichzeitig** den deutschen
+Objektnamen `Schlüssel` und `Ich höre die Glocke.` als Voice-Untertitel;
+der PCM-Gate misst vor dem Klick `0,0000`, während der Wiedergabe `0,8012`
+und nach Escape `0,0000` (Artefakt `native-v6-studio-story-voc-localized`).
+Die übrigen Pflicht-Gates der Schlussrevision sind gesondert abzuschließen.
+Offen bleiben insbesondere
 automatische Sprachaufnahmen an Gesprächsknoten und Actor-Lippensync;
 das kombinierte Paket erfordert einen vollständig übersetzten Story-Katalog.
 

@@ -28,8 +28,9 @@
 **Aktuelles vertikales Paket (2026-11-08):** Gemeinsamer nativer
 Sprachzustand für lokalisierten Story-Text und VOC-Zeilen; ein geprüftes
 Story-Sprachpaket wird beim Export um die Unicode-Untertitel ergänzt.
-Nachweis: integrierter Exporttest, neue stock-ScummVM-Kombinationsprobe
-im experimentellen Workflow. Weitere Sprechrollen- und Dialogknoten-
+Nachweis: integrierter Exporttest und deutschsprachiger Story-Text mit VOC-
+Untertitel im selben stock-ScummVM-Bild plus PCM-Escape (CI `42531065406`).
+Weitere Sprechrollen- und Dialogknoten-
 Synchronisierung bleibt offen (D03/D04/U03).
 
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
