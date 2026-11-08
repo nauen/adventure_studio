@@ -500,16 +500,25 @@ geketteten Verbablaufs**, kein Einzelbeweis für jeden Animationframe oder
 jede Walkbox-Position. Als nächstes sind solche visuellen Actor-
 Zwischenzustände und Wiederholung/Abbruch im Spiel gezielt zu prüfen.
 
-**Zustandsgebundene Interaktionsfolgen (2026-11-08, native Abnahme läuft):**
+**Zustandsgebundene Interaktionsfolgen (2026-11-08, Teilnachweis):**
 Eine vorhandene Hotspot-/Verbfolge kann im Studio optional nur bei einem
 konkreten Raumobjektzustand (0–2 im derzeitigen Exportvertrag) ausgeführt
 werden. Modell, JSON-v1-Roundtrip und Gradio-Editor verwenden dieselbe
 Bedingung; der ScummC-Export setzt ein natives `getObjectState`-Gate vor
 die geordneten Aktionen. Ohne Bedingung bleibt die bisherige JSON-Ausgabe
-unverändert. Der bestehende reale Klick-Actor-Ablauf wird nun mit dem
-Türzustand 1 als Voraussetzung kompiliert und im stock ScummVM geprüft.
-**Offen:** Erneutes Klicken nach Statuswechsel und tatsächliche
-Unterbrechungs-/Skip-Semantik separat nachweisen.
+unverändert. Der bestehende reale Klick-Actor-Ablauf mit Türzustand 1 als
+Voraussetzung lief im unveränderten ScummVM erfolgreich (CI `42505166878`,
+PR #57 gemergt). Der negative Zustand und die Wiederholung waren noch offen.
+
+**Mehrere Zustandsvarianten je Verb (2026-11-08, CI ausstehend):** Im Studio
+können bestehende Folgen für einen weiteren Zustand desselben Raumobjekts
+dupliziert und unabhängig bearbeitet werden. Der Export führt sie unter
+einem einzigen nativen `case` mit disjunkten Zustandsvergleichen aus und
+akzeptiert optional eine bedingungslose Fallback-Folge. Mehrdeutige
+Varianten werden schon im Projektmodell abgewiesen. Der native
+Spielablauf prüft dieselbe `Close`-Aktion dreimal bei abwechselndem
+Türzustand 1/2/1, einschließlich Rückkehr zur ersten Aktionsfolge.
+**Noch offen:** tatsächliche Unterbrechungs-/Skip-Semantik laufender Scripts.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.

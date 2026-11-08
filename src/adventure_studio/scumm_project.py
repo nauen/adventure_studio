@@ -422,6 +422,7 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError("Animation trigger requires a named, explicitly indexed animation")
         if actor.direction not in {direction.direction for direction in animation.directions}:
             raise ValueError("Animation trigger lacks the Actor's direction")
+    sequence_groups = {}
     for sequence in document.interaction_sequences:
         if not isinstance(sequence, InteractionSequence):
             raise ValueError("Invalid typed interaction sequence")
@@ -432,9 +433,10 @@ def _validate_document(document: GameDocument) -> None:
         if sequence.verb not in ("Push", "Pull", "Open", "Close"):
             raise ValueError("Unsupported interaction sequence verb")
         identity = (sequence.room, sequence.hotspot_id, sequence.verb)
-        if identity in seen_inputs:
+        if identity in seen_inputs and identity not in sequence_groups:
             raise ValueError("Duplicate animation verb binding")
         seen_inputs.add(identity)
+        sequence_groups.setdefault(identity, []).append(sequence)
         if not isinstance(sequence.steps, tuple) or not sequence.steps:
             raise ValueError("Interaction sequence requires ordered steps")
         if (sequence.condition_hotspot_id is None) != (sequence.condition_state is None):
@@ -480,6 +482,14 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction facing requires an Actor in the room and a cardinal direction")
             else:
                 raise ValueError("Unsupported interaction sequence step")
+    for group in sequence_groups.values():
+        if len(group) < 2:
+            continue
+        guards = [item for item in group if item.condition_hotspot_id is not None]
+        if (len(guards) < len(group) - 1
+                or len({item.condition_hotspot_id for item in guards}) != 1
+                or len({item.condition_state for item in guards}) != len(guards)):
+            raise ValueError("Interaction alternatives need distinct states of one object and at most one fallback")
 
 
 def parse_document(source: str) -> GameDocument:

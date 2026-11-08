@@ -90,7 +90,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 
 | ID | Fähigkeit | Analyse | Studio | Test | ScummVM | Nächstes Gate |
 | --- | --- | --- | --- | --- | --- | --- |
-| S01 | Native Script-/Objektscript-Lifetime | A | I (Teil: Studio-Verbfolgen mit optionalem `getObjectState`-Guard) | T (Teil: JSON-/ScummC-Vertrag) | – | Zustandsbedingung und Wiederholung im echten Spiel, Raumwechsel-/Slot-Test |
+| S01 | Native Script-/Objektscript-Lifetime | A | I (Teil: Studio-Verbfolgen mit mehreren zustandsabhängigen Alternativen, optionalem Fallback) | T (Teil: JSON-/ScummC-Vertrag) | V (Teil: einzelner Guard im realen Klickspiel, CI `42505166878`) | Abwechselnde Zustandsvarianten und Wiederholung im echten Spiel, Raumwechsel-/Slot-Test |
 | S02 | Parallele Scripts/`breakHere`/Wait/Freeze | A | – | – | – | Scheduler-Szenarien |
 | S03 | Cutscene-Stack/`begin`/`end` | A | – | – | – | Native Sequenz |
 | S04 | Skip-/Override-Endzustand | A | – | – | – | Kontrollfluss/Inventarzustand |
