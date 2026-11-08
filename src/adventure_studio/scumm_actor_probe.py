@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 
 from .scumm_assets import destination_fixture, scrolling_fixture
 from .scumm_costume_probe import gesture_fixture
 from .scumm_costume import CostumeDirection
-from .scumm_launch import launch_smoke
-from .scumm_launch import visible_key_pixels
+from .scumm_launch import launch_smoke, door_pixels, open_door_center, visible_key_pixels
 from .scumm_binary import verify_room_binary
 from .scumm_project import (ActorAsset, ActorCountCondition, AnimationRule, AnimationInputRule,
                             GameDocument, ObjectStateEffect, canonical_json,
@@ -98,10 +99,13 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
                                 ActorAsset("Companion", costume.name, "Harbor", 410, 110, "S", "Companion",
                                            "gesture"),
                                 ActorAsset("Guide", costume.name, "Harbor", 470, 110, "E", "Guide"),
+                            ), animation_rules=(
+                                AnimationRule(ActorCountCondition("Companion", 1),
+                                              ObjectStateEffect("Harbor", "Door", 2)),
                             ), animation_input_rules=(
-                                AnimationInputRule("Companion", "Harbor", "Key", "Push", 2,
-                                                   ObjectStateEffect("Harbor", "Door", 2),
-                                                   ObjectStateEffect("Harbor", "Door", 1)),
+                                AnimationInputRule("Companion", "Harbor", "Door", "Push", 2,
+                                                   ObjectStateEffect("Harbor", "Key", 0),
+                                                   ObjectStateEffect("Harbor", "Key", 1)),
                             ))
     encoded = canonical_json(document)
     (build / "project.json").write_text(encoded, encoding="utf-8")
@@ -173,10 +177,106 @@ def run_actor_count_probe(upstream: Path, actor_build: Path, destination: Path) 
     return report
 
 
+def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) -> dict:
+    """Click the native Push verb between COUNT markers, then after both."""
+    resources = actor_build / "build" / "resources"
+    source = (resources / "Harbor.scc").read_text(encoding="utf-8")
+    if source.count("        animateActor(Companion,24);\n") != 1:
+        raise ValueError("Missing native Actor animation for input probe")
+    # Slow only the isolated fixture's Actor, leaving the authored project and
+    # exporter timing unchanged. The first COUNT is observable as a cyan door.
+    source = source.replace("        animateActor(Companion,24);\n",
+                            "        setCameraAt(480);\n"
+                            "        setCurrentActor(Companion);\n"
+                            "        setActorAnimSpeed(30);\n"
+                            "        setCurrentActor(VAR_EGO);\n"
+                            "        delaySeconds(2);\n"
+                            "        animateActor(Companion,24);\n", 1)
+    destination.mkdir(parents=True, exist_ok=True)
+    room_file = destination / "Harbor.scc"
+    room_file.write_text(source, encoding="utf-8")
+    road = upstream / "examples" / "road"
+    room_obj = destination / "Harbor.roobj"
+    subprocess.run([str(_tool(upstream, "scc")), "-V", "6",
+                    "-I", str(upstream / "include"), "-I", str(resources),
+                    "-I", str(road), "-R", str(resources),
+                    "-o", str(room_obj), str(room_file)], check=True, timeout=120)
+    subprocess.run([str(_tool(upstream, "sld")), "-o", str(destination / "tentacle"),
+                    "-key", "0x69", str(resources / "bootstrap.roobj"),
+                    str(room_obj), str(resources / "Cellar.roobj")],
+                   cwd=road, check=True, timeout=120)
+    verify_room_binary((destination / "tentacle.001").read_bytes(), xor_key=0x69)
+
+    def run_click(kind: str) -> dict:
+        output = destination / kind
+        output.mkdir(parents=True, exist_ok=True)
+        if not os.environ.get("DISPLAY"):
+            raise RuntimeError("Input probe needs a virtual X display")
+        environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
+
+        def frame(name: str) -> None:
+            xwd = output / f"scummvm-{name}.xwd"
+            png = output / f"scummvm-{name}.png"
+            subprocess.run(["xwd", "-root", "-silent", "-out", str(xwd)],
+                           check=True, stdout=subprocess.DEVNULL, timeout=10)
+            subprocess.run(["convert", str(xwd), str(png)], check=True,
+                           stdout=subprocess.DEVNULL, timeout=10)
+
+        def click(x: int, y: int) -> None:
+            subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                           check=True, timeout=10)
+
+        with (output / "scummvm.log").open("w", encoding="utf-8") as log:
+            game = subprocess.Popen(["scummvm", f"--path={destination.resolve()}", "tentacle"],
+                                    stdout=log, stderr=subprocess.STDOUT, env=environment)
+            try:
+                started = time.monotonic()
+                first_count = None
+                while time.monotonic() - started < 16:
+                    if game.poll() is not None:
+                        raise RuntimeError(f"ScummVM ended before COUNT: {kind}")
+                    frame("door")
+                    if door_pixels(output, "door", open_state=True) >= 40:
+                        first_count = time.monotonic()
+                        break
+                    time.sleep(0.08)
+                if first_count is None:
+                    raise RuntimeError(f"Native first COUNT marker never opened door: {kind}")
+                click(392, 524)  # Upstream Road Push verb at logical (100, 170).
+                if kind == "late":
+                    time.sleep(6)
+                door_x, door_y = open_door_center(output, "door")
+                click(door_x, door_y)
+                time.sleep(0.8)
+                frame("end")
+                gold = visible_key_pixels(output)
+                return {"key_pixels": gold, "first_count_time": round(first_count - started, 3),
+                        "door_click": [door_x, door_y]}
+            finally:
+                game.terminate()
+                try:
+                    game.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    game.kill()
+                    game.wait(timeout=5)
+
+    early = run_click("early")
+    late = run_click("late")
+    report = {"native_early_late_input_verified": early["key_pixels"] < 40
+              and late["key_pixels"] >= 40, "early": early, "late": late}
+    (destination / "actor-input-report.json").write_text(json.dumps(report, indent=2) + "\n",
+                                                          encoding="utf-8")
+    if not report["native_early_late_input_verified"]:
+        raise RuntimeError(f"Native COUNT input window branches differ incorrectly: {report}")
+    return report
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 3:
         print(run_actor_probe(Path(sys.argv[1]), Path(sys.argv[2])))
     elif len(sys.argv) == 5 and sys.argv[1] == "--count":
         print(run_actor_count_probe(Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4])))
+    elif len(sys.argv) == 5 and sys.argv[1] == "--input":
+        print(run_actor_input_probe(Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4])))
     else:
         raise SystemExit("Usage: python -m adventure_studio.scumm_actor_probe SCUMMC_DIR OUTPUT_DIR | --count SCUMMC_DIR ACTOR_BUILD OUTPUT_DIR")
