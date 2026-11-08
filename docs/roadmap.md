@@ -170,8 +170,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         erzeugen die nativen ScummC-Befehle und beim Escape den letzten
         Musik-Endzustand. Native SOUN-Kompilierung ist in den regulären ZIP-
         Export integriert. Modell, UI, JSON und Quell-/Fake-Exporter lokal
-        getestet; die neue ScummVM-Klickprobe sowie ein expliziter hörbarer
-        Stop/Start-Beleg sind vor Abschluss noch zu verifizieren.
+        getestet. Die ScummVM-Klickprobe (`42517210707`) bestätigt die native
+        SOUN-Kompilierung und gemessene PCM-Aktivität vor Stopp, nach Stopp und
+        nach Neustart; dieses Ergebnis ist nun ein Pflichtgate. Ein vollständiger
+        grüner CI-Lauf mit dem verschärften Gate fehlt noch.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

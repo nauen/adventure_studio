@@ -574,11 +574,15 @@ Runtime; fehlende/ungültige Ressourcen werden nicht still übergangen.
 Interaktionssequenzen besitzen nun `Musik starten` und `Musik stoppen`, mit
 nativen `startMusic`/`stopMusic`-Schritten. Der Escape-Override übernimmt
 den **letzten** Musikeffekt vor einem möglichen terminalen Raumwechsel.
-JSON-v1-Projekte ohne Audio bleiben unverändert. 288 lokale Tests grün;
-die native Actor-Klickprobe ist um importiertes MIDI und Audio-Aktionen
-erweitert. **Native CI-/Audio-Laufzeitabnahme noch ausstehend**, insbesondere
-ein zeitlich abgegrenzter Hör-/PCM-Beleg des Stop/Start-Effekts.
-**Nächstes Produktpaket nach dieser Abnahme:** frei authorbare Soundeffekte
+JSON-v1-Projekte ohne Audio bleiben unverändert. 288 lokale Tests grün.
+Die native Actor-Klickprobe kompilierte das Studio-MIDI zu `SOUN`, lief im
+unveränderten ScummVM und erfasste drei zeitlich abgegrenzte PCM-Fenster
+(Actions `42517210707`, Actor-Schritt erfolgreich): Aktivität vor dem
+Escape-Stopp `0,9482`, danach `0,2686`, nach erneutem Start `0,9830`.
+Der relative Stop-/Wiederstart-Unterschied ist nun auch ein **verbindliches
+CI-Gate**; dessen erneuter vollständiger Lauf ist noch ausstehend.
+Die allgemeine iMUSE-/Beat-/Taktabdeckung bleibt offen.
+**Nächstes Produktpaket nach der CI-Abnahme:** frei authorbare Soundeffekte
 mit eigenen Ressourcen und synchronisierten Spielereignissen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;

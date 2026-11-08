@@ -218,6 +218,7 @@ jobs:
           name: native-v6-studio-actor-sequence
           path: |
             /tmp/native-actor-sequence/actor-sequence-report.json
+            /tmp/native-actor-sequence/sequence-audio.raw
             /tmp/native-actor-sequence/build/project.json
             /tmp/native-actor-sequence/build/resources/Harbor.scc
             /tmp/native-actor-sequence/build/resources/StudioSequenceTheme.mid

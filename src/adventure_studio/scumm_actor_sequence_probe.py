@@ -314,8 +314,16 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
         "after_stop": round(activity(first_skip_at + 0.4, second_click_at - 0.2), 4),
         "after_restart": round(activity(second_skip_at + 0.4, third_click_at - 0.2), 4),
     }
+    audio = report["audio_pcm"]
+    report["music_stop_restart_audible"] = bool(
+        audio["bytes"] >= 8192
+        and audio["before_stop"] > audio["after_stop"] + 0.35
+        and audio["after_restart"] > audio["after_stop"] + 0.35
+    )
     (destination / "actor-sequence-report.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    if not report["music_stop_restart_audible"]:
+        raise RuntimeError(f"Native music cue did not stop and restart audibly: {audio}")
     return report
 
 
