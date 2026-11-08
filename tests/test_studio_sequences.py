@@ -63,6 +63,9 @@ class NativeSequenceEditorTests(unittest.TestCase):
                                      "Musik starten", None, None, None, None)
             with self.assertRaisesRegex(ValueError, "Musik-ID existiert"):
                 import_room_music(raw, "Cellar", "HarborTheme", str(root / "theme.mid"))
+            with self.assertRaisesRegex(ValueError, "conflicts with hotspot"):
+                import_room_music(canonical_json(document), "Harbor", "Key",
+                                  str(root / "theme.mid"))
             fake_upstream(root / "scummc")
             executable = root / "scummc" / "soun"
             executable.write_text("fake executable", encoding="utf-8")
