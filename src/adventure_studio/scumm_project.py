@@ -589,13 +589,13 @@ def _validate_document(document: GameDocument) -> None:
                         or step.sound_id not in {asset.id for asset in document.sound_assets
                                                  if asset.room == room.name}
                         or not isinstance(step.text, str) or not 1 <= len(step.text) <= 160
-                        or any(ord(char) < 32 or ord(char) > 126 or char in '\\"'
+                        or any(ord(char) < 32 or 0x7F <= ord(char) <= 0x9F or char in '\\"'
                                for char in step.text)
                         or (step.actor_id is not None and
                             (not isinstance(step.actor_id, str)
                              or step.actor_id not in {actor.id for actor in document.actors
                                                      if actor.room == room.name}))):
-                    raise ValueError("Voice line requires a room VOC, safe ASCII subtitle and optional room Actor")
+                    raise ValueError("Voice line requires a room VOC, safe subtitle and optional room Actor")
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")

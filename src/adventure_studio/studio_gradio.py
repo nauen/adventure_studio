@@ -592,7 +592,7 @@ def make_app():
                 native_move_y = gr.Number(label="Actor-Ziel Y (Versetzen/Laufen)", value=100, precision=0)
                 native_face_direction = gr.Dropdown(label="Blickrichtung (Actor drehen)",
                                                     choices=["N", "E", "S", "W"], value="S")
-            native_subtitle = gr.Textbox(label="Untertitel für gesprochene Zeile (ASCII, maximal 160 Zeichen)",
+            native_subtitle = gr.Textbox(label="Untertitel für gesprochene Zeile (Unicode, maximal 160 Zeichen)",
                                          placeholder="Text, den die Spielfigur spricht")
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")

@@ -28,7 +28,7 @@ def run_sound_effect_probe(upstream: Path, destination: Path,
     if voice_line:
         raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Gesprochene Zeile",
                                    None, None, "BellSound", None,
-                                   subtitle="I can hear the bell.")
+                                   subtitle="Ich höre die Glocke.")
     else:
         raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound starten",
                                    None, None, "BellSound", None)
