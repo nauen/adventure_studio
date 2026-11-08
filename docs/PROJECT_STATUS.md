@@ -385,6 +385,18 @@ Stock-ScummVM-Bild- und Gameplay-Nachweise bleiben offen.
 Wiedergabe einer aus Studio-PNGs erzeugten Mehrframe-Costume in stock
 ScummVM belegen, bevor weitere Komfortfunktionen priorisiert werden.
 
+**Studio-PNG-Nativpfad (2026-11-08, Nachweis ausstehend):** Der bestehende
+experimentelle ScummC-/ScummVM-Workflow baut nun zusätzlich aus zwei
+wirklichen PNGs über die produktiven Studio-Funktionen eine mehrteilige
+`wave`-COST-Animation mit vier Richtungen und Actor-Startanimation. Er
+exportiert das versionierte Projekt, kompiliert es und startet das Spiel in
+stock ScummVM; Compilerquellen, Projekt-JSON und Bilder werden als Artefakte
+aufbewahrt. Lokal ist die ScummC-Quellgenerierung geprüft; **CI-Ausführung,
+Kompilierung, Spielstart und sichtbarer Framewechsel sind noch nicht
+nachgewiesen**. Das nächste Gate bleibt die Auswertung dieses nativen
+Laufs und ein tatsächlicher Framewechsel-Nachweis, bevor die Fähigkeit als
+in ScummVM verifiziert eingestuft wird.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
