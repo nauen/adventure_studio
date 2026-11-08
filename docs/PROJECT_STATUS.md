@@ -545,6 +545,21 @@ Stock-ScummVM-Szenario überprüft dafür ein aus Token und Shard erzeugtes
 Badge nach Escape; der CI-Nachweis steht bei Erstellung noch aus. Audio-
 und Raumwechsel-Endzustände bleiben außerhalb dieses Pakets.
 
+**Folgepaket Raumwechsel am Sequenzende (2026-11-08, Implementierung):**
+Im Studio kann `Raum wechseln` als letzter Schritt einer Hotspot-/Verbfolge
+auf einen existierenden Projekt-Raum zeigen. Der JSON-v1-Vertrag nimmt
+optional `change_room` auf; frühere Projekte bleiben unverändert. Der
+ScummC-Exporter gibt `startRoom` erst **nach** den bisherigen Schritten und
+bei überspringbaren Folgen erst **nach** `try`/`override` aus, damit Actor-,
+Objekt- und Inventar-Endzustände vor dem Wechsel angewendet werden. 287 lokale
+Tests grün, darunter Editor-/JSON-/ScummC- und Ungültigzielprüfungen.
+**Status:** Implementiert und lokal getestet, aber der konkrete Wechsel
+nach Escape einschließlich Wiedereintritt und Zustandserhalt ist noch
+**nicht in stock ScummVM verifiziert**. Keine vollständige S04-Abnahme.
+**Nächstes Produktpaket:** Raumwechsel nach Escape im generierten Spiel mit
+Rückweg und bleibendem Inventar-/Objektzustand nativ abnehmen; dabei
+eine konkrete Fortsetzung nach dem Wechsel prüfen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

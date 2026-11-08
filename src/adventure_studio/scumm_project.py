@@ -131,13 +131,18 @@ class CombineInventoryStep:
 
 
 @dataclass(frozen=True)
+class ChangeRoomStep:
+    room: str
+
+
+@dataclass(frozen=True)
 class InteractionSequence:
     """Ordered native actions initiated by a room object verb."""
 
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep | CombineInventoryStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -239,6 +244,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, PickupObjectStep)
                                                    else {"type": "combine_inventory", **vars(step)}
                                                    if isinstance(step, CombineInventoryStep)
+                                                   else {"type": "change_room", **vars(step)}
+                                                   if isinstance(step, ChangeRoomStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
                                        for sequence in document.interaction_sequences]}
@@ -464,7 +471,7 @@ def _validate_document(document: GameDocument) -> None:
                 or type(sequence.condition_state) is not int
                 or not 0 <= sequence.condition_state <= 2):
             raise ValueError("Interaction condition requires a valid room object and native state")
-        for step in sequence.steps:
+        for step_index, step in enumerate(sequence.steps):
             if isinstance(step, AnimateActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if actor is None or actor.room != room.name:
@@ -488,6 +495,11 @@ def _validate_document(document: GameDocument) -> None:
                 if not isinstance(step.result_id, str) or step.result_id not in {
                         rule.result_id for rule in room.combine_rules}:
                     raise ValueError("Interaction combination requires an existing room recipe")
+            elif isinstance(step, ChangeRoomStep):
+                if not isinstance(step.room, str) or step.room not in rooms_by_name:
+                    raise ValueError("Interaction room transition requires an existing destination room")
+                if step_index != len(sequence.steps) - 1:
+                    raise ValueError("Interaction room transition must be the final step")
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")
@@ -660,6 +672,9 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "combine_inventory":
                 step = _only(raw_step, {"type", "result_id"}, {"type", "result_id"})
                 steps.append(CombineInventoryStep(step["result_id"]))
+            elif kind == "change_room":
+                step = _only(raw_step, {"type", "room"}, {"type", "room"})
+                steps.append(ChangeRoomStep(step["room"]))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],

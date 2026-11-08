@@ -491,7 +491,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
-                                PickupObjectStep, CombineInventoryStep)
+                                PickupObjectStep, CombineInventoryStep, ChangeRoomStep)
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
@@ -535,6 +535,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     def instructions_for(sequence):
         instructions = []
         for step in sequence.steps:
+            if isinstance(step, ChangeRoomStep):
+                continue  # Switch rooms only after the native cutscene/override has ended.
             if isinstance(step, AnimateActorStep):
                 actor = actors_by_id[step.actor_id]
                 animation = next(item for item in costumes_by_name[actor.costume].animations
@@ -563,8 +565,10 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
 
     def playable_sequence(sequence):
         actions = instructions_for(sequence)
+        transition = (f"            startRoom({sequence.steps[-1].room});\n"
+                      if isinstance(sequence.steps[-1], ChangeRoomStep) else "")
         if not sequence.skippable:
-            return actions
+            return actions + transition
         # ScummC's native try/override is backed by the SCUMM v6 override
         # opcodes. Escape jumps to override; every persistent effect must be
         # committed there even when the ordinary action list did not finish.
@@ -604,7 +608,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 + "".join("        " + line for line in commit.splitlines(True))
                 + "                    }\n"
                 + "                }\n"
-                + "            }\n")
+                + "            }\n"
+                + transition)
 
     for group in grouped.values():
         sequence = group[0]

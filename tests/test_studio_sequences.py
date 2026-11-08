@@ -27,6 +27,44 @@ from test_scumm_toolchain import fake_upstream
 
 
 class NativeSequenceEditorTests(unittest.TestCase):
+    def test_terminal_room_transition_survives_json_editor_and_native_export(self):
+        document = GameDocument("RoomChange", (scrolling_fixture(), destination_fixture()))
+        raw = canonical_json(document)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Warten",
+                                   None, None, None, 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Gegenstand aufnehmen",
+                                   None, None, "Key", None)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Raum wechseln",
+                                   None, None, "Cellar", None)
+        identity = "Harbor|Key|Close"
+        self.assertEqual(sequence_steps(raw, identity)[-1], "Raumwechsel: Cellar")
+        self.assertEqual(sequence_step_fields(raw, identity, 2)[3], "Cellar")
+        self.assertEqual(canonical_json(parse_document(raw)), raw)
+        from adventure_studio.studio_sequences import set_sequence_skippable
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        source = ('    object Key {\n        verb(int vrb, int objA, int objB) {\n'
+                  '        }\n    }\n    local script entry() {\n    }\n')
+        for skippable in (False, True):
+            authored = set_sequence_skippable(raw, identity, skippable)
+            result = inject_interaction_sequences(source, "Harbor",
+                                                  parse_document(authored).interaction_sequences,
+                                                  (), (), document.rooms[0])
+            self.assertEqual(result.count("startRoom(Cellar);"), 1)
+            self.assertLess(result.index("delaySeconds(2);"), result.index("startRoom(Cellar);"))
+            self.assertLess(result.rindex("pickupObject(Key,VAR_ROOM);"),
+                            result.index("startRoom(Cellar);"))
+            if skippable:
+                self.assertLess(result.index("} override {"), result.index("startRoom(Cellar);"))
+                self.assertLess(result.index("if(VAR_OVERRIDE)"), result.index("startRoom(Cellar);"))
+        with self.assertRaisesRegex(ValueError, "final step"):
+            append_sequence_step(raw, "Harbor", "Key", "Close", "Warten",
+                                 None, None, None, 1)
+        with self.assertRaisesRegex(ValueError, "destination room"):
+            replace_sequence_step(raw, identity, 2, "Raum wechseln", None, None,
+                                  "Unknown", None)
+        with self.assertRaisesRegex(ValueError, "final step"):
+            modify_sequence_step(raw, identity, 2, "Nach oben")
+
     def test_edit_existing_step_in_place_without_changing_trigger_or_order(self):
         document = GameDocument("EditorProject", (scrolling_fixture(), destination_fixture()),
                                 (gesture_fixture(),),
