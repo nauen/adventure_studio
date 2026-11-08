@@ -381,6 +381,11 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError(f"Actor {actor.id} has invalid display name")
     for room in document.rooms:
         _validate(room)
+        if room.music_id is not None and room.music_id in {
+                hotspot.id for hotspot in room.hotspots}:
+            raise ValueError(f"Room music symbol conflicts with hotspot: {room.music_id}")
+        if room.music_id is not None and room.music_id in actor_ids | costume_names:
+            raise ValueError(f"Room music symbol conflicts with Actor/Costume: {room.music_id}")
         for destination in (r.destination_room for r in room.use_rules):
             if destination is not None and destination not in room_names:
                 raise ValueError(f"Unknown destination room: {destination}")
