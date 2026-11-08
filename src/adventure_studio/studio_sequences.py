@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from .scumm_project import (AnimateActorStep, DelayStep, GameDocument,
+from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, GameDocument,
                             InteractionSequence, ObjectStateStep,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
@@ -51,11 +51,13 @@ def _identity(sequence: InteractionSequence) -> str:
     return f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
         return f"Warten: {step.seconds} s"
+    if isinstance(step, MoveActorStep):
+        return f"Actor {step.actor_id}: zu ({step.x}, {step.y}) setzen"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -81,7 +83,8 @@ def actor_animations(raw: str, actor_id: str | None) -> tuple[str, ...]:
 
 def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
                          kind: str, actor_id: str | None, animation: str | None,
-                         target_id: str | None, amount: int | float | None) -> str:
+                         target_id: str | None, amount: int | float | None,
+                         x: int | float | None = None, y: int | float | None = None) -> str:
     """Append to an existing verb sequence or create it; never silently replace another binding."""
     document = parse_document(raw)
     if verb not in VERBS:
@@ -96,6 +99,11 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Wartezeit muss eine ganze Zahl sein")
         step = DelayStep(int(amount))
+    elif kind == "Actor versetzen":
+        if (type(x) not in (int, float) or type(y) not in (int, float)
+                or int(x) != x or int(y) != y):
+            raise ValueError("Actor-Ziel benötigt ganze Pixelkoordinaten")
+        step = MoveActorStep(actor_id, int(x), int(y))
     else:
         raise ValueError("Unbekannter Aktionstyp")
     key = (room, hotspot_id, verb)

@@ -45,6 +45,9 @@ class NativeSequenceEditorTests(unittest.TestCase):
         self.assertEqual(steps[1].hotspot_id, "Door")
         raw = modify_sequence_step(raw, identity, 2, "Entfernen")
         self.assertEqual(len(parse_document(raw).interaction_sequences[0].steps), 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Actor versetzen", "Guide",
+                                   None, None, None, 420, 112)
+        self.assertEqual(sequence_steps(raw, identity)[-1], "Actor Guide: zu (420, 112) setzen")
         with self.assertRaisesRegex(ValueError, "Interaction state step"):
             append_sequence_step(raw, "Harbor", "Key", "Pull", "Objektzustand setzen",
                                  None, None, "MissingObject", 2)
@@ -68,7 +71,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
                                                "Warten", None, None, None, 3)
         saved_again = canonical_studio_project(restored_story, restored_native)
         self.assertEqual(len(parse_document(parse_studio_project(saved_again)[1])
-                             .interaction_sequences[0].steps), 3)
+                             .interaction_sequences[0].steps), 4)
         self.assertEqual(canonical_studio_project(*parse_studio_project(saved_again)), saved_again)
 
         with tempfile.TemporaryDirectory() as directory:

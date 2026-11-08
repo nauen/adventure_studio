@@ -61,7 +61,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | ID | Fähigkeit | Analyse | Studio | Test | ScummVM | Nächstes Gate |
 | --- | --- | --- | --- | --- | --- | --- |
 | A01 | Native Actor-Costume-Ressourcen | A | I (COST + Projekt-JSON/Actor-Bindung; PNG-Import und Actor-Anlage im Studio) | T | V (Fixture; neu importiertes Studio-PNG noch nicht interaktiv belegt) | Mehrteilige Animationsframes und unabhängigere Actor-Spielbindung |
-| A02 | Actor-Platzierung/Richtung/Teleport | A (Teil) | I (Anfangsposition/Richtung) | T | V (Mehr-Actor-Fixture) | Allgemeiner Laufzeit-Teleport und Spieler-Actor |
+| A02 | Actor-Platzierung/Richtung/Teleport | A (Teil) | I (Anfangsposition/Richtung; Actor per typisiertem Interaktionsschritt zur Laufzeit im selben Raum versetzen) | T | V (Mehr-Actor-Fixture; Interaktions-Teleport offen) | Interaktives Versetzen in ScummVM und freier Spieler-Actor |
 | A03 | Actor-Walk/Pathfinding/Speed | A | I (Demo) | T (Teil) | V (Teil) | Modell + Walkboxen |
 | A04 | Stand-/Walk-/Talk-Costume-Frames | A | I (Frames/Richtungen, Startanimation einschließlich Studio-Auswahl/Deaktivierung, deklarative Verb-Animationen; Studio-PNG-Frames, Mehrframe-COST-Folgen, visuelle Timeline und GIF-Editor-Wiedergabe; Story+Actors speicherbar) | T (Teil) | V (Teil: Erststart und kein Replay beim Room-Reentry; neue Mehrframe-Animationen und Ablaufklicks noch offen) | Native Mehrframe-COST-/ScummVM-Wiedergabe prüfen |
 | A05 | Actor-Skalierung/Z-Clip/Verdeckung | A | – | – | – | R06/R10 + Actor |

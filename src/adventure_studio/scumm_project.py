@@ -96,13 +96,20 @@ class DelayStep:
 
 
 @dataclass(frozen=True)
+class MoveActorStep:
+    actor_id: str
+    x: int
+    y: int
+
+
+@dataclass(frozen=True)
 class InteractionSequence:
     """Ordered native actions initiated by a room object verb."""
 
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep, ...]
 
 
 @dataclass(frozen=True)
@@ -185,6 +192,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, AnimateActorStep)
                                                    else {"type": "set_object_state", **vars(step)}
                                                    if isinstance(step, ObjectStateStep)
+                                                   else {"type": "move_actor", **vars(step)}
+                                                   if isinstance(step, MoveActorStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
                                        for sequence in document.interaction_sequences]}
@@ -418,6 +427,13 @@ def _validate_document(document: GameDocument) -> None:
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")
+            elif isinstance(step, MoveActorStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if (actor is None or actor.room != room.name or type(step.x) is not int
+                        or type(step.y) is not int
+                        or not 0 <= step.x < room.geometry.room_width
+                        or not 0 <= step.y < room.geometry.room_height):
+                    raise ValueError("Interaction movement requires an Actor and position in the sequence room")
             else:
                 raise ValueError("Unsupported interaction sequence step")
 
@@ -542,6 +558,10 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "delay_seconds":
                 step = _only(raw_step, {"type", "seconds"}, {"type", "seconds"})
                 steps.append(DelayStep(step["seconds"]))
+            elif kind == "move_actor":
+                step = _only(raw_step, {"type", "actor_id", "x", "y"},
+                             {"type", "actor_id", "x", "y"})
+                steps.append(MoveActorStep(step["actor_id"], step["x"], step["y"]))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],
