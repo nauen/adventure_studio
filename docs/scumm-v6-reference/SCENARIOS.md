@@ -69,7 +69,12 @@ eine definierte Reaktion. Kein zufälliges Ergebnis durch Frame-Race.
   der Schlüssel. Bildschirmfarben der Tür und des Schlüssels sind die
   expliziten Positiv-/Negativassertions. Die isolierte Probe hält die Figur
   neben dem Interaktionsziel und verlangsamt ihre Costume-Animation; diese
-  Fixture-Parameter sind keine Editor-Limits. Noch offen sind Wiederholung,
+  Fixture-Parameter sind keine Editor-Limits. Ein erweitertes natives
+  Acceptance-Gate prüft zusätzlich **keinen Klick** und **zwei Klicks im
+  selben Spielprozess**: Der erste verändert die Tür vor COUNT 2, der
+  zweite verändert anschließend den Schlüssel nach COUNT 2. Damit ist
+  das erneute Auswerten der COUNT-Bedingung für diesen Übergang belegt.
+  Noch offen sind beliebige Mehrfachaktionen und weitere Zeitfenster,
   Raumwechsel, Save/Load und das vollständige Fahrgeschäft-Szenario.
 
 ## C. Kinoartige Cutscene mit Totale, Nahaufnahme und Detail

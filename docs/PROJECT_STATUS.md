@@ -218,6 +218,20 @@ in stock ScummVM. Die positive JSON-Regel und die bisherige negative
 Fixture-Kontrolle sind grün. Allgemeine Action-/Condition-IR, parallele Interaktion und
 mehrstufige Animationsabläufe sind nicht abgeschlossen.
 
+**P0.5-Eingabefolge (stock ScummVM, CI `42467237997`):** Ein
+versioniertes `AnimationInputRule` erzeugt native `Push`-/`Pull`-/`Open`-/
+`Close`-Verbfälle, die vor beziehungsweise nach einer COUNT-Grenze
+unterschiedliche Objektzustände setzen. Der reproduzierbare native
+Gameplay-Test prüft 0, 1 und 2 Eingaben: Ohne Klick bleiben Schlüssel
+sichtbar und Tür nach COUNT 1 offen; ein früher Klick entfernt die Tür,
+ein später Klick den Schlüssel,
+und bei einem frühen und einem späteren Klick **im selben Spielprozess**
+werden beide zeitabhängigen Aktionen nacheinander ausgeführt. Das
+ist kein Nachweis für beliebige Wiederholung, mehrfach gestartete
+Animationen, Raumwechsel oder Save/Load. **Nächstes P0.5-Gate:**
+Zustandskonsistenz nach Raumwechsel und Wiedereintritt bei einer
+zeitabhängigen Actor-Interaktion in unverändertem ScummVM.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

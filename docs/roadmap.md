@@ -87,6 +87,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         mit nativer Script-Ausgabe und einer aus Projekt-JSON geladenen,
         in stock ScummVM getesteten COUNT-Objektreaktion. Native CI
         `42461862069` mit JSON-Projektregel und manueller Negativkontrolle.
+  - [x] Teil-Gate: deklaratives `AnimationInputRule`-Zeitfenster mit
+        früh/spät getrennten nativen Objektzuständen. Stock-ScummVM-Probe
+        bestätigt 0/1/2 Spieleraktionen einschließlich erneuter Eingabe
+        **im selben Prozess**; CI `42467237997`.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
