@@ -78,9 +78,13 @@ eine definierte Reaktion. Kein zufälliges Ergebnis durch Frame-Race.
   tatsächliche `WalkTo`-Tür nach `Cellar` und die Treppe zurück nach
   `Harbor`. Der Schlüssel bleibt nach Wiedereintritt verschwunden,
   während die Tür offen bleibt; die normale Room-Entry-Logik läuft
-  erneut. Noch offen sind beliebige Mehrfachaktionen und weitere
-  Zeitfenster, der Actor-Animations-Neustart bei Room-Reentry,
-  Save/Load und das vollständige Fahrgeschäft-Szenario.
+  erneut. Ein zusätzlicher COUNT-Wächter würde den Schlüssel bei
+  erneutem Initialanimationsstart wieder sichtbar machen. Ein natives,
+  globales SCUMM-Bit verhindert diesen Replay beim Wiedereintritt;
+  die stock-ScummVM-Probe bestätigt den unveränderten Schlüsselzustand.
+  Noch offen sind beliebige Mehrfachaktionen und weitere Zeitfenster,
+  **explizit angeforderte** Animations-Neustarts, Save/Load und das
+  vollständige Fahrgeschäft-Szenario.
 
 ## C. Kinoartige Cutscene mit Totale, Nahaufnahme und Detail
 

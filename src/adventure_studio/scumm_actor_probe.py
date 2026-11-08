@@ -182,7 +182,9 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
     document = parse_document((actor_build / "build" / "project.json").read_text(encoding="utf-8"))
     first_count_rule = AnimationRule(ActorCountCondition("Companion", 1),
                                      ObjectStateEffect("Harbor", "Door", 2))
-    source = inject_actor_count_rules(source, "Harbor", (first_count_rule,),
+    replay_detector = AnimationRule(ActorCountCondition("Companion", 1),
+                                    ObjectStateEffect("Harbor", "Key", 1))
+    source = inject_actor_count_rules(source, "Harbor", (first_count_rule, replay_detector),
                                       document.actors, document.costumes)
     walk_marker = "        walkActorTo(VAR_EGO, 540, 100);\n"
     if source.count(walk_marker) != 1:
@@ -190,11 +192,17 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
     source = source.replace(walk_marker, "", 1)
     if source.count("        animateActor(Companion,24);\n") != 1:
         raise ValueError("Missing native Actor animation for input probe")
+    entry_guard = "        if(!__studioActorInitial0) {\n"
+    if source.count(entry_guard) != 1:
+        raise ValueError("Missing first-entry animation guard in native input probe")
+    # The fixture camera/hero setup is needed on *every* entry. It must not
+    # accidentally be hidden inside the production once-only animation guard.
+    source = source.replace(entry_guard,
+                            "        putActorAt(VAR_EGO, 375, 100, Harbor);\n"
+                            "        setCameraAt(480);\n" + entry_guard, 1)
     # Slow only the isolated fixture's Actor, leaving the authored project and
     # exporter timing unchanged. The first COUNT is observable as a cyan door.
     source = source.replace("        animateActor(Companion,24);\n",
-                            "        putActorAt(VAR_EGO, 375, 100, Harbor);\n"
-                            "        setCameraAt(480);\n"
                             "        setCurrentActor(Companion);\n"
                             "        setActorAnimSpeed(30);\n"
                             "        setCurrentActor(VAR_EGO);\n"
@@ -313,7 +321,9 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                         time.sleep(0.3)
                     else:
                         raise RuntimeError("Stairs did not return to visible Harbor")
-                    time.sleep(3)
+                    # An unguarded re-entry restarts the COST and its COUNT
+                    # watcher, which would make the already removed Key visible.
+                    time.sleep(5)
                     frame("return")
                     return_result = {
                         "key_pixels": colored_item_pixels(output, "return", (255, 220, 75)),
