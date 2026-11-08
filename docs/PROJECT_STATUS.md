@@ -632,8 +632,10 @@ Die ScummC-Quelle verwendet dazu explizite `\\xNN`-Bytes statt ungesicherter
 UTF-8-Literale. Ein nicht vorhandener DejaVu-Font bzw. fehlende `char`-
 Toolchain führt zu einer verständlichen Exportfehlermeldung. Bestehende
 ASCII-Projekte benötigen keinen zusätzlichen Font-Build. 291 lokale Tests
-grün; echte ScummVM-Darstellung von `Ich höre die Glocke.` und Escape-PCM
-sind als neues CI-Gate vorbereitet, **native Abnahme steht noch aus**.
+grün. Der echte ScummVM-Klicklauf `42526681259` zeigt den korrekt gerenderten
+Umlaut in `Ich höre die Glocke.`; das VOC-Audio misst vor dem Klick `0,0000`,
+während der Zeile `0,8558` und nach Escape `0,0000` (2.105.344 Bytes).
+Die vollständigen Pflichtworkflows der Schlussrevision stehen noch aus.
 Sprachabhängige VOC-Varianten und dynamischer Sprachwechsel bleiben offen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;

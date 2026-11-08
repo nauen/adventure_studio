@@ -195,7 +195,9 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         geplanter und durch ScummC erzeugter CHAR-Ressource. Fehlende Fonts
         und Byte-/Glyph-Grenzen werden sichtbar abgelehnt; die bestehende
         ASCII-Ausgabe bleibt ohne Zusatzabhängigkeit. 291 Tests grün;
-        natives Untertitel-/PCM-Gate in CI steht noch aus.
+        natives Untertitel-/PCM-Gate für `Ich höre die Glocke.` bestanden,
+        inklusive korrektem Umlaut-Screenshot und VOC-Stopp nach Escape
+        (CI `42526681259`).
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das
