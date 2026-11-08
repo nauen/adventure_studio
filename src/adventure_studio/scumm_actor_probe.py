@@ -106,7 +106,7 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
                                                    ObjectStateEffect("Harbor", "Door", 0),
                                                    ObjectStateEffect("Harbor", "Key", 0)),
                             ), animation_triggers=(
-                                AnimationTrigger("Companion", "Harbor", "Key", "Pull", "gesture"),
+                                AnimationTrigger("Guide", "Harbor", "Key", "Pull", "gesture"),
                             ))
     encoded = canonical_json(document)
     (build / "project.json").write_text(encoded, encoding="utf-8")

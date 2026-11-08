@@ -7,7 +7,7 @@ verbindet einen Raum-Hotspot und ein Verb (`Push`, `Pull`, `Open`, `Close`)
 mit einem Actor und einer benannten Animation seiner Costume:
 
 ```json
-{"actor_id":"Companion","room":"Harbor","hotspot_id":"Key","verb":"Pull","animation":"gesture"}
+{"actor_id":"Guide","room":"Harbor","hotspot_id":"Key","verb":"Pull","animation":"gesture"}
 ```
 
 Bei jeder Aktion ruft das generierte native Verb-Script die ausgewählte
