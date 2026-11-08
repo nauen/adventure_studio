@@ -344,6 +344,20 @@ oder ScummVM-Nachweis der neu importierten Grafik.
 **Nächstes Produktpaket:** mehrteilige Costume-Animationen und individuelle
 Blickrichtungen aus mehreren importierten Frames im Editor definieren.
 
+**P0.5 – mehrteilige Costume-Animationen im Studio (Implementierung, CI ausstehend):**
+Bestehenden Costumes können jetzt mehrere echte PNG-Frames zugeordnet
+werden. Ein gemeinsamer 31-Farben-Palettenvertrag erhält bereits importierte
+Framefarben; zusätzliche unpassende Farben werden sichtbar abgewiesen.
+Im Studio werden benannte Animationen mit eigenen nativen Indizes und
+richtungsbezogenen Frame-/COUNT-Folgen definiert oder aktualisiert. Der
+bestehende Interaktionseditor kann diese Animationen über ihren Namen
+auslösen. Modell, versionierte Projektdatei und ScummC-COST-/Verbquellen
+sind verbunden. Ein gezielter Studio-Integrationstest mit zwei PNGs und
+einer `wave`-Animation ist grün; echter ScummC-Build und stock-ScummVM-
+Gameplay dieser neuen Mehrframe-Costume sind noch offen.
+**Nächstes Produktpaket:** visuelle Costume-Frame-/Animationsvorschau und
+direkte Frame-Reihenfolge im Editor statt kommaseparierter Kommandoliste.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

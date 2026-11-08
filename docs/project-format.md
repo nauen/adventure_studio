@@ -37,8 +37,19 @@ Richtungen sowie dieselbe Pose als benannte, nicht-loopende Animation
 `gesture` mit dem bereits belegten nativen Index 24. Actors lassen sich
 mit stabiler ID, Raumauswahl, Position und Blickrichtung anlegen oder
 verschieben. Das gemeinsame Studio-Projekt speichert diese Assets und
-übergibt sie an den regulären ScummC-/COST-Export. Mehrere Frames, individuell
-gezeichnete Richtungen und Animations-Timelines sind noch offen.
+übergibt sie an den regulären ScummC-/COST-Export.
+
+Weitere PNG-Frames können einer bestehenden Costume mit einer eindeutigen
+Frame-ID hinzugefügt werden. Bereits verwendete Palettenfarben werden
+wiederverwendet, neue Farben erhalten freie lokale Einträge; sobald alle
+31 sichtbaren Farben belegt sind, wird ein zusätzlicher Farbwert abgewiesen,
+anstatt vorhandene Frames still neu einzufärben. Unter einem frei gewählten
+Animationsnamen können pro Blickrichtung geordnete Frame-IDs und die
+belegten nativen Kommandos `COUNT`, `SHOW`, `HIDE`, `NOP` gespeichert werden.
+Die bestehende ScummC-Kompilierung verarbeitet diese Folgen unverändert;
+das `interaction_sequences`-Format kann sie über ihren Namen und den
+expliziten Costume-Index auslösen. Eine graphische Frame-Timeline mit
+Live-Vorschau und Synchronisationssteuerung ist noch offen.
 
 ## Geordnete Interaktionsfolgen (P0.5)
 

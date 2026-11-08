@@ -15,7 +15,8 @@ from adventure_studio.studio_sequences import (append_sequence_step, modify_sequ
                                                 compose_story_project)
 from adventure_studio.studio_export import export_native_project
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
-from adventure_studio.studio_actors import add_actor, create_costume, move_actor
+from adventure_studio.studio_actors import (add_actor, create_costume, move_actor,
+                                           add_costume_frame, set_costume_animation)
 from test_scumm_toolchain import fake_upstream
 
 
@@ -82,10 +83,24 @@ class NativeSequenceEditorTests(unittest.TestCase):
             raw = create_costume(raw, str(sprite), "PixelCostume")
             raw = add_actor(raw, "PixelHero", "PixelCostume", "Harbor", 220, 100, "S", "Pixel Hero")
             raw = move_actor(raw, "PixelHero", "Harbor", 240, 106, "E")
+            second = root / "hero-wave.png"
+            wave = Image.new("RGBA", (8, 12), (0, 0, 0, 0))
+            for x in range(1, 7):
+                for y in range(1, 9):
+                    wave.putpixel((x, y), (40, 130, 220, 255) if x < 4 else (220, 60, 80, 255))
+            wave.save(second)
+            raw = add_costume_frame(raw, "PixelCostume", str(second), "Pose1")
+            raw = set_costume_animation(raw, "PixelCostume", "wave", 28, "E",
+                                        "Pose0, COUNT, Pose1", False)
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Actor animieren",
+                                       "PixelHero", "wave", None, None)
             created = parse_document(raw)
             self.assertEqual((created.actors[-1].x, created.actors[-1].direction), (240, "E"))
             self.assertEqual(created.costumes[-1].frames[0].pixels.count(1), 36)
-            self.assertEqual(created.costumes[-1].animations[-1].index, 24)
+            self.assertEqual(len(created.costumes[-1].frames), 2)
+            self.assertEqual(created.costumes[-1].animations[-1].directions[0].commands,
+                             ("Pose0", "COUNT", "Pose1"))
+            self.assertEqual(created.costumes[-1].animations[-1].index, 28)
             fake_upstream(root / "scummc")
             road = root / "scummc" / "examples" / "road"
             source = road / "common.scc"
@@ -112,8 +127,12 @@ class NativeSequenceEditorTests(unittest.TestCase):
                         self.assertIn("case Close:", source)
                         self.assertLess(source.index("animateActor(Guide,24);"),
                                         source.index("setObjectState(Door,2);"))
+                        self.assertIn("animateActor(PixelHero,28);", source)
                     if target.name == "PixelCostume.cost":
-                        self.assertIn("anim gesture @ 24", Path(args[-1]).read_text(encoding="utf-8"))
+                        script = Path(args[-1]).read_text(encoding="utf-8")
+                        self.assertIn("anim gesture @ 24", script)
+                        self.assertIn("anim wave @ 28", script)
+                        self.assertIn("body(Pose0, COUNT, Pose1)", script)
                     target.write_bytes(b"COST" if target.suffix == ".cost" else b"compiled")
 
             result = export_native_project(raw, root / "scummc", root / "game.zip", fake_runner,

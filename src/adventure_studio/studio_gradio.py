@@ -24,7 +24,9 @@ from .studio_sequences import (actor_animations, append_sequence_step, modify_se
                                compose_story_project)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
-from .studio_actors import add_actor, actor_summary, costume_names, create_costume, move_actor
+from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
+                            create_costume, add_costume_frame, set_costume_animation,
+                            move_actor)
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
@@ -239,8 +241,11 @@ def make_app():
         except (ValueError, OSError, RuntimeError, subprocess.CalledProcessError) as error:
             raise gr.Error(f"SCUMM-Export fehlgeschlagen: {error}") from error
 
-    def native_selectors(raw, selected_room=None, selected_sequence=None):
+    def native_selectors(raw, selected_room=None, selected_sequence=None, selected_costume=None):
         rooms, objects, actors = project_choices(raw, selected_room)
+        costumes = costume_names(raw)
+        chosen_costume = selected_costume if selected_costume in costumes else (
+            costumes[0] if costumes else None)
         room = selected_room if selected_room in rooms else rooms[0]
         sequences = sequence_choices(raw)
         identity = selected_sequence if selected_sequence in {value for _, value in sequences} else (
@@ -256,9 +261,8 @@ def make_app():
                 gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],
                           value=0 if steps else None),
                 "\n".join(f"{i+1}. {text}" for i, text in enumerate(steps)) or "Noch keine Schritte",
-                gr.update(choices=costume_names(raw),
-                          value=costume_names(raw)[0] if costume_names(raw) else None),
-                actor_summary(raw))
+                gr.update(choices=costumes, value=chosen_costume),
+                actor_summary(raw), costume_summary(raw, chosen_costume))
 
     def native_load(file_path):
         if not file_path:
@@ -299,7 +303,11 @@ def make_app():
             raise gr.Error("Bitte zuerst die Story als natives Projekt übernehmen")
         try:
             updated = action(raw, *args)
-            return updated, *native_selectors(updated), "Actor-/Costume-Daten geändert und validiert"
+            chosen = (args[1] if action is create_costume else args[0]
+                      if action in (add_costume_frame, set_costume_animation) else
+                      args[1] if action is add_actor else None)
+            return (updated, *native_selectors(updated, selected_costume=chosen),
+                    "Actor-/Costume-Daten geändert und validiert")
         except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
 
@@ -450,12 +458,25 @@ def make_app():
             native_file = gr.File(label="Native Projekt-JSON öffnen", file_types=[".json"], type="filepath")
             native_sync_button = gr.Button("Aktuelle Story als natives Projekt übernehmen / aktualisieren")
             with gr.Accordion("Actors und Costumes erstellen", open=True):
-                gr.Markdown("Ein PNG wird in eine native 32-Farben-Costume mit Transparenzfarbe umgewandelt. Bilder mit mehr als 31 sichtbaren Farben werden auf 31 Farben reduziert. Die erste Pose erhält eine Standanimation und eine auslösbare `gesture`-Animation. Weitere Animationsframes folgen in einem späteren Paket.")
+                gr.Markdown("Ein PNG wird in eine native 32-Farben-Costume mit Transparenzfarbe umgewandelt. Bilder mit mehr als 31 sichtbaren Farben werden auf 31 Farben reduziert. Weitere Frames behalten die vorhandenen Farben; ist die Palette voll, wird der Import mit einer klaren Meldung abgelehnt.")
                 with gr.Row():
                     native_costume_file = gr.File(label="Costume-PNG", file_types=[".png"], type="filepath")
                     native_costume_name = gr.Textbox(label="Neue Costume-ID")
                     native_costume_button = gr.Button("Costume aus PNG erstellen")
                 native_costume_select = gr.Dropdown(label="Vorhandene Costume")
+                native_costume_summary = gr.Textbox(label="Frames und Animationen", lines=5, interactive=False)
+                with gr.Row():
+                    native_frame_file = gr.File(label="Weiteres Frame-PNG", file_types=[".png"], type="filepath")
+                    native_frame_id = gr.Textbox(label="Neue Frame-ID")
+                    native_frame_button = gr.Button("Frame zur Costume hinzufügen")
+                gr.Markdown("**Animation gestalten:** Frame-IDs in der gewünschten Reihenfolge durch Komma trennen. `COUNT`, `SHOW`, `HIDE` und `NOP` sind native Costume-Kommandos. Der Index muss durch vier teilbar sein; `gesture` verwendet zunächst 24.")
+                with gr.Row():
+                    native_anim_name = gr.Textbox(label="Animationsname", value="gesture")
+                    native_anim_index = gr.Number(label="Nativer Index", value=24, precision=0)
+                    native_anim_direction = gr.Dropdown(label="Animationsrichtung", choices=["N", "E", "S", "W"], value="S")
+                    native_anim_commands = gr.Textbox(label="Frame- und COUNT-Folge", value="Pose0")
+                    native_anim_loop = gr.Checkbox(label="Wiederholen", value=False)
+                native_anim_button = gr.Button("Animation für diese Richtung speichern")
                 with gr.Row():
                     native_actor_id = gr.Textbox(label="Actor-ID")
                     native_actor_name = gr.Textbox(label="Anzeigename")
@@ -542,7 +563,7 @@ def make_app():
         game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])
         native_outputs = [native_room, native_hotspot, native_actor, native_animation,
                           native_target, native_sequence, native_step, native_steps,
-                          native_costume_select, native_actor_list]
+                          native_costume_select, native_actor_list, native_costume_summary]
         native_file.change(native_load, [native_file], [native_state, native_linked,
                                                        *native_outputs, native_report])
         native_sync_button.click(native_sync, [state, native_state],
@@ -550,6 +571,16 @@ def make_app():
         native_costume_button.click(lambda *args: native_asset_edit(create_costume, *args),
                                     [native_state, native_costume_file, native_costume_name],
                                     [native_state, *native_outputs, native_report])
+        native_frame_button.click(lambda *args: native_asset_edit(add_costume_frame, *args),
+                                  [native_state, native_costume_select, native_frame_file, native_frame_id],
+                                  [native_state, *native_outputs, native_report])
+        native_anim_button.click(lambda *args: native_asset_edit(set_costume_animation, *args),
+                                 [native_state, native_costume_select, native_anim_name,
+                                  native_anim_index, native_anim_direction, native_anim_commands,
+                                  native_anim_loop], [native_state, *native_outputs, native_report])
+        native_costume_select.change(lambda raw, name: costume_summary(raw, name)
+                                     if raw is not None else "Bitte ein Projekt laden",
+                                     [native_state, native_costume_select], [native_costume_summary])
         native_actor_button.click(lambda raw, actor_id, costume, room, x, y, direction, name:
                                   native_asset_edit(add_actor, raw, actor_id, costume, room,
                                                     x, y, direction, name),

@@ -79,6 +79,80 @@ def create_costume(raw: str, png_path: str, name: str) -> str:
     return canonical_json(replace(document, costumes=(*document.costumes, costume)))
 
 
+def costume_summary(raw: str, name: str | None) -> str:
+    document = parse_document(raw)
+    costume = next((costume for costume in document.costumes if costume.name == name), None)
+    if costume is None:
+        return "Bitte eine Costume wählen"
+    frames = ", ".join(frame.id for frame in costume.frames)
+    animations = "\n".join(
+        f"{animation.name} ({animation.index if animation.index is not None else 'Standard'}): "
+        + "; ".join(f"{direction.direction} = {', '.join(direction.commands)}"
+                     for direction in animation.directions)
+        for animation in costume.animations)
+    return f"Frames: {frames}\nAnimationen:\n{animations}"
+
+
+def add_costume_frame(raw: str, name: str, png_path: str, frame_id: str) -> str:
+    """Add visible artwork without silently recoloring previously authored frames."""
+    document = parse_document(raw)
+    existing = next((item for item in document.costumes if item.name == name), None)
+    if existing is None:
+        raise ValueError("Bitte eine vorhandene Costume auswählen")
+    width, height, values, imported_palette = _costume_image(png_path)
+    used = {pixel for frame in existing.frames for pixel in frame.pixels if pixel}
+    palette = list(existing.palette)
+    color_indices = {palette[existing.palette_first + index]: index for index in sorted(used)}
+    free_indices = iter(index for index in range(1, existing.palette_last - existing.palette_first + 1)
+                        if index not in used)
+    mapping = {0: 0}
+    for source_index in sorted(set(values) - {0}):
+        color = imported_palette[16 + source_index]
+        if color in color_indices:
+            mapping[source_index] = color_indices[color]
+        else:
+            next_index = next(free_indices, None)
+            if next_index is None:
+                raise ValueError("Costume-Palette enthält bereits 31 Farben; bitte PNG-Farben angleichen")
+            palette[existing.palette_first + next_index] = color
+            color_indices[color] = next_index
+            mapping[source_index] = next_index
+    frame = CostumeFrame(frame_id, width, height,
+                         bytes(mapping[value] for value in values), -width // 2, 1 - height)
+    updated = replace(existing, palette=tuple(palette), frames=(*existing.frames, frame))
+    costumes = tuple(updated if item.name == name else item for item in document.costumes)
+    return canonical_json(replace(document, costumes=costumes))
+
+
+def set_costume_animation(raw: str, costume_name: str, animation_name: str, index: int | float,
+                          direction: str, commands: str, loop: bool) -> str:
+    """Author a native COST command sequence in one direction of a named animation."""
+    document = parse_document(raw)
+    costume = next((item for item in document.costumes if item.name == costume_name), None)
+    if costume is None:
+        raise ValueError("Bitte eine vorhandene Costume auswählen")
+    if type(index) not in (int, float) or int(index) != index:
+        raise ValueError("Animationsindex muss eine ganze Zahl sein")
+    if not isinstance(commands, str) or not commands.strip():
+        raise ValueError("Animation benötigt Frame-IDs oder native COST-Kommandos")
+    sequence = tuple(token.strip() for token in commands.split(","))
+    if any(not token for token in sequence):
+        raise ValueError("Animation enthält einen leeren Schritt")
+    new_direction = CostumeDirection(direction, sequence, loop)
+    animations = list(costume.animations)
+    position = next((i for i, item in enumerate(animations) if item.name == animation_name), None)
+    if position is None:
+        animations.append(CostumeAnimation(animation_name, (new_direction,), int(index)))
+    else:
+        current = animations[position]
+        directions = tuple(item for item in current.directions if item.direction != direction)
+        animations[position] = replace(current, index=int(index),
+                                       directions=(*directions, new_direction))
+    updated = replace(costume, animations=tuple(animations))
+    costumes = tuple(updated if item.name == costume_name else item for item in document.costumes)
+    return canonical_json(replace(document, costumes=costumes))
+
+
 def add_actor(raw: str, actor_id: str, costume_name: str, room: str, x: int | float,
               y: int | float, direction: str, display_name: str) -> str:
     document = parse_document(raw)
