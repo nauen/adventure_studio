@@ -83,6 +83,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         nativer ScummVM-Start nachgewiesen. Eine benannte Startanimation
         löst COUNT-Ereignisse am projektdefinierten Actor aus (positive
         Zwei-COUNT- und negative Drei-COUNT-Kontrolle, Actions `42421713939`).
+  - [x] Teil-Gate: Versionierte `ActorCountCondition` und `ObjectStateEffect`
+        mit nativer Script-Ausgabe und einer aus Projekt-JSON geladenen,
+        in stock ScummVM getesteten COUNT-Objektreaktion. Native CI
+        `42461862069` mit JSON-Projektregel und manueller Negativkontrolle.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

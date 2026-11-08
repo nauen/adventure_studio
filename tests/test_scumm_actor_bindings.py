@@ -1,11 +1,15 @@
 """Source-level contract for native ScummC Actor declarations and setup."""
 
+import json
 import unittest
 
-from adventure_studio.scumm_bootstrap import inject_actor_bindings, inject_actor_room_animations
-from adventure_studio.scumm_actor_probe import actor_count_room_source, actor_binding_room_source
+from adventure_studio.scumm_bootstrap import (inject_actor_bindings, inject_actor_room_animations,
+                                              inject_actor_count_rules)
+from adventure_studio.scumm_actor_probe import (actor_count_room_source, actor_binding_room_source,
+                                                 project_count_room_source)
 from adventure_studio.scumm_costume_probe import gesture_fixture
-from adventure_studio.scumm_project import ActorAsset
+from adventure_studio.scumm_project import (ActorAsset, ActorCountCondition, ObjectStateEffect,
+                                            AnimationRule)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture
 from dataclasses import replace
@@ -112,6 +116,73 @@ class ActorBootstrapTests(unittest.TestCase):
                 self.assertIn(expression, actor_binding_room_source(source, kind))
         with self.assertRaises(ValueError):
             actor_binding_room_source(source, "unknown")
+
+    def test_typed_count_rules_round_trip_and_generate_native_watchers(self):
+        actor = ActorAsset('Companion', 'NativeGesture', 'Harbor', 300, 100,
+                           initial_animation='gesture')
+        rules = (AnimationRule(ActorCountCondition('Companion', 1),
+                               ObjectStateEffect('Harbor', 'Key', 0)),
+                 AnimationRule(ActorCountCondition('Companion', 2),
+                               ObjectStateEffect('Harbor', 'Door', 2)))
+        document = GameDocument('CountRules', (scrolling_fixture(), destination_fixture()),
+                                (gesture_fixture(),), (actor,), rules)
+        serialized = canonical_json(document)
+        self.assertEqual(parse_document(serialized), document)
+        source = ('room Harbor {\n    local script entry() {\n'
+                  '        ResRoom::showCursor();\n    }\n}\n')
+        animated = inject_actor_room_animations(source, 'Harbor', document.actors,
+                                                document.costumes)
+        native = inject_actor_count_rules(animated, 'Harbor', document.animation_rules,
+                                          document.actors, document.costumes)
+        self.assertIn('while(getActorAnimCounter1(Companion) < 1)', native)
+        self.assertIn('while(getActorAnimCounter1(Companion) < 2)', native)
+        self.assertIn('setObjectState(Key,0);', native)
+        self.assertIn('setObjectState(Door,2);', native)
+        self.assertIn('animateActor(Companion,24);\n        watchActorCount0();\n        watchActorCount1();', native)
+        self.assertEqual(inject_actor_count_rules(source, 'Cellar', rules,
+                                                  document.actors, document.costumes), source)
+
+    def test_typed_count_rules_reject_invalid_references_and_types(self):
+        actor = ActorAsset('Companion', 'NativeGesture', 'Harbor', 300, 100,
+                           initial_animation='gesture')
+        rooms = (scrolling_fixture(), destination_fixture())
+        valid = AnimationRule(ActorCountCondition('Companion', 2),
+                              ObjectStateEffect('Harbor', 'Key', 0))
+        for invalid, expected in (
+            (replace(valid, condition=ActorCountCondition('Missing', 2)), 'requires an Actor'),
+            (replace(valid, condition=ActorCountCondition('Companion', 0)), 'positive event'),
+            (replace(valid, condition=ActorCountCondition('Companion', True)), 'positive event'),
+            (replace(valid, condition=ActorCountCondition('Companion', 3)), 'unreachable'),
+            (replace(valid, effect=ObjectStateEffect('Cellar', 'Key', 0)), 'effect room'),
+            (replace(valid, effect=ObjectStateEffect('Harbor', 'Missing', 0)), 'unknown room hotspot'),
+            (replace(valid, effect=ObjectStateEffect('Harbor', 'Key', 3)), 'supported SCUMM object state'),
+        ):
+            with self.subTest(expected=expected), self.assertRaisesRegex(ValueError, expected):
+                canonical_json(GameDocument('InvalidRule', rooms, (gesture_fixture(),),
+                                             (actor,), (invalid,)))
+        without_animation = replace(actor, initial_animation=None)
+        with self.assertRaisesRegex(ValueError, 'requires an Actor'):
+            canonical_json(GameDocument('InvalidRule', rooms, (gesture_fixture(),),
+                                        (without_animation,), (valid,)))
+        data = json.loads(canonical_json(GameDocument('CountRules', rooms,
+                                                       (gesture_fixture(),), (actor,), (valid,))))
+        data['animation_rules'][0]['effect']['script'] = 'arbitrary code'
+        with self.assertRaises(ValueError):
+            parse_document(json.dumps(data))
+
+    def test_project_count_probe_uses_versioned_rules_not_raw_script_data(self):
+        actor = ActorAsset('Companion', 'NativeGesture', 'Harbor', 410, 110,
+                           initial_animation='gesture')
+        document = GameDocument('CountProbe', (scrolling_fixture(), destination_fixture()),
+                                (gesture_fixture(),), (actor,))
+        source = ('room Harbor {\n    local script entry() {\n'
+                  '        animateActor(Companion,24);\n    }\n}\n')
+        rendered = project_count_room_source(source, document, 2)
+        self.assertIn('local script watchActorCount0()', rendered)
+        self.assertIn('getActorAnimCounter1(Companion) < 2', rendered)
+        self.assertIn('watchActorCount0();', rendered)
+        self.assertLess(rendered.index('setCameraAt(480);'),
+                        rendered.index('animateActor(Companion,24);'))
 
 
 if __name__ == '__main__':

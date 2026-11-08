@@ -1,5 +1,34 @@
 # Versioniertes SCUMM-Projektformat (experimentell)
 
+## Typisierte COUNT-Reaktionen im Projektmodell (P0.5)
+
+`GameDocument` v1 unterstützt optional `animation_rules`. Eine Regel besitzt
+eine `condition` mit `actor_id` und `minimum_count` sowie einen `effect` mit
+`room`, `hotspot_id` und `state` (0, 1 oder 2). Die Daten verweisen auf einen
+Actor mit explizit indizierter `initial_animation` und einen Hotspot im
+gleichen Raum. Eine nicht-loopende Anfangsanimation muss genügend explizite
+`COUNT`-Kommandos in ihrer Startrichtung enthalten. Fremde JSON-Felder,
+falsche Typen und ungültige Referenzen werden abgewiesen.
+
+Beispiel einer Regel innerhalb eines Projekts mit Actor `Companion`,
+Raum `Harbor` und Objekt `Key`:
+
+```json
+{"condition":{"actor_id":"Companion","minimum_count":2},"effect":{"room":"Harbor","hotspot_id":"Key","state":0}}
+```
+
+Der ScummC-Adapter erzeugt einen nativen lokalen Script-Slot mit
+`getActorAnimCounter1`, `breakScript` und `setObjectState`. Er wird nach
+dem `animateActor`-Aufruf des Actors gestartet. Es entsteht keine eigene
+Runtime und kein aus dem JSON ausgeführter Quellcode. Alte Projekte ohne
+`animation_rules` behalten ihre kanonische v1-Ausgabe.
+
+Der erste vertikale Pfad deckt nur Objektzustandsänderungen nach der
+initialen Actor-Animation ab; freier Ereignisgraph, Input-Fenster,
+Raumwechsel während des Waits und Cutscene-Skip sind gesonderte Aufgaben.
+Die native Projektregel wurde in stock ScummVM als Objektzustandswechsel
+nach dem zweiten COUNT-Ereignis bestätigt (Actions `42461862069`).
+
 `adventure_studio.scumm_project` ist die erste datenbasierte Schnittstelle
 zwischen Adventure-Konfiguration und deterministischem SCUMM-Exporter.
 
