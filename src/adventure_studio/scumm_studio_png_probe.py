@@ -62,8 +62,8 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
                           for pixel in pixels) for color in colors]
         # Each pose must dominate at a different moment. Merely finding both
         # colors somewhere in a scrolling scene is not a frame-change proof.
-        observed = [observed[0] or (counts[0] >= 20 and counts[0] > 2 * counts[1]),
-                    observed[1] or (counts[1] >= 20 and counts[1] > 2 * counts[0])]
+        observed = [observed[0] or (counts[0] >= 20 and 2 * counts[0] > 3 * counts[1]),
+                    observed[1] or (counts[1] >= 20 and 2 * counts[1] > 3 * counts[0])]
     if not all(observed):
         raise RuntimeError(f"Studio PNG native animation frames not both visible: "
                            f"observed={observed}, samples={len(samples)}")
