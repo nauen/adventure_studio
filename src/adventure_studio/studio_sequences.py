@@ -9,7 +9,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             FaceActorStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
-                            SoundAsset, SoundEffectStep, VoiceLineStep,
+                            SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -55,6 +55,36 @@ def room_sound_ids(raw: str, room_name: str) -> tuple[str, ...]:
                  if asset.room == room_name)
 
 
+def set_default_voice_language(raw: str, language: str) -> str:
+    """Choose the project's initial native spoken language."""
+    return _checked(replace(parse_document(raw), default_voice_language=language))
+
+
+def edit_voice_variant(raw: str, identity: str, step_number: int,
+                       language: str, sound_id: str | None, subtitle: str | None,
+                       remove: bool = False) -> str:
+    """Add/replace or remove one translation on a selected spoken sequence step."""
+    document = parse_document(raw)
+    sequences = list(document.interaction_sequences)
+    index = next((i for i, item in enumerate(sequences) if _identity(item) == identity), None)
+    if index is None or type(step_number) is not int or not 0 <= step_number < len(sequences[index].steps):
+        raise ValueError("Bitte eine bestehende Sprachzeile auswählen")
+    steps = list(sequences[index].steps)
+    voice = steps[step_number]
+    if not isinstance(voice, VoiceLineStep):
+        raise ValueError("Der gewählte Schritt ist keine gesprochene Zeile")
+    variants = {item.language: item for item in voice.variants}
+    if remove:
+        if language not in variants:
+            raise ValueError("Sprachvariante existiert nicht")
+        del variants[language]
+    else:
+        variants[language] = VoiceVariant(language, sound_id, subtitle)
+    steps[step_number] = replace(voice, variants=tuple(variants[key] for key in sorted(variants)))
+    sequences[index] = replace(sequences[index], steps=tuple(steps))
+    return _checked(replace(document, interaction_sequences=tuple(sequences)))
+
+
 def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
     """Combine current authored Story rooms with typed native Actor and verb actions.
 
@@ -75,7 +105,8 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                        animation_triggers=native.animation_triggers,
                        interaction_sequences=native.interaction_sequences,
                        music_assets=native.music_assets,
-                       sound_assets=native.sound_assets)
+                       sound_assets=native.sound_assets,
+                       default_voice_language=native.default_voice_language)
     return canonical_json(composed)
 
 
@@ -184,7 +215,9 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
     if isinstance(step, SoundEffectStep):
         return f"Sound {step.sound_id}: {'starten' if step.operation == 'start' else 'stoppen'}"
     if isinstance(step, VoiceLineStep):
-        return f"Sprachzeile {step.sound_id} ({step.actor_id or 'Ego'}): {step.text}"
+        return (f"Sprachzeile {step.sound_id} ({step.actor_id or 'Ego'}): {step.text}"
+                + (" [" + ", ".join(item.language for item in step.variants) + "]"
+                   if step.variants else ""))
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -309,7 +342,10 @@ def replace_sequence_step(raw: str, identity: str, step_number: int | float | No
     selected = int(step_number)
     if not 0 <= selected < len(steps):
         raise ValueError("Schritt existiert nicht")
-    steps[selected] = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction, subtitle)
+    replacement = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction, subtitle)
+    if isinstance(steps[selected], VoiceLineStep) and isinstance(replacement, VoiceLineStep):
+        replacement = replace(replacement, variants=steps[selected].variants)
+    steps[selected] = replacement
     sequences[index] = replace(sequences[index], steps=tuple(steps))
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
 

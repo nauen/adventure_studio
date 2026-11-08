@@ -198,6 +198,13 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         natives Untertitel-/PCM-Gate für `Ich höre die Glocke.` bestanden,
         inklusive korrektem Umlaut-Screenshot und VOC-Stopp nach Escape
         (CI `42526681259`).
+  - [x] Produkt-Implementierung/lokale Tests: Eine gesprochene VOC-Zeile
+        besitzt weitere Sprachvarianten mit eigenem Sound und Untertitel;
+        Sprachkürzel können in der Studio-UI bearbeitet und die Standardsprache
+        festgelegt werden. Die native v6-Sprachleiste steuert Text und Ton
+        gemeinsam; nicht vorhandene Übersetzungen verwenden die Standardsprache,
+        Escape stoppt alle möglichen Aufnahmen. 292 Tests grün;
+        native Sprachwechsel-/PCM-Probe noch in CI zu bestätigen.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

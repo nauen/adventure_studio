@@ -32,13 +32,24 @@ def _voice_charset(document, resources: Path, upstream: Path):
     from .localization import (LanguageCatalog, LocalizedLine, canonical_catalog_json,
                                charset_plan)
 
-    extras = sorted({char for sequence in document.interaction_sequences
-                     for step in sequence.steps if isinstance(step, VoiceLineStep)
-                     for char in step.text if ord(char) > 126})
-    if not extras:
+    lines = [step for sequence in document.interaction_sequences
+             for step in sequence.steps if isinstance(step, VoiceLineStep)]
+    has_variants = any(step.variants for step in lines)
+    texts = [value for step in lines
+             for value in (step.text, *(item.text for item in step.variants))]
+    if not has_variants and not any(ord(char) > 126 for text in texts for char in text):
         return None
-    catalog = LanguageCatalog("en", ("en",),
-                              (LocalizedLine("voice_glyphs", (("en", "".join(extras)),)),))
+    languages = tuple(sorted({document.default_voice_language,
+                              *(variant.language for line in lines for variant in line.variants)}))
+    if len(languages) > 5:
+        raise ValueError("Native voice language GUI supports up to five languages")
+    catalog_lines = []
+    for index, step in enumerate(lines):
+        variants = {item.language: item.text for item in step.variants}
+        catalog_lines.append(LocalizedLine(f"voice_{index:04d}",
+                          tuple((language, variants.get(language, step.text))
+                                for language in languages)))
+    catalog = LanguageCatalog(document.default_voice_language, languages, tuple(catalog_lines))
     plan = charset_plan(catalog)
     if (resources / "multilingual-font.char").exists():
         raise ValueError("Voice subtitle charset conflicts with existing language package")
@@ -95,6 +106,8 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
             if not target.is_file() or target.stat().st_size == 0:
                 raise RuntimeError(f"ScummC did not produce native VOC sound: {asset.id}")
     voice_charset = _voice_charset(document, resources, upstream)
+    voice_variants = any(isinstance(step, VoiceLineStep) and step.variants
+                         for sequence in document.interaction_sequences for step in sequence.steps)
     for room in document.rooms:
         for suffix in (".scc", ".bmp"):
             if not (resources / f"{room.name}{suffix}").is_file():
@@ -156,6 +169,8 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         raise ValueError("Graphical language selectors require --localize-story")
     if graphical_language_buttons and screen_language_gui:
         raise ValueError("Choose one graphical language selector mode")
+    if voice_variants and (localize_story or screen_language_gui or graphical_language_buttons):
+        raise ValueError("Localized voice GUI cannot be combined with independent story language selector")
     if localize_story:
         if language_catalog is None:
             raise ValueError("Localized story export requires a verified language package")
@@ -178,7 +193,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         if language_room_probe:
             bootstrap = inject_language_room_probe(bootstrap, document.rooms[1].name,
                                                    language_catalog)
-        if screen_language_gui:
+        if screen_language_gui or voice_variants:
             bootstrap, header = inject_screen_language_verbs(bootstrap, header,
                                                              language_catalog)
     (resources / "bootstrap.scc").write_text(inject_inventory_objects(bootstrap, icon_ids), encoding="utf-8")
@@ -209,7 +224,8 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         rendered = inject_interaction_sequences(rendered, room.name,
                                                 document.interaction_sequences,
                                                 document.actors, document.costumes, room,
-                                                document.sound_assets, voice_charset)
+                                                document.sound_assets, voice_charset,
+                                                document.default_voice_language)
         room_source.write_text(rendered, encoding="utf-8")
         target = resources / f"{room.name}.roobj"
         runner([str(compiler), "-V", "6", *include_args, "-R", str(resources),

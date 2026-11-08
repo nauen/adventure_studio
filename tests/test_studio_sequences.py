@@ -20,7 +20,8 @@ from adventure_studio.studio_sequences import (append_sequence_step, append_sele
                                                 project_choices, sequence_choices, sequence_steps,
                                                 compose_story_project)
 from adventure_studio.studio_sequences import (import_room_music, import_room_sound,
-                                                set_sequence_skippable)
+                                                set_sequence_skippable,
+                                                edit_voice_variant, set_default_voice_language)
 from adventure_studio.studio_export import export_native_project
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
 from adventure_studio.studio_actors import (add_actor, create_costume, move_actor,
@@ -31,6 +32,51 @@ from test_scumm_toolchain import fake_upstream
 
 
 class NativeSequenceEditorTests(unittest.TestCase):
+    def test_spoken_line_language_variants_and_escape_stop_all_sounds(self):
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import SoundAsset, VoiceVariant
+        from adventure_studio.localization import LanguageCatalog, LocalizedLine, charset_plan
+        from adventure_studio.scumm_assets import scummc_room_source
+        document = GameDocument("Languages", (scrolling_fixture(), destination_fixture()),
+                                sound_assets=(SoundAsset("EnglishVoice", "Harbor", original_voc_effect()),
+                                              SoundAsset("GermanVoice", "Harbor", original_voc_effect(330))))
+        raw = append_sequence_step(canonical_json(document), "Harbor", "Key", "Close",
+                                   "Gesprochene Zeile", None, None, "EnglishVoice", None,
+                                   subtitle="I hear a bell.")
+        raw = edit_voice_variant(raw, "Harbor|Key|Close", 0, "de", "GermanVoice",
+                                 "Ich höre eine Glocke.")
+        raw = set_sequence_skippable(raw, "Harbor|Key|Close", True)
+        parsed = parse_document(raw)
+        voice = parsed.interaction_sequences[0].steps[0]
+        self.assertEqual(voice.variants, (VoiceVariant("de", "GermanVoice",
+                                                       "Ich höre eine Glocke."),))
+        self.assertEqual(canonical_json(parsed), raw)
+        revised = replace_sequence_step(raw, "Harbor|Key|Close", 0, "Gesprochene Zeile",
+                                        None, None, "EnglishVoice", None,
+                                        subtitle="A different bell.")
+        self.assertEqual(parse_document(revised).interaction_sequences[0].steps[0].variants,
+                         voice.variants)
+        plan = charset_plan(LanguageCatalog("en", ("de", "en"), (
+            LocalizedLine("voice", (("de", "Ich höre eine Glocke."),
+                                     ("en", "I hear a bell."))),)))
+        native = inject_interaction_sequences(scummc_room_source(parsed.rooms[0]), "Harbor",
+                                              parsed.interaction_sequences, (), (), parsed.rooms[0],
+                                              parsed.sound_assets, plan)
+        self.assertIn("if(GameLanguage == 25701)", native)
+        self.assertIn(r'egoSay("Ich h\x80re eine Glocke.");', native)
+        self.assertIn('egoSay("I hear a bell.");', native)
+        self.assertEqual(native.count("stopSound(EnglishVoice);"), 2)
+        self.assertEqual(native.count("stopSound(GermanVoice);"), 2)
+        with self.assertRaisesRegex(ValueError, "unique language"):
+            edit_voice_variant(raw, "Harbor|Key|Close", 0, "en", "GermanVoice", "Hello")
+        with self.assertRaisesRegex(ValueError, "room VOC"):
+            edit_voice_variant(raw, "Harbor|Key|Close", 0, "fr", "Unknown", "Bonjour")
+        removed = edit_voice_variant(raw, "Harbor|Key|Close", 0, "de", None, None, True)
+        self.assertEqual(parse_document(removed).interaction_sequences[0].steps[0].variants, ())
+        other_default = set_default_voice_language(removed, "de")
+        self.assertEqual(parse_document(other_default).default_voice_language, "de")
+        self.assertEqual(canonical_json(parse_document(other_default)), other_default)
+
     def test_spoken_voc_line_binds_subtitle_and_stops_on_escape(self):
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
         from adventure_studio.scumm_project import SoundAsset, VoiceLineStep, export_document

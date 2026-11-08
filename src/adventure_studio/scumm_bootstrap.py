@@ -487,7 +487,8 @@ def inject_actor_animation_triggers(source: str, room_name: str, triggers, actor
 
 
 def inject_interaction_sequences(source: str, room_name: str, sequences, actors, costumes,
-                                 room_asset=None, sound_assets=(), voice_charset=None) -> str:
+                                 room_asset=None, sound_assets=(), voice_charset=None,
+                                 default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
@@ -574,18 +575,30 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, VoiceLineStep):
                 # The dialogue message owns the subtitle lifetime; the VOC
                 # plays alongside it and is stopped once the message ends.
-                if voice_charset is None:
-                    from .scumm_assets import _scumm_string
-                    literal = _scumm_string(step.text)
+                def line(sound_id, value, indent):
+                    if voice_charset is None:
+                        from .scumm_assets import _scumm_string
+                        literal = _scumm_string(value)
+                    else:
+                        from .localization import encode_scumm_literal
+                        literal = encode_scumm_literal(value, voice_charset)
+                    say = (f"actorSay({step.actor_id},{literal})" if step.actor_id
+                           else f"egoSay({literal})")
+                    return (f"{indent}startSound({sound_id});\n"
+                            f"{indent}{say};\n"
+                            f"{indent}waitForMessage();\n"
+                            f"{indent}stopSound({sound_id});\n")
+
+                if step.variants:
+                    for variant in step.variants:
+                        code = int.from_bytes(variant.language.encode("ascii"), "big")
+                        instructions.append(f"            if(GameLanguage == {code}) {{\n"
+                                            + line(variant.sound_id, variant.text, "                ")
+                                            + "            } else ")
+                    instructions.append("{\n" + line(step.sound_id, step.text, "                ")
+                                        + "            }\n")
                 else:
-                    from .localization import encode_scumm_literal
-                    literal = encode_scumm_literal(step.text, voice_charset)
-                say = (f"actorSay({step.actor_id},{literal})" if step.actor_id
-                       else f"egoSay({literal})")
-                instructions.extend((f"            startSound({step.sound_id});\n",
-                                     f"            {say};\n",
-                                     "            waitForMessage();\n",
-                                     f"            stopSound({step.sound_id});\n"))
+                    instructions.append(line(step.sound_id, step.text, "            "))
             else:
                 raise ValueError("Unsupported native interaction step")
         return "".join(instructions)
@@ -623,6 +636,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 final_sounds[step.sound_id] = step.operation
             elif isinstance(step, VoiceLineStep):
                 final_sounds[step.sound_id] = "stop"
+                for variant in step.variants:
+                    final_sounds[variant.sound_id] = "stop"
         commit = ""
         for step in inventory_steps:
             commit += inventory_action(step, "                ")

@@ -638,6 +638,26 @@ während der Zeile `0,8558` und nach Escape `0,0000` (2.105.344 Bytes).
 Die vollständigen Pflichtworkflows der Schlussrevision stehen noch aus.
 Sprachabhängige VOC-Varianten und dynamischer Sprachwechsel bleiben offen.
 
+**Sprachvarianten pro VOC-Zeile (2026-11-08, Implementierung):**
+Studio-Projekte besitzen eine einstellbare Standardsprache (zwei Buchstaben,
+für alte JSON-v1-Daten weiterhin `en`). Jede `Gesprochene Zeile` kann
+beliebig viele weitere Sprachvarianten mit eigener Raum-VOC-Sound-ID und
+eigenem Unicode-Untertitel enthalten. Die Studio-Aktionsbearbeitung fügt
+Sprachen hinzu, ersetzt oder entfernt sie. Beim regulären Export wird der
+native `GameLanguage`-Zustand über sichtbare Sprachverben umgeschaltet;
+die Sequenz verzweigt Text **und** Soundressource und fällt für fehlende
+Übersetzungen ausdrücklich auf die Standardsprache zurück. Escape stoppt
+alle potenziellen Sprachaufnahmen. Die aktuelle native Sprachleisten-UI
+unterstützt bis zu fünf Sprachcodes; das Fachmodell kann mehr tragen,
+ein solcher Export wird dann klar abgelehnt. 292 lokale Tests grün,
+neue stock-ScummVM-Klick-/Sprachwechsel-/PCM-Probe erfolgreich in CI
+`42528788315` (Artefakt `native-v6-studio-voc-localized`): Nach Auswahl
+von `de` zeigt der native Screenshot `Ich höre die Glocke.` einschließlich
+Umlaut. Die Audiomessung ergibt vor dem Klick `0,0000`, während der
+deutschen Zeile `0,8115` und nach Escape `0,0000`; die gewählte
+Sprachvariante ist damit im Spiel hör- und sichtbar. Die vollständige
+Pflicht-CI der Schlussrevision bleibt gesondert zu prüfen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

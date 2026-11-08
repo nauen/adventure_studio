@@ -147,10 +147,18 @@ class SoundEffectStep:
 
 
 @dataclass(frozen=True)
+class VoiceVariant:
+    language: str
+    sound_id: str
+    text: str
+
+
+@dataclass(frozen=True)
 class VoiceLineStep:
     sound_id: str
     text: str
     actor_id: str | None = None
+    variants: tuple[VoiceVariant, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -191,6 +199,7 @@ class GameDocument:
     interaction_sequences: tuple[InteractionSequence, ...] = ()
     music_assets: tuple[MusicAsset, ...] = ()
     sound_assets: tuple[SoundAsset, ...] = ()
+    default_voice_language: str = "en"
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -283,7 +292,10 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, MusicCueStep)
                                                    else {"type": "sound_effect", **vars(step)}
                                                    if isinstance(step, SoundEffectStep)
-                                                   else {"type": "voice_line", **vars(step)}
+                                                   else {"type": "voice_line", "sound_id": step.sound_id,
+                                                         "text": step.text, "actor_id": step.actor_id,
+                                                         **({"variants": [vars(item) for item in step.variants]}
+                                                            if step.variants else {})}
                                                    if isinstance(step, VoiceLineStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
@@ -296,6 +308,8 @@ def document_dict(document: GameDocument) -> dict:
                                "voc": _encode_pixels(asset.voc)}
                               for asset in document.sound_assets]}
            if document.sound_assets else {}),
+        **({"default_voice_language": document.default_voice_language}
+           if document.default_voice_language != "en" else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -354,6 +368,9 @@ def document_dict(document: GameDocument) -> dict:
 
 
 def _validate_document(document: GameDocument) -> None:
+    if (not isinstance(document.default_voice_language, str)
+            or not re.fullmatch(r"[a-z]{2}", document.default_voice_language)):
+        raise ValueError("Default voice language requires a two-letter code")
     if not isinstance(document.id, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", document.id):
         raise ValueError("Invalid game project identifier")
     if not document.rooms or len(document.rooms) > 64:
@@ -596,6 +613,22 @@ def _validate_document(document: GameDocument) -> None:
                              or step.actor_id not in {actor.id for actor in document.actors
                                                      if actor.room == room.name}))):
                     raise ValueError("Voice line requires a room VOC, safe subtitle and optional room Actor")
+                languages = set()
+                for variant in step.variants:
+                    if (not isinstance(variant, VoiceVariant)
+                            or not isinstance(variant.language, str)
+                            or not re.fullmatch(r"[a-z]{2}", variant.language)
+                            or variant.language == document.default_voice_language
+                            or variant.language in languages
+                            or not isinstance(variant.sound_id, str)
+                            or variant.sound_id not in {asset.id for asset in document.sound_assets
+                                                        if asset.room == room.name}
+                            or not isinstance(variant.text, str)
+                            or not 1 <= len(variant.text) <= 160
+                            or any(ord(char) < 32 or 0x7F <= ord(char) <= 0x9F
+                                   or char in '\\"' for char in variant.text)):
+                        raise ValueError("Voice variant requires unique language, room VOC and safe subtitle")
+                    languages.add(variant.language)
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")
@@ -632,7 +665,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets", "sound_assets"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets", "sound_assets", "default_voice_language"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -779,9 +812,18 @@ def parse_document(source: str) -> GameDocument:
                              {"type", "sound_id", "operation"})
                 steps.append(SoundEffectStep(step["sound_id"], step["operation"]))
             elif kind == "voice_line":
-                step = _only(raw_step, {"type", "sound_id", "text", "actor_id"},
+                step = _only(raw_step, {"type", "sound_id", "text", "actor_id", "variants"},
                              {"type", "sound_id", "text"})
-                steps.append(VoiceLineStep(step["sound_id"], step["text"], step.get("actor_id")))
+                raw_variants = step.get("variants", [])
+                if not isinstance(raw_variants, list):
+                    raise ValueError("Voice variants must be a list")
+                variants = []
+                for raw_variant in raw_variants:
+                    variant_item = _only(raw_variant, {"language", "sound_id", "text"},
+                                         {"language", "sound_id", "text"})
+                    variants.append(VoiceVariant(**variant_item))
+                steps.append(VoiceLineStep(step["sound_id"], step["text"],
+                                           step.get("actor_id"), tuple(variants)))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],
@@ -944,7 +986,8 @@ def parse_document(source: str) -> GameDocument:
         sound_assets.append(SoundAsset(asset["id"], asset["room"], _decode_pixels(asset["voc"])))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
                             tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers),
-                            tuple(interaction_sequences), tuple(music_assets), tuple(sound_assets))
+                            tuple(interaction_sequences), tuple(music_assets), tuple(sound_assets),
+                            data.get("default_voice_language", "en"))
     _validate_document(document)
     return document
 

@@ -14,21 +14,28 @@ from .scumm_launch import colored_item_center
 from .scumm_project import GameDocument, canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
 from .scumm_voc_fixture import original_voc_effect
-from .studio_sequences import append_sequence_step, set_sequence_skippable
+from .studio_sequences import append_sequence_step, edit_voice_variant, set_sequence_skippable
 from .scumm_project import SoundAsset
 
 
 def run_sound_effect_probe(upstream: Path, destination: Path,
-                           voice_line: bool = False) -> dict:
+                           voice_line: bool = False,
+                           localized: bool = False) -> dict:
     """A real hotspot click plays a VOC; Escape applies the final stop cue."""
+    sounds = [SoundAsset("BellSound", "Harbor", original_voc_effect(duration_ms=5000))]
+    if localized:
+        sounds.append(SoundAsset("GermanVoice", "Harbor",
+                                 original_voc_effect(frequency=330, duration_ms=5000)))
     document = GameDocument("SoundEffects", (scrolling_fixture(), destination_fixture()),
-                            sound_assets=(SoundAsset("BellSound", "Harbor",
-                                                     original_voc_effect(duration_ms=5000)),))
+                            sound_assets=tuple(sounds))
     raw = canonical_json(document)
     if voice_line:
         raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Gesprochene Zeile",
                                    None, None, "BellSound", None,
-                                   subtitle="Ich höre die Glocke.")
+                                   subtitle="I hear the bell." if localized else "Ich höre die Glocke.")
+        if localized:
+            raw = edit_voice_variant(raw, "Harbor|Key|Close", 0, "de", "GermanVoice",
+                                     "Ich höre die Glocke.")
     else:
         raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound starten",
                                    None, None, "BellSound", None)
@@ -67,6 +74,10 @@ def run_sound_effect_probe(upstream: Path, destination: Path,
             time.sleep(6)
             if game.poll() is not None:
                 raise RuntimeError("ScummVM exited before sound interaction")
+            if localized:
+                # The native keyboard language selector maps sorted 'de' to 1.
+                subprocess.run(["xdotool", "key", "1"], check=True, timeout=10)
+                time.sleep(2.5)
             frame("before")
             key_x, key_y = colored_item_center(frames, "before", (255, 220, 75))
             for x, y in ((234, 563), (key_x, key_y)):
@@ -106,6 +117,8 @@ def run_sound_effect_probe(upstream: Path, destination: Path,
     report = {
         "native_sound_id": "BellSound",
         "voice_line": voice_line,
+        "localized": localized,
+        "selected_language": "de" if localized else None,
         "escape_sent": True,
         "pcm_bytes": len(pcm),
         "before_click": round(activity(start_at - 1.4, start_at - 0.2), 4),
@@ -125,9 +138,10 @@ def run_sound_effect_probe(upstream: Path, destination: Path,
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 4 and sys.argv[1] == "--voice":
-        print(run_sound_effect_probe(Path(sys.argv[2]), Path(sys.argv[3]), voice_line=True))
+    if len(sys.argv) == 4 and sys.argv[1] in ("--voice", "--localized"):
+        print(run_sound_effect_probe(Path(sys.argv[2]), Path(sys.argv[3]), voice_line=True,
+                                     localized=sys.argv[1] == "--localized"))
     elif len(sys.argv) == 3:
         print(run_sound_effect_probe(Path(sys.argv[1]), Path(sys.argv[2])))
     else:
-        raise SystemExit("Usage: python -m adventure_studio.scumm_sound_effect_probe [--voice] SCUMMC DESTINATION")
+        raise SystemExit("Usage: python -m adventure_studio.scumm_sound_effect_probe [--voice|--localized] SCUMMC DESTINATION")
