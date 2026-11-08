@@ -153,6 +153,93 @@ def set_costume_animation(raw: str, costume_name: str, animation_name: str, inde
     return canonical_json(replace(document, costumes=costumes))
 
 
+def costume_animation_names(raw: str, costume_name: str | None) -> tuple[str, ...]:
+    costume = next((item for item in parse_document(raw).costumes if item.name == costume_name), None)
+    return tuple(item.name for item in costume.animations) if costume else ()
+
+
+def costume_animation_steps(raw: str, costume_name: str | None,
+                            animation_name: str | None, direction: str) -> tuple[str, ...]:
+    costume = next((item for item in parse_document(raw).costumes if item.name == costume_name), None)
+    animation = next((item for item in costume.animations if item.name == animation_name), None) if costume else None
+    selected = next((item for item in animation.directions if item.direction == direction), None) if animation else None
+    return selected.commands if selected else ()
+
+
+def costume_timeline_images(raw: str, costume_name: str | None,
+                            animation_name: str | None, direction: str):
+    """Render real authored frame pixels and native command cards in order."""
+    from PIL import Image, ImageDraw
+
+    costume = next((item for item in parse_document(raw).costumes if item.name == costume_name), None)
+    if costume is None:
+        return []
+    frames = {frame.id: frame for frame in costume.frames}
+    results = []
+    for index, command in enumerate(costume_animation_steps(raw, costume_name, animation_name, direction)):
+        if command in frames:
+            frame = frames[command]
+            pixels = bytes(component for value in frame.pixels for component in
+                           ((*costume.palette[costume.palette_first + value], 255)
+                            if value else (0, 0, 0, 0)))
+            original = Image.frombytes("RGBA", (frame.width, frame.height), pixels)
+            scale = min(8, 96 / max(frame.width, frame.height))
+            enlarged = original.resize((max(1, round(frame.width * scale)),
+                                        max(1, round(frame.height * scale))),
+                                       Image.Resampling.NEAREST)
+            card = Image.new("RGB", (112, 112), (42, 45, 52))
+            card.paste(enlarged, ((112 - enlarged.width) // 2, (112 - enlarged.height) // 2), enlarged)
+        else:
+            card = Image.new("RGB", (112, 112), (42, 45, 52))
+            ImageDraw.Draw(card).text((15, 48), command, fill=(244, 232, 155))
+        results.append((card, f"{index + 1}. {command}"))
+    return results
+
+
+def edit_costume_timeline(raw: str, costume_name: str, animation_name: str,
+                          direction: str, step_number: int | float | None,
+                          operation: str, command: str | None = None) -> str:
+    """Edit the selected native command sequence, preserving other directions."""
+    document = parse_document(raw)
+    costume = next((item for item in document.costumes if item.name == costume_name), None)
+    if costume is None:
+        raise ValueError("Bitte eine Costume auswählen")
+    animation = next((item for item in costume.animations if item.name == animation_name), None)
+    if animation is None:
+        raise ValueError("Bitte eine vorhandene Animation auswählen")
+    selected = next((item for item in animation.directions if item.direction == direction), None)
+    if selected is None:
+        raise ValueError("Die gewählte Animation hat noch keine Folge für diese Richtung")
+    commands = list(selected.commands)
+    if operation == "Anhängen":
+        if command is None:
+            raise ValueError("Bitte ein Frame oder COST-Kommando wählen")
+        commands.append(command)
+    else:
+        if (step_number is None or type(step_number) not in (int, float)
+                or int(step_number) != step_number or not 0 <= int(step_number) < len(commands)):
+            raise ValueError("Bitte einen gültigen Animationsschritt auswählen")
+        index = int(step_number)
+        if operation == "Entfernen":
+            if len(commands) == 1:
+                raise ValueError("Eine native Richtung benötigt mindestens einen Animationsschritt")
+            commands.pop(index)
+        elif operation in ("Nach oben", "Nach unten"):
+            other = index + (-1 if operation == "Nach oben" else 1)
+            if not 0 <= other < len(commands):
+                raise ValueError("Animationsschritt ist bereits am Rand")
+            commands[index], commands[other] = commands[other], commands[index]
+        else:
+            raise ValueError("Unbekannte Timeline-Aktion")
+    updated_direction = replace(selected, commands=tuple(commands))
+    updated_animation = replace(animation, directions=tuple(
+        updated_direction if item.direction == direction else item for item in animation.directions))
+    updated_costume = replace(costume, animations=tuple(
+        updated_animation if item.name == animation_name else item for item in costume.animations))
+    costumes = tuple(updated_costume if item.name == costume_name else item for item in document.costumes)
+    return canonical_json(replace(document, costumes=costumes))
+
+
 def add_actor(raw: str, actor_id: str, costume_name: str, room: str, x: int | float,
               y: int | float, direction: str, display_name: str) -> str:
     document = parse_document(raw)

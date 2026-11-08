@@ -358,6 +358,20 @@ Gameplay dieser neuen Mehrframe-Costume sind noch offen.
 **Nächstes Produktpaket:** visuelle Costume-Frame-/Animationsvorschau und
 direkte Frame-Reihenfolge im Editor statt kommaseparierter Kommandoliste.
 
+**P0.5 – visuelle Costume-Timeline (Implementierung, CI ausstehend):**
+Der Studio-Editor zeigt die echten Costume-Frame-Pixel und COST-Kommandos
+einer ausgewählten Richtung als geordnete Karten. Schritte können direkt
+angeklickt, umsortiert, angehängt und entfernt werden. Die Speicherung
+verändert ausschließlich die typisierten `CostumeDirection.commands`; das
+SCUMM-Projekt und der Compilerpfad bleiben unverändert. Der bestehende
+Studio-Integrationstest prüft Vorschaureihenfolge, Bearbeitung und die
+resultierende `.scost`-Quellfolge; keine zusätzliche Engine-Testmatrix.
+Eine animierte Echtzeitvorschau oder ein ScummVM-Nachweis der neuen
+Mehrframe-Sequenzen liegt noch nicht vor.
+**Nächstes Produktpaket:** eine abspielbare Editor-Vorschau über die
+vorhandenen Frames und Richtungsauswahl, mit einstellbaren Framezeiten,
+ohne eine zusätzliche Spiel-Runtime zu simulieren.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
