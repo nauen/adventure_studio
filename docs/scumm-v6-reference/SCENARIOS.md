@@ -74,8 +74,13 @@ eine definierte Reaktion. Kein zufälliges Ergebnis durch Frame-Race.
   selben Spielprozess**: Der erste verändert die Tür vor COUNT 2, der
   zweite verändert anschließend den Schlüssel nach COUNT 2. Damit ist
   das erneute Auswerten der COUNT-Bedingung für diesen Übergang belegt.
-  Noch offen sind beliebige Mehrfachaktionen und weitere Zeitfenster,
-  Raumwechsel, Save/Load und das vollständige Fahrgeschäft-Szenario.
+  Ein weiterer stock-ScummVM-Lauf nutzt nach der späten Eingabe die
+  tatsächliche `WalkTo`-Tür nach `Cellar` und die Treppe zurück nach
+  `Harbor`. Der Schlüssel bleibt nach Wiedereintritt verschwunden,
+  während die Tür offen bleibt; die normale Room-Entry-Logik läuft
+  erneut. Noch offen sind beliebige Mehrfachaktionen und weitere
+  Zeitfenster, der Actor-Animations-Neustart bei Room-Reentry,
+  Save/Load und das vollständige Fahrgeschäft-Szenario.
 
 ## C. Kinoartige Cutscene mit Totale, Nahaufnahme und Detail
 

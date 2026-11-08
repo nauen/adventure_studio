@@ -212,7 +212,7 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe --count /tmp/scummc-upstream /tmp/native-actors /tmp/native-actor-count
-      - name: Verify absent, early, late and repeated native Push input during Actor COUNT animation
+      - name: Verify native Actor input repetition and room return state
         env:
           PYTHONPATH: src
         run: |
@@ -232,6 +232,9 @@ jobs:
             /tmp/native-actor-input/none/scummvm-end.png
             /tmp/native-actor-input/repeat/scummvm-after-first.png
             /tmp/native-actor-input/repeat/scummvm-end.png
+            /tmp/native-actor-input/return/scummvm-post-action.png
+            /tmp/native-actor-input/return/scummvm-cellar.png
+            /tmp/native-actor-input/return/scummvm-return.png
           if-no-files-found: ignore
       - name: Retain authored Actor COUNT positive and negative evidence
         if: always()

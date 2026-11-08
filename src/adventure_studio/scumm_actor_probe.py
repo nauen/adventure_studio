@@ -14,8 +14,8 @@ from pathlib import Path
 from .scumm_assets import destination_fixture, scrolling_fixture
 from .scumm_costume_probe import gesture_fixture
 from .scumm_costume import CostumeDirection
-from .scumm_launch import (launch_smoke, colored_item_center, colored_item_pixels,
-                           door_pixels, visible_key_pixels)
+from .scumm_launch import (launch_smoke, close_rgb, colored_item_center, colored_item_pixels,
+                           door_center, door_pixels, scene_pixel, visible_key_pixels)
 from .scumm_binary import verify_room_binary
 from .scumm_project import (ActorAsset, ActorCountCondition, AnimationRule, AnimationInputRule,
                             GameDocument, ObjectStateEffect, canonical_json,
@@ -252,7 +252,7 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                     raise RuntimeError(f"Native first COUNT marker never opened door: {kind}")
                 key_x, key_y = colored_item_center(output, "door", (255, 220, 75))
                 if kind != "none":
-                    if kind == "late":
+                    if kind in ("late", "return"):
                         time.sleep(6)
                     click(392, 524)  # Upstream Road Push verb at logical (100, 170).
                     click(key_x, key_y)
@@ -273,13 +273,63 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                     time.sleep(2.5)
                 elif kind == "none":
                     time.sleep(6)
+                return_result = None
+                if kind == "return":
+                    frame("post-action")
+                    before_return = {
+                        "key_pixels": colored_item_pixels(output, "post-action", (255, 220, 75)),
+                        "open_door_pixels": colored_item_pixels(output, "post-action", (50, 220, 220)),
+                    }
+                    if before_return["key_pixels"] >= 10 or before_return["open_door_pixels"] < 40:
+                        raise RuntimeError(f"Late input was not effective before room exit: {before_return}")
+
+                    # WalkTo is selected again after a completed sentence.
+                    # Hit the open door frame away from the overlapping Guide Actor.
+                    door_x, door_y = colored_item_center(output, "post-action", (50, 220, 220))
+                    click(door_x - 12, door_y - 12)
+                    deadline = time.monotonic() + 14
+                    while time.monotonic() < deadline:
+                        if game.poll() is not None:
+                            raise RuntimeError("ScummVM stopped before the Cellar transition")
+                        frame("cellar")
+                        if close_rgb(scene_pixel(output, "cellar"), (120, 70, 180)):
+                            break
+                        time.sleep(0.3)
+                    else:
+                        raise RuntimeError("WalkTo open Door did not reach Cellar")
+                    time.sleep(1)
+                    frame("exit")
+                    stairs_x, stairs_y = door_center(output, "exit")
+                    click(stairs_x, stairs_y)
+                    # On return the normal room-entry scripts run again.
+                    # Wait for the camera to reach the right side before sampling.
+                    deadline = time.monotonic() + 16
+                    while time.monotonic() < deadline:
+                        if game.poll() is not None:
+                            raise RuntimeError("ScummVM stopped before Harbor re-entry")
+                        frame("return")
+                        if close_rgb(scene_pixel(output, "return"), (240, 175, 95)):
+                            break
+                        time.sleep(0.3)
+                    else:
+                        raise RuntimeError("Stairs did not return to visible Harbor")
+                    time.sleep(3)
+                    frame("return")
+                    return_result = {
+                        "key_pixels": colored_item_pixels(output, "return", (255, 220, 75)),
+                        "open_door_pixels": colored_item_pixels(output, "return", (50, 220, 220)),
+                        "cellar_reached": True, "harbor_reentered": True,
+                        "exit_click": [door_x - 12, door_y - 12],
+                        "stairs_click": [stairs_x, stairs_y],
+                    }
                 frame("end")
                 gold = visible_key_pixels(output)
                 cyan = colored_item_pixels(output, "end", (50, 220, 220))
                 return {"key_pixels": gold, "open_door_pixels": cyan,
                         "first_count_time": round(first_count - started, 3),
                         "key_click": [key_x, key_y],
-                        **({"after_first": first_result} if first_result is not None else {})}
+                        **({"after_first": first_result} if first_result is not None else {}),
+                        **({"after_return": return_result} if return_result is not None else {})}
             finally:
                 game.terminate()
                 try:
@@ -292,6 +342,7 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
     early = run_click("early")
     late = run_click("late")
     repeat = run_click("repeat")
+    returned = run_click("return")
     report = {"native_early_late_and_repeated_input_verified": (
               none["key_pixels"] >= 10 and none["open_door_pixels"] >= 40
               and
@@ -300,11 +351,18 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
               and repeat["after_first"]["key_pixels"] >= 10
               and repeat["after_first"]["open_door_pixels"] < 40
               and repeat["key_pixels"] < 40 and repeat["open_door_pixels"] < 40),
-              "none": none, "early": early, "late": late, "repeat": repeat}
+              "native_room_return_state_verified": (
+              returned["after_return"]["cellar_reached"]
+              and returned["after_return"]["harbor_reentered"]
+              and returned["after_return"]["key_pixels"] < 10
+              and returned["after_return"]["open_door_pixels"] >= 40),
+              "none": none, "early": early, "late": late, "repeat": repeat,
+              "return": returned}
     (destination / "actor-input-report.json").write_text(json.dumps(report, indent=2) + "\n",
                                                           encoding="utf-8")
-    if not report["native_early_late_and_repeated_input_verified"]:
-        raise RuntimeError(f"Native COUNT input window 0/1/2-click behavior differs: {report}")
+    if not (report["native_early_late_and_repeated_input_verified"]
+            and report["native_room_return_state_verified"]):
+        raise RuntimeError(f"Native COUNT input state or room return differs: {report}")
     return report
 
 

@@ -228,9 +228,19 @@ ein später Klick den Schlüssel,
 und bei einem frühen und einem späteren Klick **im selben Spielprozess**
 werden beide zeitabhängigen Aktionen nacheinander ausgeführt. Das
 ist kein Nachweis für beliebige Wiederholung, mehrfach gestartete
-Animationen, Raumwechsel oder Save/Load. **Nächstes P0.5-Gate:**
-Zustandskonsistenz nach Raumwechsel und Wiedereintritt bei einer
-zeitabhängigen Actor-Interaktion in unverändertem ScummVM.
+Animationen, Raumwechsel oder Save/Load. Der seither ergänzte
+Raumwechsel-Nachweis folgt unmittelbar darunter.
+
+**P0.5-Raumwechsel-Teilnachweis (native CI `42468551627`):** Nach einer
+verspäteten `Push`-Aktion verschwindet der Schlüssel; die offene Tür
+ermöglicht den regulären `WalkTo`-Wechsel `Harbor → Cellar`. Über den
+Treppe-Hotspot kehrt der Spieler nach `Harbor` zurück. Die native
+ScummVM-Probe bestätigt, dass der Schlüssel weiterhin unsichtbar
+und die Tür offen ist. Die bisherigen 0/1/2-Klick-Tests bleiben grün.
+**Als Nächstes:** Actor-Initialanimation und COUNT-Wächter beim erneuten
+Raumbetreten gezielt auf Doppelstart/Replay prüfen und gegebenenfalls
+einen einmaligen Initialisierungsvertrag modellieren. Save/Load und das
+vollständige Fahrgeschäft bleiben weitere offene Gates.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
