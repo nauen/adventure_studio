@@ -536,6 +536,15 @@ Wartezeit verloren geht. Die native Probe ergänzt deshalb die zweite
 Zustandsvariante um einen eigenen Token und kontrolliert dessen Inventar-Icon
 nach Escape. Vollständige Ton-/Raumwechsel-Skip-Zustände bleiben offen.
 
+**Nächstes Produktpaket:** Eine `Inventar kombinieren`-Aktion kann im
+Studio an ein bestehendes Raumrezept gebunden werden. Die normale Sequenz
+prüft den Besitz beider Eingangsobjekte, verbraucht sie und erzeugt das
+Rezeptresultat mit nativen SCUMM-Befehlen. Der Escape-Pfad übernimmt die
+vorherigen Aufnahmen und die Kombination in derselben Reihenfolge. Das
+Stock-ScummVM-Szenario überprüft dafür ein aus Token und Shard erzeugtes
+Badge nach Escape; der CI-Nachweis steht bei Erstellung noch aus. Audio-
+und Raumwechsel-Endzustände bleiben außerhalb dieses Pakets.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

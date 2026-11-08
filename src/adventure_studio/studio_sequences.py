@@ -7,6 +7,7 @@ from dataclasses import replace
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
+                            CombineInventoryStep,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -130,6 +131,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Actor {step.actor_id}: Richtung {step.direction}"
     if isinstance(step, PickupObjectStep):
         return f"Inventar: {step.hotspot_id} aufnehmen"
+    if isinstance(step, CombineInventoryStep):
+        return f"Inventar: zu {step.result_id} kombinieren"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -165,6 +168,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         step = ObjectStateStep(target_id, int(amount))
     elif kind == "Gegenstand aufnehmen":
         step = PickupObjectStep(target_id)
+    elif kind == "Inventar kombinieren":
+        step = CombineInventoryStep(target_id)
     elif kind == "Warten":
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Wartezeit muss eine ganze Zahl sein")
@@ -269,6 +274,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Warten", None, None, None, step.seconds, 320, 100, "S")
     if isinstance(step, PickupObjectStep):
         return ("Gegenstand aufnehmen", None, None, step.hotspot_id, 1, 320, 100, "S")
+    if isinstance(step, CombineInventoryStep):
+        return ("Inventar kombinieren", None, None, step.result_id, 1, 320, 100, "S")
     return ("Objektzustand setzen", None, None, step.hotspot_id, step.state, 320, 100, "S")
 
 

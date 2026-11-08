@@ -150,6 +150,13 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Variante anhängen; der Escape-Override erhält ebenfalls die
         Inventaraufnahme. Das ScummVM-Klickszenario kontrolliert den Token
         nach der übersprungenen zweiten Sequenz. Ton und Raumwechsel offen.
+  - [x] Produkt-Implementierung: Autorierte Actor-Interaktionen können ein
+        vorhandenes Inventar-Kombinationsrezept als Sequenzschritt ausführen.
+        Die beiden Voraussetzungen werden über native Besitzerzustände
+        geprüft; der resultierende Gegenstand wird mit `pickupObject` erzeugt.
+        Ein Escape-Skip führt auch vorausgehende Pickups und die Kombination
+        in Schrittfolge aus. Native Probe kontrolliert das Badge-Icon nach
+        dem zweiten Escape. Audio-/Raumwechsel-Skip weiterhin offen.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das
