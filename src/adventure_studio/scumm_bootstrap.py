@@ -584,7 +584,6 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_states[step.hotspot_id] = 0
             elif isinstance(step, CombineInventoryStep):
                 inventory_steps.append(step)
-                end_states[step.result_id] = 1
         commit = ""
         for step in inventory_steps:
             commit += inventory_action(step, "                ")
