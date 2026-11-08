@@ -91,6 +91,9 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         früh/spät getrennten nativen Objektzuständen. Stock-ScummVM-Probe
         bestätigt 0/1/2 Spieleraktionen einschließlich erneuter Eingabe
         **im selben Prozess**; CI `42467237997`.
+  - [x] Teil-Gate: Dieselbe späte, deklarative Eingabe bleibt nach
+        `Harbor → Cellar → Harbor` über normale `WalkTo`-Hotspots erhalten:
+        Schlüssel weiterhin unsichtbar, Tür offen. Native CI `42468551627`.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
