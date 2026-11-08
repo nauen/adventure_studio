@@ -260,6 +260,10 @@ Dialog, Neustart mit `--save-slot=1`, erneute Bildprüfung und regulärer
 einen verlorenen Initialanimations-Guard auf. Die Prüfung ist erst mit
 grünem Interpreter-CI-Lauf abgenommen; Save/Load **während** einer noch
 laufenden Animation ist davon nicht abgedeckt.
+Die vormals auf einzelne Testfälle hartcodierten Screenshot-Frame-Namen in
+den gemeinsamen Door-/Key-Pixelhelfern wurden durch eine gemeinsame sichere
+Frame-Namensvalidierung ersetzt. Neue native Szenarien erfordern damit keine
+Änderung an den allgemeinen Bildprüfhelfern mehr.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.

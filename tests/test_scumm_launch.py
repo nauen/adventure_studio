@@ -6,10 +6,31 @@ from unittest.mock import patch
 from subprocess import CompletedProcess
 from pathlib import Path
 
-from adventure_studio.scumm_launch import authored_item_center, close_rgb, colored_item_center, compare_frames, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, key_center, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
+from adventure_studio.scumm_launch import authored_item_center, close_rgb, colored_item_center, compare_frames, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, door_center, door_pixels, open_door_center, visible_key_pixels, screenshot_frame, key_center, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
 
 
 class ScummLaunchTests(unittest.TestCase):
+    def test_door_helpers_accept_new_frame_names_without_allowlist_edits(self):
+        folder = Path("/tmp/native-game")
+        with patch("adventure_studio.scumm_launch.subprocess.run",
+                   return_value=CompletedProcess([], 0, stdout="16x8+240+200", stderr="")) as run:
+            for locate in (door_center, open_door_center):
+                self.assertEqual(locate(folder, "stairs-after-load"), (440, 388))
+                self.assertIn(str(folder / "scummvm-stairs-after-load.png"),
+                              run.call_args.args[0])
+        with patch("adventure_studio.scumm_launch.subprocess.run",
+                   return_value=CompletedProcess(
+                       [], 0, stdout=" 44: (60,220,90) #3CDC5A\n", stderr="")):
+            self.assertEqual(door_pixels(folder, "new-room-return"), 44)
+            self.assertEqual(visible_key_pixels(folder, "new-room-return"), 0)
+
+    def test_screenshot_helper_rejects_unsafe_names_without_scenario_allowlist(self):
+        self.assertEqual(screenshot_frame(Path("/tmp"), "room-2_after-save"),
+                         Path("/tmp/scummvm-room-2_after-save.png"))
+        for invalid in ("", "../outside", "/tmp/outside", "room/exit", "room.png", " with space", None):
+            with self.subTest(frame=invalid), self.assertRaisesRegex(ValueError, "frame name"):
+                screenshot_frame(Path("/tmp"), invalid)
+
     def test_story_item_locator_widens_tolerance_only_when_no_pixels_match(self):
         with patch("adventure_studio.scumm_launch.colored_item_center",
                    side_effect=[ValueError("Unexpected sprite bounds: '1x1-1-1'"), (450, 400)]) as locate:
