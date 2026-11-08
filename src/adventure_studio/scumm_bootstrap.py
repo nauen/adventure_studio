@@ -489,7 +489,8 @@ def inject_actor_animation_triggers(source: str, room_name: str, triggers, actor
 def inject_interaction_sequences(source: str, room_name: str, sequences, actors, costumes) -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
-                                MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep)
+                                MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
+                                PickupObjectStep)
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
@@ -497,7 +498,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     actors_by_id = {actor.id: actor for actor in actors}
     costumes_by_name = {costume.name: costume for costume in costumes}
     targets = {step.hotspot_id for sequence in active for step in sequence.steps
-               if isinstance(step, ObjectStateStep)}
+               if isinstance(step, (ObjectStateStep, PickupObjectStep))}
     declarations = [f"    object {target};\n" for target in sorted(targets)
                     if f"    object {target};\n" not in source]
     first = min((source.find(f"    object {sequence.hotspot_id} {{\n")
@@ -520,6 +521,10 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            animateActor({actor.id},{animation.index});\n")
             elif isinstance(step, ObjectStateStep):
                 instructions.append(f"            setObjectState({step.hotspot_id},{step.state});\n")
+            elif isinstance(step, PickupObjectStep):
+                instructions.append(f"            if(getObjectOwner({step.hotspot_id}) != VAR_EGO) "
+                                    f"pickupObject({step.hotspot_id},VAR_ROOM);\n")
+                instructions.append(f"            setObjectState({step.hotspot_id},0);\n")
             elif isinstance(step, DelayStep):
                 instructions.append(f"            delaySeconds({step.seconds});\n")
             elif isinstance(step, MoveActorStep):
@@ -547,6 +552,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_states = {}
         end_positions = {}
         end_directions = {}
+        end_pickups = set()
         for step in sequence.steps:
             if isinstance(step, ObjectStateStep):
                 end_states[step.hotspot_id] = step.state
@@ -554,7 +560,13 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_positions[step.actor_id] = (step.x, step.y)
             elif isinstance(step, FaceActorStep):
                 end_directions[step.actor_id] = step.direction
+            elif isinstance(step, PickupObjectStep):
+                end_pickups.add(step.hotspot_id)
+                end_states[step.hotspot_id] = 0
         commit = ""
+        for hotspot in sorted(end_pickups):
+            commit += (f"                if(getObjectOwner({hotspot}) != VAR_EGO) "
+                       f"pickupObject({hotspot},VAR_ROOM);\n")
         for hotspot, state in end_states.items():
             commit += f"                setObjectState({hotspot},{state});\n"
         for actor, (x, y) in end_positions.items():

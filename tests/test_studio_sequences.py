@@ -10,7 +10,8 @@ from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import ActorAsset, GameDocument, canonical_json, parse_document
 from adventure_studio.story_document import canonical_story_json, parse_story_document
-from adventure_studio.studio_sequences import (append_sequence_step, modify_sequence_step,
+from adventure_studio.studio_sequences import (append_sequence_step, append_selected_sequence_step,
+                                                modify_sequence_step,
                                                 replace_sequence_step, sequence_step_fields,
                                                 sequence_condition_fields, set_sequence_condition,
                                                 duplicate_sequence_variant,
@@ -51,7 +52,10 @@ class NativeSequenceEditorTests(unittest.TestCase):
         raw = duplicate_sequence_variant(raw, guarded_identity, "Door", 2)
         variant_identity = identity + "|Door|2"
         raw = replace_sequence_step(raw, variant_identity, 0, "Warten", None, None, None, 1)
+        raw = append_selected_sequence_step(raw, variant_identity, "Gegenstand aufnehmen",
+                                            None, None, "Key", None)
         self.assertEqual(sequence_steps(raw, variant_identity)[0], "Warten: 1 s")
+        self.assertEqual(sequence_steps(raw, variant_identity)[-1], "Inventar: Key aufnehmen")
         self.assertEqual(len(sequence_choices(raw)), 2)
         with self.assertRaisesRegex(ValueError, "distinct states"):
             duplicate_sequence_variant(raw, guarded_identity, "Door", 2)

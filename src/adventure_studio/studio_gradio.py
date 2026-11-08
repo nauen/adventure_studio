@@ -19,7 +19,8 @@ from .studio_service import (accept_proposal, add_decoration, change_item,
                              report_text, scene_preview, translation_draft, validate_translation_draft)
 from .story_document import canonical_story_json, parse_story_document
 from .studio_export import export_playable, export_native_project
-from .studio_sequences import (actor_animations, append_sequence_step, modify_sequence_step,
+from .studio_sequences import (actor_animations, append_sequence_step, append_selected_sequence_step,
+                               modify_sequence_step,
                                replace_sequence_step, sequence_step_fields,
                                sequence_condition_fields, set_sequence_condition,
                                duplicate_sequence_variant, sequence_skip_enabled,
@@ -548,7 +549,7 @@ def make_app():
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt")
@@ -561,6 +562,7 @@ def make_app():
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
+            native_add_selected = gr.Button("Schritt an ausgewählte Variante anhängen")
             with gr.Row():
                 native_condition_object = gr.Dropdown(
                     label="Interaktion nur bei Objektzustand", choices=[("Immer ausführen", None)])
@@ -572,7 +574,7 @@ def make_app():
             with gr.Row():
                 native_skippable = gr.Checkbox(label="Mit Escape überspringbar", value=False)
                 native_skip_save = gr.Button("Skip-Einstellung speichern")
-            gr.Markdown("Beim Überspringen setzt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen** der Sequenz. Laufende Animationen und Wartezeiten entfallen; die native Cutscene-Taste Escape beendet den Ablauf.")
+            gr.Markdown("Beim Überspringen übernimmt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen sowie aufgenommene Inventargegenstände** der Sequenz. Laufende Animationen und Wartezeiten entfallen; Escape beendet den Ablauf.")
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
             with gr.Row():
@@ -831,6 +833,11 @@ def make_app():
                           native_kind, native_actor, native_animation, native_target, native_amount,
                           native_move_x, native_move_y, native_face_direction],
                          [native_state, *native_outputs, native_report])
+        native_add_selected.click(lambda *args: native_edit(append_selected_sequence_step, *args),
+                                  [native_state, native_sequence, native_kind, native_actor,
+                                   native_animation, native_target, native_amount, native_move_x,
+                                   native_move_y, native_face_direction],
+                                  [native_state, *native_outputs, native_report])
         native_replace.click(lambda *args: native_edit(replace_sequence_step, *args),
                              [native_state, native_sequence, native_step,
                               native_kind, native_actor, native_animation, native_target,

@@ -6,7 +6,7 @@ from dataclasses import replace
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, GameDocument,
-                            InteractionSequence, ObjectStateStep,
+                            InteractionSequence, ObjectStateStep, PickupObjectStep,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -128,6 +128,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Auf Actor {step.actor_id} warten"
     if isinstance(step, FaceActorStep):
         return f"Actor {step.actor_id}: Richtung {step.direction}"
+    if isinstance(step, PickupObjectStep):
+        return f"Inventar: {step.hotspot_id} aufnehmen"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -161,6 +163,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Objektzustand muss eine ganze Zahl sein")
         step = ObjectStateStep(target_id, int(amount))
+    elif kind == "Gegenstand aufnehmen":
+        step = PickupObjectStep(target_id)
     elif kind == "Warten":
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Wartezeit muss eine ganze Zahl sein")
@@ -199,6 +203,23 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
         sequences.append(InteractionSequence(room, hotspot_id, verb, (step,)))
     else:
         sequences[index] = replace(sequences[index], steps=(*sequences[index].steps, step))
+    return _checked(replace(document, interaction_sequences=tuple(sequences)))
+
+
+def append_selected_sequence_step(raw: str, identity: str, kind: str,
+                                  actor_id: str | None, animation: str | None,
+                                  target_id: str | None, amount: int | float | None,
+                                  x: int | float | None = None, y: int | float | None = None,
+                                  direction: str | None = None) -> str:
+    """Append to an existing guarded or unguarded variant, preserving its trigger."""
+    document = parse_document(raw)
+    index = next((i for i, sequence in enumerate(document.interaction_sequences)
+                  if _identity(sequence) == identity), None)
+    if index is None:
+        raise ValueError("Bitte eine vorhandene Interaktion wählen")
+    step = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction)
+    sequences = list(document.interaction_sequences)
+    sequences[index] = replace(sequences[index], steps=(*sequences[index].steps, step))
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
 
 
@@ -246,6 +267,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Actor drehen", step.actor_id, None, None, 1, 320, 100, step.direction)
     if isinstance(step, DelayStep):
         return ("Warten", None, None, None, step.seconds, 320, 100, "S")
+    if isinstance(step, PickupObjectStep):
+        return ("Gegenstand aufnehmen", None, None, step.hotspot_id, 1, 320, 100, "S")
     return ("Objektzustand setzen", None, None, step.hotspot_id, step.state, 320, 100, "S")
 
 
