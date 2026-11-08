@@ -5,13 +5,14 @@ import unittest
 
 from adventure_studio.scumm_bootstrap import (inject_actor_bindings, inject_actor_room_animations,
                                               inject_actor_count_rules)
+from adventure_studio.scumm_bootstrap import inject_actor_input_rules
 from adventure_studio.scumm_actor_probe import (actor_count_room_source, actor_binding_room_source,
                                                  project_count_room_source)
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import (ActorAsset, ActorCountCondition, ObjectStateEffect,
-                                            AnimationRule)
+                                            AnimationRule, AnimationInputRule)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
-from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture
+from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture, scummc_room_source
 from dataclasses import replace
 
 
@@ -183,6 +184,60 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('watchActorCount0();', rendered)
         self.assertLess(rendered.index('setCameraAt(480);'),
                         rendered.index('animateActor(Companion,24);'))
+
+    def test_animation_input_rule_roundtrip_and_native_early_late_branches(self):
+        actor = ActorAsset('Companion', 'NativeGesture', 'Harbor', 300, 100,
+                           initial_animation='gesture')
+        rule = AnimationInputRule('Companion', 'Harbor', 'Key', 'Push', 2,
+                                  ObjectStateEffect('Harbor', 'Door', 2),
+                                  ObjectStateEffect('Harbor', 'Door', 1))
+        document = GameDocument('InputWindow', (scrolling_fixture(), destination_fixture()),
+                                (gesture_fixture(),), (actor,), (), (rule,))
+        serialized = canonical_json(document)
+        self.assertEqual(parse_document(serialized), document)
+        self.assertIn('"animation_input_rules"', serialized)
+        native = inject_actor_input_rules(scummc_room_source(document.rooms[0]),
+                                          'Harbor', document.animation_input_rules)
+        self.assertIn('case Push:', native)
+        self.assertLess(native.index('    object Door;\n'), native.index('    object Key {\n'))
+        self.assertIn('if(getActorAnimCounter1(Companion) < 2)', native)
+        self.assertIn('setObjectState(Door,2);', native)
+        self.assertIn('setObjectState(Door,1);', native)
+        self.assertEqual(inject_actor_input_rules(native, 'Cellar', (rule,)), native)
+        with self.assertRaisesRegex(ValueError, 'Conflicting native input verb'):
+            inject_actor_input_rules(native, 'Harbor', (rule,))
+
+    def test_animation_input_rejects_invalid_rules_and_unknown_fields(self):
+        actor = ActorAsset('Companion', 'NativeGesture', 'Harbor', 300, 100,
+                           initial_animation='gesture')
+        rooms = (scrolling_fixture(), destination_fixture())
+        rule = AnimationInputRule('Companion', 'Harbor', 'Key', 'Push', 2,
+                                  ObjectStateEffect('Harbor', 'Door', 2),
+                                  ObjectStateEffect('Harbor', 'Door', 1))
+        for invalid, expected in (
+            (replace(rule, actor_id='Unknown'), 'requires an Actor'),
+            (replace(rule, room='Cellar'), 'share a room'),
+            (replace(rule, hotspot_id='Unknown'), 'unknown hotspot'),
+            (replace(rule, verb='LookAt'), 'Unsupported'),
+            (replace(rule, before_count=0), 'unreachable'),
+            (replace(rule, before_count=True), 'unreachable'),
+            (replace(rule, before_count=3), 'unreachable'),
+            (replace(rule, on_time=ObjectStateEffect('Cellar', 'Door', 2)), 'target its room'),
+            (replace(rule, too_late=ObjectStateEffect('Harbor', 'Missing', 1)), 'unknown hotspot'),
+            (replace(rule, too_late=ObjectStateEffect('Harbor', 'Door', 3)), 'object state'),
+        ):
+            with self.subTest(expected=expected), self.assertRaisesRegex(ValueError, expected):
+                canonical_json(GameDocument('InputWindow', rooms, (gesture_fixture(),),
+                                            (actor,), (), (invalid,)))
+        with self.assertRaisesRegex(ValueError, 'Duplicate animation input'):
+            canonical_json(GameDocument('InputWindow', rooms, (gesture_fixture(),),
+                                        (actor,), (), (rule, rule)))
+        document = GameDocument('InputWindow', rooms, (gesture_fixture(),),
+                                (actor,), (), (rule,))
+        data = json.loads(canonical_json(document))
+        data['animation_input_rules'][0]['on_time']['script'] = 'arbitrary script'
+        with self.assertRaisesRegex(ValueError, 'Invalid document fields'):
+            parse_document(json.dumps(data))
 
 
 if __name__ == '__main__':

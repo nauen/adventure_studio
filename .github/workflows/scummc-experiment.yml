@@ -212,6 +212,24 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe --count /tmp/scummc-upstream /tmp/native-actors /tmp/native-actor-count
+      - name: Verify early and late native Push input during Actor COUNT animation
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe --input /tmp/scummc-upstream /tmp/native-actors /tmp/native-actor-input
+      - name: Retain native Actor input window gameplay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-actor-input-window
+          path: |
+            /tmp/native-actor-input/actor-input-report.json
+            /tmp/native-actor-input/Harbor.scc
+            /tmp/native-actor-input/early/scummvm-door.png
+            /tmp/native-actor-input/early/scummvm-end.png
+            /tmp/native-actor-input/late/scummvm-door.png
+            /tmp/native-actor-input/late/scummvm-end.png
+          if-no-files-found: ignore
       - name: Retain authored Actor COUNT positive and negative evidence
         if: always()
         uses: actions/upload-artifact@v4
