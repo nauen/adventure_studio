@@ -29,7 +29,6 @@ def run_actor_save_probe(game: Path, output: Path) -> dict:
     output.mkdir(parents=True, exist_ok=True)
     saves = output / "saves"
     saves.mkdir(exist_ok=True)
-    config = output / "scummvm.ini"
     environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
 
     def capture(name: str) -> None:
@@ -44,8 +43,8 @@ def run_actor_save_probe(game: Path, output: Path) -> dict:
                        check=True, timeout=10)
 
     def start(slot: int | None = None) -> subprocess.Popen:
-        args = ["scummvm", f"--config={config.resolve()}",
-                f"--savepath={saves.resolve()}", f"--path={game.resolve()}"]
+        args = ["scummvm", f"--savepath={saves.resolve()}",
+                f"--path={game.resolve()}"]
         if slot is not None:
             args.append(f"--save-slot={slot}")
         args.append("tentacle")

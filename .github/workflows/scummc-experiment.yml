@@ -231,6 +231,7 @@ jobs:
           name: native-v6-actor-save-load
           path: |
             /tmp/native-actor-save/actor-save-report.json
+            /tmp/native-actor-save/initial.png
             /tmp/native-actor-save/before-save.png
             /tmp/native-actor-save/save-menu.png
             /tmp/native-actor-save/after-load.png
