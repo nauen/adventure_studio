@@ -21,13 +21,13 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
     build = destination / "build"
     build.mkdir(parents=True, exist_ok=True)
     png_paths = []
-    for name, color in (("pose", (245, 40, 75, 255)),
-                        ("wave", (40, 245, 120, 255))):
+    colors = ((245, 40, 75), (180, 40, 245))
+    for name, color in zip(("pose", "wave"), colors):
         image = Image.new("RGBA", (24, 32), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
-        draw.rectangle((7, 8, 16, 31), fill=color)
+        draw.rectangle((7, 8, 16, 31), fill=(*color, 255))
         draw.rectangle((3 if name == "pose" else 17, 12,
-                        6 if name == "pose" else 20, 22), fill=color)
+                        6 if name == "pose" else 20, 22), fill=(*color, 255))
         path = build / f"{name}.png"
         image.save(path)
         png_paths.append(path)
@@ -48,13 +48,30 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
     (build / "project.json").write_text(encoded, encoding="utf-8")
     export_document(parse_document(encoded), build / "resources")
     game = compile_story_game(build, upstream, destination / "game")
-    launch_smoke(game, destination / "screenshots", scene_only=True)
+    screenshots = destination / "screenshots"
+    launch_smoke(game, screenshots, scene_only=True, sample_scene_frames=True)
+    observed = [False, False]
+    samples = sorted(screenshots.glob("scummvm-sample-*.png"))
+    for screenshot in samples:
+        with Image.open(screenshot) as image:
+            # The native 320x200 viewport is 2x-scaled into this X display.
+            scene = image.convert("RGB").crop((192, 184, 832, 472))
+            pixels = scene.getdata()
+            counts = [sum(all(abs(channel - expected) <= 20
+                              for channel, expected in zip(pixel, color))
+                          for pixel in pixels) for color in colors]
+        observed = [found or count >= 20 for found, count in zip(observed, counts)]
+    if not all(observed):
+        raise RuntimeError(f"Studio PNG native animation frames not both visible: "
+                           f"observed={observed}, samples={len(samples)}")
     report = {
         "studio_png_frames": 2,
         "native_costume_compiled": True,
         "stock_scummvm_launched": True,
         "animation_source": "StudioPngCostume.scost",
-        "animation_playback_visually_verified": False,
+        "animation_playback_visually_verified": True,
+        "observed_frame_colors": [list(color) for color in colors],
+        "screenshot_samples": len(samples),
     }
     (destination / "studio-png-report.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8")

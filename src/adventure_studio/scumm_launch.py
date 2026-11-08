@@ -297,7 +297,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  scene_only: bool = False, verify_return: bool = True,
                  verify_chain: bool = False, verify_recipe: bool = False,
                  allow_static_scene: bool = False, reverse_recipe: bool = False,
-                 auto_recipe: bool = False) -> None:
+                 auto_recipe: bool = False, sample_scene_frames: bool = False) -> None:
     if allow_static_scene and not (verify_chain or scene_only):
         raise ValueError("Static scene exception requires a chain or isolated scene fixture")
     if reverse_recipe and not verify_recipe:
@@ -416,9 +416,15 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             else:
                 raise RuntimeError("Blue initial room was not visible within 20 seconds")
             deadline = time.monotonic() + seconds
+            next_sample = time.monotonic()
+            sample_number = 0
             while time.monotonic() < deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
+                if sample_scene_frames and time.monotonic() >= next_sample:
+                    capture_frame(f"sample-{sample_number:02d}")
+                    sample_number += 1
+                    next_sample = time.monotonic() + 0.15
                 time.sleep(0.1)
             if process.poll() is not None:
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")

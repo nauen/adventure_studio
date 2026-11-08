@@ -447,6 +447,17 @@ aktiven Actor wieder her. Der Schritt ist mit Bewegung, Ankunfts-Wait,
 Animation und Objektzustand kombinierbar. Die interaktive ScummVM-
 Choreografie ist weiterhin nicht als V belegt.
 
+**Native Mehrframe-Animation – ausführbarer Bildnachweis (2026-11-08):**
+Die bestehende Studio-PNG-Actor-Probe sammelt jetzt während eines einzigen
+stock-ScummVM-Spielstarts mehrere Szenenbilder und verlangt sichtbare
+Pixel beider unterschiedlich gefärbten COST-Frames. Ein bloßer Spielstart
+oder identisches Standbild reicht nicht mehr aus. Der experimentelle
+ScummC-Workflow läuft für diese Probe nun auch bei passenden Pull Requests;
+die Einzelbilder werden als CI-Artefakte bereitgestellt. **Bis zu einem
+erfolgreichen nativen Lauf bleibt die V-Einstufung offen.** Das folgende
+Paket ist die Auswertung und bei Bedarf Korrektur der konkreten nativen
+Spielgrafik, danach der Actor-Lauf-/Wait-/Dreh-Choreografie.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
