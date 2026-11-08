@@ -40,7 +40,7 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
         raw = set_costume_animation(raw, "StudioPngCostume", "wave", 28,
                                     direction, "Pose0, WavePose, Pose0, WavePose", True)
     raw = add_actor(raw, "StudioPngActor", "StudioPngCostume", "Harbor",
-                    500, 120, "S", "Studio PNG Actor")
+                    430, 110, "S", "Studio PNG Actor")
     document = parse_document(raw)
     document = replace(document, actors=(replace(document.actors[0],
                                                   initial_animation="wave"),))
