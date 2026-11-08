@@ -88,15 +88,10 @@ def actor_animations(raw: str, actor_id: str | None) -> tuple[str, ...]:
                  and actor.direction in {direction.direction for direction in animation.directions})
 
 
-def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
-                         kind: str, actor_id: str | None, animation: str | None,
-                         target_id: str | None, amount: int | float | None,
-                         x: int | float | None = None, y: int | float | None = None,
-                         direction: str | None = None) -> str:
-    """Append to an existing verb sequence or create it; never silently replace another binding."""
-    document = parse_document(raw)
-    if verb not in VERBS:
-        raise ValueError("Unbekanntes Verb")
+def _build_step(kind: str, actor_id: str | None, animation: str | None,
+                target_id: str | None, amount: int | float | None,
+                x: int | float | None, y: int | float | None,
+                direction: str | None):
     if kind == "Actor animieren":
         step = AnimateActorStep(actor_id, animation)
     elif kind == "Objektzustand setzen":
@@ -119,6 +114,19 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
         step = FaceActorStep(actor_id, direction)
     else:
         raise ValueError("Unbekannter Aktionstyp")
+    return step
+
+
+def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
+                         kind: str, actor_id: str | None, animation: str | None,
+                         target_id: str | None, amount: int | float | None,
+                         x: int | float | None = None, y: int | float | None = None,
+                         direction: str | None = None) -> str:
+    """Append to an existing verb sequence or create it; never silently replace another binding."""
+    document = parse_document(raw)
+    if verb not in VERBS:
+        raise ValueError("Unbekanntes Verb")
+    step = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction)
     key = (room, hotspot_id, verb)
     sequences = list(document.interaction_sequences)
     index = next((index for index, item in enumerate(sequences)
@@ -128,6 +136,53 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
     else:
         sequences[index] = replace(sequences[index], steps=(*sequences[index].steps, step))
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
+
+
+def replace_sequence_step(raw: str, identity: str, step_number: int | float | None,
+                          kind: str, actor_id: str | None, animation: str | None,
+                          target_id: str | None, amount: int | float | None,
+                          x: int | float | None = None, y: int | float | None = None,
+                          direction: str | None = None) -> str:
+    """Edit an existing action in place without changing its order or trigger."""
+    document = parse_document(raw)
+    if step_number is None or type(step_number) not in (int, float) or int(step_number) != step_number:
+        raise ValueError("Bitte einen Schritt wählen")
+    sequences = list(document.interaction_sequences)
+    index = next((i for i, item in enumerate(sequences) if _identity(item) == identity), None)
+    if index is None:
+        raise ValueError("Bitte eine vorhandene Interaktion wählen")
+    steps = list(sequences[index].steps)
+    selected = int(step_number)
+    if not 0 <= selected < len(steps):
+        raise ValueError("Schritt existiert nicht")
+    steps[selected] = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction)
+    sequences[index] = replace(sequences[index], steps=tuple(steps))
+    return _checked(replace(document, interaction_sequences=tuple(sequences)))
+
+
+def sequence_step_fields(raw: str, identity: str | None, step_number: int | float | None) -> tuple:
+    """Load an authored step back into the existing action form."""
+    empty = ("Actor animieren", None, None, None, 1, 320, 100, "S")
+    if not identity or step_number is None:
+        return empty
+    sequence = next((item for item in parse_document(raw).interaction_sequences
+                     if _identity(item) == identity), None)
+    if sequence is None or int(step_number) not in range(len(sequence.steps)):
+        return empty
+    step = sequence.steps[int(step_number)]
+    if isinstance(step, AnimateActorStep):
+        return ("Actor animieren", step.actor_id, step.animation, None, 1, 320, 100, "S")
+    if isinstance(step, MoveActorStep):
+        return ("Actor versetzen", step.actor_id, None, None, 1, step.x, step.y, "S")
+    if isinstance(step, WalkActorStep):
+        return ("Actor laufen lassen", step.actor_id, None, None, 1, step.x, step.y, "S")
+    if isinstance(step, WaitActorStep):
+        return ("Auf Actor warten", step.actor_id, None, None, 1, 320, 100, "S")
+    if isinstance(step, FaceActorStep):
+        return ("Actor drehen", step.actor_id, None, None, 1, 320, 100, step.direction)
+    if isinstance(step, DelayStep):
+        return ("Warten", None, None, None, step.seconds, 320, 100, "S")
+    return ("Objektzustand setzen", None, None, step.hotspot_id, step.state, 320, 100, "S")
 
 
 def modify_sequence_step(raw: str, identity: str, step_number: int | float | None,

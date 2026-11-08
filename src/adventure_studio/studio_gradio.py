@@ -20,6 +20,7 @@ from .studio_service import (accept_proposal, add_decoration, change_item,
 from .story_document import canonical_story_json, parse_story_document
 from .studio_export import export_playable, export_native_project
 from .studio_sequences import (actor_animations, append_sequence_step, modify_sequence_step,
+                               replace_sequence_step, sequence_step_fields,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -544,7 +545,7 @@ def make_app():
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt")
@@ -560,6 +561,7 @@ def make_app():
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
             with gr.Row():
+                native_replace = gr.Button("Ausgewählten Schritt mit Formularwerten ersetzen")
                 native_up = gr.Button("Schritt nach oben")
                 native_down = gr.Button("Schritt nach unten")
                 native_remove = gr.Button("Schritt entfernen")
@@ -770,11 +772,29 @@ def make_app():
 
         native_sequence.change(native_sequence_update, [native_state, native_sequence],
                                [native_step, native_steps])
+        def native_step_update(raw, identity, number):
+            fields = sequence_step_fields(raw, identity, number)
+            sequence_room = identity.split("|", 1)[0] if identity else None
+            _, objects, actors = project_choices(raw, sequence_room)
+            animations = actor_animations(raw, fields[1]) if fields[1] else ()
+            return (fields[0], gr.update(choices=actors, value=fields[1]),
+                    gr.update(choices=animations, value=fields[2]),
+                    gr.update(choices=objects, value=fields[3]),
+                    fields[4], fields[5], fields[6], fields[7])
+
+        native_step.change(native_step_update, [native_state, native_sequence, native_step],
+                           [native_kind, native_actor, native_animation, native_target,
+                            native_amount, native_move_x, native_move_y, native_face_direction])
         native_add.click(lambda *args: native_edit(append_sequence_step, *args),
                          [native_state, native_room, native_hotspot, native_verb,
                           native_kind, native_actor, native_animation, native_target, native_amount,
                           native_move_x, native_move_y, native_face_direction],
                          [native_state, *native_outputs, native_report])
+        native_replace.click(lambda *args: native_edit(replace_sequence_step, *args),
+                             [native_state, native_sequence, native_step,
+                              native_kind, native_actor, native_animation, native_target,
+                              native_amount, native_move_x, native_move_y, native_face_direction],
+                             [native_state, *native_outputs, native_report])
         for button, operation in ((native_up, "Nach oben"), (native_down, "Nach unten"),
                                   (native_remove, "Entfernen")):
             button.click(lambda raw, identity, step, op=operation: native_edit(

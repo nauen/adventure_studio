@@ -471,8 +471,21 @@ Exporter-Blocker ausdrücklich gemeldet. Ein gezielter BMP-Palettenvergleich
 ist grün. Im erneuten nativen Lauf `42493988461` sind beide Costume-Farben
 in 26 ScummVM-Aufnahmen sichtbar und wechseln ihre Dominanz. Die
 Abnahme fordert nun ausdrücklich diesen zeitlichen Wechsel statt nur
-zweier irgendwann vorhandener Farben. **Der finale Lauf dieser
-verschärften Abnahme und die gesamte experimentelle CI bleiben offen.**
+zweier irgendwann vorhandener Farben. Der finale native Lauf
+`42494840322` ist grün: Die aus Studio-PNGs exportierten Costume-Frames
+wechseln sichtbar im unveränderten ScummVM. PR #54 wurde nach den
+vollständigen CI-Prüfungen gemergt (`bbba784`). Die gesamte Actor-
+Choreografie durch Spielereingaben bleibt weiter als V offen.
+
+**Studio-Interaktionseditor (2026-11-08):** Ein bestehender Schritt lässt
+sich nun auswählen, in die vorhandenen Aktionsfelder zurückladen und am
+selben Platz ersetzen. Actor, Animation, Bewegung, Blickrichtung, Pause
+und Objektzustand nutzen weiterhin das validierte Projektmodell und den
+existierenden nativen Exportpfad. Das Bearbeiten erfordert kein Löschen
+und erneutes Anhängen und verändert nicht das auslösende Hotspot-Verb.
+**Nächstes Produktgate:** Eine vollständige, vom Studio authorbare
+Actor-Lauf-/Wait-/Dreh-/Animationsfolge durch einen tatsächlichen
+ScummVM-Verb-Klick nachweisen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
