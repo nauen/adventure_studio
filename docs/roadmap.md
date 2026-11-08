@@ -49,6 +49,11 @@ und den endgültigen Gesprächsabschluss durch echte Klicks (CI
 `42536777733`, `native-v6-studio-nested-dialogue`). Eine echte klassische
 SCUMM-Gesprächsmenü-UI und Sprecherwechsel bleiben weitere Produktpakete.
 
+**Sprecher-Authoring (2026-11-09, Teilstand):** Der Story-Editor ordnet
+Sprechzeilen und neue Antwortknoten jetzt einer Figur derselben Szene zu.
+Die native Mehrsprecher-Ausgabe ist ausdrücklich noch gesperrt; als nächstes
+muss sie tatsächliche SCUMM-Actors und deren `actorSay`-Zeilen erzeugen.
+
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und
 [Abnahmeszenarien](scumm-v6-reference/SCENARIOS.md). Die

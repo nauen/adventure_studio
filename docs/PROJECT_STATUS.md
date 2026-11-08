@@ -718,6 +718,16 @@ ausgeblendet; beide Reihen bleiben im 144-Pixel-Viewport. Die native
 UI verwendet weiterhin klickbare Antwortobjekte statt eines echten
 SCUMM-Gesprächsmenüs; Sprecherwechsel und völlig freie Layouts bleiben offen.
 
+**Sprecherzuordnung im Dialogeditor (2026-11-09, Teilimplementierung):**
+Bestehende Sprechzeilen und neu an abschließende Antworten angehängte
+Dialogknoten können im Studio jetzt ausdrücklich einer Figur derselben Szene
+zugeordnet werden. Die fachliche Validierung verhindert fremde Szenen;
+der bestehende Story-JSON-Vertrag bleibt unverändert. 299 lokale Tests
+grün. **Noch kein nativer Mehrsprecher-Nachweis:** Der aktuelle
+Story-zu-SCUMM-Adapter lehnt unterschiedliche Sprecher innerhalb eines
+Gesprächs weiterhin klar ab. Nächstes Gate ist eine Actor-Zuordnung mit
+`actorSay`-Ausgabe und echter ScummVM-Gesprächsprobe.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

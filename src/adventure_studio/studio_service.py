@@ -128,14 +128,21 @@ def change_puzzle(raw: str, puzzle_id: str, title: str,
                                                       requires=required_item_ids)))
 
 
-def change_dialogue_line(raw: str, node_id: str, text: str) -> StudioEdit:
+def change_dialogue_line(raw: str, node_id: str, text: str,
+                         speaker_id: str | None = None) -> StudioEdit:
     story = parse_story_document(raw)
     node = next((node for node in story.dialogue_nodes if node.id == node_id), None)
     if node is None:
         raise ValueError("Unknown dialogue node ID")
     if not text.strip() or len(text) > 4096:
         raise ValueError("Dialogue text must be 1..4096 characters")
-    return _commit(story, PutEntity("dialogue_node", replace(node, text=text.strip())))
+    speaker = speaker_id if speaker_id is not None else node.speaker_id
+    dialogue = next(d for d in story.dialogues if d.id == node.dialogue_id)
+    if speaker not in {character.id for character in story.characters
+                       if character.scene_id == dialogue.scene_id}:
+        raise ValueError("Dialogue speaker must be a character in the same scene")
+    return _commit(story, PutEntity("dialogue_node", replace(
+        node, text=text.strip(), speaker_id=speaker)))
 
 
 def add_dialogue_choice(raw: str, node_id: str, choice_id: str, text: str,
@@ -159,7 +166,7 @@ def add_dialogue_choice(raw: str, node_id: str, choice_id: str, text: str,
 
 
 def extend_dialogue_choice(raw: str, choice_id: str, new_node_id: str,
-                           text: str) -> StudioEdit:
+                           text: str, speaker_id: str | None = None) -> StudioEdit:
     """Atomically attach a new response node to a previously terminal answer."""
     story = parse_story_document(raw)
     choice = next((item for item in story.dialogue_choices if item.id == choice_id), None)
@@ -171,7 +178,12 @@ def extend_dialogue_choice(raw: str, choice_id: str, new_node_id: str,
             or not isinstance(text, str) or not text.strip()):
         raise ValueError("New dialogue node requires a new ASCII ID and non-empty text")
     parent = next(node for node in story.dialogue_nodes if node.id == choice.node_id)
-    node = DialogueNode(new_node_id, parent.dialogue_id, parent.speaker_id, text.strip())
+    dialogue = next(d for d in story.dialogues if d.id == parent.dialogue_id)
+    speaker = speaker_id if speaker_id is not None else parent.speaker_id
+    if speaker not in {character.id for character in story.characters
+                       if character.scene_id == dialogue.scene_id}:
+        raise ValueError("Dialogue speaker must be a character in the same scene")
+    node = DialogueNode(new_node_id, parent.dialogue_id, speaker, text.strip())
     return _commit_many(story, (PutEntity("dialogue_node", node),
                                 PutEntity("dialogue_choice", replace(choice, next_node_id=new_node_id))))
 
