@@ -27,7 +27,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
-                               import_room_sound, room_sound_ids)
+                               import_room_sound, room_sound_ids,
+                               edit_voice_variant, set_default_voice_language)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -614,6 +615,17 @@ def make_app():
             gr.Markdown("*Sound starten/stoppen* verwendet einen zuvor für den Raum importierten VOC-Effekt. Mehrere Effekte bleiben unabhängig; beim Escape wird der jeweils letzte Zustand pro Sound gesetzt.")
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
+            gr.Markdown("**Mehrsprachige VOC-Zeile:** Wähle eine *Gesprochene Zeile*, dann ergänze pro Sprache einen Untertitel und eine importierte VOC-Aufnahme. Die sichtbaren Sprachkürzel im Spiel schalten die Variante um; nicht übersetzte Zeilen verwenden die Standardsprache.")
+            with gr.Row():
+                native_default_voice = gr.Textbox(label="Standardsprache (ISO-Code, z. B. en)", value="en")
+                native_default_voice_save = gr.Button("Standardsprache speichern")
+            with gr.Row():
+                native_voice_language = gr.Textbox(label="Weitere Sprache (z. B. de)", value="de")
+                native_voice_sound = gr.Dropdown(label="VOC der Sprachvariante")
+            native_voice_text = gr.Textbox(label="Übersetzter Untertitel")
+            with gr.Row():
+                native_voice_add = gr.Button("Sprachvariante hinzufügen / aktualisieren")
+                native_voice_remove = gr.Button("Sprachvariante entfernen")
             with gr.Row():
                 native_replace = gr.Button("Ausgewählten Schritt mit Formularwerten ersetzen")
                 native_up = gr.Button("Schritt nach oben")
@@ -880,6 +892,35 @@ def make_app():
                            [native_kind, native_actor, native_animation, native_target,
                             native_amount, native_move_x, native_move_y, native_face_direction,
                             native_subtitle])
+        native_room.change(
+            lambda raw, room: gr.update(choices=room_sound_ids(raw, room) if raw else (),
+                                        value=None),
+            [native_state, native_room], [native_voice_sound])
+        native_sequence.change(
+            lambda raw, identity: gr.update(choices=room_sound_ids(raw, identity.split("|", 1)[0])
+                                           if raw and identity else (), value=None),
+            [native_state, native_sequence], [native_voice_sound])
+        native_state.change(
+            lambda raw, room: gr.update(choices=room_sound_ids(raw, room) if raw and room else (),
+                                        value=None),
+            [native_state, native_room], [native_voice_sound])
+        native_state.change(lambda raw: parse_document(raw).default_voice_language
+                            if raw else "en", [native_state], [native_default_voice])
+        native_default_voice_save.click(
+            lambda *args: native_edit(set_default_voice_language, *args),
+            [native_state, native_default_voice],
+            [native_state, *native_outputs, native_report])
+        native_voice_add.click(
+            lambda raw, identity, number, language, sound, subtitle:
+            native_edit(edit_voice_variant, raw, identity, number, language, sound, subtitle),
+            [native_state, native_sequence, native_step, native_voice_language,
+             native_voice_sound, native_voice_text],
+            [native_state, *native_outputs, native_report])
+        native_voice_remove.click(
+            lambda raw, identity, number, language:
+            native_edit(edit_voice_variant, raw, identity, number, language, None, None, True),
+            [native_state, native_sequence, native_step, native_voice_language],
+            [native_state, *native_outputs, native_report])
         native_add.click(lambda *args: native_edit(append_sequence_step, *args),
                          [native_state, native_room, native_hotspot, native_verb,
                           native_kind, native_actor, native_animation, native_target, native_amount,
