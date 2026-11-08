@@ -111,6 +111,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
   - [x] Produkt-Implementierung: `interaction_sequences` kombiniert native
         Actor-Cues, Pausen und Objektzustände in einem geordneten Verbablauf;
         JSON und Exporter angebunden. Native CI und Gameplay-Nachweis offen.
+  - [x] Produkt-Implementierung: Interaktionsfolgen aus einem geladenen nativen
+        `GameDocument` im Gradio-Studio anlegen, Schritte anhängen, umordnen,
+        entfernen und JSON bzw. natives SCUMM-ZIP exportieren. Service-Test
+        grün; Gradio-UI- und Interaktionsnachweis in ScummVM noch offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
