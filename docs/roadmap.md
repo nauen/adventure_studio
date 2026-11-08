@@ -134,6 +134,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         native Animationsfolgen pro Blickrichtung mit Frame-IDs und `COUNT`
         als Daten authoren; ScummC-Quellgenerierung und Verb-Aufruf im
         Studio-Integrationstest, native Kompilierung/Gameplay noch offen.
+  - [x] Produkt-Implementierung: visuelle Timeline aus importierten Costume-
+        Frames und nativen Kommandos, mit Auswahl, Umordnung, Hinzufügen und
+        Entfernen. Derselbe native COST-Exporter bleibt zuständig; animierte
+        Vorschau und ScummVM-Gate offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

@@ -26,7 +26,8 @@ from .scumm_project import canonical_json as canonical_project_json, parse_docum
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
                             create_costume, add_costume_frame, set_costume_animation,
-                            move_actor)
+                            move_actor, costume_animation_names, costume_animation_steps,
+                            costume_timeline_images, edit_costume_timeline)
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
@@ -304,7 +305,8 @@ def make_app():
         try:
             updated = action(raw, *args)
             chosen = (args[1] if action is create_costume else args[0]
-                      if action in (add_costume_frame, set_costume_animation) else
+                      if action in (add_costume_frame, set_costume_animation,
+                                    edit_costume_timeline) else
                       args[1] if action is add_actor else None)
             return (updated, *native_selectors(updated, selected_costume=chosen),
                     "Actor-/Costume-Daten geändert und validiert")
@@ -477,6 +479,18 @@ def make_app():
                     native_anim_commands = gr.Textbox(label="Frame- und COUNT-Folge", value="Pose0")
                     native_anim_loop = gr.Checkbox(label="Wiederholen", value=False)
                 native_anim_button = gr.Button("Animation für diese Richtung speichern")
+                with gr.Accordion("Visuelle Animationsfolge", open=True):
+                    gr.Markdown("Wähle eine vorhandene Animation und Blickrichtung. Jeder Frame und jedes native COST-Kommando wird in Reihenfolge gezeigt. Du kannst einen Schritt anklicken, verschieben oder entfernen sowie einen Frame bzw. ein Kommando anhängen.")
+                    native_timeline_animation = gr.Dropdown(label="Animation auswählen")
+                    native_timeline_gallery = gr.Gallery(label="Frame- und Kommando-Timeline", columns=6,
+                                                         object_fit="contain", height=180)
+                    native_timeline_step = gr.Dropdown(label="Schritt der Animation")
+                    native_timeline_command = gr.Dropdown(label="Frame/Kommando anhängen")
+                    with gr.Row():
+                        native_timeline_append = gr.Button("Anhängen")
+                        native_timeline_up = gr.Button("Nach links")
+                        native_timeline_down = gr.Button("Nach rechts")
+                        native_timeline_remove = gr.Button("Entfernen")
                 with gr.Row():
                     native_actor_id = gr.Textbox(label="Actor-ID")
                     native_actor_name = gr.Textbox(label="Anzeigename")
@@ -581,6 +595,79 @@ def make_app():
         native_costume_select.change(lambda raw, name: costume_summary(raw, name)
                                      if raw is not None else "Bitte ein Projekt laden",
                                      [native_state, native_costume_select], [native_costume_summary])
+        def timeline_choices(raw, name, current):
+            if raw is None:
+                return gr.update(choices=[], value=None), gr.update(choices=[], value=None)
+            animations = costume_animation_names(raw, name)
+            selected = (current if current in animations else "gesture" if "gesture" in animations
+                        else animations[0] if animations else None)
+            costume = next((item for item in parse_document(raw).costumes if item.name == name), None)
+            commands = [frame.id for frame in costume.frames] if costume else []
+            commands.extend(("COUNT", "SHOW", "HIDE", "NOP"))
+            return (gr.update(choices=animations, value=selected),
+                    gr.update(choices=commands, value=commands[0] if commands else None))
+
+        native_state.change(timeline_choices, [native_state, native_costume_select,
+                                               native_timeline_animation],
+                            [native_timeline_animation, native_timeline_command])
+        native_costume_select.change(timeline_choices, [native_state, native_costume_select,
+                                                        native_timeline_animation],
+                                     [native_timeline_animation, native_timeline_command])
+
+        def timeline_editor(raw, name, animation_name, direction):
+            if raw is None or not name or not animation_name:
+                return "", 24, "", False
+            costume = next((item for item in parse_document(raw).costumes if item.name == name), None)
+            animation = next((item for item in costume.animations if item.name == animation_name), None) if costume else None
+            selected = next((item for item in animation.directions if item.direction == direction), None) if animation else None
+            return (animation_name, animation.index if animation and animation.index is not None else 24,
+                    ", ".join(selected.commands) if selected else "",
+                    selected.loop if selected else False)
+
+        for component in (native_timeline_animation, native_anim_direction):
+            component.change(timeline_editor,
+                             [native_state, native_costume_select, native_timeline_animation,
+                              native_anim_direction],
+                             [native_anim_name, native_anim_index, native_anim_commands, native_anim_loop])
+
+        def timeline_view(raw, name, animation, direction):
+            if raw is None or not name or not animation:
+                return [], gr.update(choices=[], value=None)
+            steps = costume_animation_steps(raw, name, animation, direction)
+            return (costume_timeline_images(raw, name, animation, direction),
+                    gr.update(choices=[(f"{i+1}. {step}", i) for i, step in enumerate(steps)],
+                              value=0 if steps else None))
+
+        for component in (native_state, native_costume_select, native_timeline_animation,
+                          native_anim_direction):
+            component.change(timeline_view,
+                             [native_state, native_costume_select, native_timeline_animation,
+                              native_anim_direction], [native_timeline_gallery, native_timeline_step])
+        def select_timeline_step(evt: gr.SelectData):
+            return evt.index if type(evt.index) is int else None
+
+        native_timeline_gallery.select(select_timeline_step, outputs=[native_timeline_step])
+
+        def timeline_edit(raw, name, animation, direction, step, operation, command):
+            result = native_asset_edit(edit_costume_timeline, raw, name, animation, direction,
+                                       step, operation, command)
+            updated = result[0]
+            return (*result, gr.update(value=animation),
+                    *timeline_editor(updated, name, animation, direction))
+
+        timeline_inputs = [native_state, native_costume_select, native_timeline_animation,
+                           native_anim_direction, native_timeline_step]
+        timeline_outputs = [native_state, *native_outputs, native_report,
+                            native_timeline_animation, native_anim_name, native_anim_index,
+                            native_anim_commands, native_anim_loop]
+        for button, operation in ((native_timeline_append, "Anhängen"),
+                                  (native_timeline_up, "Nach oben"),
+                                  (native_timeline_down, "Nach unten"),
+                                  (native_timeline_remove, "Entfernen")):
+            button.click(lambda raw, name, animation, direction, step, command,
+                         op=operation: timeline_edit(raw, name, animation, direction,
+                                                     step, op, command),
+                         [*timeline_inputs, native_timeline_command], timeline_outputs)
         native_actor_button.click(lambda raw, actor_id, costume, room, x, y, direction, name:
                                   native_asset_edit(add_actor, raw, actor_id, costume, room,
                                                     x, y, direction, name),

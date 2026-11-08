@@ -48,8 +48,16 @@ Animationsnamen können pro Blickrichtung geordnete Frame-IDs und die
 belegten nativen Kommandos `COUNT`, `SHOW`, `HIDE`, `NOP` gespeichert werden.
 Die bestehende ScummC-Kompilierung verarbeitet diese Folgen unverändert;
 das `interaction_sequences`-Format kann sie über ihren Namen und den
-expliziten Costume-Index auslösen. Eine graphische Frame-Timeline mit
-Live-Vorschau und Synchronisationssteuerung ist noch offen.
+expliziten Costume-Index auslösen.
+
+Im Studio gibt es zusätzlich eine visuelle Timeline: Die tatsächlichen
+palettierten Frame-Pixel werden als Vorschaubilder dargestellt, native
+`COUNT`-/`SHOW`-/`HIDE`-/`NOP`-Kommandos als beschriftete Karten. Ein Klick
+wählt einen Schritt, der per Button versetzt, entfernt oder durch eine
+weitere Frame-ID bzw. ein natives Kommando ergänzt werden kann. Die Timeline
+ändert die zugrunde liegenden `CostumeDirection.commands` direkt; es gibt
+keine separate Vorschau-Runtime und keine neuen SCUMM-Operationen.
+Bewegte Wiedergabe und die echte ScummVM-Ansicht sind noch offen.
 
 ## Geordnete Interaktionsfolgen (P0.5)
 
