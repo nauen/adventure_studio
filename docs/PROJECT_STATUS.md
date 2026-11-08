@@ -205,17 +205,17 @@ des Mehr-Actor-Test-Costumes. Die vollständige N/E/S/W-Sequenz liefert
 nun die erwarteten nativen Ereignisse. Die fixierte Testfixture ist
 kein Beleg für beliebige Richtungswechsel während einer Animation.
 
-**Nächster P0.5-Vertikalschnitt (native CI-Abnahme noch offen):**
+**P0.5-Vertikalschnitt (native CI-Abnahme erfolgreich `42461862069`):**
 `GameDocument.animation_rules` modelliert eine `ActorCountCondition`
 (Actor und COUNT-Schwelle) mit einem `ObjectStateEffect` (Raum-Hotspot und
 Zustand) als versioniertes, deklaratives JSON. Der ScummC-Adapter gibt
 lokale native COUNT-Wächter-Scripts nach dem Anfangsanimationsaufruf aus.
 Die Referenzen und die Erreichbarkeit des COUNT-Schwellwerts in einer
 nicht-loopenden Anfangsanimation werden geprüft. Bestehendes v1-JSON
-bleibt unverändert. Die neue CI-Probe kompiliert erstmals auch eine solche
-aus Projekt-JSON geladene Regel und prüft den resultierenden Objektzustand
-in stock ScummVM. **Bis zum grünen Lauf ist der Exporter-Laufzeitnachweis
-noch offen.** Allgemeine Action-/Condition-IR, parallele Interaktion und
+bleibt unverändert. Die neue CI-Probe kompiliert auch eine solche aus
+Projekt-JSON geladene Regel und prüft den resultierenden Objektzustand
+in stock ScummVM. Die positive JSON-Regel und die bisherige negative
+Fixture-Kontrolle sind grün. Allgemeine Action-/Condition-IR, parallele Interaktion und
 mehrstufige Animationsabläufe sind nicht abgeschlossen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;

@@ -26,8 +26,8 @@ Runtime und kein aus dem JSON ausgeführter Quellcode. Alte Projekte ohne
 Der erste vertikale Pfad deckt nur Objektzustandsänderungen nach der
 initialen Actor-Animation ab; freier Ereignisgraph, Input-Fenster,
 Raumwechsel während des Waits und Cutscene-Skip sind gesonderte Aufgaben.
-Die native Projektregel ist erst nach erfolgreicher CI-Spielprobe als
-Laufzeitverhalten bestätigt.
+Die native Projektregel wurde in stock ScummVM als Objektzustandswechsel
+nach dem zweiten COUNT-Ereignis bestätigt (Actions `42461862069`).
 
 `adventure_studio.scumm_project` ist die erste datenbasierte Schnittstelle
 zwischen Adventure-Konfiguration und deterministischem SCUMM-Exporter.

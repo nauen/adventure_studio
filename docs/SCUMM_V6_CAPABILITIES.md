@@ -66,7 +66,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | A04 | Stand-/Walk-/Talk-Costume-Frames | A | I (Frames/Richtungen, benannte Startanimation) | T | V (Teil) | Weitere Animations- und Talk-Cues |
 | A05 | Actor-Skalierung/Z-Clip/Verdeckung | A | – | – | – | R06/R10 + Actor |
 | A06 | Costume-`COUNT` und Abfrage | A | I (COST-Cues) | T | V (Ego- und Projekt-Actor-Fixtures) | Allgemeiner Action-/Condition-Export |
-| A07 | Aktion während laufender Animation | A (Teil) | – | – | – | Script/Cue + Zähler |
+| A07 | Aktion während laufender Animation | A (Teil) | I (COUNT → Objektzustand) | T | V (Teil: JSON-Regel) | Eingabe-Zeitfenster und allgemeine Action-/Condition-IR |
 | A08 | Mehrere synchronisierte Actors | A (Teil) | – | – | – | Koordinierte Scriptslots |
 | A09 | Figur/Objekt-Einstieg, Abfahrt, Reaktion | A (Konzept) | – | – | – | Filmische End-to-End-Sequenz |
 | A10 | Actor-Talk-Position/Blase/Portrait | A (Teil) | – | – | – | Text-/Costume-/Talk-Fixture |
