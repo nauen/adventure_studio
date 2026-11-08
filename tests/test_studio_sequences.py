@@ -2,6 +2,7 @@
 
 import unittest
 import tempfile
+import importlib.util
 from pathlib import Path
 from zipfile import ZipFile
 
@@ -69,6 +70,8 @@ class NativeSequenceEditorTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
+            if importlib.util.find_spec("PIL") is None:
+                return  # The Studio CI runs this PNG path with its optional Pillow dependency.
             from PIL import Image
             sprite = root / "hero.png"
             image = Image.new("RGBA", (8, 12), (0, 0, 0, 0))
