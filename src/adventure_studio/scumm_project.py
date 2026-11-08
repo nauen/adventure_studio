@@ -36,11 +36,31 @@ class ActorAsset:
 
 
 @dataclass(frozen=True)
+class ActorCountCondition:
+    actor_id: str
+    minimum_count: int
+
+
+@dataclass(frozen=True)
+class ObjectStateEffect:
+    room: str
+    hotspot_id: str
+    state: int
+
+
+@dataclass(frozen=True)
+class AnimationRule:
+    condition: ActorCountCondition
+    effect: ObjectStateEffect
+
+
+@dataclass(frozen=True)
 class GameDocument:
     id: str
     rooms: tuple[RoomAsset, ...]
     costumes: tuple[CostumeAsset, ...] = ()
     actors: tuple[ActorAsset, ...] = ()
+    animation_rules: tuple[AnimationRule, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -89,6 +109,12 @@ def document_dict(document: GameDocument) -> dict:
                        **({"display_name": actor.display_name} if actor.display_name is not None else {}),
                        **({"initial_animation": actor.initial_animation} if actor.initial_animation is not None else {})}
                       for actor in document.actors]} if document.actors else {}),
+        **({"animation_rules": [{"condition": {"actor_id": rule.condition.actor_id,
+                                               "minimum_count": rule.condition.minimum_count},
+                                 "effect": {"room": rule.effect.room,
+                                            "hotspot_id": rule.effect.hotspot_id,
+                                            "state": rule.effect.state}}
+                                for rule in document.animation_rules]} if document.animation_rules else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -202,6 +228,34 @@ def _validate_document(document: GameDocument) -> None:
                 raise ValueError(f"Unknown exit destination room: {destination}")
     if sum(r.goal_text is not None for r in document.rooms) != 1:
         raise ValueError("Project needs exactly one goal room")
+    actors_by_id = {actor.id: actor for actor in document.actors}
+    rooms_by_name = {room.name: room for room in document.rooms}
+    for rule in document.animation_rules:
+        if not isinstance(rule, AnimationRule) or not isinstance(rule.condition, ActorCountCondition) or not isinstance(rule.effect, ObjectStateEffect):
+            raise ValueError("Invalid typed animation rule")
+        if any(not isinstance(value, str) for value in
+               (rule.condition.actor_id, rule.effect.room, rule.effect.hotspot_id)):
+            raise ValueError("COUNT rules require string identifiers")
+        actor = actors_by_id.get(rule.condition.actor_id)
+        if actor is None or actor.initial_animation is None:
+            raise ValueError(f"COUNT condition requires an Actor with an initial animation: {rule.condition.actor_id}")
+        if type(rule.condition.minimum_count) is not int or rule.condition.minimum_count < 1:
+            raise ValueError("COUNT condition requires a positive event threshold")
+        costume = costumes_by_name[actor.costume]
+        animation = next(animation for animation in costume.animations
+                         if animation.name == actor.initial_animation)
+        direction = next(direction for direction in animation.directions
+                         if direction.direction == actor.direction)
+        events_per_cycle = direction.commands.count("COUNT")
+        if events_per_cycle == 0 or (not direction.loop and rule.condition.minimum_count > events_per_cycle):
+            raise ValueError(f"COUNT threshold is unreachable in Actor {actor.id}'s initial animation")
+        room = rooms_by_name.get(rule.effect.room)
+        if room is None or actor.room != rule.effect.room:
+            raise ValueError(f"COUNT rule requires the Actor in its effect room: {rule.effect.room}")
+        if rule.effect.hotspot_id not in {hotspot.id for hotspot in room.hotspots}:
+            raise ValueError(f"COUNT effect references unknown room hotspot: {rule.effect.hotspot_id}")
+        if type(rule.effect.state) is not int or not 0 <= rule.effect.state <= 2:
+            raise ValueError("COUNT effect requires a supported SCUMM object state 0, 1 or 2")
 
 
 def parse_document(source: str) -> GameDocument:
@@ -210,7 +264,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -265,6 +319,18 @@ def parse_document(source: str) -> GameDocument:
         actors.append(ActorAsset(actor["id"], actor["costume"], actor["room"],
                                  actor["x"], actor["y"], actor.get("direction", "S"),
                                  actor.get("display_name"), actor.get("initial_animation")))
+    raw_animation_rules = data.get("animation_rules", [])
+    if not isinstance(raw_animation_rules, list):
+        raise ValueError("Animation rules must be a list")
+    animation_rules = []
+    for raw_rule in raw_animation_rules:
+        item = _only(raw_rule, {"condition", "effect"}, {"condition", "effect"})
+        condition = _only(item["condition"], {"actor_id", "minimum_count"},
+                          {"actor_id", "minimum_count"})
+        effect = _only(item["effect"], {"room", "hotspot_id", "state"},
+                       {"room", "hotspot_id", "state"})
+        animation_rules.append(AnimationRule(ActorCountCondition(**condition),
+                                             ObjectStateEffect(**effect)))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",
@@ -404,7 +470,8 @@ def parse_document(source: str) -> GameDocument:
             tuple(talk_rules),
             tuple(planes), tuple(boxes), routes, scale, tuple(curves), room.get("demo_walk_to_y"), tuple(camera_cues),
         ))
-    document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors))
+    document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
+                            tuple(animation_rules))
     _validate_document(document)
     return document
 

@@ -15,7 +15,10 @@ from .scumm_costume import CostumeDirection
 from .scumm_launch import launch_smoke
 from .scumm_launch import visible_key_pixels
 from .scumm_binary import verify_room_binary
-from .scumm_project import ActorAsset, GameDocument, canonical_json, export_document, parse_document
+from .scumm_project import (ActorAsset, ActorCountCondition, AnimationRule,
+                            GameDocument, ObjectStateEffect, canonical_json,
+                            export_document, parse_document)
+from .scumm_bootstrap import inject_actor_count_rules
 from .scumm_toolchain import _tool, compile_story_game
 
 
@@ -55,6 +58,23 @@ def actor_binding_room_source(source: str, check: str) -> str:
         "        putActorAt(Companion, 430, 100, Harbor);\n"
         + marker
         + f"        if({expressions[check]}) setObjectState(Key, 0);\n", 1)
+
+
+def project_count_room_source(source: str, document: GameDocument, required: int) -> str:
+    """Exercise the same typed JSON-to-native rule path as the exporter."""
+    rule = AnimationRule(ActorCountCondition("Companion", required),
+                         ObjectStateEffect("Harbor", "Key", 0))
+    validated = parse_document(canonical_json(replace(document, animation_rules=(rule,))))
+    marker = "        animateActor(Companion,24);\n"
+    if source.count(marker) != 1:
+        raise ValueError("Missing native authored Actor animation trigger")
+    prepared = source.replace(marker,
+                              "        delaySeconds(2);\n"
+                              "        setCameraAt(480);\n"
+                              "        putActorAt(Companion, 430, 100, Harbor);\n"
+                              + marker, 1)
+    return inject_actor_count_rules(prepared, "Harbor", validated.animation_rules,
+                                    validated.actors, validated.costumes)
 
 
 def run_actor_probe(upstream: Path, destination: Path) -> dict:
@@ -103,6 +123,7 @@ def run_actor_count_probe(upstream: Path, actor_build: Path, destination: Path) 
         if not (resources / name).is_file():
             raise ValueError(f"Missing compiled Actor fixture resource: {name}")
     source = (resources / "Harbor.scc").read_text(encoding="utf-8")
+    document = parse_document((actor_build / "build" / "project.json").read_text(encoding="utf-8"))
     road = upstream / "examples" / "road"
 
     def run_variant(target: Path, generated_source: str) -> int:
@@ -131,10 +152,14 @@ def run_actor_count_probe(upstream: Path, actor_build: Path, destination: Path) 
     binding_pixels = {check: run_variant(destination / f"binding_{check}",
                                          actor_binding_room_source(source, check))
                       for check in ("room", "costume", "frame")}
-    passed = baseline < 40 and first < 40 and positive < 40 and control >= 40
+    declarative_positive = run_variant(destination / "project_two_counts",
+                                        project_count_room_source(source, document, 2))
+    passed = (baseline < 40 and first < 40 and positive < 40 and control >= 40
+              and declarative_positive < 40)
     report = {"authored_actor_count_verified": passed, "expected_events": 2,
               "zero_count_key_pixels": baseline, "one_count_key_pixels": first,
               "positive_key_pixels": positive, "control_key_pixels": control,
+              "project_positive_key_pixels": declarative_positive,
               "actor_binding_key_pixels": binding_pixels}
     (destination / "actor-count-report.json").write_text(json.dumps(report, indent=2) + "\n",
                                                                encoding="utf-8")

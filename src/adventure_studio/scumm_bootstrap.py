@@ -353,6 +353,41 @@ def inject_actor_room_animations(source: str, room_name: str, actors, costumes) 
     return source.replace(marker, marker + "".join(calls), 1)
 
 
+def inject_actor_count_rules(source: str, room_name: str, rules, actors, costumes) -> str:
+    """Compile typed COUNT conditions and object-state effects as native local scripts."""
+    active = [rule for rule in rules if rule.effect.room == room_name]
+    if not active:
+        return source
+    entry_marker = "    local script entry() {\n"
+    if source.count(entry_marker) != 1:
+        raise ValueError(f"Missing native room entry for COUNT rules: {room_name}")
+    actors_by_id = {actor.id: actor for actor in actors}
+    costumes_by_name = {costume.name: costume for costume in costumes}
+    scripts = []
+    calls_by_actor = {}
+    for index, rule in enumerate(active):
+        actor = actors_by_id[rule.condition.actor_id]
+        costume = costumes_by_name[actor.costume]
+        animation = next(animation for animation in costume.animations
+                         if animation.name == actor.initial_animation)
+        marker = f"        animateActor({actor.id},{animation.index});\n"
+        if source.count(marker) != 1:
+            raise ValueError(f"Missing native animation trigger for COUNT Actor: {actor.id}")
+        name = f"watchActorCount{index}"
+        scripts.append(
+            f"    local script {name}() {{\n"
+            f"        while(getActorAnimCounter1({actor.id}) < {rule.condition.minimum_count}) {{\n"
+            "            breakScript();\n"
+            "        }\n"
+            f"        setObjectState({rule.effect.hotspot_id},{rule.effect.state});\n"
+            "    }\n")
+        calls_by_actor.setdefault(marker, []).append(f"        {name}();\n")
+    source = source.replace(entry_marker, "".join(scripts) + entry_marker, 1)
+    for marker, calls in calls_by_actor.items():
+        source = source.replace(marker, marker + "".join(calls), 1)
+    return source
+
+
 def read_icon_ids(argument: str) -> tuple[str, ...]:
     if argument.startswith("@"):
         argument = Path(argument[1:]).read_text(encoding="ascii").strip()
