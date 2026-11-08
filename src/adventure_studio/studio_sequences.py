@@ -57,6 +57,24 @@ def sequence_condition_fields(raw: str, identity: str | None) -> tuple[str | Non
             if sequence and sequence.condition_hotspot_id is not None else (None, 0))
 
 
+def sequence_skip_enabled(raw: str, identity: str | None) -> bool:
+    sequence = next((item for item in parse_document(raw).interaction_sequences
+                     if _identity(item) == identity), None)
+    return sequence.skippable if sequence else False
+
+
+def set_sequence_skippable(raw: str, identity: str, enabled: bool) -> str:
+    """Enable native Escape override with deterministic final object/Actor states."""
+    document = parse_document(raw)
+    index = next((i for i, item in enumerate(document.interaction_sequences)
+                  if _identity(item) == identity), None)
+    if index is None or type(enabled) is not bool:
+        raise ValueError("Bitte eine Interaktion und gültige Skip-Einstellung wählen")
+    sequences = list(document.interaction_sequences)
+    sequences[index] = replace(sequences[index], skippable=enabled)
+    return _checked(replace(document, interaction_sequences=tuple(sequences)))
+
+
 def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
                            state: int | float | None) -> str:
     """Set or clear a native object-state guard on an existing verb sequence."""

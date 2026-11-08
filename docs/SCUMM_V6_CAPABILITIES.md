@@ -90,10 +90,10 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 
 | ID | Fähigkeit | Analyse | Studio | Test | ScummVM | Nächstes Gate |
 | --- | --- | --- | --- | --- | --- | --- |
-| S01 | Native Script-/Objektscript-Lifetime | A | I (Teil: Studio-Verbfolgen mit mehreren zustandsabhängigen Alternativen, optionalem Fallback) | T (Teil: JSON-/ScummC-Vertrag) | V (Teil: drei Klicks desselben Verbs schalten native Objektzustände 1 → 2 → 1 → 2, CI `42506834029`) | Abbruch/Unterbrechung laufender Sequenzen und Raumwechsel-/Slot-Test |
+| S01 | Native Script-/Objektscript-Lifetime | A | I (Teil: Studio-Verbfolgen mit Zustandsalternativen und optionalem Escape-Skip) | T (Teil: JSON-/ScummC-Vertrag und Skip-Commit) | V (Teil: drei Klicks desselben Verbs schalten native Objektzustände 1 → 2 → 1 → 2, CI `42506834029`) | Raumwechsel-/Slot-Test und allgemeinere Abbruchfälle |
 | S02 | Parallele Scripts/`breakHere`/Wait/Freeze | A | – | – | – | Scheduler-Szenarien |
 | S03 | Cutscene-Stack/`begin`/`end` | A | – | – | – | Native Sequenz |
-| S04 | Skip-/Override-Endzustand | A | – | – | – | Kontrollfluss/Inventarzustand |
+| S04 | Skip-/Override-Endzustand | A | I (Teil: Studio-Verbsequenz mit Escape-Skip und Objekt-/Actor-Endzustand) | T (Teil: ScummC-`try`/`override` und JSON-Roundtrip) | – | Native Escape-Abnahme; Inventar-/Audio-/Raumzustand |
 | S05 | Kamerasprung `setCameraAt` | A | I (Raum-Cues) | T | V (Raum) | Allgemeiner Shot-/Cutscene-Export |
 | S06 | Horizontaler Pan + `waitForCamera` | A | I (Raum-Cues) | T | V (Raum) | Multi-Track-/Cutscene-Synchronisation |
 | S07 | Camera-Follows-Actor | A | – | – | – | Follow/Abbruch |

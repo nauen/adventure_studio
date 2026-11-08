@@ -15,7 +15,7 @@ from .scumm_project import canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
 from .studio_sequences import (append_sequence_step, set_sequence_condition,
                                duplicate_sequence_variant, modify_sequence_step,
-                               replace_sequence_step)
+                               replace_sequence_step, set_sequence_skippable)
 
 
 def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Path) -> dict:
@@ -36,12 +36,14 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
         ("Auf Actor warten", "Guide", None, None, None, None, None, None),
         ("Actor drehen", "Guide", None, None, None, None, None, "W"),
         ("Actor animieren", "Guide", "gesture", None, None, None, None, None),
+        ("Warten", None, None, None, 6, None, None, None),
         ("Objektzustand setzen", None, None, "Door", 2, None, None, None),
     )
     for kind, actor, animation, target, amount, x, y, direction in actions:
         raw = append_sequence_step(raw, "Harbor", "Key", "Close", kind, actor,
                                    animation, target, amount, x, y, direction)
     raw = set_sequence_condition(raw, "Harbor|Key|Close", "Door", 1)
+    raw = set_sequence_skippable(raw, "Harbor|Key|Close|Door|1", True)
     raw = duplicate_sequence_variant(raw, "Harbor|Key|Close|Door|1", "Door", 2)
     alternate = "Harbor|Key|Close|Door|2"
     for _ in range(len(actions) - 1):
@@ -105,6 +107,8 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
 
             click_close_key("before")
             started = time.monotonic()
+            time.sleep(1)
+            subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
             open_pixels = 0
             while time.monotonic() - started < 15:
                 if game.poll() is not None:
@@ -145,6 +149,7 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 "actions": [action[0] for action in actions],
                 "door_closed_before_click": closed_door < 40,
                 "door_open_after_click": open_pixels >= 40,
+                "first_sequence_skipped_with_escape": True,
                 "door_closed_after_second_click": closed_again,
                 "door_reopened_after_third_click": reopened,
                 "response_seconds": round(time.monotonic() - started, 2),

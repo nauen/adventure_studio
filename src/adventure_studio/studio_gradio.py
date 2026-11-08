@@ -22,7 +22,8 @@ from .studio_export import export_playable, export_native_project
 from .studio_sequences import (actor_animations, append_sequence_step, modify_sequence_step,
                                replace_sequence_step, sequence_step_fields,
                                sequence_condition_fields, set_sequence_condition,
-                               duplicate_sequence_variant,
+                               duplicate_sequence_variant, sequence_skip_enabled,
+                               set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -568,6 +569,10 @@ def make_app():
                 native_condition_save = gr.Button("Bedingung speichern")
                 native_variant_add = gr.Button("Alternative Zustandsvariante duplizieren")
             gr.Markdown("Mehrere Varianten desselben Verbs dürfen unterschiedliche Zustände **desselben Raumobjekts** abdecken. Eine Variante ohne Bedingung dient als Fallback. Nach dem Duplizieren die Schritte der neuen Variante bearbeiten.")
+            with gr.Row():
+                native_skippable = gr.Checkbox(label="Mit Escape überspringbar", value=False)
+                native_skip_save = gr.Button("Skip-Einstellung speichern")
+            gr.Markdown("Beim Überspringen setzt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen** der Sequenz. Laufende Animationen und Wartezeiten entfallen; die native Cutscene-Taste Escape beendet den Ablauf.")
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
             with gr.Row():
@@ -794,6 +799,12 @@ def make_app():
 
         native_sequence.change(native_condition_update, [native_state, native_sequence],
                                [native_condition_object, native_condition_state])
+        native_sequence.change(lambda raw, identity: sequence_skip_enabled(raw, identity)
+                               if raw is not None else False,
+                               [native_state, native_sequence], [native_skippable])
+        native_skip_save.click(lambda *args: native_edit(set_sequence_skippable, *args),
+                               [native_state, native_sequence, native_skippable],
+                               [native_state, *native_outputs, native_report])
         native_condition_save.click(lambda *args: native_edit(set_sequence_condition, *args),
                                     [native_state, native_sequence, native_condition_object,
                                      native_condition_state],

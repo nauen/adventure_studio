@@ -136,6 +136,13 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Verbbindungen; echte Klickfolge Tür 1 → 2 → 1 → 2 in stock ScummVM
         bestätigt (CI `42506834029`). Unterbrechung laufender Sequenzen
         bleibt ein eigenständiges offenes Gameplay-Paket.
+  - [x] Produkt-Implementierung: Interaktionsvarianten können im Studio
+        separat als **mit Escape überspringbar** markiert werden. Der native
+        ScummC-`try`/`override`-Pfad setzt bei Skip die letzten geschriebenen
+        Objektzustände, Actor-Zielpositionen und Blickrichtungen, statt
+        Wartezeiten/Bewegungen zu Ende laufen zu lassen. In einer realen
+        Stock-ScummVM-Klickprobe wird Escape während der Actor-Folge ausgelöst.
+        Weitergehende Cutscene-Zustände (Inventar, Ton, Raumwechsel) bleiben offen.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

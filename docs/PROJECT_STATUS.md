@@ -522,7 +522,13 @@ CI `42506834029`, Artefakt `native-v6-studio-actor-sequence`. Beim ersten
 Lauf zeigte sich ein wandernder Kameraausschnitt; die Klickprobe bestimmt
 deshalb vor jeder Eingabe die aktuelle Hotspot-Position neu, ohne die
 Studio-Produktlogik zu ändern.
-**Noch offen:** tatsächliche Unterbrechungs-/Skip-Semantik laufender Scripts.
+**Neues Teilpaket:** Studio-Verbfolgen können optional mit Escape übersprungen
+werden. ScummC emittiert native `try`/`override`-Blöcke; der Override setzt
+die letzten dokumentierten Raumobjekt-Zustände, Actor-Zielpositionen und
+Blickrichtungen. Das veränderte native Klickszenario sendet Escape während
+eines Actor-Ablaufs und prüft den Türzustand; der CI-Nachweis ist bei
+Erstellung dieses Pakets noch ausstehend. Inventar-/Ton-/Raumwechsel-Skips
+sind weiterhin offen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
