@@ -187,7 +187,9 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Studio-Sequenzaktion mit editierbarem Untertitel und optionalem
         Sprecher, JSON-v1-Roundtrip und nativen Start-/Text-/Wait-/Stop-
         Befehlen. Escape beendet die Sprachressource. Aktuell sichere
-        ASCII-Untertitel; native ScummVM-Abnahme folgt in CI.
+        ASCII-Untertitel. In stock ScummVM sind Text und VOC-Ton gleichzeitig
+        sichtbar/hörbar und nach Escape stumm (CI `42524819678`,
+        PCM `0,0000`/`0,8557`/`0,0000`).
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

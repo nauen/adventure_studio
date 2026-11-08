@@ -614,8 +614,12 @@ den Sound; der Escape-Endzustand stoppt die Sprachausgabe ebenfalls.
 Die erste Version validiert Untertitel bewusst als native, sichere ASCII-
 Zeichenkette mit maximal 160 Zeichen; mehrsprachige Glyphen erfordern
 eine separate Charset-Integration. JSON-v1 ist rückwärtskompatibel.
-Lokaler Integrationstest und eine echte ScummVM-PCM-/Bild-Probe sind ergänzt;
-deren CI-Abnahme steht zunächst noch aus.
+290 lokale Tests sind grün. Die echte ScummVM-Probe aus CI
+`42524819678` zeigt den Untertitel `I can hear the bell.` sichtbar
+über der Spielfigur, während die importierte VOC-Datei hörbar ist:
+PCM-Aktivität vor dem Klick `0,0000`, während der Zeile `0,8557`,
+nach Escape `0,0000` (2.109.440 PCM-Bytes). Die vollständigen
+Pflichtworkflows der PR-Schlussrevision stehen noch aus.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
