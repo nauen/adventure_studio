@@ -390,9 +390,22 @@ def inject_actor_count_rules(source: str, room_name: str, rules, actors, costume
 
 def inject_actor_input_rules(source: str, room_name: str, rules) -> str:
     """Add native verb branches for a bounded Actor COUNT input window."""
-    for rule in rules:
-        if rule.room != room_name:
-            continue
+    active = [rule for rule in rules if rule.room == room_name]
+    if not active:
+        return source
+    room_marker = f"room {room_name} {{\n"
+    if source.count(room_marker) != 1:
+        raise ValueError(f"Missing native room for input rules: {room_name}")
+    # ScummC resolves object symbols while parsing each verb handler, so
+    # references to objects defined later need explicit forward declarations.
+    declarations = []
+    for hotspot_id in sorted({effect.hotspot_id for rule in active
+                              for effect in (rule.on_time, rule.too_late)}):
+        marker = f"    object {hotspot_id};\n"
+        if marker not in source:
+            declarations.append(marker)
+    source = source.replace(room_marker, room_marker + "".join(declarations), 1)
+    for rule in active:
         object_marker = f"    object {rule.hotspot_id} {{\n"
         if source.count(object_marker) != 1:
             raise ValueError(f"Missing native input hotspot: {rule.hotspot_id}")
