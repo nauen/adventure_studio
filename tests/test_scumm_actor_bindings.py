@@ -4,6 +4,7 @@ import json
 import unittest
 
 from adventure_studio.scumm_bootstrap import (inject_actor_bindings, inject_actor_room_animations,
+                                              inject_actor_initial_flags,
                                               inject_actor_count_rules)
 from adventure_studio.scumm_bootstrap import inject_actor_input_rules
 from adventure_studio.scumm_actor_probe import (actor_count_room_source, actor_binding_room_source,
@@ -67,9 +68,36 @@ class ActorBootstrapTests(unittest.TestCase):
         room_source = 'room Harbor {\n        ResRoom::showCursor();\n}\n'
         room_source = inject_actor_room_animations(room_source, 'Harbor',
                                                    restored.actors, restored.costumes)
-        self.assertIn('ResRoom::showCursor();\n        animateActor(Guide,24);', room_source)
+        self.assertIn('ResRoom::showCursor();\n        if(!__studioActorInitial0)', room_source)
+        self.assertIn('animateActor(Guide,24);', room_source)
         self.assertEqual(inject_actor_room_animations(room_source, 'Cellar',
                                                        restored.actors, restored.costumes), room_source)
+
+    def test_initial_animation_is_not_retriggered_on_room_reentry(self):
+        actor = ActorAsset('Companion', 'NativeGesture', 'Harbor', 280, 110,
+                           initial_animation='gesture')
+        room_source = ('room Harbor {\n    local script entry() {\n'
+                       '        ResRoom::showCursor();\n    }\n}\n')
+        native = inject_actor_room_animations(room_source, 'Harbor', (actor,),
+                                              (gesture_fixture(),))
+        self.assertIn('if(!__studioActorInitial0)', native)
+        self.assertIn('__studioActorInitial0 = 1;', native)
+        self.assertEqual(native.count('animateActor(Companion,24);'), 1)
+        declared = inject_actor_initial_flags('bit verbsOn,cursorOn,cursorLoaded;\n', (actor,))
+        self.assertIn('bit __studioActorInitial0;', declared)
+        self.assertEqual(inject_actor_initial_flags('unchanged', (replace(actor, initial_animation=None),)),
+                         'unchanged')
+        with self.assertRaisesRegex(ValueError, 'global-bit declaration'):
+            inject_actor_initial_flags('unexpected', (actor,))
+        second = replace(actor, id='Guide')
+        both = inject_actor_room_animations(room_source, 'Harbor', (actor, second),
+                                            (gesture_fixture(),))
+        self.assertIn('if(!__studioActorInitial0)', both)
+        self.assertIn('if(!__studioActorInitial1)', both)
+        self.assertIn('animateActor(Guide,24);', both)
+        declarations = inject_actor_initial_flags('bit verbsOn,cursorOn,cursorLoaded;\n',
+                                                   (actor, second))
+        self.assertEqual(declarations.count('bit __studioActorInitial'), 2)
 
     def test_initial_animation_rejects_unknown_unindexed_and_missing_direction(self):
         costume = gesture_fixture()

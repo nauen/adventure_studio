@@ -331,9 +331,9 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
 
 
 def inject_actor_room_animations(source: str, room_name: str, actors, costumes) -> str:
-    """Start explicitly indexed actor animations after their native room loads."""
-    active = [actor for actor in actors if actor.room == room_name
-              and actor.initial_animation is not None]
+    """Start each authored initial animation only on its first room entry."""
+    active = [(index, actor) for index, actor in enumerate(actors)
+              if actor.room == room_name and actor.initial_animation is not None]
     if not active:
         return source
     marker = "        ResRoom::showCursor();\n"
@@ -341,7 +341,7 @@ def inject_actor_room_animations(source: str, room_name: str, actors, costumes) 
         raise ValueError(f"Unexpected entry script for Actor animation room {room_name}")
     costumes_by_name = {costume.name: costume for costume in costumes}
     calls = []
-    for actor in active:
+    for index, actor in active:
         costume = costumes_by_name.get(actor.costume)
         if costume is None:
             raise ValueError(f"Unknown native Actor costume: {actor.costume}")
@@ -349,8 +349,25 @@ def inject_actor_room_animations(source: str, room_name: str, actors, costumes) 
                           if item.name == actor.initial_animation), None)
         if animation is None or animation.index is None:
             raise ValueError(f"Actor {actor.id} requires an explicitly indexed native animation")
-        calls.append(f"        animateActor({actor.id},{animation.index});\n")
+        flag = f"__studioActorInitial{index}"
+        calls.append(
+            f"        if(!{flag}) {{\n"
+            f"            {flag} = 1;\n"
+            f"        animateActor({actor.id},{animation.index});\n"
+            "        }\n")
     return source.replace(marker, marker + "".join(calls), 1)
+
+
+def inject_actor_initial_flags(source: str, actors) -> str:
+    """Declare native persistent bits for first-entry Actor animations."""
+    active = [index for index, actor in enumerate(actors) if actor.initial_animation is not None]
+    if not active:
+        return source
+    marker = "bit verbsOn,cursorOn,cursorLoaded;\n"
+    if source.count(marker) != 1:
+        raise ValueError("Unexpected upstream global-bit declaration for Actor initial animations")
+    declaration = "".join(f"bit __studioActorInitial{index};\n" for index in active)
+    return source.replace(marker, marker + declaration, 1)
 
 
 def inject_actor_count_rules(source: str, room_name: str, rules, actors, costumes) -> str:

@@ -182,7 +182,9 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
     document = parse_document((actor_build / "build" / "project.json").read_text(encoding="utf-8"))
     first_count_rule = AnimationRule(ActorCountCondition("Companion", 1),
                                      ObjectStateEffect("Harbor", "Door", 2))
-    source = inject_actor_count_rules(source, "Harbor", (first_count_rule,),
+    replay_detector = AnimationRule(ActorCountCondition("Companion", 1),
+                                    ObjectStateEffect("Harbor", "Key", 1))
+    source = inject_actor_count_rules(source, "Harbor", (first_count_rule, replay_detector),
                                       document.actors, document.costumes)
     walk_marker = "        walkActorTo(VAR_EGO, 540, 100);\n"
     if source.count(walk_marker) != 1:
@@ -313,7 +315,9 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                         time.sleep(0.3)
                     else:
                         raise RuntimeError("Stairs did not return to visible Harbor")
-                    time.sleep(3)
+                    # An unguarded re-entry restarts the COST and its COUNT
+                    # watcher, which would make the already removed Key visible.
+                    time.sleep(5)
                     frame("return")
                     return_result = {
                         "key_pixels": colored_item_pixels(output, "return", (255, 220, 75)),

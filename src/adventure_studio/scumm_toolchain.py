@@ -18,7 +18,7 @@ from typing import Callable
 
 from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_objects,
                               inject_actor_bindings, inject_actor_room_animations,
-                              inject_actor_count_rules, inject_actor_input_rules,
+                              inject_actor_initial_flags, inject_actor_count_rules, inject_actor_input_rules,
                               inject_language_keys, inject_language_room_probe, inject_multilingual_charset,
                               inject_screen_language_verbs, retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
@@ -63,6 +63,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
     bootstrap, header = inject_actor_bindings(
         bootstrap, header, document.actors, document.costumes,
         tuple(room.name for room in document.rooms))
+    bootstrap = inject_actor_initial_flags(bootstrap, document.actors)
     if document.actors:
         cost_compiler = _tool(upstream, "cost")
         for costume_name in sorted({actor.costume for actor in document.actors}):
