@@ -18,7 +18,10 @@ from .studio_service import (accept_proposal, add_decoration, change_item,
                              describe_story, item_position, prepare_proposal,
                              report_text, scene_preview, translation_draft, validate_translation_draft)
 from .story_document import canonical_story_json, parse_story_document
-from .studio_export import export_playable
+from .studio_export import export_playable, export_native_project
+from .studio_sequences import (actor_animations, append_sequence_step, modify_sequence_step,
+                               project_choices, sequence_choices, sequence_steps)
+from .scumm_project import canonical_json as canonical_project_json, parse_document
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
@@ -233,6 +236,65 @@ def make_app():
         except (ValueError, OSError, RuntimeError, subprocess.CalledProcessError) as error:
             raise gr.Error(f"SCUMM-Export fehlgeschlagen: {error}") from error
 
+    def native_selectors(raw, selected_room=None, selected_sequence=None):
+        rooms, objects, actors = project_choices(raw, selected_room)
+        room = selected_room if selected_room in rooms else rooms[0]
+        sequences = sequence_choices(raw)
+        identity = selected_sequence if selected_sequence in {value for _, value in sequences} else (
+            sequences[0][1] if sequences else None)
+        steps = sequence_steps(raw, identity) if identity else ()
+        animations = actor_animations(raw, actors[0] if actors else None)
+        return (gr.update(choices=rooms, value=room),
+                gr.update(choices=objects, value=objects[0] if objects else None),
+                gr.update(choices=actors, value=actors[0] if actors else None),
+                gr.update(choices=animations, value=animations[0] if animations else None),
+                gr.update(choices=objects, value=objects[0] if objects else None),
+                gr.update(choices=sequences, value=identity),
+                gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],
+                          value=0 if steps else None),
+                "\n".join(f"{i+1}. {text}" for i, text in enumerate(steps)) or "Noch keine Schritte")
+
+    def native_load(file_path):
+        if not file_path:
+            raise gr.Error("Bitte native Projekt-JSON-Datei auswählen")
+        try:
+            raw = canonical_project_json(parse_document(Path(file_path).read_text(encoding="utf-8")))
+            return raw, *native_selectors(raw), "Natives Projekt geladen und validiert"
+        except (OSError, ValueError) as error:
+            raise gr.Error(str(error)) from error
+
+    def native_edit(action, raw, *args):
+        if raw is None:
+            raise gr.Error("Bitte zuerst eine native Projektdatei laden")
+        try:
+            updated = action(raw, *args)
+            if action is append_sequence_step:
+                room, hotspot, verb = args[:3]
+                identity = f"{room}|{hotspot}|{verb}"
+            else:
+                identity = args[0]
+                room = identity.split("|", 1)[0]
+            return (updated, *native_selectors(updated, room, identity),
+                    "Interaktionsablauf geändert und validiert")
+        except ValueError as error:
+            raise gr.Error(str(error)) from error
+
+    def native_download(raw):
+        if raw is None:
+            raise gr.Error("Bitte zuerst eine native Projektdatei laden")
+        path = Path(tempfile.mkdtemp(prefix="adventure-studio-project-")) / "project.json"
+        path.write_text(canonical_project_json(parse_document(raw)), encoding="utf-8")
+        return str(path)
+
+    def native_game(raw, scummc_path):
+        if raw is None or not scummc_path.strip():
+            raise gr.Error("Native Projektdatei und ScummC-Pfad sind erforderlich")
+        path = Path(tempfile.mkdtemp(prefix="adventure-studio-native-game-")) / "adventure.zip"
+        try:
+            return str(export_native_project(raw, Path(scummc_path.strip()), path))
+        except (ValueError, OSError, RuntimeError, subprocess.CalledProcessError) as error:
+            raise gr.Error(f"Nativer SCUMM-Export fehlgeschlagen: {error}") from error
+
     with gr.Blocks(title="Adventure Studio") as app:
         gr.Markdown("# Adventure Studio\nStory schreiben, KI-Änderungen prüfen und als SCUMM-fähige Daten speichern.")
         state = gr.State(initial)
@@ -327,6 +389,34 @@ def make_app():
             with gr.Accordion("Für andere KI-Anbieter: JSON-Operationen importieren", open=False):
                 imported_json = gr.Textbox(label="Deklarative Operations-JSON", lines=5)
                 import_button = gr.Button("JSON-Vorschlag deterministisch prüfen")
+        with gr.Tab("Native Interaktionsabläufe"):
+            gr.Markdown("Native `GameDocument`-Projekte bearbeiten: Objekt-Verben mit Actor-Animationen, Pausen und Objektzuständen verknüpfen. Dieses Projektformat ist vom Storyformat getrennt; es wird nichts stillschweigend konvertiert.")
+            native_state = gr.State(None)
+            native_file = gr.File(label="Native Projekt-JSON öffnen", file_types=[".json"], type="filepath")
+            with gr.Row():
+                native_room = gr.Dropdown(label="Raum")
+                native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
+                native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
+            with gr.Row():
+                native_kind = gr.Dropdown(label="Aktion hinzufügen", choices=["Actor animieren", "Warten", "Objektzustand setzen"], value="Actor animieren")
+                native_actor = gr.Dropdown(label="Actor")
+                native_animation = gr.Dropdown(label="Costume-Animation")
+                native_target = gr.Dropdown(label="Zielobjekt")
+                native_amount = gr.Number(label="Sekunden / Objektzustand (0–2)", value=1, precision=0)
+            native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
+            native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
+            native_step = gr.Dropdown(label="Schritt auswählen")
+            native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
+            with gr.Row():
+                native_up = gr.Button("Schritt nach oben")
+                native_down = gr.Button("Schritt nach unten")
+                native_remove = gr.Button("Schritt entfernen")
+            native_report = gr.Textbox(label="Projektstatus", interactive=False)
+            with gr.Row():
+                native_json_button = gr.Button("Validiertes Projekt herunterladen")
+                native_json_download = gr.File(label="Native Projekt-JSON")
+            native_game_button = gr.Button("Natives SCUMM-ZIP bauen")
+            native_game_download = gr.File(label="SCUMM-Spiel")
         report = gr.Textbox(label="Deterministischer Änderungs- und Prüfbericht", lines=7, interactive=False)
         confirm_button = gr.Button("Geprüfte Änderung jetzt übernehmen", variant="primary")
 
@@ -378,6 +468,46 @@ def make_app():
         translation_validate_button.click(validate_translations, inputs=[state, translation_file],
                                           outputs=[translation_validated_download])
         game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])
+        native_outputs = [native_room, native_hotspot, native_actor, native_animation,
+                          native_target, native_sequence, native_step, native_steps]
+        native_file.change(native_load, [native_file], [native_state, *native_outputs, native_report])
+        def native_room_update(raw, room):
+            if raw is None:
+                return gr.update(), gr.update(), gr.update(), gr.update()
+            _, objects, actors = project_choices(raw, room)
+            animations = actor_animations(raw, actors[0] if actors else None)
+            return (gr.update(choices=objects, value=objects[0] if objects else None),
+                    gr.update(choices=objects, value=objects[0] if objects else None),
+                    gr.update(choices=actors, value=actors[0] if actors else None),
+                    gr.update(choices=animations, value=animations[0] if animations else None))
+
+        native_room.change(native_room_update, [native_state, native_room],
+                           [native_hotspot, native_target, native_actor, native_animation])
+        def native_actor_update(raw, actor):
+            animations = actor_animations(raw, actor) if raw is not None else ()
+            return gr.update(choices=animations, value=animations[0] if animations else None)
+
+        native_actor.change(native_actor_update, [native_state, native_actor], [native_animation])
+        def native_sequence_update(raw, identity):
+            steps = sequence_steps(raw, identity) if raw is not None and identity else ()
+            return (gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],
+                              value=0 if steps else None),
+                    "\n".join(f"{i+1}. {text}" for i, text in enumerate(steps)) or "Noch keine Schritte")
+
+        native_sequence.change(native_sequence_update, [native_state, native_sequence],
+                               [native_step, native_steps])
+        native_add.click(lambda *args: native_edit(append_sequence_step, *args),
+                         [native_state, native_room, native_hotspot, native_verb,
+                          native_kind, native_actor, native_animation, native_target, native_amount],
+                         [native_state, *native_outputs, native_report])
+        for button, operation in ((native_up, "Nach oben"), (native_down, "Nach unten"),
+                                  (native_remove, "Entfernen")):
+            button.click(lambda raw, identity, step, op=operation: native_edit(
+                modify_sequence_step, raw, identity, step, op),
+                [native_state, native_sequence, native_step],
+                [native_state, *native_outputs, native_report])
+        native_json_button.click(native_download, [native_state], [native_json_download])
+        native_game_button.click(native_game, [native_state, scummc_path], [native_game_download])
     return app
 
 

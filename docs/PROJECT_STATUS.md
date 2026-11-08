@@ -286,6 +286,18 @@ mit zwei Cues und einer Objektreaktion. Noch kein visueller Gameplay-Nachweis
 für die gesamte Sequenz. **Nächster Produktfokus:** Authoring und Bearbeitung
 dieser Abläufe im Studio statt ausschließlich über Projekt-JSON.
 
+**P0.5 – native Interaktionen im Studio bearbeiten (Implementierung, UI-/Gameplay-Gate offen):**
+Der Gradio-Editor enthält einen separaten Bereich für validierte native
+`GameDocument`-Dateien. Hier lassen sich Hotspot-Verb-Abläufe anlegen, Actor-
+Animationen, Pausen und Objektzustände als Schritte anhängen, verschieben
+oder entfernen und das Ergebnis als Projekt-JSON oder über den echten
+ScummC-Pfad als Spiel-ZIP ausgeben. Bereits vorhandene Story-v4-Dateien
+werden nicht stillschweigend als native Projekte behandelt. Service-
+Roundtrip und Regressionstests sind lokal grün; Gradio-UI-Interaktion
+und ein interaktiver ScummVM-Klickpfad wurden noch nicht geprüft.
+**Nächstes Produktpaket:** Story-Authoring und native Actor-/Interaktions-
+Authoringdaten in einem durchgängigen Projektmodell verbinden.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
