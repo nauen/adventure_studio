@@ -587,6 +587,20 @@ Die allgemeine iMUSE-/Beat-/Taktabdeckung bleibt offen.
 **Nächstes Produktpaket nach der CI-Abnahme:** frei authorbare Soundeffekte
 mit eigenen Ressourcen und synchronisierten Spielereignissen.
 
+**Studio-VOC-Soundeffekte (2026-11-08, Implementierung und lokale Tests):**
+Pro Raum lassen sich originale Creative-Voice-(`.voc`)-Dateien mit eindeutiger
+Sound-ID importieren. Die Studio-Sequenzaktionen `Sound starten` und
+`Sound stoppen` erzeugen native `startSound`-/`stopSound`-Aufrufe; der
+Escape-Override übernimmt für **jede** beteiligte Sound-ID die letzte
+Aktion. JSON-v1-Roundtrip und Projekt-ZIP enthalten die binären VOC-Daten,
+der reguläre ScummC-Export kompiliert sie über `soun -voc` zu SOUN.
+289 lokale Tests grün, einschließlich zweier unabhängiger Sound-Endzustände
+in derselben Sequenz und Fake-Toolchain-Export. Eine zusätzliche native
+Hotspot-Klickprobe mit PCM-Vorher-/Während-/Nachher-Fenster ist als
+CI-Gate vorbereitet; **stock-ScummVM-Nachweis noch ausstehend**.
+VOC-Sprachvarianten, Untertitel und Synchronisierung mit Actor-Lippensprache
+bleiben offen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

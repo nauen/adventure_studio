@@ -26,7 +26,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                duplicate_sequence_variant, sequence_skip_enabled,
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
-                               compose_story_project, import_room_music)
+                               compose_story_project, import_room_music,
+                               import_room_sound, room_sound_ids)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -268,7 +269,8 @@ def make_app():
                 gr.update(choices=actors, value=chosen_actor),
                 gr.update(choices=animations, value=animations[0] if animations else None),
                 gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
-                                   *[(f"Raum: {name}", name) for name in rooms]],
+                                   *[(f"Raum: {name}", name) for name in rooms],
+                                   *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)]],
                           value=objects[0] if objects else room),
                 gr.update(choices=sequences, value=identity),
                 gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],
@@ -340,6 +342,16 @@ def make_app():
             updated = import_room_music(raw, room, music_id, file_path)
             return (updated, *native_selectors(updated, selected_room=room),
                     f"MIDI {music_id} für {room} gespeichert; ScummC erstellt die native SOUN-Ressource beim Export")
+        except (ValueError, OSError) as error:
+            raise gr.Error(str(error)) from error
+
+    def native_sound_import(raw, room, sound_id, file_path):
+        if raw is None or not file_path:
+            raise gr.Error("Bitte zuerst ein Projekt und eine VOC-Datei wählen")
+        try:
+            updated = import_room_sound(raw, room, sound_id, file_path)
+            return (updated, *native_selectors(updated, selected_room=room),
+                    f"VOC {sound_id} für {room} gespeichert; ScummC erstellt die native SOUN-Ressource beim Export")
         except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
 
@@ -565,7 +577,11 @@ def make_app():
                 native_music_id = gr.Textbox(label="Musik-ID", value="RoomTheme")
                 native_music_add = gr.Button("MIDI dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen"], value="Actor animieren")
+                native_sound_file = gr.File(label="Soundeffekt als VOC importieren", file_types=[".voc"], type="filepath")
+                native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
+                native_sound_add = gr.Button("VOC dem Raum zuweisen")
+            with gr.Row():
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
@@ -592,6 +608,7 @@ def make_app():
                 native_skip_save = gr.Button("Skip-Einstellung speichern")
             gr.Markdown("Beim Überspringen übernimmt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen sowie Inventaraufnahmen und -kombinationen** der Sequenz. Für *Inventar kombinieren* ein Ergebnisobjekt mit vorhandener Raum-Kombinationsregel wählen. *Raum wechseln* muss der letzte Schritt sein; der Wechsel erfolgt nach dem normalen Ablauf oder nach Escape und dem Setzen aller Endzustände.")
             gr.Markdown("*Musik starten/stoppen* nutzt die MIDI-Ressource des Sequenzraums. Beim Escape wird der letzte Musikzustand der Folge ausgeführt. Die Raumzuweisung startet Musik auch beim normalen Betreten des Raums.")
+            gr.Markdown("*Sound starten/stoppen* verwendet einen zuvor für den Raum importierten VOC-Effekt. Mehrere Effekte bleiben unabhängig; beim Escape wird der jeweils letzte Zustand pro Sound gesetzt.")
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
             with gr.Row():
@@ -666,6 +683,9 @@ def make_app():
                                  [native_state, native_linked, *native_outputs, native_report])
         native_music_add.click(native_music_import,
                                [native_state, native_room, native_music_id, native_music_file],
+                               [native_state, *native_outputs, native_report])
+        native_sound_add.click(native_sound_import,
+                               [native_state, native_room, native_sound_id, native_sound_file],
                                [native_state, *native_outputs, native_report])
         native_costume_button.click(lambda *args: native_asset_edit(create_costume, *args),
                                     [native_state, native_costume_file, native_costume_name],
@@ -783,7 +803,8 @@ def make_app():
                             if actors and actor.id == actors[0]), None)
             return (gr.update(choices=objects, value=objects[0] if objects else None),
                     gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
-                                       *[(f"Raum: {name}", name) for name in rooms]],
+                                       *[(f"Raum: {name}", name) for name in rooms],
+                                       *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)]],
                               value=objects[0] if objects else room),
                     gr.update(choices=actors, value=actors[0] if actors else None),
                     gr.update(choices=animations, value=animations[0] if animations else None),
@@ -845,7 +866,9 @@ def make_app():
             return (fields[0], gr.update(choices=actors, value=fields[1]),
                     gr.update(choices=animations, value=fields[2]),
                     gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
-                                       *[(f"Raum: {name}", name) for name in rooms]], value=fields[3]),
+                                       *[(f"Raum: {name}", name) for name in rooms],
+                                       *[(f"Sound: {name}", name) for name in room_sound_ids(raw, sequence_room)]],
+                              value=fields[3]),
                     fields[4], fields[5], fields[6], fields[7])
 
         native_step.change(native_step_update, [native_state, native_sequence, native_step],

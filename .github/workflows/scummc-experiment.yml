@@ -7,8 +7,11 @@ on:
   pull_request:
     paths:
       - '.github/workflows/scummc-experiment.yml'
+      - 'src/adventure_studio/scumm_sound_effect_probe.py'
       - 'src/adventure_studio/scumm_studio_png_probe.py'
       - 'src/adventure_studio/scumm_actor_sequence_probe.py'
+      - 'src/adventure_studio/scumm_sound_effect_probe.py'
+      - 'src/adventure_studio/scumm_voc_fixture.py'
       - 'src/adventure_studio/scumm_launch.py'
   push:
     paths:
@@ -234,6 +237,27 @@ jobs:
             /tmp/native-actor-sequence/screenshots/scummvm-stairs-after-escape.png
             /tmp/native-actor-sequence/screenshots/scummvm-harbor-after-return.png
             /tmp/native-actor-sequence/screenshots/scummvm.log
+          if-no-files-found: ignore
+      - name: Play imported VOC sound effect from Studio hotspot and stop via Escape
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_sound_effect_probe /tmp/scummc-upstream /tmp/native-voc-effects
+      - name: Retain native VOC sound effect playback evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-voc-sound-effect
+          path: |
+            /tmp/native-voc-effects/sound-effect-report.json
+            /tmp/native-voc-effects/sound-effect.raw
+            /tmp/native-voc-effects/build/project.json
+            /tmp/native-voc-effects/build/resources/Harbor.scc
+            /tmp/native-voc-effects/build/resources/BellSound.voc
+            /tmp/native-voc-effects/build/resources/BellSound.soun
+            /tmp/native-voc-effects/screenshots/scummvm-before.png
+            /tmp/native-voc-effects/screenshots/scummvm-after.png
+            /tmp/native-voc-effects/screenshots/scummvm.log
           if-no-files-found: ignore
       - name: Compile Studio-imported PNG animation and launch native game
         env:

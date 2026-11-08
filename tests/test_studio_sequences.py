@@ -8,6 +8,7 @@ from zipfile import ZipFile
 
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture
 from adventure_studio.music_demo import original_midi_theme
+from adventure_studio.scumm_voc_fixture import original_voc_effect
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import ActorAsset, GameDocument, canonical_json, parse_document
 from adventure_studio.story_document import canonical_story_json, parse_story_document
@@ -18,7 +19,8 @@ from adventure_studio.studio_sequences import (append_sequence_step, append_sele
                                                 duplicate_sequence_variant,
                                                 project_choices, sequence_choices, sequence_steps,
                                                 compose_story_project)
-from adventure_studio.studio_sequences import import_room_music, set_sequence_skippable
+from adventure_studio.studio_sequences import (import_room_music, import_room_sound,
+                                                set_sequence_skippable)
 from adventure_studio.studio_export import export_native_project
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
 from adventure_studio.studio_actors import (add_actor, create_costume, move_actor,
@@ -29,6 +31,67 @@ from test_scumm_toolchain import fake_upstream
 
 
 class NativeSequenceEditorTests(unittest.TestCase):
+    def test_voc_sound_effects_reference_room_assets_and_skip_last_state(self):
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import export_document
+        document = GameDocument("VocProject", (scrolling_fixture(), destination_fixture()))
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            voc = original_voc_effect()
+            (root / "effect.voc").write_bytes(voc)
+            raw = canonical_json(document)
+            raw = import_room_sound(raw, "Harbor", "BellSound", str(root / "effect.voc"))
+            raw = import_room_sound(raw, "Harbor", "WindSound", str(root / "effect.voc"))
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound starten",
+                                       None, None, "BellSound", None)
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound starten",
+                                       None, None, "WindSound", None)
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Warten",
+                                       None, None, None, 2)
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound stoppen",
+                                       None, None, "BellSound", None)
+            raw = set_sequence_skippable(raw, "Harbor|Key|Close", True)
+            self.assertEqual(canonical_json(parse_document(raw)), raw)
+            self.assertEqual(parse_document(raw).sound_assets[0].voc, voc)
+            export_document(parse_document(raw), root / "resources")
+            self.assertEqual((root / "resources" / "BellSound.voc").read_bytes(), voc)
+            source = (root / "resources" / "Harbor.scc").read_text(encoding="utf-8")
+            native = inject_interaction_sequences(source, "Harbor",
+                                                  parse_document(raw).interaction_sequences,
+                                                  (), (), parse_document(raw).rooms[0],
+                                                  parse_document(raw).sound_assets)
+            self.assertIn('sound BellSound = "BellSound.soun";', native)
+            self.assertIn('sound WindSound = "WindSound.soun";', native)
+            self.assertEqual(native.count("startSound(BellSound);"), 1)
+            self.assertEqual(native.count("stopSound(BellSound);"), 2)
+            self.assertEqual(native.count("startSound(WindSound);"), 2)
+            fake_upstream(root / "scummc")
+            soun = root / "scummc" / "soun"
+            soun.write_text("fake executable", encoding="utf-8")
+            soun.chmod(0o755)
+            calls = []
+
+            def fake_runner(args, **_kwargs):
+                calls.append(args)
+                target = Path(args[args.index("-o") + 1])
+                if args[0].endswith("/sld"):
+                    target.with_suffix(".000").write_bytes(b"index")
+                    target.with_suffix(".001").write_bytes(b"data")
+                else:
+                    target.write_bytes(b"SOUN" if args[0].endswith("/soun") else b"compiled")
+
+            export_native_project(raw, root / "scummc", root / "sounds.zip", fake_runner)
+            self.assertEqual(sum("-voc" in args for args in calls), 2)
+            with self.assertRaisesRegex(ValueError, "room VOC resource"):
+                append_sequence_step(raw, "Cellar", "Stairs", "Close", "Sound starten",
+                                     None, None, "BellSound", None)
+            with self.assertRaisesRegex(ValueError, "Sound-ID existiert"):
+                import_room_sound(raw, "Cellar", "BellSound", str(root / "effect.voc"))
+            story = (Path(__file__).resolve().parents[1] / "examples" /
+                     "mini_story_chain.json").read_text(encoding="utf-8")
+            composed = parse_document(compose_story_project(story, raw))
+            self.assertEqual(composed.sound_assets, parse_document(raw).sound_assets)
+
     def test_imported_midi_controls_skippable_music_cue_and_survives_story_composition(self):
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
         from adventure_studio.scumm_project import export_document
