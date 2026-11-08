@@ -266,7 +266,8 @@ def make_app():
                         if actor.id == chosen_actor), None)
         return (gr.update(choices=rooms, value=room),
                 gr.update(choices=objects, value=objects[0] if objects else None),
-                gr.update(choices=actors, value=chosen_actor),
+                gr.update(choices=[("Ego (für gesprochene Zeile)", None),
+                                   *[(item, item) for item in actors]], value=chosen_actor),
                 gr.update(choices=animations, value=animations[0] if animations else None),
                 gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
                                    *[(f"Raum: {name}", name) for name in rooms],
@@ -581,7 +582,7 @@ def make_app():
                 native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
                 native_sound_add = gr.Button("VOC dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
@@ -591,6 +592,8 @@ def make_app():
                 native_move_y = gr.Number(label="Actor-Ziel Y (Versetzen/Laufen)", value=100, precision=0)
                 native_face_direction = gr.Dropdown(label="Blickrichtung (Actor drehen)",
                                                     choices=["N", "E", "S", "W"], value="S")
+            native_subtitle = gr.Textbox(label="Untertitel für gesprochene Zeile (ASCII, maximal 160 Zeichen)",
+                                         placeholder="Text, den die Spielfigur spricht")
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
@@ -806,7 +809,8 @@ def make_app():
                                        *[(f"Raum: {name}", name) for name in rooms],
                                        *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)]],
                               value=objects[0] if objects else room),
-                    gr.update(choices=actors, value=actors[0] if actors else None),
+                    gr.update(choices=[("Ego (für gesprochene Zeile)", None), *[(item, item) for item in actors]],
+                              value=actors[0] if actors else None),
                     gr.update(choices=animations, value=animations[0] if animations else None),
                     gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in animations]],
                               value=initial))
@@ -863,31 +867,34 @@ def make_app():
             sequence_room = identity.split("|", 1)[0] if identity else None
             rooms, objects, actors = project_choices(raw, sequence_room)
             animations = actor_animations(raw, fields[1]) if fields[1] else ()
-            return (fields[0], gr.update(choices=actors, value=fields[1]),
+            return (fields[0], gr.update(choices=[("Ego (für gesprochene Zeile)", None),
+                                                 *[(item, item) for item in actors]], value=fields[1]),
                     gr.update(choices=animations, value=fields[2]),
                     gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
                                        *[(f"Raum: {name}", name) for name in rooms],
                                        *[(f"Sound: {name}", name) for name in room_sound_ids(raw, sequence_room)]],
                               value=fields[3]),
-                    fields[4], fields[5], fields[6], fields[7])
+                    fields[4], fields[5], fields[6], fields[7], fields[8] if len(fields) > 8 else "")
 
         native_step.change(native_step_update, [native_state, native_sequence, native_step],
                            [native_kind, native_actor, native_animation, native_target,
-                            native_amount, native_move_x, native_move_y, native_face_direction])
+                            native_amount, native_move_x, native_move_y, native_face_direction,
+                            native_subtitle])
         native_add.click(lambda *args: native_edit(append_sequence_step, *args),
                          [native_state, native_room, native_hotspot, native_verb,
                           native_kind, native_actor, native_animation, native_target, native_amount,
-                          native_move_x, native_move_y, native_face_direction],
+                          native_move_x, native_move_y, native_face_direction, native_subtitle],
                          [native_state, *native_outputs, native_report])
         native_add_selected.click(lambda *args: native_edit(append_selected_sequence_step, *args),
                                   [native_state, native_sequence, native_kind, native_actor,
                                    native_animation, native_target, native_amount, native_move_x,
-                                   native_move_y, native_face_direction],
+                                   native_move_y, native_face_direction, native_subtitle],
                                   [native_state, *native_outputs, native_report])
         native_replace.click(lambda *args: native_edit(replace_sequence_step, *args),
                              [native_state, native_sequence, native_step,
                               native_kind, native_actor, native_animation, native_target,
-                              native_amount, native_move_x, native_move_y, native_face_direction],
+                              native_amount, native_move_x, native_move_y, native_face_direction,
+                              native_subtitle],
                              [native_state, *native_outputs, native_report])
         for button, operation in ((native_up, "Nach oben"), (native_down, "Nach unten"),
                                   (native_remove, "Entfernen")):

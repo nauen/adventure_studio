@@ -31,6 +31,38 @@ from test_scumm_toolchain import fake_upstream
 
 
 class NativeSequenceEditorTests(unittest.TestCase):
+    def test_spoken_voc_line_binds_subtitle_and_stops_on_escape(self):
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import SoundAsset, VoiceLineStep, export_document
+        document = GameDocument("VoiceProject", (scrolling_fixture(), destination_fixture()),
+                                sound_assets=(SoundAsset("Greeting", "Harbor", original_voc_effect()),))
+        raw = append_sequence_step(canonical_json(document), "Harbor", "Key", "Close",
+                                   "Gesprochene Zeile", None, None, "Greeting", None,
+                                   subtitle="The door is open.")
+        raw = set_sequence_skippable(raw, "Harbor|Key|Close", True)
+        parsed = parse_document(raw)
+        self.assertEqual(parsed.interaction_sequences[0].steps,
+                         (VoiceLineStep("Greeting", "The door is open."),))
+        self.assertEqual(canonical_json(parsed), raw)
+        self.assertEqual(sequence_step_fields(raw, "Harbor|Key|Close", 0)[8],
+                         "The door is open.")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            export_document(parsed, root)
+            native = inject_interaction_sequences((root / "Harbor.scc").read_text(),
+                                                  "Harbor", parsed.interaction_sequences,
+                                                  (), (), parsed.rooms[0], parsed.sound_assets)
+            self.assertIn('egoSay("The door is open.");', native)
+            self.assertIn("waitForMessage();", native)
+            self.assertEqual(native.count("startSound(Greeting);"), 1)
+            self.assertEqual(native.count("stopSound(Greeting);"), 2)
+        with self.assertRaisesRegex(ValueError, "safe ASCII subtitle"):
+            append_sequence_step(raw, "Harbor", "Key", "Open", "Gesprochene Zeile",
+                                 None, None, "Greeting", None, subtitle='Say "hello"')
+        with self.assertRaisesRegex(ValueError, "room VOC"):
+            append_sequence_step(raw, "Cellar", "Stairs", "Close", "Gesprochene Zeile",
+                                 None, None, "Greeting", None, subtitle="Hello")
+
     def test_voc_sound_effects_reference_room_assets_and_skip_last_state(self):
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
         from adventure_studio.scumm_project import export_document

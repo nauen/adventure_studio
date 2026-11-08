@@ -9,7 +9,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             FaceActorStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
-                            SoundAsset, SoundEffectStep,
+                            SoundAsset, SoundEffectStep, VoiceLineStep,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -183,6 +183,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return "Musik starten" if step.operation == "start" else "Musik stoppen"
     if isinstance(step, SoundEffectStep):
         return f"Sound {step.sound_id}: {'starten' if step.operation == 'start' else 'stoppen'}"
+    if isinstance(step, VoiceLineStep):
+        return f"Sprachzeile {step.sound_id} ({step.actor_id or 'Ego'}): {step.text}"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -209,7 +211,7 @@ def actor_animations(raw: str, actor_id: str | None) -> tuple[str, ...]:
 def _build_step(kind: str, actor_id: str | None, animation: str | None,
                 target_id: str | None, amount: int | float | None,
                 x: int | float | None, y: int | float | None,
-                direction: str | None):
+                direction: str | None, subtitle: str | None = None):
     if kind == "Actor animieren":
         step = AnimateActorStep(actor_id, animation)
     elif kind == "Objektzustand setzen":
@@ -230,6 +232,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         step = SoundEffectStep(target_id, "start")
     elif kind == "Sound stoppen":
         step = SoundEffectStep(target_id, "stop")
+    elif kind == "Gesprochene Zeile":
+        step = VoiceLineStep(target_id, subtitle, actor_id)
     elif kind == "Warten":
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Wartezeit muss eine ganze Zahl sein")
@@ -253,12 +257,12 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
                          kind: str, actor_id: str | None, animation: str | None,
                          target_id: str | None, amount: int | float | None,
                          x: int | float | None = None, y: int | float | None = None,
-                         direction: str | None = None) -> str:
+                         direction: str | None = None, subtitle: str | None = None) -> str:
     """Append to an existing verb sequence or create it; never silently replace another binding."""
     document = parse_document(raw)
     if verb not in VERBS:
         raise ValueError("Unbekanntes Verb")
-    step = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction)
+    step = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction, subtitle)
     key = (room, hotspot_id, verb)
     sequences = list(document.interaction_sequences)
     index = next((index for index, item in enumerate(sequences)
@@ -275,14 +279,14 @@ def append_selected_sequence_step(raw: str, identity: str, kind: str,
                                   actor_id: str | None, animation: str | None,
                                   target_id: str | None, amount: int | float | None,
                                   x: int | float | None = None, y: int | float | None = None,
-                                  direction: str | None = None) -> str:
+                                  direction: str | None = None, subtitle: str | None = None) -> str:
     """Append to an existing guarded or unguarded variant, preserving its trigger."""
     document = parse_document(raw)
     index = next((i for i, sequence in enumerate(document.interaction_sequences)
                   if _identity(sequence) == identity), None)
     if index is None:
         raise ValueError("Bitte eine vorhandene Interaktion wählen")
-    step = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction)
+    step = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction, subtitle)
     sequences = list(document.interaction_sequences)
     sequences[index] = replace(sequences[index], steps=(*sequences[index].steps, step))
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
@@ -292,7 +296,7 @@ def replace_sequence_step(raw: str, identity: str, step_number: int | float | No
                           kind: str, actor_id: str | None, animation: str | None,
                           target_id: str | None, amount: int | float | None,
                           x: int | float | None = None, y: int | float | None = None,
-                          direction: str | None = None) -> str:
+                          direction: str | None = None, subtitle: str | None = None) -> str:
     """Edit an existing action in place without changing its order or trigger."""
     document = parse_document(raw)
     if step_number is None or type(step_number) not in (int, float) or int(step_number) != step_number:
@@ -305,14 +309,14 @@ def replace_sequence_step(raw: str, identity: str, step_number: int | float | No
     selected = int(step_number)
     if not 0 <= selected < len(steps):
         raise ValueError("Schritt existiert nicht")
-    steps[selected] = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction)
+    steps[selected] = _build_step(kind, actor_id, animation, target_id, amount, x, y, direction, subtitle)
     sequences[index] = replace(sequences[index], steps=tuple(steps))
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
 
 
 def sequence_step_fields(raw: str, identity: str | None, step_number: int | float | None) -> tuple:
     """Load an authored step back into the existing action form."""
-    empty = ("Actor animieren", None, None, None, 1, 320, 100, "S")
+    empty = ("Actor animieren", None, None, None, 1, 320, 100, "S", "")
     if not identity or step_number is None:
         return empty
     sequence = next((item for item in parse_document(raw).interaction_sequences
@@ -344,6 +348,9 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
     if isinstance(step, SoundEffectStep):
         return ("Sound starten" if step.operation == "start" else "Sound stoppen",
                 None, None, step.sound_id, 1, 320, 100, "S")
+    if isinstance(step, VoiceLineStep):
+        return ("Gesprochene Zeile", step.actor_id, None, step.sound_id,
+                1, 320, 100, "S", step.text)
     return ("Objektzustand setzen", None, None, step.hotspot_id, step.state, 320, 100, "S")
 
 

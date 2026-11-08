@@ -18,18 +18,24 @@ from .studio_sequences import append_sequence_step, set_sequence_skippable
 from .scumm_project import SoundAsset
 
 
-def run_sound_effect_probe(upstream: Path, destination: Path) -> dict:
+def run_sound_effect_probe(upstream: Path, destination: Path,
+                           voice_line: bool = False) -> dict:
     """A real hotspot click plays a VOC; Escape applies the final stop cue."""
     document = GameDocument("SoundEffects", (scrolling_fixture(), destination_fixture()),
                             sound_assets=(SoundAsset("BellSound", "Harbor",
                                                      original_voc_effect(duration_ms=5000)),))
     raw = canonical_json(document)
-    raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound starten",
-                               None, None, "BellSound", None)
-    raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Warten",
-                               None, None, None, 6)
-    raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound stoppen",
-                               None, None, "BellSound", None)
+    if voice_line:
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Gesprochene Zeile",
+                                   None, None, "BellSound", None,
+                                   subtitle="I can hear the bell.")
+    else:
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound starten",
+                                   None, None, "BellSound", None)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Warten",
+                                   None, None, None, 6)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Sound stoppen",
+                                   None, None, "BellSound", None)
     raw = set_sequence_skippable(raw, "Harbor|Key|Close", True)
     build = destination / "build"
     resources = build / "resources"
@@ -69,7 +75,9 @@ def run_sound_effect_probe(upstream: Path, destination: Path) -> dict:
             start_at = time.monotonic()
             # The actor first walks to the clicked hotspot (~1.5 s), then
             # the sequence starts. Skip only after native sound is playing.
-            time.sleep(3.1)
+            time.sleep(2.4 if voice_line else 3.1)
+            if voice_line:
+                frame("speaking")
             subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
             stop_at = time.monotonic()
             time.sleep(3)
@@ -97,10 +105,12 @@ def run_sound_effect_probe(upstream: Path, destination: Path) -> dict:
 
     report = {
         "native_sound_id": "BellSound",
+        "voice_line": voice_line,
         "escape_sent": True,
         "pcm_bytes": len(pcm),
         "before_click": round(activity(start_at - 1.4, start_at - 0.2), 4),
-        "during_sound": round(activity(start_at + 2.0, stop_at - 0.15), 4),
+        "during_sound": round(activity(start_at + 1.8, stop_at - 0.15), 4)
+        if voice_line else round(activity(start_at + 2.0, stop_at - 0.15), 4),
         "after_escape": round(activity(stop_at + 1.0, stop_at + 2.6), 4),
     }
     report["sound_effect_audible_and_stopped"] = bool(
@@ -115,6 +125,9 @@ def run_sound_effect_probe(upstream: Path, destination: Path) -> dict:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit("Usage: python -m adventure_studio.scumm_sound_effect_probe SCUMMC DESTINATION")
-    print(run_sound_effect_probe(Path(sys.argv[1]), Path(sys.argv[2])))
+    if len(sys.argv) == 4 and sys.argv[1] == "--voice":
+        print(run_sound_effect_probe(Path(sys.argv[2]), Path(sys.argv[3]), voice_line=True))
+    elif len(sys.argv) == 3:
+        print(run_sound_effect_probe(Path(sys.argv[1]), Path(sys.argv[2])))
+    else:
+        raise SystemExit("Usage: python -m adventure_studio.scumm_sound_effect_probe [--voice] SCUMMC DESTINATION")

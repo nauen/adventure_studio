@@ -259,6 +259,26 @@ jobs:
             /tmp/native-voc-effects/screenshots/scummvm-after.png
             /tmp/native-voc-effects/screenshots/scummvm.log
           if-no-files-found: ignore
+      - name: Play Studio VOC voice line with native subtitle and Escape
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_sound_effect_probe --voice /tmp/scummc-upstream /tmp/native-voc-voice
+      - name: Retain native spoken VOC subtitle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-voc-voice-subtitle
+          path: |
+            /tmp/native-voc-voice/sound-effect-report.json
+            /tmp/native-voc-voice/sound-effect.raw
+            /tmp/native-voc-voice/build/project.json
+            /tmp/native-voc-voice/build/resources/Harbor.scc
+            /tmp/native-voc-voice/screenshots/scummvm-before.png
+            /tmp/native-voc-voice/screenshots/scummvm-speaking.png
+            /tmp/native-voc-voice/screenshots/scummvm-after.png
+            /tmp/native-voc-voice/screenshots/scummvm.log
+          if-no-files-found: ignore
       - name: Compile Studio-imported PNG animation and launch native game
         env:
           PYTHONPATH: src

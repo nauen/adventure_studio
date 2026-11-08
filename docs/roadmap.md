@@ -183,6 +183,11 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         bestätigt echtes VOC-Audio und dessen Stopp in stock ScummVM
         (PCM `0,0000` vor / `0,8558` während / `0,0000` nach Escape,
         CI `42522610786`).
+  - [x] Produkt-Implementierung/lokale Tests: VOC-Sprachzeile als echte
+        Studio-Sequenzaktion mit editierbarem Untertitel und optionalem
+        Sprecher, JSON-v1-Roundtrip und nativen Start-/Text-/Wait-/Stop-
+        Befehlen. Escape beendet die Sprachressource. Aktuell sichere
+        ASCII-Untertitel; native ScummVM-Abnahme folgt in CI.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

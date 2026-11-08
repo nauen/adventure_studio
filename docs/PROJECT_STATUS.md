@@ -605,6 +605,18 @@ noch nicht abgeschlossen.
 VOC-Sprachvarianten, Untertitel und Synchronisierung mit Actor-Lippensprache
 bleiben offen.
 
+**Sprachzeilen mit VOC und Untertitel (2026-11-08, Implementierung):**
+Die Studio-Sequenzaktion `Gesprochene Zeile` verbindet einen importierten
+Raum-VOC-Effekt mit editierbarem Untertitel und optionalem Actor (ohne
+Auswahl spricht Ego). Der native SCUMM-v6-Export startet die SOUN-Ressource,
+zeigt den Text mit `egoSay`/`actorSay`, wartet auf die Nachricht und beendet
+den Sound; der Escape-Endzustand stoppt die Sprachausgabe ebenfalls.
+Die erste Version validiert Untertitel bewusst als native, sichere ASCII-
+Zeichenkette mit maximal 160 Zeichen; mehrsprachige Glyphen erfordern
+eine separate Charset-Integration. JSON-v1 ist rückwärtskompatibel.
+Lokaler Integrationstest und eine echte ScummVM-PCM-/Bild-Probe sind ergänzt;
+deren CI-Abnahme steht zunächst noch aus.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
