@@ -358,16 +358,16 @@ def inject_actor_room_animations(source: str, room_name: str, actors, costumes) 
     return source.replace(marker, marker + "".join(calls), 1)
 
 
-def inject_actor_initial_flags(source: str, actors) -> str:
-    """Declare native persistent bits for first-entry Actor animations."""
+def inject_actor_initial_flags(header: str, actors) -> str:
+    """Declare shared native persistent bits for first-entry Actor animations."""
     active = [index for index, actor in enumerate(actors) if actor.initial_animation is not None]
     if not active:
-        return source
-    marker = "bit verbsOn,cursorOn,cursorLoaded;\n"
-    if source.count(marker) != 1:
-        raise ValueError("Unexpected upstream global-bit declaration for Actor initial animations")
+        return header
+    marker = "actor hero;\n"
+    if header.count(marker) != 1:
+        raise ValueError("Unexpected upstream shared Actor declaration for initial animations")
     declaration = "".join(f"bit __studioActorInitial{index};\n" for index in active)
-    return source.replace(marker, marker + declaration, 1)
+    return header.replace(marker, marker + declaration, 1)
 
 
 def inject_actor_count_rules(source: str, room_name: str, rules, actors, costumes) -> str:

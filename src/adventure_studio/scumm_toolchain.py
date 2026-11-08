@@ -63,7 +63,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
     bootstrap, header = inject_actor_bindings(
         bootstrap, header, document.actors, document.costumes,
         tuple(room.name for room in document.rooms))
-    bootstrap = inject_actor_initial_flags(bootstrap, document.actors)
+    header = inject_actor_initial_flags(header, document.actors)
     if document.actors:
         cost_compiler = _tool(upstream, "cost")
         for costume_name in sorted({actor.costume for actor in document.actors}):

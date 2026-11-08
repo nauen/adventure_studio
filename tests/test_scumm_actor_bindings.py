@@ -83,11 +83,11 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('if(!__studioActorInitial0)', native)
         self.assertIn('__studioActorInitial0 = 1;', native)
         self.assertEqual(native.count('animateActor(Companion,24);'), 1)
-        declared = inject_actor_initial_flags('bit verbsOn,cursorOn,cursorLoaded;\n', (actor,))
+        declared = inject_actor_initial_flags('actor hero;\n', (actor,))
         self.assertIn('bit __studioActorInitial0;', declared)
         self.assertEqual(inject_actor_initial_flags('unchanged', (replace(actor, initial_animation=None),)),
                          'unchanged')
-        with self.assertRaisesRegex(ValueError, 'global-bit declaration'):
+        with self.assertRaisesRegex(ValueError, 'shared Actor declaration'):
             inject_actor_initial_flags('unexpected', (actor,))
         second = replace(actor, id='Guide')
         both = inject_actor_room_animations(room_source, 'Harbor', (actor, second),
@@ -95,7 +95,7 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('if(!__studioActorInitial0)', both)
         self.assertIn('if(!__studioActorInitial1)', both)
         self.assertIn('animateActor(Guide,24);', both)
-        declarations = inject_actor_initial_flags('bit verbsOn,cursorOn,cursorLoaded;\n',
+        declarations = inject_actor_initial_flags('actor hero;\n',
                                                    (actor, second))
         self.assertEqual(declarations.count('bit __studioActorInitial'), 2)
 
