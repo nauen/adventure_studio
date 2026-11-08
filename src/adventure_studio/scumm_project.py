@@ -154,6 +154,14 @@ class VoiceVariant:
 
 
 @dataclass(frozen=True)
+class DialogueVoiceCue:
+    line_id: str
+    source_text: str
+    sound_id: str
+    variants: tuple[tuple[str, str], ...] = ()  # (ISO language, room VOC ID)
+
+
+@dataclass(frozen=True)
 class VoiceLineStep:
     sound_id: str
     text: str
@@ -200,6 +208,7 @@ class GameDocument:
     music_assets: tuple[MusicAsset, ...] = ()
     sound_assets: tuple[SoundAsset, ...] = ()
     default_voice_language: str = "en"
+    dialogue_voice_cues: tuple[DialogueVoiceCue, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -310,6 +319,13 @@ def document_dict(document: GameDocument) -> dict:
            if document.sound_assets else {}),
         **({"default_voice_language": document.default_voice_language}
            if document.default_voice_language != "en" else {}),
+        **({"dialogue_voice_cues": [{"line_id": cue.line_id, "source_text": cue.source_text,
+                                    "sound_id": cue.sound_id,
+                                    **({"variants": [{"language": language, "sound_id": sound}
+                                                       for language, sound in cue.variants]}
+                                       if cue.variants else {})}
+                                   for cue in document.dialogue_voice_cues]}
+           if document.dialogue_voice_cues else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -396,6 +412,37 @@ def _validate_document(document: GameDocument) -> None:
                 or int.from_bytes(asset.voc[22:24], "little") != 266):
             raise ValueError("Invalid or duplicate VOC sound asset")
         sound_ids.add(asset.id)
+    dialogue_lines = {}
+    for room in document.rooms:
+        prefix = f"room.{room.name.lower()}.dialogue"
+        for rule_index, rule in enumerate(room.talk_rules):
+            for line_index, line in enumerate(rule.opening_lines):
+                dialogue_lines[f"{prefix}.{rule_index}.opening.{line_index}"] = (room.name, line)
+            for choice_index, choice in enumerate(rule.choices):
+                for line_index, line in enumerate(choice.reply_lines):
+                    dialogue_lines[f"{prefix}.{rule_index}.choice.{choice_index}.reply.{line_index}"] = (room.name, line)
+    seen_cues = set()
+    for cue in document.dialogue_voice_cues:
+        if (not isinstance(cue, DialogueVoiceCue) or not isinstance(cue.line_id, str)
+                or not isinstance(cue.source_text, str) or not isinstance(cue.sound_id, str)
+                or not isinstance(cue.variants, tuple)):
+            raise ValueError("Invalid dialogue voice cue")
+        target = dialogue_lines.get(cue.line_id)
+        if (cue.line_id in seen_cues
+                or target is None or cue.source_text != target[1]):
+            raise ValueError(f"Missing, stale or duplicate dialogue voice line: {cue.line_id}")
+        seen_cues.add(cue.line_id)
+        room_sounds = {asset.id for asset in document.sound_assets if asset.room == target[0]}
+        if any(not isinstance(item, tuple) or len(item) != 2
+               or not isinstance(item[0], str) or not isinstance(item[1], str)
+               for item in cue.variants):
+            raise ValueError(f"Invalid dialogue voice variant: {cue.line_id}")
+        languages = [item[0] for item in cue.variants]
+        if (cue.sound_id not in room_sounds or len(languages) != len(set(languages))
+                or any(not re.fullmatch(r"[a-z]{2}", item[0])
+                       or item[0] == document.default_voice_language or item[1] not in room_sounds
+                       for item in cue.variants)):
+            raise ValueError(f"Invalid room VOC or language in dialogue voice: {cue.line_id}")
     if len(set(room_names)) != len(room_names):
         raise ValueError("Duplicate room name")
     costume_names = set()
@@ -665,7 +712,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets", "sound_assets", "default_voice_language"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets", "sound_assets", "default_voice_language", "dialogue_voice_cues"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -984,10 +1031,26 @@ def parse_document(source: str) -> GameDocument:
     for raw_asset in raw_sounds:
         asset = _only(raw_asset, {"id", "room", "voc"}, {"id", "room", "voc"})
         sound_assets.append(SoundAsset(asset["id"], asset["room"], _decode_pixels(asset["voc"])))
+    raw_cues = data.get("dialogue_voice_cues", [])
+    if not isinstance(raw_cues, list):
+        raise ValueError("Invalid dialogue voice collection")
+    voice_cues = []
+    for raw_cue in raw_cues:
+        item = _only(raw_cue, {"line_id", "source_text", "sound_id", "variants"},
+                     {"line_id", "source_text", "sound_id"})
+        variants = item.get("variants", [])
+        if not isinstance(variants, list):
+            raise ValueError("Invalid dialogue voice variants")
+        parsed_variants = []
+        for raw_variant in variants:
+            variant = _only(raw_variant, {"language", "sound_id"}, {"language", "sound_id"})
+            parsed_variants.append((variant["language"], variant["sound_id"]))
+        voice_cues.append(DialogueVoiceCue(item["line_id"], item["source_text"],
+                                          item["sound_id"], tuple(parsed_variants)))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
                             tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers),
                             tuple(interaction_sequences), tuple(music_assets), tuple(sound_assets),
-                            data.get("default_voice_language", "en"))
+                            data.get("default_voice_language", "en"), tuple(voice_cues))
     _validate_document(document)
     return document
 

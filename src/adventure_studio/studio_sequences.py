@@ -10,6 +10,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
+                            DialogueVoiceCue,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -53,6 +54,58 @@ def import_room_sound(raw: str, room_name: str, sound_id: str, voc_path: str) ->
 def room_sound_ids(raw: str, room_name: str) -> tuple[str, ...]:
     return tuple(asset.id for asset in parse_document(raw).sound_assets
                  if asset.room == room_name)
+
+
+def dialogue_voice_lines(raw: str) -> tuple[tuple[str, str], ...]:
+    """Stable choices for authored NPC opening and answer dialogue lines."""
+    document = parse_document(raw)
+    result = []
+    for room in document.rooms:
+        for rule_index, rule in enumerate(room.talk_rules):
+            base = f"room.{room.name.lower()}.dialogue.{rule_index}"
+            for line_index, line in enumerate(rule.opening_lines):
+                result.append((f"{room.name} / {rule.speaker_id} / {line}",
+                               f"{base}.opening.{line_index}"))
+            for choice_index, choice in enumerate(rule.choices):
+                for line_index, line in enumerate(choice.reply_lines):
+                    result.append((f"{room.name} / {choice.caption} / {line}",
+                                   f"{base}.choice.{choice_index}.reply.{line_index}"))
+    return tuple(result)
+
+
+def edit_dialogue_voice(raw: str, line_id: str, language: str,
+                        sound_id: str | None, remove: bool = False) -> str:
+    """Assign a room VOC to an NPC line or to one selected language."""
+    document = parse_document(raw)
+    lines = dict((identity, label) for label, identity in dialogue_voice_lines(raw))
+    if line_id not in lines:
+        raise ValueError("Bitte eine vorhandene Dialogzeile auswählen")
+    room = next(room for room in document.rooms
+                if line_id.startswith(f"room.{room.name.lower()}."))
+    rest = line_id.split(".dialogue.", 1)[1].split(".")
+    rule = room.talk_rules[int(rest[0])]
+    source = (rule.opening_lines[int(rest[2])] if rest[1] == "opening"
+              else rule.choices[int(rest[2])].reply_lines[int(rest[4])])
+    cues = {cue.line_id: cue for cue in document.dialogue_voice_cues}
+    existing = cues.get(line_id)
+    if language == document.default_voice_language:
+        if remove:
+            cues.pop(line_id, None)
+        else:
+            cues[line_id] = DialogueVoiceCue(line_id, source, sound_id,
+                                            existing.variants if existing else ())
+    else:
+        if existing is None:
+            raise ValueError("Zuerst die Aufnahme der Standardsprache zuordnen")
+        variants = dict(existing.variants)
+        if remove:
+            if language not in variants:
+                raise ValueError("Sprachaufnahme existiert nicht")
+            del variants[language]
+        else:
+            variants[language] = sound_id
+        cues[line_id] = replace(existing, variants=tuple(sorted(variants.items())))
+    return _checked(replace(document, dialogue_voice_cues=tuple(cues[key] for key in sorted(cues))))
 
 
 def set_default_voice_language(raw: str, language: str) -> str:
@@ -106,7 +159,8 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                        interaction_sequences=native.interaction_sequences,
                        music_assets=native.music_assets,
                        sound_assets=native.sound_assets,
-                       default_voice_language=native.default_voice_language)
+                       default_voice_language=native.default_voice_language,
+                       dialogue_voice_cues=native.dialogue_voice_cues)
     return canonical_json(composed)
 
 

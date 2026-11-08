@@ -68,17 +68,20 @@ def _click(x: int, y: int) -> None:
     _run(["xdotool", "mousemove", str(x), str(y), "click", "1"], timeout=5)
 
 
-def run(game_directory: Path, output: Path) -> dict:
+def run(game_directory: Path, output: Path, voice: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Virtual X display required")
     if not all((game_directory / f"tentacle.{part}").is_file() for part in ("000", "001")):
         raise ValueError("Linked SCUMM dialogue game is missing")
     output.mkdir(parents=True, exist_ok=True)
-    report: dict = {"game": "dialogue-choices", "passed": False}
+    report: dict = {"game": "dialogue-choices", "passed": False, "voice": voice}
+    pcm_path = output / "dialogue-voice.raw"
     with (output / "scummvm.log").open("w", encoding="utf-8") as log:
         process = subprocess.Popen(["scummvm", f"--path={game_directory.resolve()}", "tentacle"],
                                    stdout=log, stderr=subprocess.STDOUT,
-                                   env={**os.environ, "SDL_AUDIODRIVER": "dummy"})
+                                   env={**os.environ, "SDL_AUDIODRIVER": "disk" if voice else "dummy",
+                                        **({"SDL_DISKAUDIOFILE": str(pcm_path)} if voice else {})})
+        epoch = time.monotonic()
         try:
             ready = False
             before = 0
@@ -98,10 +101,16 @@ def run(game_directory: Path, output: Path) -> dict:
             report.update({"answer_pixels_before": before, "actor_pixels": actor_count})
             if not ready:
                 raise RuntimeError(f"Initial scene/character not ready: {report}")
+            if voice:
+                _run(["xdotool", "key", "1"])  # sorted languages: de, en
+                time.sleep(0.6)
             # The inherited DOTT verb GUI is in fixed 1024x768 Xvfb coords.
             _click(330, 560)  # Talk to
             x, y = _color_center(output, "before", ACTOR_RGB)
             _click(x, y)
+            if voice:
+                time.sleep(2.0)
+                _capture(output, "spoken")
             displayed = 0
             for _ in range(35):
                 if process.poll() is not None:
@@ -134,10 +143,10 @@ def run(game_directory: Path, output: Path) -> dict:
                            "passed": detect_answer_transition(before, displayed, dismissed)})
             if not report["passed"]:
                 raise RuntimeError(f"Answer interaction was not proven: {report}")
+            if voice:
+                report["selected_language"] = "de"
             return report
         finally:
-            (output / "dialogue-report.json").write_text(json.dumps(report, indent=2) + "\n",
-                                                           encoding="utf-8")
             if process.poll() is None:
                 process.terminate()
                 try:
@@ -145,15 +154,27 @@ def run(game_directory: Path, output: Path) -> dict:
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait(timeout=3)
+            if voice:
+                pcm = pcm_path.read_bytes() if pcm_path.exists() else b""
+                report["pcm_bytes"] = len(pcm)
+                report["pcm_active_fraction"] = round(
+                    sum(value not in (0, 128) for value in pcm) / len(pcm), 4) if pcm else 0.0
+                report["voice_audible"] = report["pcm_bytes"] >= 8192 and report["pcm_active_fraction"] > 0.05
+                if not report["voice_audible"]:
+                    report["passed"] = False
+            (output / "dialogue-report.json").write_text(json.dumps(report, indent=2) + "\n",
+                                                           encoding="utf-8")
 
 
 def main() -> int:
-    if len(sys.argv) != 3:
-        print("Usage: python -m adventure_studio.scumm_dialogue_probe GAME_DIR OUTPUT_DIR")
+    voice = len(sys.argv) == 4 and sys.argv[1] == "--voice"
+    if (len(sys.argv) != 3 and not voice):
+        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice] GAME_DIR OUTPUT_DIR")
         return 2
-    report = run(Path(sys.argv[1]), Path(sys.argv[2]))
+    report = run(Path(sys.argv[2] if voice else sys.argv[1]),
+                 Path(sys.argv[3] if voice else sys.argv[2]), voice=voice)
     print(json.dumps(report, sort_keys=True))
-    return 0
+    return 0 if report["passed"] else 1
 
 
 if __name__ == "__main__":

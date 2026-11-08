@@ -33,6 +33,13 @@ Untertitel im selben stock-ScummVM-Bild plus PCM-Escape (CI `42531065406`).
 Weitere Sprechrollen- und Dialogknoten-
 Synchronisierung bleibt offen (D03/D04/U03).
 
+**Aktuelles NPC-Dialog-VOC-Paket (2026-11-08):** Studio-Import von VOCs
+auf Gesprächs-Öffnungs- und Antwortzeilen mit Sprachvariante,
+versioniertem Quelltext-Schutz und nativer `GameLanguage`-Ausgabe.
+Gezielte Modell-/SCUMM-Tests grün; die echte NPC-Klick-/Antwort-/Audioprobe
+ist als weiteres Gate der Dialogue-CI ergänzt. Vollständige zyklische
+Gesprächsgraphen, mehrere Sprecher und Actor-Lippensync bleiben offen.
+
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und
 [Abnahmeszenarien](scumm-v6-reference/SCENARIOS.md). Die

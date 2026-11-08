@@ -28,7 +28,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
                                import_room_sound, room_sound_ids,
-                               edit_voice_variant, set_default_voice_language)
+                               edit_voice_variant, set_default_voice_language,
+                               dialogue_voice_lines, edit_dialogue_voice)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -629,6 +630,14 @@ def make_app():
             with gr.Row():
                 native_voice_add = gr.Button("Sprachvariante hinzufügen / aktualisieren")
                 native_voice_remove = gr.Button("Sprachvariante entfernen")
+            gr.Markdown("**Dialog-Stimmen:** Ordne einer NPC-Gesprächszeile eine zuvor importierte VOC-Aufnahme zu. Zuerst die Standardsprache, danach weitere Sprachen auswählen. Der gesprochene Text stammt aus der Story-Übersetzung.")
+            native_dialogue_line = gr.Dropdown(label="NPC-Dialogzeile (Öffnung oder Antwort)")
+            with gr.Row():
+                native_dialogue_language = gr.Textbox(label="Sprache der Aufnahme (z. B. en)", value="en")
+                native_dialogue_sound = gr.Dropdown(label="VOC-Aufnahme für Dialogzeile")
+            with gr.Row():
+                native_dialogue_voice_save = gr.Button("Dialogaufnahme zuweisen / ersetzen")
+                native_dialogue_voice_remove = gr.Button("Dialogaufnahme entfernen")
             with gr.Row():
                 native_replace = gr.Button("Ausgewählten Schritt mit Formularwerten ersetzen")
                 native_up = gr.Button("Schritt nach oben")
@@ -927,6 +936,23 @@ def make_app():
             lambda raw, identity, number, language:
             native_edit(edit_voice_variant, raw, identity, number, language, None, None, True),
             [native_state, native_sequence, native_step, native_voice_language],
+            [native_state, *native_outputs, native_report])
+        native_state.change(
+            lambda raw: gr.update(choices=dialogue_voice_lines(raw) if raw else (), value=None),
+            [native_state], [native_dialogue_line])
+        native_dialogue_line.change(
+            lambda raw, line: gr.update(
+                choices=room_sound_ids(raw, next((room.name for room in parse_document(raw).rooms
+                                                 if line and line.startswith(f"room.{room.name.lower()}.")), ""))
+                if raw else (), value=None),
+            [native_state, native_dialogue_line], [native_dialogue_sound])
+        native_dialogue_voice_save.click(
+            lambda *args: native_edit(edit_dialogue_voice, *args),
+            [native_state, native_dialogue_line, native_dialogue_language, native_dialogue_sound],
+            [native_state, *native_outputs, native_report])
+        native_dialogue_voice_remove.click(
+            lambda raw, line, language: native_edit(edit_dialogue_voice, raw, line, language, None, True),
+            [native_state, native_dialogue_line, native_dialogue_language],
             [native_state, *native_outputs, native_report])
         native_add.click(lambda *args: native_edit(append_sequence_step, *args),
                          [native_state, native_room, native_hotspot, native_verb,

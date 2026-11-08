@@ -517,7 +517,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         # ScummC parses room parameters (image/boxd/zplanes) before resource
         # declarations: sound resources therefore belong before the objects.
         declarations += [f'    sound {asset.id} = "{asset.id}.soun";\n'
-                         for asset in sorted(room_sounds, key=lambda item: item.id)]
+                         for asset in sorted(room_sounds, key=lambda item: item.id)
+                         if f'    sound {asset.id} = "{asset.id}.soun";\n' not in source]
     source = source[:first] + "".join(declarations) + source[first:]
     grouped = {}
     for sequence in active:

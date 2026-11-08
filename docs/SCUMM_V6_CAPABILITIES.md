@@ -106,12 +106,12 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | ID | Fähigkeit | Analyse | Studio | Test | ScummVM | Nächstes Gate |
 | --- | --- | --- | --- | --- | --- | --- |
 | D01 | Einfache Textausgabe | A (Teil) | I | T | V (Teil) | Echte NPC-Talk-UI |
-| D02 | Verzweigte Gespräche/Antwortoptionen | A (Teil) | I (Demo) | T (Teil) | offen | Native Menüdarstellung |
+| D02 | Verzweigte Gespräche/Antwortoptionen | A (Teil) | I (Teil: NPC-Öffnungs- und Antworttexte mit VOC-Sprachvarianten aus dem Studio-Projekt) | T (Teil: JSON-/Editor-/SCUMM-Quelltest; native Audio-Gesprächsprobe ausstehend) | V (Teil: bisherige klickbare Antwortobjekte) | Beliebige native Dialoggraphen und Sprecherwechsel |
 | D03 | Mehrere Sprecher/Costume-Lippensync | A (Teil) | – | – | – | Actor-/Audio-Koordination |
 | D04 | Mehrsprachige Textressourcen | A (Teil) | I (Teil: Story-Katalog und VOC-Untertitel mit gemeinsamem CHAR und `GameLanguage` im nativen Export) | T (Teil: gemeinsamer Export-/Sprachverzweigungs-Test, 293 lokal) | V (Teil: gemeinsames deutsches Objektlabel und VOC-Untertitel mit PCM-Escape in stock ScummVM, CI `42531065406`) | Vollständige Story-Übersetzung, Sprecher-Sprachaufnahmen an Dialogknoten |
 | U01 | MIDI-/Soundresource | A (Teil) | I (Teil: Studio-MIDI-Import, SOUN-Export, Raumreferenz) | T (Teil: JSON-/Exporter-Test) | V (Teil: Studio-MIDI als native SOUN mit Stop/Start-PCM-Gate in stock ScummVM, CI `42517572328`) | Weitere Soundformate und allgemeines iMUSE |
 | U02 | iMUSE-/Music-State-Übergänge | A (Teil) | I (Plan) | T (Plan) | – | Hook-/Beat-Nachweis |
-| U03 | VOC-Sprache und Soundeffekte | A (Teil) | I (Teil: VOC-Import, Unicode-`Gesprochene Zeile` mit Actor/Ego, eigener Sprach-VOC/Untertitel-Variante, native Sprachverben und CHAR-Font) | T (Teil: unabhängige Escape-Soundzustände, JSON-/Exporter-/Unicode-/Sprachvarianten-Tests, 292 lokal) | V (Teil: VOC-Effekt CI `42522610786`; ASCII-Sprachzeile CI `42524819678`; Umlaut + VOC-Escape CI `42526681259`; deutsche Sprachvariante mit sichtbarem Umlaut und PCM-Escape-Gate CI `42528788315`) | Actor-Lipsync und vollständige Dialoglokalisierung |
+| U03 | VOC-Sprache und Soundeffekte | A (Teil) | I (Teil: VOC-Import, Unicode-Sprachzeilen, eigene Sprach-VOC-/Untertitel-Varianten sowie VOC-Zuordnung zu NPC-Dialogzeilen und Antworten) | T (Teil: JSON-/Exporter-/Unicode-/Dialog-Audiobindungstests, 295 lokal) | V (Teil: VOC-Effekt CI `42522610786`; ASCII-Sprachzeile CI `42524819678`; Umlaut + VOC-Escape CI `42526681259`; Sprachvariante CI `42528788315`; native NPC-Dialog-Audioprobe ausstehend) | Actor-Lipsync und vollständige Dialoggraphen |
 | P01 | Globale Variablen/Objektzustände | A | I (Teil) | T | V (Teil) | Langzeit-/Room-Scope |
 | P02 | Save/Load kompletter Spielzustand | A (Teil) | I (Probe) | T (Teil) | offen | Raum+Inventar+Actors |
 | P03 | Spielziel/Quest-Fortschritt | A (Projekt) | I (Teil) | T | V (Teil) | Verschiedene Enden |

@@ -678,6 +678,22 @@ Offen bleiben insbesondere
 automatische Sprachaufnahmen an Gesprächsknoten und Actor-Lippensync;
 das kombinierte Paket erfordert einen vollständig übersetzten Story-Katalog.
 
+**Sprachaufnahmen an NPC-Gesprächszeilen (2026-11-08, Implementierung):**
+Der Studio-Editor kann jetzt für die Öffnungszeilen und Antworttexte der
+vorhandenen verzweigten NPC-Gespräche eine importierte Raum-VOC-Aufnahme
+der Standardsprache und weitere Sprachaufnahmen binden. Die native SCUMM-
+Ausgabe startet die pro `GameLanguage` ausgewählte Aufnahme zum passenden
+übersetzten `egoSay`-Text und stoppt anschließend alle möglichen Aufnahmen.
+Die Bindungen stehen verlustfrei im versionierten Projekt-JSON und bleiben
+beim Zusammensetzen mit einer geänderten Story nur erhalten, wenn die
+Dialogzeile noch dieselbe ist; sonst wird der Export klar abgewiesen.
+Die ersten 295 lokalen Tests sind grün. Der neue native Dialog-/VOC-
+Gameplay-Nachweis mit Anklicken eines NPCs und anschließender Antwort
+ist in der isolierten Dialogue-CI vorbereitet, aber noch ausstehend.
+Scope-Limit: Der aktuelle SCUMM-Dialog-Compiler unterstützt weiterhin
+nur flache, begrenzte Antwortzweige ohne Actor-Lippensynchronisation;
+vollständige beliebige Dialoggraphen bleiben offen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

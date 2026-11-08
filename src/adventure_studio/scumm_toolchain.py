@@ -35,18 +35,22 @@ def _voice_charset(document, resources: Path, upstream: Path,
 
     lines = [step for sequence in document.interaction_sequences
              for step in sequence.steps if isinstance(step, VoiceLineStep)]
-    has_variants = any(step.variants for step in lines)
+    dialogue_cues = document.dialogue_voice_cues
+    has_variants = any(step.variants for step in lines) or any(cue.variants for cue in dialogue_cues)
     texts = [value for step in lines
              for value in (step.text, *(item.text for item in step.variants))]
+    texts += [cue.source_text for cue in dialogue_cues]
     if not has_variants and not any(ord(char) > 126 for text in texts for char in text):
         return None
     languages = (story_catalog.languages if story_catalog is not None else
                  tuple(sorted({document.default_voice_language,
-                               *(variant.language for line in lines for variant in line.variants)})))
+                               *(variant.language for line in lines for variant in line.variants),
+                               *(language for cue in dialogue_cues for language, _sound in cue.variants)})))
     if story_catalog is not None:
         if story_catalog.source_language != document.default_voice_language:
             raise ValueError("Story source language differs from default voice language")
-        unknown = sorted({variant.language for line in lines for variant in line.variants}
+        unknown = sorted(({variant.language for line in lines for variant in line.variants}
+                          | {language for cue in dialogue_cues for language, _sound in cue.variants})
                          - set(languages))
         if unknown:
             raise ValueError(f"Voice languages absent from story translation package: {unknown}")
@@ -58,6 +62,9 @@ def _voice_charset(document, resources: Path, upstream: Path,
         catalog_lines.append(LocalizedLine(f"voice_{index:04d}",
                           tuple((language, variants.get(language, step.text))
                                 for language in languages)))
+    for index, cue in enumerate(dialogue_cues):
+        catalog_lines.append(LocalizedLine(f"dialogue_voice_{index:04d}",
+                          tuple((language, cue.source_text) for language in languages)))
     catalog = LanguageCatalog(document.default_voice_language, languages,
                               (*story_catalog.lines, *catalog_lines) if story_catalog is not None
                               else tuple(catalog_lines))
@@ -116,8 +123,9 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                     "-o", str(target)], check=True)
             if not target.is_file() or target.stat().st_size == 0:
                 raise RuntimeError(f"ScummC did not produce native VOC sound: {asset.id}")
-    voice_variants = any(isinstance(step, VoiceLineStep) and step.variants
-                         for sequence in document.interaction_sequences for step in sequence.steps)
+    voice_variants = (any(isinstance(step, VoiceLineStep) and step.variants
+                          for sequence in document.interaction_sequences for step in sequence.steps)
+                      or any(cue.variants for cue in document.dialogue_voice_cues))
     for room in document.rooms:
         for suffix in (".scc", ".bmp"):
             if not (resources / f"{room.name}{suffix}").is_file():
@@ -198,6 +206,15 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         if not stock_fonts_probe:
             bootstrap = inject_multilingual_charset(bootstrap)
         shutil.copyfile(resources / "multilingual-font.char", road / "multilingual-font.char")
+    if localize_story or document.dialogue_voice_cues:
+        from .scumm_assets import scummc_room_source
+        for room in document.rooms:
+            (resources / f"{room.name}.scc").write_text(
+                scummc_room_source(room, language_catalog if localize_story else None,
+                                   graphical_language_buttons=graphical_language_buttons,
+                                   dialogue_voice_cues=tuple(cue for cue in document.dialogue_voice_cues
+                                                             if cue.line_id.startswith(f"room.{room.name.lower()}."))),
+                encoding="utf-8")
     if localize_story:
         if language_catalog is None:
             raise ValueError("Localized story export requires a verified language package")
@@ -209,12 +226,8 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         # catalogue. The native room-localization compiler consumes its story IDs.
         if voice_charset is None:
             validate_story_catalog(document, language_catalog)
-        for room in document.rooms:
-            (resources / f"{room.name}.scc").write_text(
-                scummc_room_source(room, language_catalog,
-                                   graphical_language_buttons=graphical_language_buttons),
-                encoding="utf-8")
-            if graphical_language_buttons:
+        if graphical_language_buttons:
+            for room in document.rooms:
                 write_button_sprites(room, language_catalog, resources)
     if language_room_probe and (language_catalog is None or len(document.rooms) < 2):
         raise ValueError("Room language probe needs a language package and two rooms")
