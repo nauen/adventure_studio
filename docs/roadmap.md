@@ -130,6 +130,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         bearbeiten. Eine Standpose und native `gesture`-Aktion pro Costume;
         mehrteilige Animationen, echte PNG-COST-Kompilierung und Gameplay-
         Nachweis noch offen.
+  - [x] Produkt-Implementierung: weitere PNG-Frames in Costume aufnehmen und
+        native Animationsfolgen pro Blickrichtung mit Frame-IDs und `COUNT`
+        als Daten authoren; ScummC-Quellgenerierung und Verb-Aufruf im
+        Studio-Integrationstest, native Kompilierung/Gameplay noch offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
