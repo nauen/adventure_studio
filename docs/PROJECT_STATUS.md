@@ -658,6 +658,26 @@ deutschen Zeile `0,8115` und nach Escape `0,0000`; die gewählte
 Sprachvariante ist damit im Spiel hör- und sichtbar. Die vollständige
 Pflicht-CI der Schlussrevision bleibt gesondert zu prüfen.
 
+**Gemeinsame Story- und VOC-Lokalisierung (2026-11-08, Implementierung):**
+Der native SCUMM-v6-Exporter kann jetzt ein geprüftes Story-Sprachpaket mit
+den in Studio erfassten Sprachvarianten gesprochener Zeilen kombinieren.
+Ein gemeinsamer CHAR-Font enthält die Zeichen beider Textbestände;
+Dialog-/Objekttexte und VOC-/Untertitel-Verzweigungen teilen sich
+`GameLanguage` und dieselbe sichtbare Sprachauswahl. Die Eingabeprüfung
+weist abweichende Quellsprachen sowie VOC-Sprachcodes außerhalb des
+Story-Katalogs sichtbar zurück. Die vorhandenen getrennten Exporte bleiben
+erhalten; historische Projekt-JSONs benötigen keine Migration. Im nativen
+Studio-ZIP-Export kann eine vollständige `language-catalog.json` direkt
+geladen werden. 293 lokale Tests sind grün. Die kombinierte native
+stock-ScummVM-Probe CI `42531065406` zeigt **gleichzeitig** den deutschen
+Objektnamen `Schlüssel` und `Ich höre die Glocke.` als Voice-Untertitel;
+der PCM-Gate misst vor dem Klick `0,0000`, während der Wiedergabe `0,8012`
+und nach Escape `0,0000` (Artefakt `native-v6-studio-story-voc-localized`).
+Die übrigen Pflicht-Gates der Schlussrevision sind gesondert abzuschließen.
+Offen bleiben insbesondere
+automatische Sprachaufnahmen an Gesprächsknoten und Actor-Lippensync;
+das kombinierte Paket erfordert einen vollständig übersetzten Story-Katalog.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

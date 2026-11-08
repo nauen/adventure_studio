@@ -301,6 +301,25 @@ jobs:
             /tmp/native-voc-localized/screenshots/scummvm-after.png
             /tmp/native-voc-localized/screenshots/scummvm.log
           if-no-files-found: ignore
+      - name: Play localized story and spoken VOC using one native language selection
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_sound_effect_probe --localized-story /tmp/scummc-upstream /tmp/native-voc-story-localized
+      - name: Retain combined native story and VOC language evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-story-voc-localized
+          path: |
+            /tmp/native-voc-story-localized/sound-effect-report.json
+            /tmp/native-voc-story-localized/build/project.json
+            /tmp/native-voc-story-localized/build/resources/language-catalog.json
+            /tmp/native-voc-story-localized/build/resources/Harbor.scc
+            /tmp/native-voc-story-localized/screenshots/scummvm-speaking.png
+            /tmp/native-voc-story-localized/screenshots/scummvm-after.png
+            /tmp/native-voc-story-localized/screenshots/scummvm.log
+          if-no-files-found: ignore
       - name: Compile Studio-imported PNG animation and launch native game
         env:
           PYTHONPATH: src

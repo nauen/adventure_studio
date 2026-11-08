@@ -368,13 +368,16 @@ def make_app():
         path.write_text(project, encoding="utf-8")
         return str(path)
 
-    def native_game(raw, scummc_path, linked, story_raw):
+    def native_game(raw, scummc_path, linked, story_raw, translation_file):
         if raw is None or not scummc_path.strip():
             raise gr.Error("Native Projektdatei und ScummC-Pfad sind erforderlich")
         path = Path(tempfile.mkdtemp(prefix="adventure-studio-native-game-")) / "adventure.zip"
         try:
+            catalog_raw = (Path(translation_file).read_text(encoding="utf-8")
+                           if translation_file else None)
             return str(export_native_project(raw, Path(scummc_path.strip()), path,
-                                             story_raw=story_raw if linked else None))
+                                             story_raw=story_raw if linked else None,
+                                             language_catalog_raw=catalog_raw))
         except (ValueError, OSError, RuntimeError, subprocess.CalledProcessError) as error:
             raise gr.Error(f"Nativer SCUMM-Export fehlgeschlagen: {error}") from error
 
@@ -635,6 +638,10 @@ def make_app():
             with gr.Row():
                 native_json_button = gr.Button("Validiertes Projekt herunterladen")
                 native_json_download = gr.File(label="Native Projekt-JSON")
+            native_translation_file = gr.File(
+                label="Optional: vollständiger Story-Sprachkatalog (language-catalog.json)",
+                file_types=[".json"], type="filepath")
+            gr.Markdown("Wird ein Sprachkatalog geladen, übersetzt der native Export Story-Texte und VOC-Untertitel gemeinsam. Die Quellsprache muss der VOC-Standardsprache entsprechen; jede VOC-Sprache muss im Katalog stehen.")
             native_game_button = gr.Button("Natives SCUMM-ZIP bauen")
             native_game_download = gr.File(label="SCUMM-Spiel")
         report = gr.Textbox(label="Deterministischer Änderungs- und Prüfbericht", lines=7, interactive=False)
@@ -944,7 +951,8 @@ def make_app():
                 [native_state, native_sequence, native_step],
                 [native_state, *native_outputs, native_report])
         native_json_button.click(native_download, [native_state, native_linked, state], [native_json_download])
-        native_game_button.click(native_game, [native_state, scummc_path, native_linked, state],
+        native_game_button.click(native_game, [native_state, scummc_path, native_linked, state,
+                                               native_translation_file],
                                  [native_game_download])
         studio_file.change(studio_load, [studio_file],
                            [state, pending, *refreshed, report,

@@ -4,14 +4,16 @@ import hashlib
 import json
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-from adventure_studio.scumm_toolchain import compile_story_game, main
+from adventure_studio.scumm_toolchain import compile_story_game, main, _voice_charset
 from adventure_studio.scumm_bootstrap import inject_language_keys, inject_multilingual_charset
 from adventure_studio.localization import LanguageCatalog, LocalizedLine, canonical_catalog_json, parse_catalog
 from adventure_studio.story_document import build_story_document
-from adventure_studio.scumm_project import parse_document
+from adventure_studio.scumm_project import (parse_document, canonical_json, SoundAsset,
+                                            InteractionSequence, VoiceLineStep, VoiceVariant)
 from adventure_studio.story_localization import story_text_inventory
 
 
@@ -33,6 +35,99 @@ def fake_upstream(path: Path):
 
 
 class ToolchainTests(unittest.TestCase):
+    def test_story_and_spoken_voice_share_one_language_catalog_and_charset(self):
+        from adventure_studio.localization import charset_plan
+        from adventure_studio.scumm_voc_fixture import original_voc_effect
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            build_story_document(EXAMPLE.read_text(encoding="utf-8"), root / "build")
+            document = parse_document((root / "build" / "project.json").read_text(encoding="utf-8"))
+            document = replace(document, sound_assets=(
+                SoundAsset("EnglishLine", "Harbor", original_voc_effect()),
+                SoundAsset("GermanLine", "Harbor", original_voc_effect(330))),
+                interaction_sequences=(InteractionSequence("Harbor", "Key", "Close", (
+                    VoiceLineStep("EnglishLine", "The key rattles.", variants=(
+                        VoiceVariant("de", "GermanLine", "Der Schlüssel klirrt."),)),)),))
+            resources = root / "build" / "resources"
+            (root / "build" / "project.json").write_text(canonical_json(document), encoding="utf-8")
+            for asset in document.sound_assets:
+                (resources / f"{asset.id}.voc").write_bytes(asset.voc)
+            fake_upstream(root / "scummc")
+            upstream = root / "scummc"
+            (upstream / "soun").write_text("fake executable", encoding="utf-8")
+            (upstream / "soun").chmod(0o755)
+            road = upstream / "examples" / "road"
+            (road / "common.scc").write_text(
+                (road / "common.scc").read_text(encoding="utf-8").replace(
+                    "room ResRoom {", 'chset chtest = "vera.char";\n'
+                    'chset dialogCharset = "vera-small.char";\n'
+                    "script keyboardHandler(int key) {\n        switch(key) {\n        }\n    }\n"
+                    "        setupActors();\nroom ResRoom {"), encoding="utf-8")
+            (road / "common.sch").write_text(
+                (road / "common.sch").read_text(encoding="utf-8") + "// Dialog string list\n",
+                encoding="utf-8")
+            lines = tuple(LocalizedLine(key, (("de", "Tür" if key.endswith(".label") else value),
+                                               ("en", value)))
+                          for key, value in story_text_inventory(document).items())
+            story_catalog = LanguageCatalog("en", ("de", "en"), lines)
+            with self.assertRaisesRegex(ValueError, "absent from story translation package"):
+                _voice_charset(replace(document, interaction_sequences=(replace(
+                    document.interaction_sequences[0], steps=(VoiceLineStep(
+                        "EnglishLine", "The key rattles.", variants=(VoiceVariant(
+                            "fr", "GermanLine", "La clé tinte."),)),)),)),
+                    resources, upstream, story_catalog)
+            with self.assertRaisesRegex(ValueError, "differs from default voice language"):
+                _voice_charset(document, resources, upstream,
+                               replace(story_catalog, source_language="de"))
+            canonical = canonical_catalog_json(story_catalog)
+            (resources / "language-catalog.json").write_text(canonical, encoding="utf-8")
+
+            def fake_font(catalog_source, _latin, _cjk, _tool, target):
+                from adventure_studio.localization import parse_catalog
+                combined = parse_catalog(catalog_source)
+                plan = charset_plan(combined)
+                slots = 128 + len(plan.extra_glyphs)
+                data = bytearray(33 + 4 * slots + 1)
+                data[:4] = b"CHAR"
+                data[4:8] = len(data).to_bytes(4, "big")
+                data[31:33] = slots.to_bytes(2, "little")
+                for code in [*range(32, 127), *(number for _, number in plan.extra_glyphs)]:
+                    data[33 + 4 * code:37 + 4 * code] = (33 + 4 * slots).to_bytes(4, "little")
+                target.joinpath("multilingual-font.char").write_bytes(data)
+                target.joinpath("language-catalog.json").write_text(catalog_source, encoding="utf-8")
+                expected = {f"{code:02X}": chr(code) for code in range(32, 127)}
+                expected.update({f"{number:02X}": glyph for glyph, number in plan.extra_glyphs})
+                target.joinpath("language-package.json").write_text(json.dumps({
+                    "format_version": 1, "languages": list(combined.languages),
+                    "catalog_sha256": hashlib.sha256(catalog_source.encode()).hexdigest(),
+                    "char_sha256": hashlib.sha256(data).hexdigest(), "glyph_map": expected}),
+                    encoding="utf-8")
+
+            with patch("adventure_studio.scumm_language_package.build_language_package", fake_font):
+                fake_font(canonical, None, None, None, resources)
+                (upstream / "char").write_text("fake executable", encoding="utf-8")
+                (upstream / "char").chmod(0o755)
+                def fake_run(args, **kwargs):
+                    target = Path(args[args.index("-o") + 1])
+                    if args[0].endswith("/sld"):
+                        target.with_suffix(".000").write_bytes(b"index")
+                        target.with_suffix(".001").write_bytes(b"data")
+                    else:
+                        target.write_bytes(b"compiled")
+                with patch.dict("os.environ", {"ADVENTURE_STUDIO_LATIN_FONT": __file__}), patch(
+                    "adventure_studio.scumm_toolchain.inject_screen_language_verbs",
+                    side_effect=lambda source, header, catalog: (source, header)
+                ):
+                    compile_story_game(root / "build", upstream, root / "game",
+                                       runner=fake_run, localize_story=True)
+            combined = parse_catalog((resources / "language-catalog.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(combined.lines), len(story_catalog.lines) + 1)
+            self.assertIn("Schlüssel", dict(combined.lines[-1].translations)["de"])
+            self.assertIn("GameLanguage == 25701", (resources / "Harbor.scc").read_text(encoding="utf-8"))
+            self.assertIn("GermanLine", (resources / "Harbor.scc").read_text(encoding="utf-8"))
+            self.assertIn("GameLanguage", (resources / "bootstrap.scc").read_text(encoding="utf-8"))
+
     def test_stock_font_probe_requires_localized_story(self):
         argv = ["scumm_toolchain", "story", "scummc", "output", "--stock-fonts-probe"]
         with patch("sys.argv", argv), patch("builtins.print"):

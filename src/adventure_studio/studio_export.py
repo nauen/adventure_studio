@@ -10,6 +10,7 @@ from __future__ import annotations
 import shutil
 import subprocess
 import tempfile
+import os
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
@@ -65,7 +66,8 @@ def export_playable(raw: str, scummc_directory: Path, zip_path: Path,
 
 
 def export_native_project(raw: str, scummc_directory: Path, zip_path: Path,
-                          runner=subprocess.run, story_raw: str | None = None) -> Path:
+                          runner=subprocess.run, story_raw: str | None = None,
+                          language_catalog_raw: str | None = None) -> Path:
     """Build a validated GameDocument, including authored interaction sequences."""
     if story_raw is not None:
         from .studio_sequences import compose_story_project
@@ -91,7 +93,15 @@ def export_native_project(raw: str, scummc_directory: Path, zip_path: Path,
         shutil.copytree(upstream, cloned)
         (build / "project.json").write_text(canonical, encoding="utf-8")
         export_document(document, resources)
-        compile_story_game(build, cloned, game, runner=runner)
+        if language_catalog_raw is not None:
+            from .scumm_language_package import build_language_package
+            from .scumm_toolchain import _tool
+            font = Path(os.environ.get("ADVENTURE_STUDIO_LATIN_FONT",
+                                       "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
+            build_language_package(language_catalog_raw, font, font,
+                                   _tool(cloned, "char"), resources)
+        compile_story_game(build, cloned, game, runner=runner,
+                           localize_story=language_catalog_raw is not None)
         _publish_game_zip(game, "project.json", canonical,
                           "Adventure Studio native SCUMM v6 project", zip_path, staging,
                           story_json=story_raw)
