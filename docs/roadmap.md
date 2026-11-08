@@ -155,6 +155,11 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Actors mit einer nativen `putActorAt`-Aktion an eine neue Position
         im selben Raum setzen. Studio-UI, Projekt-JSON und Export sind
         verbunden; die interaktive ScummVM-Spielprobe ist noch offen.
+  - [x] Produkt-Implementierung: der neue `walk_actor`-Schritt startet
+        in einem nativen Interaktionsablauf `walkActorTo` zum angegebenen
+        Raumziel; anders als `move_actor` löst er eine Laufbewegung aus.
+        Ein implizites Ankunfts-Wait wird nicht erfunden. ScummVM-Nachweis
+        des projektdefinierten Actors bleibt offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

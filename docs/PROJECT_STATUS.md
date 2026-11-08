@@ -417,6 +417,16 @@ Regression; **die interaktive Auslösung im stock ScummVM ist noch offen**.
 Nächstes Produktpaket: tatsächliches Mehrframe- und Actor-Bewegungs-
 Gameplay im nativen Compiler-/Interpreterpfad nachweisen.
 
+**Laufbewegung als Story-Interaktion (2026-11-08):** Zusätzlich zum
+sofortigen `move_actor`-Versetzen kann das Studio jetzt einen Actor per
+`walk_actor` im selben Raum zu einer Zielposition schicken. Das
+versionierte JSON und der SCUMM-v6-Exporter verwenden das bereits für
+den Demo-Spieler belegte native `walkActorTo`; nachfolgende Aktionen
+laufen bewusst ohne implizite Ankunftssperre weiter. Die visuelle
+Spielprobe und eine später explizite `waitForActor`-Choreografie bleiben
+offen. Das nächste Produktgate bleibt echter ScummVM-Nachweis für
+Actor-Laufbewegung und die importierten Mehrframe-Costumes.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
