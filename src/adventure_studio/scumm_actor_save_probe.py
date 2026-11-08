@@ -129,9 +129,18 @@ def run_actor_save_probe(game: Path, output: Path) -> dict:
             time.sleep(0.3)
         else:
             raise RuntimeError("Loaded door did not lead to Cellar")
-        time.sleep(1)
-        capture("stairs-after-load")
-        stairs_x, stairs_y = door_center(output, "stairs-after-load")
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            capture("stairs-after-load")
+            try:
+                stairs_x, stairs_y = door_center(output, "stairs-after-load")
+                break
+            except ValueError:
+                # The Cellar scene can appear before its scrolling camera
+                # exposes the Stairs hotspot at the expected viewport location.
+                time.sleep(0.4)
+        else:
+            raise RuntimeError("Loaded Cellar never exposed a valid Stairs hotspot")
         click(stairs_x, stairs_y)
         deadline = time.monotonic() + 16
         while time.monotonic() < deadline:

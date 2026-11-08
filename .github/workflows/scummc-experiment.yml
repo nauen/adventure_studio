@@ -237,6 +237,7 @@ jobs:
             /tmp/native-actor-save/save-menu.png
             /tmp/native-actor-save/after-load.png
             /tmp/native-actor-save/cellar-after-load.png
+            /tmp/native-actor-save/stairs-after-load.png
             /tmp/native-actor-save/after-loaded-return.png
             /tmp/native-actor-save/save.log
             /tmp/native-actor-save/load.log
