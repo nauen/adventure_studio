@@ -19,7 +19,13 @@ from .studio_sequences import append_sequence_step
 def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Path) -> dict:
     """A real Close/Key click drives walk -> wait -> turn -> animate -> door."""
     original = parse_document((actor_build / "build" / "project.json").read_text(encoding="utf-8"))
-    project = replace(original, animation_input_rules=(), animation_triggers=(),
+    # The upstream Road checkout already contains the preceding Actor probe's
+    # COST. A separate playable game must have its own resource identity.
+    costume = replace(original.costumes[0], name="StudioSequenceCostume")
+    project = replace(original, costumes=(costume,),
+                      actors=tuple(replace(actor, costume=costume.name)
+                                   for actor in original.actors),
+                      animation_input_rules=(), animation_triggers=(),
                       animation_rules=(), interaction_sequences=())
     raw = canonical_json(project)
     actions = (
