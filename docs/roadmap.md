@@ -190,6 +190,14 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         ASCII-Untertitel. In stock ScummVM sind Text und VOC-Ton gleichzeitig
         sichtbar/hörbar und nach Escape stumm (CI `42524819678`,
         PCM `0,0000`/`0,8557`/`0,0000`).
+  - [x] Produkt-Implementierung/lokaler Test: Unicode-Untertitel einschließlich
+        deutscher Umlaute in der regulären VOC-Sprachzeile, mit automatisch
+        geplanter und durch ScummC erzeugter CHAR-Ressource. Fehlende Fonts
+        und Byte-/Glyph-Grenzen werden sichtbar abgelehnt; die bestehende
+        ASCII-Ausgabe bleibt ohne Zusatzabhängigkeit. 291 Tests grün;
+        natives Untertitel-/PCM-Gate für `Ich höre die Glocke.` bestanden,
+        inklusive korrektem Umlaut-Screenshot und VOC-Stopp nach Escape
+        (CI `42526681259`).
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

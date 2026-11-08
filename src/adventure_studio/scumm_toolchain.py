@@ -24,7 +24,36 @@ from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_ob
                               inject_language_keys, inject_language_room_probe, inject_multilingual_charset,
                               inject_screen_language_verbs, retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
-from .scumm_project import parse_document
+from .scumm_project import VoiceLineStep, parse_document
+
+
+def _voice_charset(document, resources: Path, upstream: Path):
+    """Build a native CHAR only when authored subtitles need extended glyphs."""
+    from .localization import (LanguageCatalog, LocalizedLine, canonical_catalog_json,
+                               charset_plan)
+
+    extras = sorted({char for sequence in document.interaction_sequences
+                     for step in sequence.steps if isinstance(step, VoiceLineStep)
+                     for char in step.text if ord(char) > 126})
+    if not extras:
+        return None
+    catalog = LanguageCatalog("en", ("en",),
+                              (LocalizedLine("voice_glyphs", (("en", "".join(extras)),)),))
+    plan = charset_plan(catalog)
+    if (resources / "multilingual-font.char").exists():
+        raise ValueError("Voice subtitle charset conflicts with existing language package")
+    from .scumm_language_package import build_language_package
+
+    font_name = os.environ.get("ADVENTURE_STUDIO_LATIN_FONT")
+    fonts = ([Path(font_name)] if font_name else [
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/usr/share/fonts/dejavu/DejaVuSans.ttf")])
+    latin = next((path for path in fonts if path.is_file()), None)
+    if latin is None:
+        raise ValueError("Extended voice subtitles need DejaVuSans.ttf or ADVENTURE_STUDIO_LATIN_FONT")
+    build_language_package(canonical_catalog_json(catalog), latin, latin,
+                           _tool(upstream, "char"), resources)
+    return plan
 
 
 def _tool(upstream: Path, name: str) -> Path:
@@ -65,6 +94,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                     "-o", str(target)], check=True)
             if not target.is_file() or target.stat().st_size == 0:
                 raise RuntimeError(f"ScummC did not produce native VOC sound: {asset.id}")
+    voice_charset = _voice_charset(document, resources, upstream)
     for room in document.rooms:
         for suffix in (".scc", ".bmp"):
             if not (resources / f"{room.name}{suffix}").is_file():
@@ -179,7 +209,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         rendered = inject_interaction_sequences(rendered, room.name,
                                                 document.interaction_sequences,
                                                 document.actors, document.costumes, room,
-                                                document.sound_assets)
+                                                document.sound_assets, voice_charset)
         room_source.write_text(rendered, encoding="utf-8")
         target = resources / f"{room.name}.roobj"
         runner([str(compiler), "-V", "6", *include_args, "-R", str(resources),

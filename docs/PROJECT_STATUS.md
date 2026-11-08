@@ -619,7 +619,24 @@ eine separate Charset-Integration. JSON-v1 ist rückwärtskompatibel.
 über der Spielfigur, während die importierte VOC-Datei hörbar ist:
 PCM-Aktivität vor dem Klick `0,0000`, während der Zeile `0,8557`,
 nach Escape `0,0000` (2.109.440 PCM-Bytes). Die vollständigen
-Pflichtworkflows der PR-Schlussrevision stehen noch aus.
+Pflichtworkflows der PR-Schlussrevision wurden für PR #65 vollständig grün
+abgeschlossen (Merge `031053e1`).
+
+**Unicode-Untertitel mit nativer CHAR-Erzeugung (2026-11-08, Implementierung):**
+Die bisherige ASCII-Grenze für `Gesprochene Zeile` entfällt. Das Studio
+akzeptiert nun auch Umlaute und weitere Unicode-Glyphen; der Export sammelt
+die tatsächlich benötigten Zeichen aus beliebig vielen Sprachzeilen,
+berechnet einen stabilen SCUMM-Byteplan und erzeugt mit dem vorhandenen
+Font-Paketpfad ein verifiziertes natives `multilingual-font.char`.
+Die ScummC-Quelle verwendet dazu explizite `\\xNN`-Bytes statt ungesicherter
+UTF-8-Literale. Ein nicht vorhandener DejaVu-Font bzw. fehlende `char`-
+Toolchain führt zu einer verständlichen Exportfehlermeldung. Bestehende
+ASCII-Projekte benötigen keinen zusätzlichen Font-Build. 291 lokale Tests
+grün. Der echte ScummVM-Klicklauf `42526681259` zeigt den korrekt gerenderten
+Umlaut in `Ich höre die Glocke.`; das VOC-Audio misst vor dem Klick `0,0000`,
+während der Zeile `0,8558` und nach Escape `0,0000` (2.105.344 Bytes).
+Die vollständigen Pflichtworkflows der Schlussrevision stehen noch aus.
+Sprachabhängige VOC-Varianten und dynamischer Sprachwechsel bleiben offen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.

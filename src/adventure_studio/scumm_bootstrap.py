@@ -487,7 +487,7 @@ def inject_actor_animation_triggers(source: str, room_name: str, triggers, actor
 
 
 def inject_interaction_sequences(source: str, room_name: str, sequences, actors, costumes,
-                                 room_asset=None, sound_assets=()) -> str:
+                                 room_asset=None, sound_assets=(), voice_charset=None) -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
@@ -574,8 +574,14 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, VoiceLineStep):
                 # The dialogue message owns the subtitle lifetime; the VOC
                 # plays alongside it and is stopped once the message ends.
-                say = (f"actorSay({step.actor_id},\"{step.text}\")" if step.actor_id
-                       else f"egoSay(\"{step.text}\")")
+                if voice_charset is None:
+                    from .scumm_assets import _scumm_string
+                    literal = _scumm_string(step.text)
+                else:
+                    from .localization import encode_scumm_literal
+                    literal = encode_scumm_literal(step.text, voice_charset)
+                say = (f"actorSay({step.actor_id},{literal})" if step.actor_id
+                       else f"egoSay({literal})")
                 instructions.extend((f"            startSound({step.sound_id});\n",
                                      f"            {say};\n",
                                      "            waitForMessage();\n",

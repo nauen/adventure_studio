@@ -56,12 +56,32 @@ class NativeSequenceEditorTests(unittest.TestCase):
             self.assertIn("waitForMessage();", native)
             self.assertEqual(native.count("startSound(Greeting);"), 1)
             self.assertEqual(native.count("stopSound(Greeting);"), 2)
-        with self.assertRaisesRegex(ValueError, "safe ASCII subtitle"):
+        with self.assertRaisesRegex(ValueError, "safe subtitle"):
             append_sequence_step(raw, "Harbor", "Key", "Open", "Gesprochene Zeile",
                                  None, None, "Greeting", None, subtitle='Say "hello"')
         with self.assertRaisesRegex(ValueError, "room VOC"):
             append_sequence_step(raw, "Cellar", "Stairs", "Close", "Gesprochene Zeile",
                                  None, None, "Greeting", None, subtitle="Hello")
+
+    def test_german_voice_subtitle_uses_verified_charset_plan(self):
+        from adventure_studio.localization import (LanguageCatalog, LocalizedLine, charset_plan)
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import SoundAsset
+        document = GameDocument("GermanVoice", (scrolling_fixture(), destination_fixture()),
+                                sound_assets=(SoundAsset("Greeting", "Harbor", original_voc_effect()),))
+        raw = append_sequence_step(canonical_json(document), "Harbor", "Key", "Close",
+                                   "Gesprochene Zeile", None, None, "Greeting", None,
+                                   subtitle="Ich höre die Glocke.")
+        parsed = parse_document(raw)
+        self.assertEqual(canonical_json(parsed), raw)
+        catalog = LanguageCatalog("en", ("en",),
+                                  (LocalizedLine("voice_glyphs", (("en", "ö"),)),))
+        from adventure_studio.scumm_assets import scummc_room_source
+        source = scummc_room_source(parsed.rooms[0])
+        native = inject_interaction_sequences(source, "Harbor", parsed.interaction_sequences,
+                                              (), (), parsed.rooms[0], parsed.sound_assets,
+                                              charset_plan(catalog))
+        self.assertIn(r'egoSay("Ich h\x80re die Glocke.");', native)
 
     def test_voc_sound_effects_reference_room_assets_and_skip_last_state(self):
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
