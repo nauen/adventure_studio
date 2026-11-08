@@ -121,6 +121,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das
         Spiel-ZIP legen. Kein dauerhafter gemeinsamer Authoring-Datentyp;
         Gameplay-Nachweis offen.
+  - [x] Produkt-Implementierung: gemeinsames `adventure.studio.json` für
+        Story und native Actor-/Costume-/Interaktionsdaten speichern, laden,
+        erneut bearbeiten und ohne doppelte Room-Bitmaps exportieren.
+        Validierter Service-Roundtrip; UI- und Gameplay-Gates offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

@@ -316,6 +316,21 @@ und das vollständige UI-Interaktionsgate fehlen weiterhin.
 das Story- und Actor-/Costume-/Interaktionsdaten dauerhaft und verlustfrei
 zusammen speichert und wieder lädt.
 
+**P0.5 – gemeinsames Studio-Authoring-Dokument (Implementierung, CI ausstehend):**
+Das Studio speichert und lädt nun `adventure.studio.json` mit einem
+versionierten Story-Dokument und einer nativen Actor-/Costume-/Action-Ebene.
+Die referenzgeprüfte Story-Übersetzung bleibt die einzige Quelle für Räume,
+Bitmaps und Hotspots; die native Ebene wird ohne redundante generierte
+Room-Ressourcen gespeichert. Der Studio-Editor stellt beide Ebenen nach
+Laden wieder her, erlaubt weitere Schritte und kann daraus das native
+SCUMM-Projekt bzw. Spiel-ZIP erzeugen. Bestehende Story-/native-JSON-Dateien
+werden nicht migriert oder ersetzt. Lokaler Roundtrip mit Bearbeitung und
+alle Regressionstests grün; vollständiger UI-Klicktest und nativer Gameplay-
+Nachweis bleiben offen.
+**Nächstes Produktpaket:** Actors und Costumes direkt im gemeinsamen Studio-
+Projekt anlegen und bearbeiten, ohne eine externe native JSON-Datei als
+Ausgangspunkt zu benötigen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

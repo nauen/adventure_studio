@@ -23,6 +23,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, modify_se
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
+from .studio_project import canonical_studio_project, parse_studio_project
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
@@ -310,6 +311,26 @@ def make_app():
         except (ValueError, OSError, RuntimeError, subprocess.CalledProcessError) as error:
             raise gr.Error(f"Nativer SCUMM-Export fehlgeschlagen: {error}") from error
 
+    def studio_load(file_path):
+        if not file_path:
+            raise gr.Error("Bitte eine Studio-Projektdatei auswählen")
+        try:
+            story_raw, native_raw = parse_studio_project(Path(file_path).read_text(encoding="utf-8"))
+            return (story_raw, None, *selectors(story_raw), "Gemeinsames Studio-Projekt geladen",
+                    native_raw, True, *native_selectors(native_raw),
+                    "Story, Actors, Costumes und Interaktionen gemeinsam geladen")
+        except (ValueError, OSError) as error:
+            raise gr.Error(f"Studio-Projekt kann nicht geladen werden: {error}") from error
+
+    def studio_download(story_raw, native_raw):
+        try:
+            combined = canonical_studio_project(story_raw, native_raw)
+        except ValueError as error:
+            raise gr.Error(f"Studio-Projekt kann nicht gespeichert werden: {error}") from error
+        path = Path(tempfile.mkdtemp(prefix="adventure-studio-authoring-")) / "adventure.studio.json"
+        path.write_text(combined, encoding="utf-8")
+        return str(path)
+
     with gr.Blocks(title="Adventure Studio") as app:
         gr.Markdown("# Adventure Studio\nStory schreiben, KI-Änderungen prüfen und als SCUMM-fähige Daten speichern.")
         state = gr.State(initial)
@@ -318,6 +339,11 @@ def make_app():
             story_file = gr.File(label="Story-JSON öffnen", file_types=[".json"], type="filepath")
             export_button = gr.Button("Geprüfte Story exportieren", variant="primary")
             download = gr.File(label="Story herunterladen")
+        with gr.Row():
+            studio_file = gr.File(label="Gemeinsames Studio-Projekt öffnen", file_types=[".json"], type="filepath")
+            studio_save_button = gr.Button("Gesamtes Studio-Projekt speichern", variant="primary")
+            studio_download_file = gr.File(label="Studio-Projekt herunterladen")
+        gr.Markdown("Das gemeinsame Projekt speichert Story und native Actors/Costumes/Interaktionsregeln ohne doppelte Raum-Bitmaps. Bisherige Story- und native Projekt-JSON-Dateien bleiben separat ladbar.")
         with gr.Row():
             source_language = gr.Dropdown(label="Quellsprache der Story",
                                           choices=[("Deutsch", "de"), ("Englisch", "en"),
@@ -529,6 +555,10 @@ def make_app():
         native_json_button.click(native_download, [native_state, native_linked, state], [native_json_download])
         native_game_button.click(native_game, [native_state, scummc_path, native_linked, state],
                                  [native_game_download])
+        studio_file.change(studio_load, [studio_file],
+                           [state, pending, *refreshed, report,
+                            native_state, native_linked, *native_outputs, native_report])
+        studio_save_button.click(studio_download, [state, native_state], [studio_download_file])
     return app
 
 
