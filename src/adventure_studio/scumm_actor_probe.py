@@ -14,8 +14,8 @@ from pathlib import Path
 from .scumm_assets import destination_fixture, scrolling_fixture
 from .scumm_costume_probe import gesture_fixture
 from .scumm_costume import CostumeDirection
-from .scumm_launch import (launch_smoke, colored_item_pixels, door_pixels,
-                           open_door_center, visible_key_pixels)
+from .scumm_launch import (launch_smoke, colored_item_center, colored_item_pixels,
+                           door_pixels, visible_key_pixels)
 from .scumm_binary import verify_room_binary
 from .scumm_project import (ActorAsset, ActorCountCondition, AnimationRule, AnimationInputRule,
                             GameDocument, ObjectStateEffect, canonical_json,
@@ -101,9 +101,9 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
                                            "gesture"),
                                 ActorAsset("Guide", costume.name, "Harbor", 470, 110, "E", "Guide"),
                             ), animation_input_rules=(
-                                AnimationInputRule("Companion", "Harbor", "Door", "Push", 2,
-                                                   ObjectStateEffect("Harbor", "Key", 0),
-                                                   ObjectStateEffect("Harbor", "Door", 0)),
+                                AnimationInputRule("Companion", "Harbor", "Key", "Push", 2,
+                                                   ObjectStateEffect("Harbor", "Door", 0),
+                                                   ObjectStateEffect("Harbor", "Key", 0)),
                             ))
     encoded = canonical_json(document)
     (build / "project.json").write_text(encoded, encoding="utf-8")
@@ -193,7 +193,7 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
     # Slow only the isolated fixture's Actor, leaving the authored project and
     # exporter timing unchanged. The first COUNT is observable as a cyan door.
     source = source.replace("        animateActor(Companion,24);\n",
-                            "        putActorAt(VAR_EGO, 430, 100, Harbor);\n"
+                            "        putActorAt(VAR_EGO, 375, 100, Harbor);\n"
                             "        setCameraAt(480);\n"
                             "        setCurrentActor(Companion);\n"
                             "        setActorAnimSpeed(30);\n"
@@ -253,15 +253,15 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
                 click(392, 524)  # Upstream Road Push verb at logical (100, 170).
                 if kind == "late":
                     time.sleep(6)
-                door_x, door_y = open_door_center(output, "door")
-                click(door_x, door_y)
+                key_x, key_y = colored_item_center(output, "door", (255, 220, 75))
+                click(key_x, key_y)
                 time.sleep(2.5)
                 frame("end")
                 gold = visible_key_pixels(output)
                 cyan = colored_item_pixels(output, "end", (50, 220, 220))
                 return {"key_pixels": gold, "open_door_pixels": cyan,
                         "first_count_time": round(first_count - started, 3),
-                        "door_click": [door_x, door_y]}
+                        "key_click": [key_x, key_y]}
             finally:
                 game.terminate()
                 try:
@@ -273,8 +273,8 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
     early = run_click("early")
     late = run_click("late")
     report = {"native_early_late_input_verified": (
-              early["key_pixels"] < 40 and early["open_door_pixels"] >= 40
-              and late["key_pixels"] >= 40 and late["open_door_pixels"] < 40),
+              early["key_pixels"] >= 40 and early["open_door_pixels"] < 40
+              and late["key_pixels"] < 40 and late["open_door_pixels"] >= 40),
               "early": early, "late": late}
     (destination / "actor-input-report.json").write_text(json.dumps(report, indent=2) + "\n",
                                                           encoding="utf-8")
