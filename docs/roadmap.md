@@ -25,6 +25,13 @@
 
 ### Verbindlicher SCUMM-v6-Funktionsvertrag
 
+**Aktuelles vertikales Paket (2026-11-08):** Gemeinsamer nativer
+Sprachzustand für lokalisierten Story-Text und VOC-Zeilen; ein geprüftes
+Story-Sprachpaket wird beim Export um die Unicode-Untertitel ergänzt.
+Nachweis: integrierter Exporttest, neue stock-ScummVM-Kombinationsprobe
+im experimentellen Workflow. Weitere Sprechrollen- und Dialogknoten-
+Synchronisierung bleibt offen (D03/D04/U03).
+
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und
 [Abnahmeszenarien](scumm-v6-reference/SCENARIOS.md). Die

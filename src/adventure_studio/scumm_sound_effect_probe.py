@@ -20,7 +20,8 @@ from .scumm_project import SoundAsset
 
 def run_sound_effect_probe(upstream: Path, destination: Path,
                            voice_line: bool = False,
-                           localized: bool = False) -> dict:
+                           localized: bool = False,
+                           localized_story: bool = False) -> dict:
     """A real hotspot click plays a VOC; Escape applies the final stop cue."""
     sounds = [SoundAsset("BellSound", "Harbor", original_voc_effect(duration_ms=5000))]
     if localized:
@@ -48,8 +49,24 @@ def run_sound_effect_probe(upstream: Path, destination: Path,
     resources = build / "resources"
     resources.mkdir(parents=True, exist_ok=True)
     (build / "project.json").write_text(raw, encoding="utf-8")
-    export_document(parse_document(raw), resources)
-    game_dir = compile_story_game(build, upstream, destination / "game")
+    parsed = parse_document(raw)
+    export_document(parsed, resources)
+    if localized_story:
+        from .localization import LanguageCatalog, LocalizedLine, canonical_catalog_json
+        from .story_localization import story_text_inventory
+        from .scumm_language_package import build_language_package
+        from .scumm_toolchain import _tool
+        story = story_text_inventory(parsed)
+        catalog = LanguageCatalog("en", ("de", "en"), tuple(
+            LocalizedLine(key, (("de", "Schlüssel" if key == "room.harbor.object.key.label"
+                                   else value), ("en", value)))
+            for key, value in story.items()))
+        font = Path(os.environ.get("ADVENTURE_STUDIO_LATIN_FONT",
+                                   "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
+        build_language_package(canonical_catalog_json(catalog), font, font,
+                               _tool(upstream, "char"), resources)
+    game_dir = compile_story_game(build, upstream, destination / "game",
+                                  localize_story=localized_story)
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Sound effect gameplay requires Xvfb")
     frames = destination / "screenshots"
@@ -118,6 +135,7 @@ def run_sound_effect_probe(upstream: Path, destination: Path,
         "native_sound_id": "BellSound",
         "voice_line": voice_line,
         "localized": localized,
+        "localized_story": localized_story,
         "selected_language": "de" if localized else None,
         "escape_sent": True,
         "pcm_bytes": len(pcm),
@@ -138,10 +156,11 @@ def run_sound_effect_probe(upstream: Path, destination: Path,
 
 
 if __name__ == "__main__":
-    if len(sys.argv) == 4 and sys.argv[1] in ("--voice", "--localized"):
+    if len(sys.argv) == 4 and sys.argv[1] in ("--voice", "--localized", "--localized-story"):
         print(run_sound_effect_probe(Path(sys.argv[2]), Path(sys.argv[3]), voice_line=True,
-                                     localized=sys.argv[1] == "--localized"))
+                                     localized=sys.argv[1] in ("--localized", "--localized-story"),
+                                     localized_story=sys.argv[1] == "--localized-story"))
     elif len(sys.argv) == 3:
         print(run_sound_effect_probe(Path(sys.argv[1]), Path(sys.argv[2])))
     else:
-        raise SystemExit("Usage: python -m adventure_studio.scumm_sound_effect_probe [--voice|--localized] SCUMMC DESTINATION")
+        raise SystemExit("Usage: python -m adventure_studio.scumm_sound_effect_probe [--voice|--localized|--localized-story] SCUMMC DESTINATION")

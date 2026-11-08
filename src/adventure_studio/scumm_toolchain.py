@@ -27,7 +27,8 @@ from .scumm_font_probe import verify_char_resource
 from .scumm_project import VoiceLineStep, parse_document
 
 
-def _voice_charset(document, resources: Path, upstream: Path):
+def _voice_charset(document, resources: Path, upstream: Path,
+                   story_catalog=None):
     """Build a native CHAR only when authored subtitles need extended glyphs."""
     from .localization import (LanguageCatalog, LocalizedLine, canonical_catalog_json,
                                charset_plan)
@@ -39,8 +40,16 @@ def _voice_charset(document, resources: Path, upstream: Path):
              for value in (step.text, *(item.text for item in step.variants))]
     if not has_variants and not any(ord(char) > 126 for text in texts for char in text):
         return None
-    languages = tuple(sorted({document.default_voice_language,
-                              *(variant.language for line in lines for variant in line.variants)}))
+    languages = (story_catalog.languages if story_catalog is not None else
+                 tuple(sorted({document.default_voice_language,
+                               *(variant.language for line in lines for variant in line.variants)})))
+    if story_catalog is not None:
+        if story_catalog.source_language != document.default_voice_language:
+            raise ValueError("Story source language differs from default voice language")
+        unknown = sorted({variant.language for line in lines for variant in line.variants}
+                         - set(languages))
+        if unknown:
+            raise ValueError(f"Voice languages absent from story translation package: {unknown}")
     if len(languages) > 5:
         raise ValueError("Native voice language GUI supports up to five languages")
     catalog_lines = []
@@ -49,9 +58,11 @@ def _voice_charset(document, resources: Path, upstream: Path):
         catalog_lines.append(LocalizedLine(f"voice_{index:04d}",
                           tuple((language, variants.get(language, step.text))
                                 for language in languages)))
-    catalog = LanguageCatalog(document.default_voice_language, languages, tuple(catalog_lines))
+    catalog = LanguageCatalog(document.default_voice_language, languages,
+                              (*story_catalog.lines, *catalog_lines) if story_catalog is not None
+                              else tuple(catalog_lines))
     plan = charset_plan(catalog)
-    if (resources / "multilingual-font.char").exists():
+    if story_catalog is None and (resources / "multilingual-font.char").exists():
         raise ValueError("Voice subtitle charset conflicts with existing language package")
     from .scumm_language_package import build_language_package
 
@@ -105,7 +116,6 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                     "-o", str(target)], check=True)
             if not target.is_file() or target.stat().st_size == 0:
                 raise RuntimeError(f"ScummC did not produce native VOC sound: {asset.id}")
-    voice_charset = _voice_charset(document, resources, upstream)
     voice_variants = any(isinstance(step, VoiceLineStep) and step.variants
                          for sequence in document.interaction_sequences for step in sequence.steps)
     for room in document.rooms:
@@ -169,8 +179,25 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         raise ValueError("Graphical language selectors require --localize-story")
     if graphical_language_buttons and screen_language_gui:
         raise ValueError("Choose one graphical language selector mode")
-    if voice_variants and (localize_story or screen_language_gui or graphical_language_buttons):
-        raise ValueError("Localized voice GUI cannot be combined with independent story language selector")
+    if voice_variants and localize_story:
+        if language_catalog is None:
+            raise ValueError("Localized story and voice require a verified language package")
+        from .story_localization import validate_story_catalog
+        validate_story_catalog(document, language_catalog)
+    voice_charset = _voice_charset(document, resources, upstream,
+                                  language_catalog if localize_story else None)
+    if voice_charset is not None and language_catalog is not None and localize_story:
+        # The common CHAR must encode the union of story and voice glyphs.
+        # The signed input package was verified above before replacement.
+        from .localization import parse_catalog
+        language_catalog = parse_catalog((resources / "language-catalog.json").read_text(encoding="utf-8"))
+        shutil.copyfile(resources / "multilingual-font.char", road / "multilingual-font.char")
+    elif voice_charset is not None and language_catalog is None:
+        from .localization import parse_catalog
+        language_catalog = parse_catalog((resources / "language-catalog.json").read_text(encoding="utf-8"))
+        if not stock_fonts_probe:
+            bootstrap = inject_multilingual_charset(bootstrap)
+        shutil.copyfile(resources / "multilingual-font.char", road / "multilingual-font.char")
     if localize_story:
         if language_catalog is None:
             raise ValueError("Localized story export requires a verified language package")
@@ -178,7 +205,10 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         from .scumm_assets import scummc_room_source
         if graphical_language_buttons:
             from .scumm_language_buttons import write_button_sprites
-        validate_story_catalog(document, language_catalog)
+        # Voice lines were added only after validating the original story
+        # catalogue. The native room-localization compiler consumes its story IDs.
+        if voice_charset is None:
+            validate_story_catalog(document, language_catalog)
         for room in document.rooms:
             (resources / f"{room.name}.scc").write_text(
                 scummc_room_source(room, language_catalog,
@@ -193,7 +223,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         if language_room_probe:
             bootstrap = inject_language_room_probe(bootstrap, document.rooms[1].name,
                                                    language_catalog)
-        if screen_language_gui or voice_variants:
+        if screen_language_gui or (voice_variants and not graphical_language_buttons):
             bootstrap, header = inject_screen_language_verbs(bootstrap, header,
                                                              language_catalog)
     (resources / "bootstrap.scc").write_text(inject_inventory_objects(bootstrap, icon_ids), encoding="utf-8")
