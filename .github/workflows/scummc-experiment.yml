@@ -217,6 +217,26 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe --input /tmp/scummc-upstream /tmp/native-actors /tmp/native-actor-input
+      - name: Verify Actor COUNT state and initialization guard across native Save/Load
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_save_probe /tmp/native-actor-input /tmp/native-actor-save
+      - name: Retain Actor native Save/Load evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-actor-save-load
+          path: |
+            /tmp/native-actor-save/actor-save-report.json
+            /tmp/native-actor-save/before-save.png
+            /tmp/native-actor-save/save-menu.png
+            /tmp/native-actor-save/after-load.png
+            /tmp/native-actor-save/cellar-after-load.png
+            /tmp/native-actor-save/after-loaded-return.png
+            /tmp/native-actor-save/save.log
+            /tmp/native-actor-save/load.log
+          if-no-files-found: ignore
       - name: Retain native Actor input window gameplay evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -85,6 +85,11 @@ eine definierte Reaktion. Kein zufälliges Ergebnis durch Frame-Race.
   Noch offen sind beliebige Mehrfachaktionen und weitere Zeitfenster,
   **explizit angeforderte** Animations-Neustarts, Save/Load und das
   vollständige Fahrgeschäft-Szenario.
+  Eine zusätzliche Save/Load-Regressionsprobe ist vorbereitet: Nach einer
+  späten Aktion speichert ScummVM den Zustand, startet mit Slot 1 neu und
+  prüft Key/Door vor sowie nach einem weiteren Raum-Rückweg. Ohne grüne
+  native CI bleibt dieser Teilnachweis offen; Speichern während einer
+  aktiven Animation ist davon nicht abgedeckt.
 
 ## C. Kinoartige Cutscene mit Totale, Nahaufnahme und Detail
 

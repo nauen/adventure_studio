@@ -252,6 +252,15 @@ Animation gebundenen COUNT-Wächter. Die alten JSON-v1-Projekte bleiben
 unverändert. **Nächstes P0.5-Gate:** Save/Load der Animation-/Objektzustände
 und anschließend explizite wiederholbare Animationsaktionen.
 
+**P0.5-Save/Load-Gate in CI-Prüfung (noch kein ScummVM-Nachweis):** Die
+isolierte Actor-Fixture erhält einen nativen Save/Load-Ablauf: späte
+`Push`-Aktion, Prüfung der Key-/Door-Bilder, Speichern über den ScummVM-
+Dialog, Neustart mit `--save-slot=1`, erneute Bildprüfung und regulärer
+`Harbor → Cellar → Harbor`-Rückweg. Der COUNT-Replay-Negativwächter deckt
+einen verlorenen Initialanimations-Guard auf. Die Prüfung ist erst mit
+grünem Interpreter-CI-Lauf abgenommen; Save/Load **während** einer noch
+laufenden Animation ist davon nicht abgedeckt.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
