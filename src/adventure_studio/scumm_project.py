@@ -115,13 +115,19 @@ class WaitActorStep:
 
 
 @dataclass(frozen=True)
+class FaceActorStep:
+    actor_id: str
+    direction: str
+
+
+@dataclass(frozen=True)
 class InteractionSequence:
     """Ordered native actions initiated by a room object verb."""
 
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep, ...]
 
 
 @dataclass(frozen=True)
@@ -210,6 +216,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, WalkActorStep)
                                                    else {"type": "wait_actor", **vars(step)}
                                                    if isinstance(step, WaitActorStep)
+                                                   else {"type": "face_actor", **vars(step)}
+                                                   if isinstance(step, FaceActorStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
                                        for sequence in document.interaction_sequences]}
@@ -454,6 +462,10 @@ def _validate_document(document: GameDocument) -> None:
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if actor is None or actor.room != room.name:
                     raise ValueError("Interaction wait requires an Actor in the sequence room")
+            elif isinstance(step, FaceActorStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if actor is None or actor.room != room.name or step.direction not in ("N", "E", "S", "W"):
+                    raise ValueError("Interaction facing requires an Actor in the room and a cardinal direction")
             else:
                 raise ValueError("Unsupported interaction sequence step")
 
@@ -589,6 +601,10 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "wait_actor":
                 step = _only(raw_step, {"type", "actor_id"}, {"type", "actor_id"})
                 steps.append(WaitActorStep(step["actor_id"]))
+            elif kind == "face_actor":
+                step = _only(raw_step, {"type", "actor_id", "direction"},
+                             {"type", "actor_id", "direction"})
+                steps.append(FaceActorStep(step["actor_id"], step["direction"]))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],

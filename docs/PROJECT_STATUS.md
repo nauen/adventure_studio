@@ -438,6 +438,15 @@ Ein interaktiver ScummVM-Nachweis der neu authorbaren Actor-Choreografie
 bleibt offen. Nächstes Gate: diese Abfolge und importierte Mehrframe-
 Costumes im echten Spiel beobachten.
 
+**Actor-Blickrichtung zur Laufzeit (2026-11-08):** Der Studio-Ablauf
+enthält nun `face_actor` als eigenständige Aktion mit N/E/S/W-Auswahl.
+Projekt-JSON und Validator halten Actor- und Raumreferenz fest; ScummC
+verwendet das in upstream `examples/road/road.scc` belegte Paar
+`setCurrentActor`/`setActorDirection` und stellt danach `VAR_EGO` als
+aktiven Actor wieder her. Der Schritt ist mit Bewegung, Ankunfts-Wait,
+Animation und Objektzustand kombinierbar. Die interaktive ScummVM-
+Choreografie ist weiterhin nicht als V belegt.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
