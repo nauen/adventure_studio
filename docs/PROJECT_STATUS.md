@@ -553,12 +553,18 @@ ScummC-Exporter gibt `startRoom` erst **nach** den bisherigen Schritten und
 bei überspringbaren Folgen erst **nach** `try`/`override` aus, damit Actor-,
 Objekt- und Inventar-Endzustände vor dem Wechsel angewendet werden. 287 lokale
 Tests grün, darunter Editor-/JSON-/ScummC- und Ungültigzielprüfungen.
-**Status:** Implementiert und lokal getestet, aber der konkrete Wechsel
-nach Escape einschließlich Wiedereintritt und Zustandserhalt ist noch
-**nicht in stock ScummVM verifiziert**. Keine vollständige S04-Abnahme.
-**Nächstes Produktpaket:** Raumwechsel nach Escape im generierten Spiel mit
-Rückweg und bleibendem Inventar-/Objektzustand nativ abnehmen; dabei
-eine konkrete Fortsetzung nach dem Wechsel prüfen.
+**Native Abnahme ergänzt:** Die bestehende echte `Close`-Spielprobe führt
+nach der Inventarkombination eine separate Studio-`Door`-Sequenz aus,
+überspringt ihre sechssekündige Wartezeit, betritt `Cellar`, kehrt über
+`Stairs` nach `Harbor` zurück und prüft offene Tür sowie Badge im Inventar.
+Die neue Zusammensetzung bestand im unveränderten ScummVM (Actions
+`42514653114`, Actor-Choreografie-Schritt). Der erste Gesamtlauf hatte
+einen nachgelagerten zeitabhängigen PNG-Costume-Fehler; dessen Wiederholung
+hat den PNG-Schritt bestanden. Gesamtworkflow und weitere CI-Gates sind
+gesondert abzuschließen. **Keine vollständige S04-Abnahme**, da native
+Audio-Endzustände offen sind.
+**Nächstes Produktpaket:** Sequenz-Audio-Cues und ihr definierter Escape-
+Endzustand über Studio/JSON/ScummC/stock ScummVM nutzbar machen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
