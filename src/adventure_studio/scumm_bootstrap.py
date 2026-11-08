@@ -486,6 +486,57 @@ def inject_actor_animation_triggers(source: str, room_name: str, triggers, actor
     return source
 
 
+def inject_interaction_sequences(source: str, room_name: str, sequences, actors, costumes) -> str:
+    """Compile ordered, authored object-verb actions into native ScummC."""
+    from .scumm_project import AnimateActorStep, ObjectStateStep, DelayStep
+
+    active = [sequence for sequence in sequences if sequence.room == room_name]
+    if not active:
+        return source
+    actors_by_id = {actor.id: actor for actor in actors}
+    costumes_by_name = {costume.name: costume for costume in costumes}
+    targets = {step.hotspot_id for sequence in active for step in sequence.steps
+               if isinstance(step, ObjectStateStep)}
+    declarations = [f"    object {target};\n" for target in sorted(targets)
+                    if f"    object {target};\n" not in source]
+    first = min((source.find(f"    object {sequence.hotspot_id} {{\n")
+                 for sequence in active), default=-1)
+    if first < 0 or any(source.find(f"    object {sequence.hotspot_id} {{\n") < 0
+                        for sequence in active):
+        raise ValueError(f"Missing native interaction hotspot in {room_name}")
+    source = source[:first] + "".join(declarations) + source[first:]
+    for sequence in active:
+        marker = f"    object {sequence.hotspot_id} {{\n"
+        if source.count(marker) != 1:
+            raise ValueError(f"Missing native interaction hotspot: {sequence.hotspot_id}")
+        start = source.index(marker) + len(marker)
+        end = source.find("    object ", start)
+        if end == -1:
+            end = source.find("    local script entry()", start)
+        if end == -1:
+            raise ValueError(f"Cannot isolate native interaction hotspot: {sequence.hotspot_id}")
+        segment = source[start:end]
+        verb_marker = "        verb(int vrb, int objA, int objB) {\n"
+        if segment.count(verb_marker) != 1 or f"        case {sequence.verb}:\n" in segment:
+            raise ValueError(f"Conflicting native interaction verb on {sequence.hotspot_id}")
+        instructions = []
+        for step in sequence.steps:
+            if isinstance(step, AnimateActorStep):
+                actor = actors_by_id[step.actor_id]
+                animation = next(item for item in costumes_by_name[actor.costume].animations
+                                 if item.name == step.animation)
+                instructions.append(f"            animateActor({actor.id},{animation.index});\n")
+            elif isinstance(step, ObjectStateStep):
+                instructions.append(f"            setObjectState({step.hotspot_id},{step.state});\n")
+            elif isinstance(step, DelayStep):
+                instructions.append(f"            delaySeconds({step.seconds});\n")
+            else:
+                raise ValueError("Unsupported native interaction step")
+        native = f"        case {sequence.verb}:\n" + "".join(instructions) + "            return;\n"
+        source = source[:start] + segment.replace(verb_marker, verb_marker + native, 1) + source[end:]
+    return source
+
+
 def read_icon_ids(argument: str) -> tuple[str, ...]:
     if argument.startswith("@"):
         argument = Path(argument[1:]).read_text(encoding="ascii").strip()

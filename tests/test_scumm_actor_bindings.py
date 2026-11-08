@@ -7,18 +7,46 @@ from adventure_studio.scumm_bootstrap import (inject_actor_bindings, inject_acto
                                               inject_actor_initial_flags,
                                               inject_actor_count_rules)
 from adventure_studio.scumm_bootstrap import inject_actor_input_rules
-from adventure_studio.scumm_bootstrap import inject_actor_animation_triggers
+from adventure_studio.scumm_bootstrap import inject_actor_animation_triggers, inject_interaction_sequences
 from adventure_studio.scumm_actor_probe import (actor_count_room_source, actor_binding_room_source,
                                                  project_count_room_source)
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import (ActorAsset, ActorCountCondition, ObjectStateEffect,
                                             AnimationRule, AnimationInputRule, AnimationTrigger)
+from adventure_studio.scumm_project import (InteractionSequence, AnimateActorStep,
+                                            ObjectStateStep, DelayStep)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture, scummc_room_source
 from dataclasses import replace
 
 
 class ActorBootstrapTests(unittest.TestCase):
+    def test_ordered_interaction_compiles_multiple_actors_and_object_reaction(self):
+        actors = (ActorAsset('Companion', 'NativeGesture', 'Harbor', 300, 100),
+                  ActorAsset('Guide', 'NativeGesture', 'Harbor', 400, 100))
+        sequence = InteractionSequence('Harbor', 'Key', 'Close', (
+            AnimateActorStep('Companion', 'gesture'), DelayStep(1),
+            AnimateActorStep('Guide', 'gesture'), ObjectStateStep('Door', 2)))
+        document = GameDocument('Scene', (scrolling_fixture(), destination_fixture()),
+                                (gesture_fixture(),), actors, interaction_sequences=(sequence,))
+        self.assertEqual(parse_document(canonical_json(document)), document)
+        source = ('room Harbor {\n    object Key {\n'
+                  '        verb(int vrb, int objA, int objB) {\n'
+                  '        }\n    }\n    object Door {\n'
+                  '        verb(int vrb, int objA, int objB) {\n'
+                  '        }\n    }\n    local script entry() {\n    }\n}\n')
+        compiled = inject_interaction_sequences(source, 'Harbor', document.interaction_sequences,
+                                                document.actors, document.costumes)
+        instructions = ('animateActor(Companion,24);', 'delaySeconds(1);',
+                        'animateActor(Guide,24);', 'setObjectState(Door,2);')
+        offsets = [compiled.index(instruction) for instruction in instructions]
+        self.assertEqual(offsets, sorted(offsets))
+        self.assertIn('object Door;', compiled[:compiled.index('object Key {')])
+        self.assertIn('case Close:', compiled)
+        with self.assertRaisesRegex(ValueError, 'Duplicate'):
+            canonical_json(replace(document, animation_triggers=(
+                AnimationTrigger('Guide', 'Harbor', 'Key', 'Close', 'gesture'),)))
+
     def test_authored_animation_actions_replay_named_costume_without_initial_animation(self):
         actor = ActorAsset('Companion', 'NativeGesture', 'Harbor', 300, 100)
         triggers = (AnimationTrigger('Companion', 'Harbor', 'Key', 'Push', 'gesture'),

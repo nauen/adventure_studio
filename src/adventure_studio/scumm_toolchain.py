@@ -20,6 +20,7 @@ from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_ob
                               inject_actor_bindings, inject_actor_room_animations,
                               inject_actor_initial_flags, inject_actor_count_rules, inject_actor_input_rules,
                               inject_actor_animation_triggers,
+                              inject_interaction_sequences,
                               inject_language_keys, inject_language_room_probe, inject_multilingual_charset,
                               inject_screen_language_verbs, retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
@@ -161,6 +162,9 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         rendered = inject_actor_animation_triggers(rendered, room.name,
                                                    document.animation_triggers,
                                                    document.actors, document.costumes)
+        rendered = inject_interaction_sequences(rendered, room.name,
+                                                document.interaction_sequences,
+                                                document.actors, document.costumes)
         room_source.write_text(rendered, encoding="utf-8")
         target = resources / f"{room.name}.roobj"
         runner([str(compiler), "-V", "6", *include_args, "-R", str(resources),

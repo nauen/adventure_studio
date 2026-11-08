@@ -276,6 +276,16 @@ und gelinkt wurde. Die wiederholte Interaktion bleibt bis zum Gameplay-Nachweis
 als offen gekennzeichnet. **Nächstes Produktpaket:** kombinierbare
 Animations-Cues und Reaktionen über mehrere Actors und Objekte.
 
+**P0.5 – geordnete Interaktionsfolgen (Implementierung, native CI ausstehend):**
+`interaction_sequences` verbindet ein Hotspot-Verb mit einer expliziten
+Reihenfolge aus Actor-Animationen, `delaySeconds` und `setObjectState`.
+Mehrere Actors und Objekte können in einer Sequenz referenziert werden;
+Projekt-JSON, Referenzvalidierung und ScummC-Exporter sind angeschlossen.
+Das bestehende native Actor-Projekt enthält eine authored `Close`-Aktion
+mit zwei Cues und einer Objektreaktion. Noch kein visueller Gameplay-Nachweis
+für die gesamte Sequenz. **Nächster Produktfokus:** Authoring und Bearbeitung
+dieser Abläufe im Studio statt ausschließlich über Projekt-JSON.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

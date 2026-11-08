@@ -79,6 +79,33 @@ class AnimationTrigger:
 
 
 @dataclass(frozen=True)
+class AnimateActorStep:
+    actor_id: str
+    animation: str
+
+
+@dataclass(frozen=True)
+class ObjectStateStep:
+    hotspot_id: str
+    state: int
+
+
+@dataclass(frozen=True)
+class DelayStep:
+    seconds: int
+
+
+@dataclass(frozen=True)
+class InteractionSequence:
+    """Ordered native actions initiated by a room object verb."""
+
+    room: str
+    hotspot_id: str
+    verb: str
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep, ...]
+
+
+@dataclass(frozen=True)
 class GameDocument:
     id: str
     rooms: tuple[RoomAsset, ...]
@@ -87,6 +114,7 @@ class GameDocument:
     animation_rules: tuple[AnimationRule, ...] = ()
     animation_input_rules: tuple[AnimationInputRule, ...] = ()
     animation_triggers: tuple[AnimationTrigger, ...] = ()
+    interaction_sequences: tuple[InteractionSequence, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -150,6 +178,17 @@ def document_dict(document: GameDocument) -> dict:
            if document.animation_input_rules else {}),
         **({"animation_triggers": [vars(trigger) for trigger in document.animation_triggers]}
            if document.animation_triggers else {}),
+        **({"interaction_sequences": [{"room": sequence.room,
+                                        "hotspot_id": sequence.hotspot_id,
+                                        "verb": sequence.verb,
+                                        "steps": [({"type": "animate_actor", **vars(step)}
+                                                   if isinstance(step, AnimateActorStep)
+                                                   else {"type": "set_object_state", **vars(step)}
+                                                   if isinstance(step, ObjectStateStep)
+                                                   else {"type": "delay_seconds", **vars(step)})
+                                                  for step in sequence.steps]}
+                                       for sequence in document.interaction_sequences]}
+           if document.interaction_sequences else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -345,6 +384,42 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError("Animation trigger requires a named, explicitly indexed animation")
         if actor.direction not in {direction.direction for direction in animation.directions}:
             raise ValueError("Animation trigger lacks the Actor's direction")
+    for sequence in document.interaction_sequences:
+        if not isinstance(sequence, InteractionSequence):
+            raise ValueError("Invalid typed interaction sequence")
+        room = rooms_by_name.get(sequence.room) if isinstance(sequence.room, str) else None
+        if room is None or not isinstance(sequence.hotspot_id, str) or sequence.hotspot_id not in {
+                hotspot.id for hotspot in room.hotspots}:
+            raise ValueError("Interaction sequence requires an existing room hotspot")
+        if sequence.verb not in ("Push", "Pull", "Open", "Close"):
+            raise ValueError("Unsupported interaction sequence verb")
+        identity = (sequence.room, sequence.hotspot_id, sequence.verb)
+        if identity in seen_inputs:
+            raise ValueError("Duplicate animation verb binding")
+        seen_inputs.add(identity)
+        if not isinstance(sequence.steps, tuple) or not sequence.steps:
+            raise ValueError("Interaction sequence requires ordered steps")
+        for step in sequence.steps:
+            if isinstance(step, AnimateActorStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if actor is None or actor.room != room.name:
+                    raise ValueError("Interaction animation Actor must be in the sequence room")
+                costume = costumes_by_name[actor.costume]
+                animation = next((item for item in costume.animations if item.name == step.animation), None)
+                if animation is None or animation.index is None:
+                    raise ValueError("Interaction animation requires named, indexed Costume animation")
+                if actor.direction not in {direction.direction for direction in animation.directions}:
+                    raise ValueError("Interaction animation lacks Actor direction")
+            elif isinstance(step, ObjectStateStep):
+                if (not isinstance(step.hotspot_id, str)
+                        or step.hotspot_id not in {hotspot.id for hotspot in room.hotspots}
+                        or type(step.state) is not int or not 0 <= step.state <= 2):
+                    raise ValueError("Interaction state step requires a valid room object and native state")
+            elif isinstance(step, DelayStep):
+                if type(step.seconds) is not int or step.seconds < 1:
+                    raise ValueError("Interaction delay must be positive whole seconds")
+            else:
+                raise ValueError("Unsupported interaction sequence step")
 
 
 def parse_document(source: str) -> GameDocument:
@@ -353,7 +428,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -442,6 +517,35 @@ def parse_document(source: str) -> GameDocument:
         item = _only(raw_trigger, {"actor_id", "room", "hotspot_id", "verb", "animation"},
                      {"actor_id", "room", "hotspot_id", "verb", "animation"})
         animation_triggers.append(AnimationTrigger(**item))
+    raw_sequences = data.get("interaction_sequences", [])
+    if not isinstance(raw_sequences, list):
+        raise ValueError("Interaction sequences must be a list")
+    interaction_sequences = []
+    for raw_sequence in raw_sequences:
+        item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps"},
+                     {"room", "hotspot_id", "verb", "steps"})
+        if not isinstance(item["steps"], list):
+            raise ValueError("Interaction steps must be a list")
+        steps = []
+        for raw_step in item["steps"]:
+            if not isinstance(raw_step, dict):
+                raise ValueError("Invalid interaction sequence step")
+            kind = raw_step.get("type")
+            if kind == "animate_actor":
+                step = _only(raw_step, {"type", "actor_id", "animation"},
+                             {"type", "actor_id", "animation"})
+                steps.append(AnimateActorStep(step["actor_id"], step["animation"]))
+            elif kind == "set_object_state":
+                step = _only(raw_step, {"type", "hotspot_id", "state"},
+                             {"type", "hotspot_id", "state"})
+                steps.append(ObjectStateStep(step["hotspot_id"], step["state"]))
+            elif kind == "delay_seconds":
+                step = _only(raw_step, {"type", "seconds"}, {"type", "seconds"})
+                steps.append(DelayStep(step["seconds"]))
+            else:
+                raise ValueError("Unsupported interaction sequence step type")
+        interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],
+                                                         item["verb"], tuple(steps)))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",
@@ -582,7 +686,8 @@ def parse_document(source: str) -> GameDocument:
             tuple(planes), tuple(boxes), routes, scale, tuple(curves), room.get("demo_walk_to_y"), tuple(camera_cues),
         ))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
-                            tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers))
+                            tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers),
+                            tuple(interaction_sequences))
     _validate_document(document)
     return document
 

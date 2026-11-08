@@ -1,5 +1,29 @@
 # Versioniertes SCUMM-Projektformat (experimentell)
 
+## Geordnete Interaktionsfolgen (P0.5)
+
+`GameDocument` v1 unterstützt optional `interaction_sequences`. Ein
+Hotspot-Verb (`Push`, `Pull`, `Open`, `Close`) löst die Schritte **in ihrer
+definierten Reihenfolge** aus. Der Export verwendet ausschließlich bereits
+vorhandene native ScummC-Aktionen, keine zusätzliche Runtime:
+
+```json
+{"room":"Harbor","hotspot_id":"Key","verb":"Close","steps":[{"type":"animate_actor","actor_id":"Guide","animation":"gesture"},{"type":"delay_seconds","seconds":1},{"type":"set_object_state","hotspot_id":"Door","state":2}]}
+```
+
+Mehrere Actor-Cues sind in einer Folge kombinierbar. Animationen brauchen
+einen benannten Costume-Index und die Actor-Richtung; alle referenzierten
+Actors und Objekte müssen im selben Raum liegen. Zustände sind 0–2,
+Wartezeiten positive ganze Sekunden. Ein Verb darf nur einmal belegt sein,
+auch über `animation_input_rules` und `animation_triggers` hinweg. Unbekannte
+Schritttypen werden abgewiesen. Das bestehende v1-Format bleibt kompatibel.
+
+Die Folge ist zunächst ein linearer Verbablauf; Cutscene-Skip, parallele
+Animationen und graphische Authoring-Oberfläche sind noch nicht implementiert.
+Die vorhandene Actor-Projekt-Fixture enthält eine solche Folge; der native
+Kompilierungs-/Spielstart-Gate verifiziert noch **nicht** das Anklicken und
+den zeitlichen Verlauf der Folge in ScummVM.
+
 ## Wiederholbare Actor-Animationen durch Spielaktionen (P0.5)
 
 `GameDocument` v1 erlaubt optional `animation_triggers`. Jeder Eintrag

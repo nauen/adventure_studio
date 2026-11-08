@@ -18,7 +18,8 @@ from .scumm_launch import (launch_smoke, close_rgb, colored_item_center, colored
                            door_center, door_pixels, scene_pixel, visible_key_pixels)
 from .scumm_binary import verify_room_binary
 from .scumm_project import (ActorAsset, ActorCountCondition, AnimationRule, AnimationInputRule,
-                            AnimationTrigger,
+                            AnimationTrigger, InteractionSequence, AnimateActorStep,
+                            DelayStep, ObjectStateStep,
                             GameDocument, ObjectStateEffect, canonical_json,
                             export_document, parse_document)
 from .scumm_bootstrap import inject_actor_count_rules
@@ -107,6 +108,13 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
                                                    ObjectStateEffect("Harbor", "Key", 0)),
                             ), animation_triggers=(
                                 AnimationTrigger("Guide", "Harbor", "Key", "Pull", "gesture"),
+                            ), interaction_sequences=(
+                                InteractionSequence("Harbor", "Key", "Close", (
+                                    AnimateActorStep("Guide", "gesture"),
+                                    DelayStep(1),
+                                    AnimateActorStep("Guide", "gesture"),
+                                    ObjectStateStep("Door", 2),
+                                )),
                             ))
     encoded = canonical_json(document)
     (build / "project.json").write_text(encoded, encoding="utf-8")
@@ -118,6 +126,7 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
               "actors": [actor.id for actor in document.actors],
               "initial_animation_compiled": True,
               "repeatable_animation_action_compiled": True,
+              "interaction_sequence_compiled": True,
               "animation_input_verb_compiled": True,
               "animation_gameplay_verified": False}
     (destination / "native-actor-report.json").write_text(json.dumps(result, indent=2) + "\n",
