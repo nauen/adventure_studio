@@ -96,12 +96,14 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
             closed_door = colored_item_pixels(screenshot_dir, "before", (50, 220, 220))
 
             # Road's native Close verb is at (10,184); Xvfb scales the game 2x.
-            def click_close_key() -> None:
-                for x, y in ((234, 563), key_center):
+            def click_close_key(sample: str) -> None:
+                frame(sample)
+                current_key = colored_item_center(screenshot_dir, sample, (255, 220, 75))
+                for x, y in ((234, 563), current_key):
                     subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                                    check=True, timeout=10)
 
-            click_close_key()
+            click_close_key("before")
             started = time.monotonic()
             open_pixels = 0
             while time.monotonic() - started < 15:
@@ -114,18 +116,22 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 time.sleep(0.25)
             if open_pixels < 40:
                 raise RuntimeError("First conditional branch did not open Door")
-            click_close_key()
+            time.sleep(2)
+            click_close_key("before-second")
             closed_again = False
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
                 frame("second")
-                if colored_item_pixels(screenshot_dir, "second", (50, 220, 220)) < 40:
+                key_visible = colored_item_pixels(screenshot_dir, "second", (255, 220, 75)) >= 5
+                if (key_visible and
+                        colored_item_pixels(screenshot_dir, "second", (50, 220, 220)) < 40):
                     closed_again = True
                     break
                 time.sleep(0.25)
             if not closed_again:
                 raise RuntimeError("Second conditional branch did not close Door")
-            click_close_key()
+            time.sleep(2)
+            click_close_key("before-third")
             reopened = False
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
