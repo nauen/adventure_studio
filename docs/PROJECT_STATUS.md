@@ -526,9 +526,15 @@ Studio-Produktlogik zu ändern.
 werden. ScummC emittiert native `try`/`override`-Blöcke; der Override setzt
 die letzten dokumentierten Raumobjekt-Zustände, Actor-Zielpositionen und
 Blickrichtungen. Das veränderte native Klickszenario sendet Escape während
-eines Actor-Ablaufs und prüft den Türzustand; der CI-Nachweis ist bei
-Erstellung dieses Pakets noch ausstehend. Inventar-/Ton-/Raumwechsel-Skips
-sind weiterhin offen.
+eines Actor-Ablaufs und prüft den Türzustand (CI `42508973832`, PR #59).
+
+**Aktuelles Produktpaket:** Studio-Interaktionsfolgen können nun einen
+aufnehmbaren Gegenstand als nativen `pickupObject`-Schritt enthalten – auch
+innerhalb einer bedingten Variante. Beim Escape-Skip wird dieser Effekt
+ebenfalls angewendet, sodass die Inventaraufnahme nicht an einer übersprungenen
+Wartezeit verloren geht. Die native Probe ergänzt deshalb die zweite
+Zustandsvariante um einen eigenen Token und kontrolliert dessen Inventar-Icon
+nach Escape. Vollständige Ton-/Raumwechsel-Skip-Zustände bleiben offen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.

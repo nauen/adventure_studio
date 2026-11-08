@@ -10,12 +10,14 @@ import time
 from dataclasses import replace
 from pathlib import Path
 
+from .scumm_assets import RoomHotspot
 from .scumm_launch import colored_item_center, colored_item_pixels
 from .scumm_project import canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
 from .studio_sequences import (append_sequence_step, set_sequence_condition,
                                duplicate_sequence_variant, modify_sequence_step,
-                               replace_sequence_step, set_sequence_skippable)
+                               replace_sequence_step, set_sequence_skippable,
+                               append_selected_sequence_step)
 
 
 def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Path) -> dict:
@@ -24,7 +26,15 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
     # The upstream Road checkout already contains the preceding Actor probe's
     # COST. A separate playable game must have its own resource identity.
     costume = replace(original.costumes[0], name="StudioSequenceCostume")
-    project = replace(original, costumes=(costume,),
+    # A second, visually distinct pickup remains clickable independent of Key.
+    # It is collected only by the skipped second variant, not by a mouse click.
+    token_sprite = bytes(4 if (3 <= x <= 12 and 3 <= y <= 12) else 2
+                         for y in range(16) for x in range(16))
+    harbor = original.rooms[0]
+    harbor = replace(harbor, hotspots=(*harbor.hotspots,
+                                       RoomHotspot("Token", "the token", "A small token.",
+                                                   610, 100, 16, 16, True, token_sprite)))
+    project = replace(original, rooms=(harbor, *original.rooms[1:]), costumes=(costume,),
                       actors=tuple(replace(actor, costume=costume.name)
                                    for actor in original.actors),
                       animation_input_rules=(), animation_triggers=(),
@@ -50,6 +60,10 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
         raw = modify_sequence_step(raw, alternate, 0, "Entfernen")
     raw = replace_sequence_step(raw, alternate, 0, "Objektzustand setzen",
                                 None, None, "Door", 1)
+    raw = append_selected_sequence_step(raw, alternate, "Warten", None, None, None, 6)
+    raw = append_selected_sequence_step(raw, alternate, "Gegenstand aufnehmen",
+                                        None, None, "Token", None)
+    raw = set_sequence_skippable(raw, alternate, True)
     build = destination / "build"
     build.mkdir(parents=True, exist_ok=True)
     (build / "project.json").write_text(raw, encoding="utf-8")
@@ -122,7 +136,10 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 raise RuntimeError("First conditional branch did not open Door")
             time.sleep(2)
             click_close_key("before-second")
+            time.sleep(1)
+            subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
             closed_again = False
+            token_in_inventory = False
             deadline = time.monotonic() + 10
             while time.monotonic() < deadline:
                 frame("second")
@@ -130,10 +147,13 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 if (key_visible and
                         colored_item_pixels(screenshot_dir, "second", (50, 220, 220)) < 40):
                     closed_again = True
-                    break
+                    token_in_inventory = (colored_item_pixels(screenshot_dir, "second",
+                                                              (60, 220, 90), inventory=True) >= 5)
+                    if token_in_inventory:
+                        break
                 time.sleep(0.25)
-            if not closed_again:
-                raise RuntimeError("Second conditional branch did not close Door")
+            if not (closed_again and token_in_inventory):
+                raise RuntimeError("Skipped second branch did not close Door and collect Token")
             time.sleep(2)
             click_close_key("before-third")
             reopened = False
@@ -151,12 +171,14 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
                 "door_open_after_click": open_pixels >= 40,
                 "first_sequence_skipped_with_escape": True,
                 "door_closed_after_second_click": closed_again,
+                "token_owned_after_second_escape": token_in_inventory,
                 "door_reopened_after_third_click": reopened,
                 "response_seconds": round(time.monotonic() - started, 2),
             }
             (destination / "actor-sequence-report.json").write_text(
                 json.dumps(report, indent=2) + "\n", encoding="utf-8")
-            if not (report["door_open_after_click"] and closed_again and reopened):
+            if not (report["door_open_after_click"] and closed_again and
+                    token_in_inventory and reopened):
                 raise RuntimeError(f"Studio native Actor choreography did not finish: {report}")
             return report
         finally:

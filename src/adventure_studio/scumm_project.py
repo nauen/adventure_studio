@@ -121,13 +121,18 @@ class FaceActorStep:
 
 
 @dataclass(frozen=True)
+class PickupObjectStep:
+    hotspot_id: str
+
+
+@dataclass(frozen=True)
 class InteractionSequence:
     """Ordered native actions initiated by a room object verb."""
 
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -225,6 +230,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, WaitActorStep)
                                                    else {"type": "face_actor", **vars(step)}
                                                    if isinstance(step, FaceActorStep)
+                                                   else {"type": "pickup_object", **vars(step)}
+                                                   if isinstance(step, PickupObjectStep)
                                                    else {"type": "delay_seconds", **vars(step)})
                                                   for step in sequence.steps]}
                                        for sequence in document.interaction_sequences]}
@@ -466,6 +473,10 @@ def _validate_document(document: GameDocument) -> None:
                         or step.hotspot_id not in {hotspot.id for hotspot in room.hotspots}
                         or type(step.state) is not int or not 0 <= step.state <= 2):
                     raise ValueError("Interaction state step requires a valid room object and native state")
+            elif isinstance(step, PickupObjectStep):
+                if not isinstance(step.hotspot_id, str) or step.hotspot_id not in {
+                        hotspot.id for hotspot in room.hotspots if hotspot.pickup}:
+                    raise ValueError("Interaction pickup requires a pickable room object")
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")
@@ -632,6 +643,9 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "direction"},
                              {"type", "actor_id", "direction"})
                 steps.append(FaceActorStep(step["actor_id"], step["direction"]))
+            elif kind == "pickup_object":
+                step = _only(raw_step, {"type", "hotspot_id"}, {"type", "hotspot_id"})
+                steps.append(PickupObjectStep(step["hotspot_id"]))
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],

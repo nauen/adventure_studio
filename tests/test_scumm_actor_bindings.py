@@ -15,7 +15,7 @@ from adventure_studio.scumm_project import (ActorAsset, ActorCountCondition, Obj
                                             AnimationRule, AnimationInputRule, AnimationTrigger)
 from adventure_studio.scumm_project import (InteractionSequence, AnimateActorStep,
                                             ObjectStateStep, DelayStep, MoveActorStep, WalkActorStep,
-                                            WaitActorStep, FaceActorStep)
+                                            WaitActorStep, FaceActorStep, PickupObjectStep)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture, scummc_room_source
 from dataclasses import replace
@@ -65,6 +65,15 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('setObjectState(Door,2);', native_skip.split('} override {')[1])
         self.assertIn('putActorAt(Guide, 480, 100, Harbor);', native_skip.split('} override {')[1])
         self.assertIn('setActorDirection(WEST);', native_skip.split('} override {')[1])
+        inventory_skip = replace(sequence, skippable=True,
+                                 steps=(*sequence.steps, PickupObjectStep('Key')))
+        inventory_document = replace(document, interaction_sequences=(inventory_skip,))
+        self.assertEqual(parse_document(canonical_json(inventory_document)), inventory_document)
+        native_inventory = inject_interaction_sequences(source, 'Harbor', (inventory_skip,),
+                                                        document.actors, document.costumes)
+        self.assertIn('if(getObjectOwner(Key) != VAR_EGO) pickupObject(Key,VAR_ROOM);',
+                      native_inventory.split('} override {')[1])
+        self.assertIn('setObjectState(Key,0);', native_inventory.split('} override {')[1])
         guarded = replace(sequence, condition_hotspot_id='Door', condition_state=1)
         guarded_document = replace(document, interaction_sequences=(guarded,))
         self.assertEqual(parse_document(canonical_json(guarded_document)), guarded_document)

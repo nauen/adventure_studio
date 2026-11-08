@@ -142,7 +142,14 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Objektzustände, Actor-Zielpositionen und Blickrichtungen, statt
         Wartezeiten/Bewegungen zu Ende laufen zu lassen. In einer realen
         Stock-ScummVM-Klickprobe wird Escape während der Actor-Folge ausgelöst.
-        Weitergehende Cutscene-Zustände (Inventar, Ton, Raumwechsel) bleiben offen.
+        Weitergehende Cutscene-Zustände (Inventarkombinationen, Ton,
+        Raumwechsel) bleiben offen.
+  - [x] Produkt-Implementierung: Ein Studio-Sequenzschritt kann ein als
+        `pickup` markiertes Raumobjekt nativ ins Inventar übernehmen. Die
+        UI kann zusätzliche Schritte gezielt an eine vorhandene bedingte
+        Variante anhängen; der Escape-Override erhält ebenfalls die
+        Inventaraufnahme. Das ScummVM-Klickszenario kontrolliert den Token
+        nach der übersprungenen zweiten Sequenz. Ton und Raumwechsel offen.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das
