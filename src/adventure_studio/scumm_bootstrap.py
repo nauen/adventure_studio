@@ -544,7 +544,11 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                      "            setCurrentActor(VAR_EGO);\n"))
             else:
                 raise ValueError("Unsupported native interaction step")
-        native = f"        case {sequence.verb}:\n" + "".join(instructions) + "            return;\n"
+        guard = (f"            if(getObjectState({sequence.condition_hotspot_id}) != "
+                 f"{sequence.condition_state}) return;\n"
+                 if sequence.condition_hotspot_id is not None else "")
+        native = (f"        case {sequence.verb}:\n" + guard
+                  + "".join(instructions) + "            return;\n")
         source = source[:start] + segment.replace(verb_marker, verb_marker + native, 1) + source[end:]
     return source
 

@@ -48,6 +48,33 @@ def sequence_steps(raw: str, identity: str) -> tuple[str, ...]:
     return tuple(_describe(step) for step in sequence.steps) if sequence else ()
 
 
+def sequence_condition_fields(raw: str, identity: str | None) -> tuple[str | None, int]:
+    sequence = next((item for item in parse_document(raw).interaction_sequences
+                     if _identity(item) == identity), None)
+    return ((sequence.condition_hotspot_id, sequence.condition_state)
+            if sequence and sequence.condition_hotspot_id is not None else (None, 0))
+
+
+def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
+                           state: int | float | None) -> str:
+    """Set or clear a native object-state guard on an existing verb sequence."""
+    document = parse_document(raw)
+    index = next((i for i, item in enumerate(document.interaction_sequences)
+                  if _identity(item) == identity), None)
+    if index is None:
+        raise ValueError("Bitte eine vorhandene Interaktion wählen")
+    if hotspot_id is None:
+        condition_state = None
+    elif state is None or type(state) not in (int, float) or int(state) != state:
+        raise ValueError("Bedingung benötigt einen ganzen Objektzustand")
+    else:
+        condition_state = int(state)
+    sequences = list(document.interaction_sequences)
+    sequences[index] = replace(sequences[index], condition_hotspot_id=hotspot_id,
+                               condition_state=condition_state)
+    return _checked(replace(document, interaction_sequences=tuple(sequences)))
+
+
 def _identity(sequence: InteractionSequence) -> str:
     return f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
 

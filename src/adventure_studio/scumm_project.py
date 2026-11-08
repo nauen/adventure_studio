@@ -128,6 +128,8 @@ class InteractionSequence:
     hotspot_id: str
     verb: str
     steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep, ...]
+    condition_hotspot_id: str | None = None
+    condition_state: int | None = None
 
 
 @dataclass(frozen=True)
@@ -206,6 +208,9 @@ def document_dict(document: GameDocument) -> dict:
         **({"interaction_sequences": [{"room": sequence.room,
                                         "hotspot_id": sequence.hotspot_id,
                                         "verb": sequence.verb,
+                                        **({"condition_hotspot_id": sequence.condition_hotspot_id,
+                                            "condition_state": sequence.condition_state}
+                                           if sequence.condition_hotspot_id is not None else {}),
                                         "steps": [({"type": "animate_actor", **vars(step)}
                                                    if isinstance(step, AnimateActorStep)
                                                    else {"type": "set_object_state", **vars(step)}
@@ -432,6 +437,13 @@ def _validate_document(document: GameDocument) -> None:
         seen_inputs.add(identity)
         if not isinstance(sequence.steps, tuple) or not sequence.steps:
             raise ValueError("Interaction sequence requires ordered steps")
+        if (sequence.condition_hotspot_id is None) != (sequence.condition_state is None):
+            raise ValueError("Interaction condition requires both an object and a state")
+        if sequence.condition_hotspot_id is not None and (
+                sequence.condition_hotspot_id not in {hotspot.id for hotspot in room.hotspots}
+                or type(sequence.condition_state) is not int
+                or not 0 <= sequence.condition_state <= 2):
+            raise ValueError("Interaction condition requires a valid room object and native state")
         for step in sequence.steps:
             if isinstance(step, AnimateActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
@@ -570,7 +582,8 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Interaction sequences must be a list")
     interaction_sequences = []
     for raw_sequence in raw_sequences:
-        item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps"},
+        item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps",
+                                    "condition_hotspot_id", "condition_state"},
                      {"room", "hotspot_id", "verb", "steps"})
         if not isinstance(item["steps"], list):
             raise ValueError("Interaction steps must be a list")
@@ -608,7 +621,9 @@ def parse_document(source: str) -> GameDocument:
             else:
                 raise ValueError("Unsupported interaction sequence step type")
         interaction_sequences.append(InteractionSequence(item["room"], item["hotspot_id"],
-                                                         item["verb"], tuple(steps)))
+                                                         item["verb"], tuple(steps),
+                                                         item.get("condition_hotspot_id"),
+                                                         item.get("condition_state")))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",

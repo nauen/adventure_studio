@@ -13,7 +13,7 @@ from pathlib import Path
 from .scumm_launch import colored_item_center, colored_item_pixels
 from .scumm_project import canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
-from .studio_sequences import append_sequence_step
+from .studio_sequences import append_sequence_step, set_sequence_condition
 
 
 def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Path) -> dict:
@@ -39,6 +39,7 @@ def run_actor_sequence_probe(upstream: Path, actor_build: Path, destination: Pat
     for kind, actor, animation, target, amount, x, y, direction in actions:
         raw = append_sequence_step(raw, "Harbor", "Key", "Close", kind, actor,
                                    animation, target, amount, x, y, direction)
+    raw = set_sequence_condition(raw, "Harbor|Key|Close", "Door", 1)
     build = destination / "build"
     build.mkdir(parents=True, exist_ok=True)
     (build / "project.json").write_text(raw, encoding="utf-8")

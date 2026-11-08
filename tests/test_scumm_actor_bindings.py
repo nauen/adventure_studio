@@ -53,6 +53,13 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertEqual(offsets, sorted(offsets))
         self.assertIn('object Door;', compiled[:compiled.index('object Key {')])
         self.assertIn('case Close:', compiled)
+        guarded = replace(sequence, condition_hotspot_id='Door', condition_state=1)
+        guarded_document = replace(document, interaction_sequences=(guarded,))
+        self.assertEqual(parse_document(canonical_json(guarded_document)), guarded_document)
+        guarded_source = inject_interaction_sequences(source, 'Harbor', (guarded,),
+                                                      document.actors, document.costumes)
+        self.assertIn('case Close:\n            if(getObjectState(Door) != 1) return;\n'
+                      '            animateActor(Companion,24);', guarded_source)
         with self.assertRaisesRegex(ValueError, 'Duplicate'):
             canonical_json(replace(document, animation_triggers=(
                 AnimationTrigger('Guide', 'Harbor', 'Key', 'Close', 'gesture'),)))

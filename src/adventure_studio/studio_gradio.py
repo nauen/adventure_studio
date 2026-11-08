@@ -21,6 +21,7 @@ from .story_document import canonical_story_json, parse_story_document
 from .studio_export import export_playable, export_native_project
 from .studio_sequences import (actor_animations, append_sequence_step, modify_sequence_step,
                                replace_sequence_step, sequence_step_fields,
+                               sequence_condition_fields, set_sequence_condition,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -558,6 +559,12 @@ def make_app():
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
+            with gr.Row():
+                native_condition_object = gr.Dropdown(
+                    label="Interaktion nur bei Objektzustand", choices=[("Immer ausführen", None)])
+                native_condition_state = gr.Number(label="Erforderlicher Zustand (0–2)",
+                                                   value=0, precision=0)
+                native_condition_save = gr.Button("Bedingung speichern")
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
             with gr.Row():
@@ -772,6 +779,22 @@ def make_app():
 
         native_sequence.change(native_sequence_update, [native_state, native_sequence],
                                [native_step, native_steps])
+        def native_condition_update(raw, identity):
+            if raw is None:
+                return gr.update(choices=[("Immer ausführen", None)], value=None), 0
+            room = identity.split("|", 1)[0] if identity else None
+            _, objects, _ = project_choices(raw, room)
+            target, state = sequence_condition_fields(raw, identity)
+            return (gr.update(choices=[("Immer ausführen", None),
+                                       *[(item, item) for item in objects]], value=target),
+                    state)
+
+        native_sequence.change(native_condition_update, [native_state, native_sequence],
+                               [native_condition_object, native_condition_state])
+        native_condition_save.click(lambda *args: native_edit(set_sequence_condition, *args),
+                                    [native_state, native_sequence, native_condition_object,
+                                     native_condition_state],
+                                    [native_state, *native_outputs, native_report])
         def native_step_update(raw, identity, number):
             fields = sequence_step_fields(raw, identity, number)
             sequence_room = identity.split("|", 1)[0] if identity else None
