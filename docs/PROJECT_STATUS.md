@@ -331,6 +331,19 @@ Nachweis bleiben offen.
 Projekt anlegen und bearbeiten, ohne eine externe native JSON-Datei als
 Ausgangspunkt zu benötigen.
 
+**P0.5 – Actor-/Costume-Authoring im Studio (Implementierung, CI ausstehend):**
+Aus einem vom Autor geladenen PNG lässt sich jetzt im Studio eine echte
+palettierte native Costume erzeugen. Das Studio legt damit Actors in
+gewählten Story-Räumen an und erlaubt deren Position/Richtung zu ändern.
+Jedes neue Costume enthält zunächst eine Standpose und eine per
+Interaktionsfolge nutzbare `gesture`-Animation auf Index 24. Projekt-JSON,
+gemeinsames `adventure.studio.json` und ScummC-COST-Export bleiben derselbe
+Produktpfad. Ein Integrationstest belegt PNG → Costume/Actor → validiertes
+Modell → ScummC-Quellen (Fake-Compiler); noch **kein** echter nativer Build
+oder ScummVM-Nachweis der neu importierten Grafik.
+**Nächstes Produktpaket:** mehrteilige Costume-Animationen und individuelle
+Blickrichtungen aus mehreren importierten Frames im Editor definieren.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

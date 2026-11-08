@@ -60,7 +60,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 
 | ID | Fähigkeit | Analyse | Studio | Test | ScummVM | Nächstes Gate |
 | --- | --- | --- | --- | --- | --- | --- |
-| A01 | Native Actor-Costume-Ressourcen | A | I (COST + Projekt-JSON/Actor-Bindung) | T | V (Fixture) | Actor-Spielbindung via externem Bootstrap; unabhängigere Ausgabe offen |
+| A01 | Native Actor-Costume-Ressourcen | A | I (COST + Projekt-JSON/Actor-Bindung; PNG-Import und Actor-Anlage im Studio) | T | V (Fixture; neu importiertes Studio-PNG noch nicht interaktiv belegt) | Mehrteilige Animationsframes und unabhängigere Actor-Spielbindung |
 | A02 | Actor-Platzierung/Richtung/Teleport | A (Teil) | I (Anfangsposition/Richtung) | T | V (Mehr-Actor-Fixture) | Allgemeiner Laufzeit-Teleport und Spieler-Actor |
 | A03 | Actor-Walk/Pathfinding/Speed | A | I (Demo) | T (Teil) | V (Teil) | Modell + Walkboxen |
 | A04 | Stand-/Walk-/Talk-Costume-Frames | A | I (Frames/Richtungen, Startanimation, deklarative Verb-Animationen; native Interaktionsfolgen im Gradio-Editor und auf Story-Räumen bearbeitbar; Story+Actors zusammen speicherbar) | T (Teil) | V (Teil: Erststart und kein Replay beim Room-Reentry; Verb-Neustarts und Ablaufklicks noch offen) | Actors/Costumes direkt authoren und Gameplay-Prüfung |

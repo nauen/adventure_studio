@@ -24,6 +24,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, modify_se
                                compose_story_project)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
+from .studio_actors import add_actor, actor_summary, costume_names, create_costume, move_actor
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
@@ -254,7 +255,10 @@ def make_app():
                 gr.update(choices=sequences, value=identity),
                 gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],
                           value=0 if steps else None),
-                "\n".join(f"{i+1}. {text}" for i, text in enumerate(steps)) or "Noch keine Schritte")
+                "\n".join(f"{i+1}. {text}" for i, text in enumerate(steps)) or "Noch keine Schritte",
+                gr.update(choices=costume_names(raw),
+                          value=costume_names(raw)[0] if costume_names(raw) else None),
+                actor_summary(raw))
 
     def native_load(file_path):
         if not file_path:
@@ -288,6 +292,15 @@ def make_app():
             return (updated, *native_selectors(updated, room, identity),
                     "Interaktionsablauf geändert und validiert")
         except ValueError as error:
+            raise gr.Error(str(error)) from error
+
+    def native_asset_edit(action, raw, *args):
+        if raw is None:
+            raise gr.Error("Bitte zuerst die Story als natives Projekt übernehmen")
+        try:
+            updated = action(raw, *args)
+            return updated, *native_selectors(updated), "Actor-/Costume-Daten geändert und validiert"
+        except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
 
     def native_download(raw, linked, story_raw):
@@ -436,6 +449,22 @@ def make_app():
             native_linked = gr.State(False)
             native_file = gr.File(label="Native Projekt-JSON öffnen", file_types=[".json"], type="filepath")
             native_sync_button = gr.Button("Aktuelle Story als natives Projekt übernehmen / aktualisieren")
+            with gr.Accordion("Actors und Costumes erstellen", open=True):
+                gr.Markdown("Ein PNG wird in eine native 32-Farben-Costume mit Transparenzfarbe umgewandelt. Bilder mit mehr als 31 sichtbaren Farben werden auf 31 Farben reduziert. Die erste Pose erhält eine Standanimation und eine auslösbare `gesture`-Animation. Weitere Animationsframes folgen in einem späteren Paket.")
+                with gr.Row():
+                    native_costume_file = gr.File(label="Costume-PNG", file_types=[".png"], type="filepath")
+                    native_costume_name = gr.Textbox(label="Neue Costume-ID")
+                    native_costume_button = gr.Button("Costume aus PNG erstellen")
+                native_costume_select = gr.Dropdown(label="Vorhandene Costume")
+                with gr.Row():
+                    native_actor_id = gr.Textbox(label="Actor-ID")
+                    native_actor_name = gr.Textbox(label="Anzeigename")
+                    native_actor_x = gr.Number(label="Position X", value=320, precision=0)
+                    native_actor_y = gr.Number(label="Position Y", value=120, precision=0)
+                    native_actor_direction = gr.Dropdown(label="Blickrichtung", choices=["N", "E", "S", "W"], value="S")
+                native_actor_button = gr.Button("Actor im gewählten Raum anlegen")
+                native_actor_move = gr.Button("Ausgewählten Actor an diese Position bewegen")
+                native_actor_list = gr.Textbox(label="Actors im Projekt", lines=4, interactive=False)
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
@@ -512,11 +541,27 @@ def make_app():
                                           outputs=[translation_validated_download])
         game_export_button.click(export_scumm, inputs=[state, scummc_path], outputs=[game_download])
         native_outputs = [native_room, native_hotspot, native_actor, native_animation,
-                          native_target, native_sequence, native_step, native_steps]
+                          native_target, native_sequence, native_step, native_steps,
+                          native_costume_select, native_actor_list]
         native_file.change(native_load, [native_file], [native_state, native_linked,
                                                        *native_outputs, native_report])
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])
+        native_costume_button.click(lambda *args: native_asset_edit(create_costume, *args),
+                                    [native_state, native_costume_file, native_costume_name],
+                                    [native_state, *native_outputs, native_report])
+        native_actor_button.click(lambda raw, actor_id, costume, room, x, y, direction, name:
+                                  native_asset_edit(add_actor, raw, actor_id, costume, room,
+                                                    x, y, direction, name),
+                                  [native_state, native_actor_id, native_costume_select,
+                                   native_room, native_actor_x, native_actor_y,
+                                   native_actor_direction, native_actor_name],
+                                  [native_state, *native_outputs, native_report])
+        native_actor_move.click(lambda raw, actor_id, room, x, y, direction:
+                                native_asset_edit(move_actor, raw, actor_id, room, x, y, direction),
+                                [native_state, native_actor, native_room, native_actor_x,
+                                 native_actor_y, native_actor_direction],
+                                [native_state, *native_outputs, native_report])
         def native_room_update(raw, room):
             if raw is None:
                 return gr.update(), gr.update(), gr.update(), gr.update()
