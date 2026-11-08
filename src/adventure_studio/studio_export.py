@@ -19,12 +19,15 @@ from .story_document import build_story_document, canonical_story_json, parse_st
 
 
 def _publish_game_zip(game: Path, document_name: str, content: str,
-                      heading: str, destination: Path, staging: Path) -> None:
+                      heading: str, destination: Path, staging: Path,
+                      story_json: str | None = None) -> None:
     files = {"tentacle.000": (game / "tentacle.000").read_bytes(),
              "tentacle.001": (game / "tentacle.001").read_bytes(),
              document_name: content.encode("utf-8"),
              "README.txt": (heading + "\nScummVM: scummvm --path=. tentacle\n"
                             "This uses a temporary DOTT compatibility identity.\n").encode("utf-8")}
+    if story_json is not None:
+        files["story.json"] = story_json.encode("utf-8")
     temporary_zip = staging / "adventure.zip"
     with ZipFile(temporary_zip, "w", compression=ZIP_DEFLATED) as archive:
         for filename, payload in sorted(files.items()):
@@ -62,8 +65,13 @@ def export_playable(raw: str, scummc_directory: Path, zip_path: Path,
 
 
 def export_native_project(raw: str, scummc_directory: Path, zip_path: Path,
-                          runner=subprocess.run) -> Path:
+                          runner=subprocess.run, story_raw: str | None = None) -> Path:
     """Build a validated GameDocument, including authored interaction sequences."""
+    if story_raw is not None:
+        from .studio_sequences import compose_story_project
+        from .story_document import canonical_story_json, parse_story_document
+        story_raw = canonical_story_json(parse_story_document(story_raw))
+        raw = compose_story_project(story_raw, raw)
     document = parse_document(raw)
     canonical = canonical_json(document)
     upstream = Path(scummc_directory).resolve()
@@ -85,5 +93,6 @@ def export_native_project(raw: str, scummc_directory: Path, zip_path: Path,
         export_document(document, resources)
         compile_story_game(build, cloned, game, runner=runner)
         _publish_game_zip(game, "project.json", canonical,
-                          "Adventure Studio native SCUMM v6 project", zip_path, staging)
+                          "Adventure Studio native SCUMM v6 project", zip_path, staging,
+                          story_json=story_raw)
     return zip_path

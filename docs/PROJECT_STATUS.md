@@ -298,6 +298,24 @@ und ein interaktiver ScummVM-Klickpfad wurden noch nicht geprüft.
 **Nächstes Produktpaket:** Story-Authoring und native Actor-/Interaktions-
 Authoringdaten in einem durchgängigen Projektmodell verbinden.
 
+**P0.5 – Story/native Projekt-Integration (Implementierung, Gameplay offen):**
+Im Studio lässt sich die aktuelle Story ausdrücklich in das native
+`GameDocument` übersetzen. Vorhandene native Actor-/Costume-Daten und
+Interaktionsregeln werden auf die frisch aus der Story generierten Räume
+übertragen und dabei referenzvalidiert. Nach Storyänderungen wird beim
+Projekt-Download und Spiel-Build erneut komponiert; gelöschte oder
+umbenannte Objekte führen zu einem sichtbaren Fehler statt Datenverlust.
+Das SCUMM-ZIP enthält sowohl die aktuelle `story.json` als auch die
+kompilierte `project.json`. Die Gradio-UI startet im CI-Smoke (`42486144774`);
+der neue Kompositionspfad wird per Integrationstest bis zur ScummC-Quelle
+geprüft. Die aktuelle Umsetzung ist **noch kein gemeinsames persistentes
+Story-/Native-Schema**: zusätzliche manuelle native Raumänderungen werden
+beim bewussten Story-Abgleich nicht übernommen. Der echte ScummVM-Klickablauf
+und das vollständige UI-Interaktionsgate fehlen weiterhin.
+**Nächstes Produktpaket:** ein versioniertes gemeinsames Authoring-Dokument,
+das Story- und Actor-/Costume-/Interaktionsdaten dauerhaft und verlustfrei
+zusammen speichert und wieder lädt.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 
