@@ -11,6 +11,7 @@ from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import ActorAsset, GameDocument, canonical_json, parse_document
 from adventure_studio.story_document import canonical_story_json, parse_story_document
 from adventure_studio.studio_sequences import (append_sequence_step, modify_sequence_step,
+                                                replace_sequence_step, sequence_step_fields,
                                                 project_choices, sequence_choices, sequence_steps,
                                                 compose_story_project)
 from adventure_studio.studio_export import export_native_project
@@ -23,6 +24,28 @@ from test_scumm_toolchain import fake_upstream
 
 
 class NativeSequenceEditorTests(unittest.TestCase):
+    def test_edit_existing_step_in_place_without_changing_trigger_or_order(self):
+        document = GameDocument("EditorProject", (scrolling_fixture(), destination_fixture()),
+                                (gesture_fixture(),),
+                                (ActorAsset("Guide", "NativeGesture", "Harbor", 400, 110),))
+        raw = canonical_json(document)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Warten",
+                                   None, None, None, 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Auf Actor warten",
+                                   "Guide", None, None, None)
+        identity = "Harbor|Key|Close"
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[4], 2)
+        raw = replace_sequence_step(raw, identity, 0, "Actor laufen lassen", "Guide",
+                                    None, None, None, 450, 112)
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:2],
+                         ("Actor laufen lassen", "Guide"))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[5:7], (450, 112))
+        self.assertEqual(sequence_steps(raw, identity),
+                         ("Actor Guide: zu (450, 112) laufen lassen", "Auf Actor Guide warten"))
+        self.assertEqual(len(parse_document(raw).interaction_sequences), 1)
+        with self.assertRaisesRegex(ValueError, "Schritt existiert nicht"):
+            replace_sequence_step(raw, identity, 3, "Warten", None, None, None, 2)
+
     def test_author_reorder_and_remove_native_actions_in_project_json(self):
         document = GameDocument("EditorProject", (scrolling_fixture(), destination_fixture()),
                                 (gesture_fixture(),),

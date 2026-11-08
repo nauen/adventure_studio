@@ -113,7 +113,8 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         JSON und Exporter angebunden. Native CI und Gameplay-Nachweis offen.
   - [x] Produkt-Implementierung: Interaktionsfolgen aus einem geladenen nativen
         `GameDocument` im Gradio-Studio anlegen, Schritte anhängen, umordnen,
-        entfernen und JSON bzw. natives SCUMM-ZIP exportieren. Service-Test
+        entfernen, bestehende Schritte samt Parametern bearbeiten und JSON
+        bzw. natives SCUMM-ZIP exportieren. Service-Test
         grün; Gradio-Start-Smoke CI `42486144774` grün, vollständige
         UI-Interaktion und Interaktionsnachweis in ScummVM noch offen.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
