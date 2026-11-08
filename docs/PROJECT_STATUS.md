@@ -458,6 +458,18 @@ erfolgreichen nativen Lauf bleibt die V-Einstufung offen.** Das folgende
 Paket ist die Auswertung und bei Bedarf Korrektur der konkreten nativen
 Spielgrafik, danach der Actor-Lauf-/Wait-/Dreh-Choreografie.
 
+**Erster tatsächlicher CI-Lauf und konkreter Fix (2026-11-08):** Der native
+Lauf `42493144908` kompiliert die Studio-COST, startet ScummVM und liefert
+24 Bilder; die erwarteten PNG-Farben erscheinen darin jedoch nicht. Die
+Original-ScummC-COST-Palette enthält **absolute Raum-Palettenindizes**,
+deren RGB-Werte im bisherigen Export nicht in die Room-BMP übernommen
+wurden. Der Export gleicht deshalb nun die belegten COST-Farben aller
+gebundenen Actors über einen gemeinsamen, deterministischen Indexplan ab
+und ergänzt die Räume, ohne das Authoring-JSON zu verändern. Belegte
+Room-Artwork-Indizes bleiben reserviert; bei erschöpften Plätzen wird der
+Exporter-Blocker ausdrücklich gemeldet. Ein gezielter BMP-Palettenvergleich
+ist grün, **der erneute native Gameplaylauf bleibt noch ausstehend**.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

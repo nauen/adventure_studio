@@ -149,6 +149,9 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Framewechsel fehlen noch; reiner Spielstart genügt nicht für V.
         Der Workflow ist nun bei passendem PR ausführbar und prüft mehrere
         tatsächlich aufgenommene Bilder auf beide native Frame-Farben.
+        Erster nativer Lauf `42493144908` zeigte fehlende COST-Farben;
+        die Raum-/Costume-Palettenzuordnung ist im Export korrigiert, die
+        erneute ScummVM-Bildprüfung bleibt bis zu grüner CI offen.
   - [x] Produkt-Implementierung: Im Gradio-Studio kann eine native
         Animation eines Actors als Startanimation ausgewählt oder deaktiviert
         werden. JSON und SCUMM-Export verwenden die bereits bestehende
