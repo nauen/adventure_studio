@@ -83,13 +83,15 @@ eine definierte Reaktion. Kein zufälliges Ergebnis durch Frame-Race.
   globales SCUMM-Bit verhindert diesen Replay beim Wiedereintritt;
   die stock-ScummVM-Probe bestätigt den unveränderten Schlüsselzustand.
   Noch offen sind beliebige Mehrfachaktionen und weitere Zeitfenster,
-  **explizit angeforderte** Animations-Neustarts, Save/Load und das
+  **explizit angeforderte** Animations-Neustarts, Save/Load während einer
+  noch laufenden Animation und das
   vollständige Fahrgeschäft-Szenario.
-  Eine zusätzliche Save/Load-Regressionsprobe ist vorbereitet: Nach einer
+  Eine zusätzliche Save/Load-Regressionsprobe ist in stock ScummVM grün
+  (`42477804196`): Nach einer
   späten Aktion speichert ScummVM den Zustand, startet mit Slot 1 neu und
-  prüft Key/Door vor sowie nach einem weiteren Raum-Rückweg. Ohne grüne
-  native CI bleibt dieser Teilnachweis offen; Speichern während einer
-  aktiven Animation ist davon nicht abgedeckt.
+  prüft Key/Door vor sowie nach einem weiteren Raum-Rückweg. Der grüne
+  native CI-Lauf belegt diesen Teilnachweis; Speichern während einer aktiven
+  Animation ist davon nicht abgedeckt.
 
 ## C. Kinoartige Cutscene mit Totale, Nahaufnahme und Detail
 

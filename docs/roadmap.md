@@ -98,11 +98,11 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         natives SCUMM-Bit starten. Ein adversarialer COUNT-Wächter würde
         nach Wiedereintritt den Schlüssel wiederbeleben; die stock-ScummVM-
         Probe `42471602488` bestätigt, dass dies ausbleibt.
-  - [ ] Teil-Gate in Prüfung: Ein abgeschlossener COUNT-/Push-Objektzustand
+  - [x] Teil-Gate: Ein abgeschlossener COUNT-/Push-Objektzustand
         übersteht natives ScummVM-Speichern, Interpreter-Neustart und Laden;
         danach bleibt die Initialanimation über einen echten
-        `Harbor → Cellar → Harbor`-Rückweg gesperrt. Native CI ist
-        Voraussetzung für die Abnahme; laufende Animationen separat.
+        `Harbor → Cellar → Harbor`-Rückweg gesperrt. Stock-ScummVM-
+        CI `42477804196` grün; laufende Animationen separat.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

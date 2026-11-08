@@ -249,17 +249,18 @@ Negativ-Wächter würde den zuvor entfernten Schlüssel nach einem
 Doppelstart wieder sichtbar machen; der unveränderte ScummVM-Lauf
 bestätigt, dass er verborgen bleibt. Der Guard umfasst alle an die
 Animation gebundenen COUNT-Wächter. Die alten JSON-v1-Projekte bleiben
-unverändert. **Nächstes P0.5-Gate:** Save/Load der Animation-/Objektzustände
-und anschließend explizite wiederholbare Animationsaktionen.
+unverändert. Das nachfolgende Gate prüft nun auch Save/Load eines
+**abgeschlossenen** COUNT-/Objektzustands. Weiter offen bleiben explizite
+wiederholbare Animationen sowie Save/Load mitten in einer aktiven Animation.
 
-**P0.5-Save/Load-Gate in CI-Prüfung (noch kein ScummVM-Nachweis):** Die
-isolierte Actor-Fixture erhält einen nativen Save/Load-Ablauf: späte
+**P0.5-Save/Load-Gate in stock ScummVM bestanden (`42477804196`):** Die
+isolierte Actor-Fixture führt einen nativen Save/Load-Ablauf aus: späte
 `Push`-Aktion, Prüfung der Key-/Door-Bilder, Speichern über den ScummVM-
 Dialog, Neustart mit `--save-slot=1`, erneute Bildprüfung und regulärer
 `Harbor → Cellar → Harbor`-Rückweg. Der COUNT-Replay-Negativwächter deckt
-einen verlorenen Initialanimations-Guard auf. Die Prüfung ist erst mit
-grünem Interpreter-CI-Lauf abgenommen; Save/Load **während** einer noch
-laufenden Animation ist davon nicht abgedeckt.
+einen verlorenen Initialanimations-Guard auf. Der native CI-Schritt und
+die zugehörige Artefaktaufbewahrung sind erfolgreich. Save/Load **während**
+einer noch laufenden Animation ist davon nicht abgedeckt.
 Die vormals auf einzelne Testfälle hartcodierten Screenshot-Frame-Namen in
 den gemeinsamen Door-/Key-Pixelhelfern wurden durch eine gemeinsame sichere
 Frame-Namensvalidierung ersetzt. Neue native Szenarien erfordern damit keine
