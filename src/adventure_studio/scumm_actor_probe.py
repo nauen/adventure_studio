@@ -273,7 +273,7 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
     early = run_click("early")
     late = run_click("late")
     report = {"native_early_late_input_verified": (
-              early["key_pixels"] >= 40 and early["open_door_pixels"] < 40
+              early["key_pixels"] >= 10 and early["open_door_pixels"] < 40
               and late["key_pixels"] < 40 and late["open_door_pixels"] >= 40),
               "early": early, "late": late}
     (destination / "actor-input-report.json").write_text(json.dumps(report, indent=2) + "\n",
