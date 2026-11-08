@@ -100,9 +100,6 @@ def run_actor_probe(upstream: Path, destination: Path) -> dict:
                                 ActorAsset("Companion", costume.name, "Harbor", 410, 110, "S", "Companion",
                                            "gesture"),
                                 ActorAsset("Guide", costume.name, "Harbor", 470, 110, "E", "Guide"),
-                            ), animation_rules=(
-                                AnimationRule(ActorCountCondition("Companion", 1),
-                                              ObjectStateEffect("Harbor", "Door", 2)),
                             ), animation_input_rules=(
                                 AnimationInputRule("Companion", "Harbor", "Door", "Push", 2,
                                                    ObjectStateEffect("Harbor", "Key", 0),
@@ -182,6 +179,11 @@ def run_actor_input_probe(upstream: Path, actor_build: Path, destination: Path) 
     """Click the native Push verb between COUNT markers, then after both."""
     resources = actor_build / "build" / "resources"
     source = (resources / "Harbor.scc").read_text(encoding="utf-8")
+    document = parse_document((actor_build / "build" / "project.json").read_text(encoding="utf-8"))
+    first_count_rule = AnimationRule(ActorCountCondition("Companion", 1),
+                                     ObjectStateEffect("Harbor", "Door", 2))
+    source = inject_actor_count_rules(source, "Harbor", (first_count_rule,),
+                                      document.actors, document.costumes)
     if source.count("        animateActor(Companion,24);\n") != 1:
         raise ValueError("Missing native Actor animation for input probe")
     # Slow only the isolated fixture's Actor, leaving the authored project and
