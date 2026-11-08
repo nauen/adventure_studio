@@ -168,6 +168,7 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('setObjectState(Key,0);', native)
         self.assertIn('setObjectState(Door,2);', native)
         self.assertIn('animateActor(Companion,24);\n        watchActorCount0();\n        watchActorCount1();', native)
+        self.assertIn('watchActorCount1();\n        }', native)
         self.assertEqual(inject_actor_count_rules(source, 'Cellar', rules,
                                                   document.actors, document.costumes), source)
 

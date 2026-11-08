@@ -94,6 +94,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
   - [x] Teil-Gate: Dieselbe späte, deklarative Eingabe bleibt nach
         `Harbor → Cellar → Harbor` über normale `WalkTo`-Hotspots erhalten:
         Schlüssel weiterhin unsichtbar, Tür offen. Native CI `42468551627`.
+  - [x] Teil-Gate: Initialanimation pro Actor nur einmal über ein globales
+        natives SCUMM-Bit starten. Ein adversarialer COUNT-Wächter würde
+        nach Wiedereintritt den Schlüssel wiederbeleben; die stock-ScummVM-
+        Probe `42471602488` bestätigt, dass dies ausbleibt.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-

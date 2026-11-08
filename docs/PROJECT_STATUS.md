@@ -237,10 +237,20 @@ ermöglicht den regulären `WalkTo`-Wechsel `Harbor → Cellar`. Über den
 Treppe-Hotspot kehrt der Spieler nach `Harbor` zurück. Die native
 ScummVM-Probe bestätigt, dass der Schlüssel weiterhin unsichtbar
 und die Tür offen ist. Die bisherigen 0/1/2-Klick-Tests bleiben grün.
-**Als Nächstes:** Actor-Initialanimation und COUNT-Wächter beim erneuten
-Raumbetreten gezielt auf Doppelstart/Replay prüfen und gegebenenfalls
-einen einmaligen Initialisierungsvertrag modellieren. Save/Load und das
-vollständige Fahrgeschäft bleiben weitere offene Gates.
+Der seither verifizierte Initialanimations-Lifecycle folgt direkt
+darunter. Save/Load und das vollständige Fahrgeschäft bleiben offen.
+
+**P0.5-Initialanimations-Lifecycle (stock ScummVM `42471602488`):**
+`ActorAsset.initial_animation` startet nun durch ein pro Actor deklariertes
+globales SCUMM-Bit genau beim ersten Eintritt in seinen Anfangsraum.
+Beim Wiedereintritt wird weder die Anfangsanimation noch der daran
+gebundene COUNT-Wächter erneut ausgelöst. Ein zusätzlicher nativer
+Negativ-Wächter würde den zuvor entfernten Schlüssel nach einem
+Doppelstart wieder sichtbar machen; der unveränderte ScummVM-Lauf
+bestätigt, dass er verborgen bleibt. Der Guard umfasst alle an die
+Animation gebundenen COUNT-Wächter. Die alten JSON-v1-Projekte bleiben
+unverändert. **Nächstes P0.5-Gate:** Save/Load der Animation-/Objektzustände
+und anschließend explizite wiederholbare Animationsaktionen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
