@@ -453,6 +453,39 @@ def inject_actor_input_rules(source: str, room_name: str, rules) -> str:
     return source
 
 
+def inject_actor_animation_triggers(source: str, room_name: str, triggers, actors, costumes) -> str:
+    """Compile authored object-verb actions that restart native Actor animations."""
+    active = [trigger for trigger in triggers if trigger.room == room_name]
+    if not active:
+        return source
+    actors_by_id = {actor.id: actor for actor in actors}
+    costumes_by_name = {costume.name: costume for costume in costumes}
+    for trigger in active:
+        actor = actors_by_id[trigger.actor_id]
+        animation = next(item for item in costumes_by_name[actor.costume].animations
+                         if item.name == trigger.animation)
+        if animation.index is None:
+            raise ValueError(f"Animation trigger {trigger.animation} lacks native index")
+        object_marker = f"    object {trigger.hotspot_id} {{\n"
+        if source.count(object_marker) != 1:
+            raise ValueError(f"Missing native animation trigger hotspot: {trigger.hotspot_id}")
+        start = source.index(object_marker) + len(object_marker)
+        end = source.find("    object ", start)
+        if end == -1:
+            end = source.find("    local script entry()", start)
+        if end == -1:
+            raise ValueError(f"Cannot isolate native trigger hotspot: {trigger.hotspot_id}")
+        segment = source[start:end]
+        marker = "        verb(int vrb, int objA, int objB) {\n"
+        if segment.count(marker) != 1 or f"        case {trigger.verb}:\n" in segment:
+            raise ValueError(f"Conflicting native animation verb on {trigger.hotspot_id}")
+        native = (f"        case {trigger.verb}:\n"
+                  f"            animateActor({actor.id},{animation.index});\n"
+                  "            return;\n")
+        source = source[:start] + segment.replace(marker, marker + native, 1) + source[end:]
+    return source
+
+
 def read_icon_ids(argument: str) -> tuple[str, ...]:
     if argument.startswith("@"):
         argument = Path(argument[1:]).read_text(encoding="ascii").strip()

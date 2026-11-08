@@ -7,17 +7,42 @@ from adventure_studio.scumm_bootstrap import (inject_actor_bindings, inject_acto
                                               inject_actor_initial_flags,
                                               inject_actor_count_rules)
 from adventure_studio.scumm_bootstrap import inject_actor_input_rules
+from adventure_studio.scumm_bootstrap import inject_actor_animation_triggers
 from adventure_studio.scumm_actor_probe import (actor_count_room_source, actor_binding_room_source,
                                                  project_count_room_source)
 from adventure_studio.scumm_costume_probe import gesture_fixture
 from adventure_studio.scumm_project import (ActorAsset, ActorCountCondition, ObjectStateEffect,
-                                            AnimationRule, AnimationInputRule)
+                                            AnimationRule, AnimationInputRule, AnimationTrigger)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture, scummc_room_source
 from dataclasses import replace
 
 
 class ActorBootstrapTests(unittest.TestCase):
+    def test_authored_animation_actions_replay_named_costume_without_initial_animation(self):
+        actor = ActorAsset('Companion', 'NativeGesture', 'Harbor', 300, 100)
+        triggers = (AnimationTrigger('Companion', 'Harbor', 'Key', 'Push', 'gesture'),
+                    AnimationTrigger('Companion', 'Harbor', 'Key', 'Pull', 'gesture'))
+        document = GameDocument('ReplayAnimation', (scrolling_fixture(), destination_fixture()),
+                                (gesture_fixture(),), (actor,), animation_triggers=triggers)
+        self.assertEqual(parse_document(canonical_json(document)), document)
+        source = ('room Harbor {\n    object Key {\n'
+                  '        verb(int vrb, int objA, int objB) {\n'
+                  '        }\n    }\n    local script entry() {\n    }\n}\n')
+        native = inject_actor_animation_triggers(source, 'Harbor', document.animation_triggers,
+                                                 document.actors, document.costumes)
+        self.assertIn('case Push:\n            animateActor(Companion,24);\n            return;', native)
+        self.assertIn('case Pull:\n            animateActor(Companion,24);\n            return;', native)
+        self.assertEqual(native.count('animateActor(Companion,24);'), 2)
+        self.assertEqual(inject_actor_animation_triggers(source, 'Cellar', triggers,
+                                                         document.actors, document.costumes), source)
+        for changed in (replace(triggers[0], actor_id='Missing'),
+                        replace(triggers[0], hotspot_id='Missing'),
+                        replace(triggers[0], animation='Missing'),
+                        replace(triggers[0], verb='LookAt')):
+            with self.subTest(trigger=changed), self.assertRaises(ValueError):
+                canonical_json(replace(document, animation_triggers=(changed,)))
+
     def test_two_actors_and_shared_costume_are_emitted_without_duplicate_cost(self):
         source = ('room Harbor;\nroom ResRoom {\n'
                   '    cost egoCost = "devil.cost";\n'
