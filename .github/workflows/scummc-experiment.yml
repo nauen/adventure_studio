@@ -8,6 +8,7 @@ on:
     paths:
       - '.github/workflows/scummc-experiment.yml'
       - 'src/adventure_studio/scumm_studio_png_probe.py'
+      - 'src/adventure_studio/scumm_actor_sequence_probe.py'
       - 'src/adventure_studio/scumm_launch.py'
   push:
     paths:
@@ -21,6 +22,7 @@ on:
       - 'src/adventure_studio/scumm_costume.py'
       - 'src/adventure_studio/scumm_costume_probe.py'
       - 'src/adventure_studio/scumm_actor_probe.py'
+      - 'src/adventure_studio/scumm_actor_sequence_probe.py'
       - 'src/adventure_studio/scumm_studio_png_probe.py'
       - 'src/adventure_studio/scumm_actor_save_probe.py'
       - 'src/adventure_studio/palette_animation.py'
@@ -204,6 +206,24 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe /tmp/scummc-upstream /tmp/native-actors
+      - name: Play Studio-authored Actor choreography from a real hotspot click
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_sequence_probe /tmp/scummc-upstream /tmp/native-actors /tmp/native-actor-sequence
+      - name: Retain native Studio interaction sequence gameplay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-actor-sequence
+          path: |
+            /tmp/native-actor-sequence/actor-sequence-report.json
+            /tmp/native-actor-sequence/build/project.json
+            /tmp/native-actor-sequence/build/resources/Harbor.scc
+            /tmp/native-actor-sequence/screenshots/scummvm-before.png
+            /tmp/native-actor-sequence/screenshots/scummvm-after.png
+            /tmp/native-actor-sequence/screenshots/scummvm.log
+          if-no-files-found: ignore
       - name: Compile Studio-imported PNG animation and launch native game
         env:
           PYTHONPATH: src
