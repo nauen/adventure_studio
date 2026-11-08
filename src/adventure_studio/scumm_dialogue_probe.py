@@ -109,7 +109,8 @@ def run(game_directory: Path, output: Path, voice: bool = False) -> dict:
             x, y = _color_center(output, "before", ACTOR_RGB)
             _click(x, y)
             if voice:
-                time.sleep(2.0)
+                # The native cursor/actor walk to the NPC must complete first.
+                time.sleep(3.6)
                 _capture(output, "spoken")
             displayed = 0
             for _ in range(35):
