@@ -165,15 +165,15 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         über `Stairs` zurück und kontrolliert Türzustand und Badge im Inventar
         (Actions `42514653114`, Actor-Schritt grün). Allgemeine Cutscene-
         Audio-Endzustände bleiben ein separates Produktpaket.
-  - [ ] Produkt-/Native-Abnahme: MIDI kann als versionierte Ressource im
+  - [x] Produkt-/Native-Abnahme: MIDI kann als versionierte Ressource im
         Studio einem Raum zugewiesen werden; `Musik starten`/`Musik stoppen`
         erzeugen die nativen ScummC-Befehle und beim Escape den letzten
         Musik-Endzustand. Native SOUN-Kompilierung ist in den regulären ZIP-
         Export integriert. Modell, UI, JSON und Quell-/Fake-Exporter lokal
         getestet. Die ScummVM-Klickprobe (`42517210707`) bestätigt die native
         SOUN-Kompilierung und gemessene PCM-Aktivität vor Stopp, nach Stopp und
-        nach Neustart; dieses Ergebnis ist nun ein Pflichtgate. Ein vollständiger
-        grüner CI-Lauf mit dem verschärften Gate fehlt noch.
+        nach Neustart; dieses Ergebnis ist ein Pflichtgate. Der vollständige
+        native CI-Lauf `42517572328` hat es erneut erfolgreich ausgeführt.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

@@ -579,8 +579,10 @@ Die native Actor-Klickprobe kompilierte das Studio-MIDI zu `SOUN`, lief im
 unveränderten ScummVM und erfasste drei zeitlich abgegrenzte PCM-Fenster
 (Actions `42517210707`, Actor-Schritt erfolgreich): Aktivität vor dem
 Escape-Stopp `0,9482`, danach `0,2686`, nach erneutem Start `0,9830`.
-Der relative Stop-/Wiederstart-Unterschied ist nun auch ein **verbindliches
-CI-Gate**; dessen erneuter vollständiger Lauf ist noch ausstehend.
+Der relative Stop-/Wiederstart-Unterschied ist ein **verbindliches
+CI-Gate** und wurde im finalen PR-Lauf `42517572328` (Wiederholung nach
+einem nicht reproduzierten älteren Tür-Smoke-Fehlschlag) erneut bestanden.
+Alle Pflichtworkflows des Pakets sind grün.
 Die allgemeine iMUSE-/Beat-/Taktabdeckung bleibt offen.
 **Nächstes Produktpaket nach der CI-Abnahme:** frei authorbare Soundeffekte
 mit eigenen Ressourcen und synchronisierten Spielereignissen.
