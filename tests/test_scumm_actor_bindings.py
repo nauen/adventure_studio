@@ -15,7 +15,9 @@ from adventure_studio.scumm_project import (ActorAsset, ActorCountCondition, Obj
                                             AnimationRule, AnimationInputRule, AnimationTrigger)
 from adventure_studio.scumm_project import (InteractionSequence, AnimateActorStep,
                                             ObjectStateStep, DelayStep, MoveActorStep, WalkActorStep,
-                                            WaitActorStep, FaceActorStep, PickupObjectStep)
+                                            WaitActorStep, FaceActorStep, PickupObjectStep,
+                                            CombineInventoryStep)
+from adventure_studio.scumm_assets import RoomHotspot, CombineRule
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture, scummc_room_source
 from dataclasses import replace
@@ -74,6 +76,24 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('if(getObjectOwner(Key) != VAR_EGO) pickupObject(Key,VAR_ROOM);',
                       native_inventory.split('} override {')[1])
         self.assertIn('setObjectState(Key,0);', native_inventory.split('} override {')[1])
+        harbor = document.rooms[0]
+        harbor = replace(harbor, hotspots=(
+            *harbor.hotspots,
+            RoomHotspot('Token', 'token', 'token', 200, 100, 16, 16, True),
+            RoomHotspot('Badge', 'badge', 'badge', 220, 100, 16, 16, True)),
+            combine_rules=(CombineRule('Key', 'Token', 'Badge', 'Ready'),))
+        combined = replace(inventory_skip, steps=(
+            *inventory_skip.steps, PickupObjectStep('Token'), CombineInventoryStep('Badge')))
+        combined_doc = replace(document, rooms=(harbor, document.rooms[1]),
+                               interaction_sequences=(combined,))
+        self.assertEqual(parse_document(canonical_json(combined_doc)), combined_doc)
+        native_combo = inject_interaction_sequences(source, 'Harbor', (combined,),
+                                                    document.actors, document.costumes, harbor)
+        override = native_combo.split('} override {')[1]
+        self.assertLess(override.index('pickupObject(Token,VAR_ROOM)'),
+                        override.index('setObjectOwner(Token,0)'))
+        self.assertIn('pickupObject(Badge,VAR_ROOM);', override)
+        self.assertIn('setObjectState(Badge,1);', override)
         guarded = replace(sequence, condition_hotspot_id='Door', condition_state=1)
         guarded_document = replace(document, interaction_sequences=(guarded,))
         self.assertEqual(parse_document(canonical_json(guarded_document)), guarded_document)

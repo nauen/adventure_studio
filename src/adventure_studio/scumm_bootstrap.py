@@ -486,19 +486,23 @@ def inject_actor_animation_triggers(source: str, room_name: str, triggers, actor
     return source
 
 
-def inject_interaction_sequences(source: str, room_name: str, sequences, actors, costumes) -> str:
+def inject_interaction_sequences(source: str, room_name: str, sequences, actors, costumes,
+                                 room_asset=None) -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
-                                PickupObjectStep)
+                                PickupObjectStep, CombineInventoryStep)
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
         return source
     actors_by_id = {actor.id: actor for actor in actors}
     costumes_by_name = {costume.name: costume for costume in costumes}
+    recipes = {rule.result_id: rule for rule in room_asset.combine_rules} if room_asset else {}
     targets = {step.hotspot_id for sequence in active for step in sequence.steps
                if isinstance(step, (ObjectStateStep, PickupObjectStep))}
+    targets.update(step.result_id for sequence in active for step in sequence.steps
+                   if isinstance(step, CombineInventoryStep))
     declarations = [f"    object {target};\n" for target in sorted(targets)
                     if f"    object {target};\n" not in source]
     first = min((source.find(f"    object {sequence.hotspot_id} {{\n")
@@ -511,6 +515,23 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     for sequence in active:
         grouped.setdefault((sequence.hotspot_id, sequence.verb), []).append(sequence)
 
+    def inventory_action(step, indent):
+        if isinstance(step, PickupObjectStep):
+            return (f"{indent}if(getObjectOwner({step.hotspot_id}) != VAR_EGO) "
+                    f"pickupObject({step.hotspot_id},VAR_ROOM);\n"
+                    f"{indent}setObjectState({step.hotspot_id},0);\n")
+        recipe = recipes.get(step.result_id)
+        if recipe is None:
+            raise ValueError(f"Missing native combination recipe: {step.result_id}")
+        return (f"{indent}if(getObjectOwner({recipe.first_id}) == VAR_EGO && "
+                f"getObjectOwner({recipe.second_id}) == VAR_EGO) {{\n"
+                f"{indent}    setObjectOwner({recipe.first_id},0);\n"
+                f"{indent}    setObjectOwner({recipe.second_id},0);\n"
+                f"{indent}    if(getObjectOwner({recipe.result_id}) != VAR_EGO) "
+                f"pickupObject({recipe.result_id},VAR_ROOM);\n"
+                f"{indent}    setObjectState({recipe.result_id},1);\n"
+                f"{indent}}}\n")
+
     def instructions_for(sequence):
         instructions = []
         for step in sequence.steps:
@@ -521,10 +542,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            animateActor({actor.id},{animation.index});\n")
             elif isinstance(step, ObjectStateStep):
                 instructions.append(f"            setObjectState({step.hotspot_id},{step.state});\n")
-            elif isinstance(step, PickupObjectStep):
-                instructions.append(f"            if(getObjectOwner({step.hotspot_id}) != VAR_EGO) "
-                                    f"pickupObject({step.hotspot_id},VAR_ROOM);\n")
-                instructions.append(f"            setObjectState({step.hotspot_id},0);\n")
+            elif isinstance(step, (PickupObjectStep, CombineInventoryStep)):
+                instructions.append(inventory_action(step, "            "))
             elif isinstance(step, DelayStep):
                 instructions.append(f"            delaySeconds({step.seconds});\n")
             elif isinstance(step, MoveActorStep):
@@ -552,7 +571,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_states = {}
         end_positions = {}
         end_directions = {}
-        end_pickups = set()
+        inventory_steps = []
         for step in sequence.steps:
             if isinstance(step, ObjectStateStep):
                 end_states[step.hotspot_id] = step.state
@@ -561,12 +580,13 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, FaceActorStep):
                 end_directions[step.actor_id] = step.direction
             elif isinstance(step, PickupObjectStep):
-                end_pickups.add(step.hotspot_id)
+                inventory_steps.append(step)
                 end_states[step.hotspot_id] = 0
+            elif isinstance(step, CombineInventoryStep):
+                inventory_steps.append(step)
         commit = ""
-        for hotspot in sorted(end_pickups):
-            commit += (f"                if(getObjectOwner({hotspot}) != VAR_EGO) "
-                       f"pickupObject({hotspot},VAR_ROOM);\n")
+        for step in inventory_steps:
+            commit += inventory_action(step, "                ")
         for hotspot, state in end_states.items():
             commit += f"                setObjectState({hotspot},{state});\n"
         for actor, (x, y) in end_positions.items():

@@ -549,7 +549,7 @@ def make_app():
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt")
@@ -574,7 +574,7 @@ def make_app():
             with gr.Row():
                 native_skippable = gr.Checkbox(label="Mit Escape überspringbar", value=False)
                 native_skip_save = gr.Button("Skip-Einstellung speichern")
-            gr.Markdown("Beim Überspringen übernimmt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen sowie aufgenommene Inventargegenstände** der Sequenz. Laufende Animationen und Wartezeiten entfallen; Escape beendet den Ablauf.")
+            gr.Markdown("Beim Überspringen übernimmt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen sowie Inventaraufnahmen und -kombinationen** der Sequenz. Für *Inventar kombinieren* ein Ergebnisobjekt mit vorhandener Raum-Kombinationsregel wählen. Escape beendet laufende Animationen und Wartezeiten.")
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
             with gr.Row():

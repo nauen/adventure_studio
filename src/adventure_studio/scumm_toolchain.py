@@ -164,7 +164,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                                                    document.actors, document.costumes)
         rendered = inject_interaction_sequences(rendered, room.name,
                                                 document.interaction_sequences,
-                                                document.actors, document.costumes)
+                                                document.actors, document.costumes, room)
         room_source.write_text(rendered, encoding="utf-8")
         target = resources / f"{room.name}.roobj"
         runner([str(compiler), "-V", "6", *include_args, "-R", str(resources),
