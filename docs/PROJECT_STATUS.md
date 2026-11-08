@@ -372,6 +372,19 @@ Mehrframe-Sequenzen liegt noch nicht vor.
 vorhandenen Frames und Richtungsauswahl, mit einstellbaren Framezeiten,
 ohne eine zusätzliche Spiel-Runtime zu simulieren.
 
+**P0.5 – abspielbare Costume-Vorschau (Implementierung, CI ausstehend):**
+Die gewählte Richtung einer Costume-Animation lässt sich jetzt direkt
+im Studio als GIF abspielen. Die Frames stammen unverändert aus den
+importierten COST-Bilddaten; die relative native Frame-Position bleibt
+erhalten. Eine frei wählbare Millisekunden-Dauer steuert ausschließlich
+die Editor-Wiedergabe, **nicht** native SCUMM-Framezeiten oder Costume-
+COUNT-Kommandos. Der bestehende Studio-Integrationstest prüft Ausgabe,
+Frameanzahl und Wiedergabedauer. Keine eigene Spiel-Runtime.
+Stock-ScummVM-Bild- und Gameplay-Nachweise bleiben offen.
+**Nächstes Produktpaket:** native ScummC-Kompilierung und tatsächliche
+Wiedergabe einer aus Studio-PNGs erzeugten Mehrframe-Costume in stock
+ScummVM belegen, bevor weitere Komfortfunktionen priorisiert werden.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

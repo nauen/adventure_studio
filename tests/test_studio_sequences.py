@@ -17,7 +17,8 @@ from adventure_studio.studio_export import export_native_project
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
 from adventure_studio.studio_actors import (add_actor, create_costume, move_actor,
                                            add_costume_frame, set_costume_animation,
-                                           costume_timeline_images, edit_costume_timeline)
+                                           costume_timeline_images, edit_costume_timeline,
+                                           render_costume_preview)
 from test_scumm_toolchain import fake_upstream
 
 
@@ -100,6 +101,12 @@ class NativeSequenceEditorTests(unittest.TestCase):
             raw = edit_costume_timeline(raw, "PixelCostume", "wave", "E", 2, "Nach oben")
             raw = edit_costume_timeline(raw, "PixelCostume", "wave", "E", None,
                                         "Anhängen", "Pose0")
+            preview = render_costume_preview(raw, "PixelCostume", "wave", "E", 180,
+                                             root / "wave-preview.gif")
+            with Image.open(preview) as animation_preview:
+                self.assertEqual(animation_preview.format, "GIF")
+                self.assertEqual(animation_preview.n_frames, 3)
+                self.assertEqual(animation_preview.info["duration"], 180)
             raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Actor animieren",
                                        "PixelHero", "wave", None, None)
             created = parse_document(raw)

@@ -138,6 +138,10 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Frames und nativen Kommandos, mit Auswahl, Umordnung, Hinzufügen und
         Entfernen. Derselbe native COST-Exporter bleibt zuständig; animierte
         Vorschau und ScummVM-Gate offen.
+  - [x] Produkt-Implementierung: animierte GIF-Editor-Vorschau aus wirklichen
+        Costume-Frames und ihren Ursprungspositionen, mit frei gewählter
+        Vorschaugeschwindigkeit. Keine behauptete SCUMM-Tick-Semantik;
+        nativer Gameplay-Nachweis weiter offen.
   - [ ] Allgemeine Actor-Zuordnung, Animations-Cue-/Condition-IR und
         projektgetriebene Aktionsfenster sind **nicht** durch das Fixture gelöst.
 - [ ] **P1.1:** Native Kameraführung, Shot-Komposition und Cutscene-
