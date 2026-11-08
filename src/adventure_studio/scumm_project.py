@@ -68,6 +68,17 @@ class AnimationInputRule:
 
 
 @dataclass(frozen=True)
+class AnimationTrigger:
+    """Replay a named native Costume animation through a room object's verb."""
+
+    actor_id: str
+    room: str
+    hotspot_id: str
+    verb: str
+    animation: str
+
+
+@dataclass(frozen=True)
 class GameDocument:
     id: str
     rooms: tuple[RoomAsset, ...]
@@ -75,6 +86,7 @@ class GameDocument:
     actors: tuple[ActorAsset, ...] = ()
     animation_rules: tuple[AnimationRule, ...] = ()
     animation_input_rules: tuple[AnimationInputRule, ...] = ()
+    animation_triggers: tuple[AnimationTrigger, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -136,6 +148,8 @@ def document_dict(document: GameDocument) -> dict:
                                          "too_late": vars(rule.too_late)}
                                         for rule in document.animation_input_rules]}
            if document.animation_input_rules else {}),
+        **({"animation_triggers": [vars(trigger) for trigger in document.animation_triggers]}
+           if document.animation_triggers else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -309,6 +323,28 @@ def _validate_document(document: GameDocument) -> None:
                 raise ValueError("Animation input effect references unknown hotspot")
             if type(effect.state) is not int or not 0 <= effect.state <= 2:
                 raise ValueError("Animation input effect requires object state 0, 1 or 2")
+    for trigger in document.animation_triggers:
+        if not isinstance(trigger, AnimationTrigger):
+            raise ValueError("Invalid typed animation trigger")
+        actor = actors_by_id.get(trigger.actor_id) if isinstance(trigger.actor_id, str) else None
+        room = rooms_by_name.get(trigger.room) if isinstance(trigger.room, str) else None
+        if actor is None or room is None or actor.room != room.name:
+            raise ValueError("Animation trigger requires an Actor in its room")
+        if (not isinstance(trigger.hotspot_id, str)
+                or trigger.hotspot_id not in {hotspot.id for hotspot in room.hotspots}):
+            raise ValueError("Animation trigger references unknown hotspot")
+        if trigger.verb not in ("Push", "Pull", "Open", "Close"):
+            raise ValueError("Unsupported animation trigger verb")
+        identity = (trigger.room, trigger.hotspot_id, trigger.verb)
+        if identity in seen_inputs:
+            raise ValueError("Duplicate animation verb binding")
+        seen_inputs.add(identity)
+        costume = costumes_by_name[actor.costume]
+        animation = next((item for item in costume.animations if item.name == trigger.animation), None)
+        if animation is None or animation.index is None:
+            raise ValueError("Animation trigger requires a named, explicitly indexed animation")
+        if actor.direction not in {direction.direction for direction in animation.directions}:
+            raise ValueError("Animation trigger lacks the Actor's direction")
 
 
 def parse_document(source: str) -> GameDocument:
@@ -317,7 +353,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -398,6 +434,14 @@ def parse_document(source: str) -> GameDocument:
         animation_inputs.append(AnimationInputRule(item["actor_id"], item["room"],
                                                    item["hotspot_id"], item["verb"],
                                                    item["before_count"], *effects))
+    raw_triggers = data.get("animation_triggers", [])
+    if not isinstance(raw_triggers, list):
+        raise ValueError("Animation triggers must be a list")
+    animation_triggers = []
+    for raw_trigger in raw_triggers:
+        item = _only(raw_trigger, {"actor_id", "room", "hotspot_id", "verb", "animation"},
+                     {"actor_id", "room", "hotspot_id", "verb", "animation"})
+        animation_triggers.append(AnimationTrigger(**item))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",
@@ -538,7 +582,7 @@ def parse_document(source: str) -> GameDocument:
             tuple(planes), tuple(boxes), routes, scale, tuple(curves), room.get("demo_walk_to_y"), tuple(camera_cues),
         ))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
-                            tuple(animation_rules), tuple(animation_inputs))
+                            tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers))
     _validate_document(document)
     return document
 

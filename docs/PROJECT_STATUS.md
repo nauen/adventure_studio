@@ -266,6 +266,15 @@ den gemeinsamen Door-/Key-Pixelhelfern wurden durch eine gemeinsame sichere
 Frame-Namensvalidierung ersetzt. Neue native Szenarien erfordern damit keine
 Änderung an den allgemeinen Bildprüfhelfern mehr.
 
+**P0.5-Produktfunktion (native CI ausstehend):** `animation_triggers`
+ermöglichen wiederholbare Actor-Animationen über einen frei gewählten
+Hotspot-Verbfall im versionierten `GameDocument`. Der native Export startet
+die benannte, indizierte Costume-Animation bei jeder Aktion erneut, unabhängig
+vom einmaligen Erststart-Guard. Das Actor-Projekt enthält eine authored
+`Pull`-Aktion. Vollständige Interaktion bleibt bis zum Gameplay-Nachweis
+als offen gekennzeichnet. **Nächstes Produktpaket:** kombinierbare
+Animations-Cues und Reaktionen über mehrere Actors und Objekte.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

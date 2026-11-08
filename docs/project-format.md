@@ -1,5 +1,22 @@
 # Versioniertes SCUMM-Projektformat (experimentell)
 
+## Wiederholbare Actor-Animationen durch Spielaktionen (P0.5)
+
+`GameDocument` v1 erlaubt optional `animation_triggers`. Jeder Eintrag
+verbindet einen Raum-Hotspot und ein Verb (`Push`, `Pull`, `Open`, `Close`)
+mit einem Actor und einer benannten Animation seiner Costume:
+
+```json
+{"actor_id":"Companion","room":"Harbor","hotspot_id":"Key","verb":"Pull","animation":"gesture"}
+```
+
+Bei jeder Aktion ruft das generierte native Verb-Script die ausgewählte
+`animateActor`-Animation erneut auf. Eine `initial_animation` ist dafür
+nicht nötig. Costume-Index und Actor-Richtung werden referenzgeprüft;
+doppelte Verbbelegungen sind ungültig. Ohne `animation_triggers` bleibt
+das bestehende JSON-v1-Format unverändert. COUNT-Wächter einer einmaligen
+Startanimation werden nicht automatisch neu eingerichtet.
+
 ## Typisierte COUNT-Reaktionen im Projektmodell (P0.5)
 
 `GameDocument` v1 unterstützt optional `animation_rules`. Eine Regel besitzt
