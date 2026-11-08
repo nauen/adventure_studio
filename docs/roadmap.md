@@ -157,6 +157,14 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         Ein Escape-Skip führt auch vorausgehende Pickups und die Kombination
         in Schrittfolge aus. Native Probe kontrolliert das Badge-Icon nach
         dem zweiten Escape. Audio-/Raumwechsel-Skip weiterhin offen.
+  - [x] Produkt-Implementierung/Native Abnahme: `Raum wechseln` ist als
+        terminale Studio-Sequenzaktion mit existierendem Zielraum, JSON-v1-
+        Roundtrip und `startRoom` nach normalem Ablauf beziehungsweise nach
+        `try`/`override` implementiert und lokal getestet. Die echte native
+        Door-/Close-Probe überspringt die Wartezeit, erreicht `Cellar`, kehrt
+        über `Stairs` zurück und kontrolliert Türzustand und Badge im Inventar
+        (Actions `42514653114`, Actor-Schritt grün). Allgemeine Cutscene-
+        Audio-Endzustände bleiben ein separates Produktpaket.
   - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
         nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
         Storyänderungen neu validieren, Story und Projekt gemeinsam in das

@@ -267,7 +267,9 @@ def make_app():
                 gr.update(choices=objects, value=objects[0] if objects else None),
                 gr.update(choices=actors, value=chosen_actor),
                 gr.update(choices=animations, value=animations[0] if animations else None),
-                gr.update(choices=objects, value=objects[0] if objects else None),
+                gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
+                                   *[(f"Raum: {name}", name) for name in rooms]],
+                          value=objects[0] if objects else room),
                 gr.update(choices=sequences, value=identity),
                 gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],
                           value=0 if steps else None),
@@ -549,10 +551,10 @@ def make_app():
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
-                native_target = gr.Dropdown(label="Zielobjekt")
+                native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
                 native_amount = gr.Number(label="Sekunden / Objektzustand (0–2)", value=1, precision=0)
             with gr.Row():
                 native_move_x = gr.Number(label="Actor-Ziel X (Versetzen/Laufen)", value=320, precision=0)
@@ -574,7 +576,7 @@ def make_app():
             with gr.Row():
                 native_skippable = gr.Checkbox(label="Mit Escape überspringbar", value=False)
                 native_skip_save = gr.Button("Skip-Einstellung speichern")
-            gr.Markdown("Beim Überspringen übernimmt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen sowie Inventaraufnahmen und -kombinationen** der Sequenz. Für *Inventar kombinieren* ein Ergebnisobjekt mit vorhandener Raum-Kombinationsregel wählen. Escape beendet laufende Animationen und Wartezeiten.")
+            gr.Markdown("Beim Überspringen übernimmt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen sowie Inventaraufnahmen und -kombinationen** der Sequenz. Für *Inventar kombinieren* ein Ergebnisobjekt mit vorhandener Raum-Kombinationsregel wählen. *Raum wechseln* muss der letzte Schritt sein; der Wechsel erfolgt nach dem normalen Ablauf oder nach Escape und dem Setzen aller Endzustände.")
             native_step = gr.Dropdown(label="Schritt auswählen")
             native_steps = gr.Textbox(label="Geordnete Schritte", lines=6, interactive=False)
             with gr.Row():
@@ -757,12 +759,14 @@ def make_app():
         def native_room_update(raw, room):
             if raw is None:
                 return gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
-            _, objects, actors = project_choices(raw, room)
+            rooms, objects, actors = project_choices(raw, room)
             animations = actor_animations(raw, actors[0] if actors else None)
             initial = next((actor.initial_animation for actor in parse_document(raw).actors
                             if actors and actor.id == actors[0]), None)
             return (gr.update(choices=objects, value=objects[0] if objects else None),
-                    gr.update(choices=objects, value=objects[0] if objects else None),
+                    gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
+                                       *[(f"Raum: {name}", name) for name in rooms]],
+                              value=objects[0] if objects else room),
                     gr.update(choices=actors, value=actors[0] if actors else None),
                     gr.update(choices=animations, value=animations[0] if animations else None),
                     gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in animations]],
@@ -818,11 +822,12 @@ def make_app():
         def native_step_update(raw, identity, number):
             fields = sequence_step_fields(raw, identity, number)
             sequence_room = identity.split("|", 1)[0] if identity else None
-            _, objects, actors = project_choices(raw, sequence_room)
+            rooms, objects, actors = project_choices(raw, sequence_room)
             animations = actor_animations(raw, fields[1]) if fields[1] else ()
             return (fields[0], gr.update(choices=actors, value=fields[1]),
                     gr.update(choices=animations, value=fields[2]),
-                    gr.update(choices=objects, value=fields[3]),
+                    gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
+                                       *[(f"Raum: {name}", name) for name in rooms]], value=fields[3]),
                     fields[4], fields[5], fields[6], fields[7])
 
         native_step.change(native_step_update, [native_state, native_sequence, native_step],
