@@ -362,7 +362,8 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
     if not active_speakers:
         return GameDocument(story.chapters[0].id + "Game", tuple(result))
     palette = [(0, 0, 0)] * 48
-    palette[17] = (230, 80, 180)
+    # Keep costume ink distinct from the magenta answer-object probe color.
+    palette[17] = (50, 220, 220)
     figure = CostumeAsset("DialogueFigure", tuple(palette),
                           (CostumeFrame("Pose", 8, 8, bytes([1] * 64), -4, -8),),
                           (CostumeAnimation("stand", tuple(
