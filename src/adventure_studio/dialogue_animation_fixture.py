@@ -18,11 +18,18 @@ def build(directory: Path) -> None:
     gesture = CostumeAnimation("gesture", tuple(
         CostumeDirection(direction, ("Speak",), True)
         for direction in ("N", "E", "S", "W")), 24)
+    talk_start = CostumeAnimation("talk_start", tuple(
+        CostumeDirection(direction, ("Speak",), True)
+        for direction in ("N", "E", "S", "W")), 16)
+    talk_stop = CostumeAnimation("talk_stop", tuple(
+        CostumeDirection(direction, ("Pose",), True)
+        for direction in ("N", "E", "S", "W")), 20)
     updated = replace(costume, palette=tuple(palette),
                       frames=(*costume.frames, CostumeFrame("Speak", 8, 8, bytes([2] * 64), -4, -8)),
                       animations=tuple(replace(animation, index=12)
                                        if animation.name == "stand" else animation
-                                       for animation in costume.animations) + (gesture,))
+                                       for animation in costume.animations)
+                                 + (talk_start, talk_stop, gesture))
     document = replace(document,
                        costumes=tuple(updated if item.name == costume.name else item
                                       for item in document.costumes),
@@ -36,7 +43,9 @@ def build(directory: Path) -> None:
     raw = canonical_json(document)
     line = next(identity for label, identity in dialogue_animation_lines(raw)
                 if label.startswith("SpeakerWitness"))
-    raw = edit_dialogue_animation(raw, line, "gesture")
+    # Observe the stock engine's reserved talk start/stop slots separately
+    # from the optional Studio-authored end-state reset.
+    raw = edit_dialogue_animation(raw, line, "gesture", False)
     project.write_text(raw, encoding="utf-8")
     export_document(parse_document(raw), directory / "resources")
 
