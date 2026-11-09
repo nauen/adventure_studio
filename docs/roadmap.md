@@ -17,6 +17,13 @@ indizierte Animation. 318 lokale Tests grün (PNG-zu-COST und
 Dialog-Quellgenerierung), native ScummVM-Bildprobe und interaktive
 Gradio-Abnahme noch ausstehend (PR #78).
 
+**Blocker im nativen Sprecher-Rendering:** Der vollständige Feature-Branch
+und die GitHub-Actions-Workflows wurden wiederhergestellt. Die SCUMM-
+Compiler- und Dialogtextprüfungen laufen, aber die Sprecher-Costume
+selbst ist in den Screenshots nicht nachweisbar. COST-Standindex 12 und
+native Talk-Frame-Bindung sind implementiert; vor der Gestenprüfung muss
+die tatsächliche Sichtbarkeit der Sprecher-Actors nachgewiesen werden.
+
 
 **Sprechanimationen kontrolliert beenden (2026-11-09, Implementierung):**
 Optionale Standpose-Rücksetzung je Dialog-Cue im nativen Studio, nach

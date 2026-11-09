@@ -26,6 +26,18 @@ und Dialog-Cue-Bindung im ScummC-Quellgenerator.
 **Offen:** Durchgeklickter Gradio-Pfad und der strenge stock-ScummVM-
 Sichtnachweis; PR #78 bleibt bis zu einem grünen nativen Gate offen.
 
+**Native Fehleranalyse (2026-11-09):** Der zuerst fehlende CI-Start war
+ein unvollständiger Git-Baum auf dem Feature-Branch; Commit `a091769`
+hat den vollständigen Repository-Baum samt Workflows wiederhergestellt.
+Die danach regulär laufenden nativen Dialogjobs zeigen Sprechertexte,
+aber keine nachweisbare zweite NPC-Costume-Grafik. Auch der explizite
+`stand`-Start in der Test-Fixture brachte keine zusätzlichen
+Actor-Farbpixel im Bildbereich. Reservierte COST-Slots sind jetzt
+Stand 12, Sprechbeginn 16 und Sprechende 20; die Geste 24 wird über
+`setActorTalkFrame` an den Sprecher gebunden. **Offenes Gate vor der
+Gesten-Abnahme:** Die native Sprecherfigur muss selbst sichtbar sein,
+anschließend Geste und Rückkehr zur Standpose.
+
 
 **Sprechgesten mit definierter Standpose (Implementierung):** Zu einer
 nativen Dialoganimation kann der Autor nun im Studio „Nach der Sprechzeile
