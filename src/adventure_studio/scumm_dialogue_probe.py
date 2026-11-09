@@ -143,14 +143,22 @@ def run(game_directory: Path, output: Path, voice: bool = False,
             _click(answer_x, answer_y)
             if multispeaker:
                 # The response is issued by a native Actor, not by VAR_EGO.
-                # Record the resulting scene while the dialogue is playing.
-                time.sleep(0.5)
-                _capture(output, "speaker")
-                speaker_text = _run(["convert", str(output / "scummvm-speaker.png"),
-                                     "-crop", "640x120+192+220", "+repage",
-                                     "-format", "%c", "histogram:info:"])
-                report["speaker_text_pixels"] = count_color_pixels(speaker_text, ANSWER_RGB)
-                if report["speaker_text_pixels"] < 20:
+                # Wait for the walk/answer-caption animation before checking
+                # the spoken text above the NPC Actor (outside answer rows).
+                text_pixels = 0
+                for _ in range(50):
+                    if process.poll() is not None:
+                        raise RuntimeError("ScummVM exited while the native Actor was speaking")
+                    _capture(output, "speaker")
+                    histogram = _run(["convert", str(output / "scummvm-speaker.png"),
+                                      "-crop", "640x130+192+195", "+repage",
+                                      "-format", "%c", "histogram:info:"])
+                    text_pixels = count_color_pixels(histogram, ANSWER_RGB)
+                    if text_pixels >= 20:
+                        break
+                    time.sleep(0.25)
+                report["speaker_text_pixels"] = text_pixels
+                if text_pixels < 20:
                     raise RuntimeError("No visible native Actor speech after selecting reply")
             if nested:
                 nested_visible = False
