@@ -54,8 +54,10 @@ Sprechzeilen und neue Antwortknoten jetzt einer Figur derselben Szene zu.
 Der Compiler erzeugt jetzt SCUMM-Actors mit eigenem Costume und `actorSay`
 für die zugeordneten Sprechzeilen. In stock ScummVM ist die zweite,
 vom Antworttext verschiedene Sprecherzeile nachgewiesen (CI `42540762070`).
-Dialoge ohne Antwortauswahl und die Kopplung von Costume-/Lippenanimation
-an Sprachaufnahmen bleiben die nächsten D03-Teilschritte.
+Lineare Sprechketten ohne Antwortauswahl sind inzwischen ebenfalls im nativen
+`actorSay`-Compiler unterstützt; ihre ScummVM-Abnahme läuft noch. Die
+Kopplung von Costume-/Lippenanimation an Sprachaufnahmen bleibt der nächste
+D03-Teilschritt.
 
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und

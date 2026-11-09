@@ -34,8 +34,6 @@ def dialogue_fixture(raw: str, choices: bool = False, nested: bool = False,
         options += (DialogueChoice("AskAgain", "HarborHint", "Nochmal fragen.", "HarborHello"),
                     DialogueChoice("Finish", "HarborHint", "Das reicht.", None))
     if multispeaker:
-        if not choices:
-            raise ValueError("Multispeaker dialogue needs choices")
         witness = Character("Witness", "Zeuge", "Ein Zeuge sieht zu.", story.starting_scene_id)
         nodes = tuple(replace(node, speaker_id="Witness") if node.id == "HarborHint" else node
                       for node in nodes)
@@ -46,12 +44,13 @@ def dialogue_fixture(raw: str, choices: bool = False, nested: bool = False,
 
 def main() -> int:
     if (len(sys.argv) not in (3, 4)
-            or (len(sys.argv) == 4 and sys.argv[3] not in ("--choices", "--nested", "--multispeaker"))):
-        print("Usage: python -m adventure_studio.dialogue_demo STORY.json OUTPUT_DIRECTORY [--choices|--nested|--multispeaker]")
+            or (len(sys.argv) == 4 and sys.argv[3] not in ("--choices", "--nested", "--multispeaker", "--linear-multispeaker"))):
+        print("Usage: python -m adventure_studio.dialogue_demo STORY.json OUTPUT_DIRECTORY [--choices|--nested|--multispeaker|--linear-multispeaker]")
         return 2
-    raw = dialogue_fixture(Path(sys.argv[1]).read_text(encoding="utf-8"), len(sys.argv) == 4,
+    raw = dialogue_fixture(Path(sys.argv[1]).read_text(encoding="utf-8"),
+                           len(sys.argv) == 4 and sys.argv[3] != "--linear-multispeaker",
                            len(sys.argv) == 4 and sys.argv[3] == "--nested",
-                           len(sys.argv) == 4 and sys.argv[3] == "--multispeaker")
+                           len(sys.argv) == 4 and sys.argv[3] in ("--multispeaker", "--linear-multispeaker"))
     output = Path(sys.argv[2])
     build_story_document(raw, output)
     (output / "story.json").write_text(raw, encoding="utf-8")
