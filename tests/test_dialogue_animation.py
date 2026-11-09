@@ -48,8 +48,11 @@ class DialogueAnimationTests(unittest.TestCase):
                                    dialogue_animation_cues=dialogue_animation_bindings(
                                        rebuilt, rebuilt.rooms[0]))
         self.assertIn("animateActor(SpeakerWitness,24);", source)
+        self.assertGreater(source.index("animateActor(SpeakerWitness,24);"),
+                           source.index('actorSay(SpeakerWitness,"Der Schluessel liegt am Boden.")'))
         self.assertLess(source.index("animateActor(SpeakerWitness,24);"),
-                        source.index('actorSay(SpeakerWitness,"Der Schluessel liegt am Boden.")'))
+                        source.index("waitForMessage();", source.index(
+                            'actorSay(SpeakerWitness,"Der Schluessel liegt am Boden.")')))
         self.assertEqual(parse_document(edit_dialogue_animation(raw, witness, None)).dialogue_animation_cues, ())
 
     def test_branching_reply_and_invalid_costume_fail_closed(self):

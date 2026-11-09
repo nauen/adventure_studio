@@ -703,7 +703,7 @@ def make_app():
             with gr.Row():
                 native_dialogue_voice_save = gr.Button("Dialogaufnahme zuweisen / ersetzen")
                 native_dialogue_voice_remove = gr.Button("Dialogaufnahme entfernen")
-            gr.Markdown("**Sprecher-Animation:** Wähle eine Dialogzeile mit nativem Actor und eine seiner indizierten Costume-Animationen. Der Actor führt sie unmittelbar vor der gesprochenen Zeile aus. Die gewünschte Blickrichtung muss in der Animation vorhanden sein.")
+            gr.Markdown("**Sprecher-Animation:** Wähle eine Dialogzeile mit nativem Actor und eine seiner indizierten Costume-Animationen. Der Actor startet die Geste während der Sprechzeile. Die gewünschte Blickrichtung muss in der Animation vorhanden sein.")
             with gr.Row():
                 native_dialogue_animation_line = gr.Dropdown(label="Sprecher-Dialogzeile")
                 native_dialogue_animation = gr.Dropdown(label="Costume-Animation")

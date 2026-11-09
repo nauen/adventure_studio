@@ -476,7 +476,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                     f"{pad}setCurrentActor(VAR_EGO);\n")
         cue = cues.get(key)
         if cue is None:
-            return face + animate + say(key, original, indent) + " " * indent + "waitForMessage();\n"
+            return face + say(key, original, indent) + animate + " " * indent + "waitForMessage();\n"
         if cue.source_text != original:
             raise ValueError(f"Stale dialogue audio line: {key}")
         pad = " " * indent
@@ -495,7 +495,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
 
         stops = "".join(f"{pad}stopSound({sound_id});\n" for sound_id in sorted(
             {cue.sound_id, *(variant[1] for variant in cue.variants)}))
-        return face + animate + sound("startSound") + say(key, original, indent) + \
+        return face + sound("startSound") + say(key, original, indent) + animate + \
             f"{pad}waitForMessage();\n" + stops
     def localized_name(hotspot: RoomHotspot) -> str:
         if catalog is None:

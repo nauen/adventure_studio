@@ -19,11 +19,15 @@ Studio-Bereich kann eine Dialogzeile mit gebundenem `Speaker`-Actor eine
 indizierte Costume-Animation erhalten oder die Zuordnung wieder entfernen.
 Die neue, optionale `dialogue_animation_cues`-Sammlung bleibt im gemeinsamen
 Projekt-JSON erhalten. Beim Export löst `animateActor` die gewählte Animation
-unmittelbar vor dem zugehörigen `actorSay` aus, auch in mehrstufigen Dialogen;
+unmittelbar nach dem zugehörigen `actorSay` und vor `waitForMessage` aus,
+auch in mehrstufigen Dialogen;
 bereits vorhandene VOC-Aufnahmen bleiben kombinierbar. Stale-Text, fehlende
 Sprecher, Animationsindices und unpassende Blickrichtungen werden abgewiesen.
 314 lokale Tests grün, darunter lineare/Antwort-Dialoge, Roundtrip und
-SCUMM-Quellnachweis. **Offenes Pflichtgate:** Der neue Animations-Cue ist
+SCUMM-Quellnachweis. Der erste native Klicklauf kompiliert und zeigt beide
+Sprecherzeilen, verfehlt aber den sichtbaren Gesten-Frame; die Reihenfolge
+von Sprech- und Animationsbefehl wurde daraufhin angepasst.
+**Offenes Pflichtgate:** Der neue Animations-Cue ist
 noch nicht in stock ScummVM visuell bestätigt; UI-Klickabnahme ebenfalls offen.
 Dies ist eine Teilimplementierung, kein abgeschlossener D03-Lippensync.
 **Nächstes Produktpaket:** Ein authored Zwei-Frame-Dialoggesten-Szenario

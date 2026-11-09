@@ -13,7 +13,7 @@
 Dialogzeilen mit Actor-Bindung können im Studio eine bereits authorierte
 indizierte Costume-Animation auswählen. Gemeinsame JSON-Persistenz,
 Validierung der Sprecher-/Animations-/Blickrichtungsbindung und
-`animateActor` vor `actorSay` im regulären ScummC-Pfad; 314 lokale Tests
+`animateActor` direkt nach `actorSay` im regulären ScummC-Pfad; 314 lokale Tests
 grün. Eine reale ScummVM-Sicht-/Interaktionsabnahme ist weiterhin
 Pflichtgate, bevor D03 als Laufzeit-Teilfähigkeit fortgeschrieben wird.
 Als nächstes: Zwei-Frame-Geste im vollständigen ScummVM-Klickpfad.
