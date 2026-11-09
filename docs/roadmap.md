@@ -63,7 +63,9 @@ D03-Teilschritt.
 lassen sich nun direkt im Studio an eine abschließende Gesprächszeile anhängen,
 einschließlich optionalem Sprecherwechsel. Das bestehende native
 Zwei-Sprecher-Fixture wird dafür um einen über die produktive Editoroperation
-hinzugefügten Folgesatz erweitert. 304 lokale Tests grün; CI-Abnahme offen.
+hinzugefügten Folgesatz erweitert. 304 lokale Tests grün; native
+ScummVM-Abnahme der ersten beiden Sprecherzeilen mit angehängtem Folgesatz
+erfolgreich (CI `42543308699`). Sichtnachweis der dritten Zeile separat offen.
 
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und

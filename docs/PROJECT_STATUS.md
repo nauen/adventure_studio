@@ -753,7 +753,12 @@ speichert die neue Knotenverbindung im Story-JSON und wird vom nativen
 Dialog-Exporter ohne zusätzliche Laufzeit übernommen. Dialogknoten mit
 bereits vorhandener Antwortauswahl oder Folgekante können nicht überschrieben
 werden. 304 lokale Tests grün; der native Fixture-Aufbau benutzt dieselbe
-Studio-Operation. Eigenständiges ScummVM-Gate für diesen Zusammenschluss läuft.
+Studio-Operation. Der native Dialog-Gameplay-Lauf `42543308699` bestätigt
+zwei unterschiedliche gesprochene Actor-Zeilen in ScummVM; die dritte, im
+Studio angehängte Zeile ist im kompilierten `Harbor.scc` als `actorSay`
+enthalten. Für die dritte Zeile existiert noch kein eigener visueller
+Laufzeitnachweis. Der übergreifende Kompatibilitätslauf `42543308664`
+war nach einem nicht reproduzierten PNG-Frame-Fehler im zweiten Versuch grün.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
