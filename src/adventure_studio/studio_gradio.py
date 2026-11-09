@@ -14,7 +14,8 @@ from pathlib import Path
 from .studio_catalog import relationship_svg, story_catalog
 from .story_ai import preview_ai_response, propose_story_change
 from .studio_service import (accept_proposal, add_decoration, change_item,
-                             change_dialogue_line, add_dialogue_choice, extend_dialogue_choice,
+                             change_dialogue_line, extend_dialogue_line,
+                             add_dialogue_choice, extend_dialogue_choice,
                              change_position, change_puzzle, change_scene,
                              describe_story, item_position, prepare_proposal,
                              report_text, scene_preview, translation_draft, validate_translation_draft)
@@ -522,6 +523,12 @@ def make_app():
             dialogue_text = gr.Textbox(label="Sprechtext", lines=4)
             dialogue_speaker = gr.Dropdown(label="Sprecher dieser Zeile")
             save_dialogue = gr.Button("Dialogänderung prüfen")
+            gr.Markdown("**Nächste Sprechzeile:** Eine abschließende Zeile ohne Antworten um eine weitere gesprochene Zeile ergänzen. So lassen sich lineare Gespräche mit Sprecherwechsel direkt im Studio aufbauen.")
+            with gr.Row():
+                dialogue_linear_id = gr.Textbox(label="Neue Sprechzeilen-ID")
+                dialogue_linear_text = gr.Textbox(label="Text der nächsten Zeile")
+                dialogue_linear_speaker = gr.Dropdown(label="Nächster Sprecher (leer: bisheriger Sprecher)")
+            dialogue_linear_add = gr.Button("Sprechzeile anhängen: Änderung prüfen")
             gr.Markdown("**Neue Antwort am ausgewählten Dialogknoten:** Die Zielzeile kann auch eine bestehende Frage sein. Ohne Ziel beendet die Antwort das Gespräch.")
             with gr.Row():
                 dialogue_answer_id = gr.Textbox(label="Neue Antwort-ID (z. B. AskAgain)")
@@ -714,6 +721,12 @@ def make_app():
         dialogue_node_select.change(dialogue_line_fields, inputs=[state, dialogue_node_select], outputs=[dialogue_text])
         dialogue_node_select.change(lambda raw, node: gr.update(**dialogue_speaker_fields(raw, node)),
                                     inputs=[state, dialogue_node_select], outputs=[dialogue_speaker])
+        def next_linear_speakers(raw, node_id):
+            options = dialogue_speaker_fields(raw, node_id)
+            return gr.update(choices=[("Bisherigen Sprecher übernehmen", None)] + options["choices"],
+                             value=None)
+        dialogue_node_select.change(next_linear_speakers,
+                                    inputs=[state, dialogue_node_select], outputs=[dialogue_linear_speaker])
         save_scene.click(lambda *args: propose(change_scene, *args),
                          [state, scene_select, scene_title, scene_description], [pending, report])
         save_item.click(lambda *args: propose(change_item, *args),
@@ -724,6 +737,9 @@ def make_app():
                           [pending, report])
         save_dialogue.click(lambda *args: propose(change_dialogue_line, *args),
                             [state, dialogue_node_select, dialogue_text, dialogue_speaker], [pending, report])
+        dialogue_linear_add.click(lambda *args: propose(extend_dialogue_line, *args),
+                                  [state, dialogue_node_select, dialogue_linear_id,
+                                   dialogue_linear_text, dialogue_linear_speaker], [pending, report])
         state.change(lambda raw: gr.update(
             choices=[("Gespräch beenden", None)] + [(node.id, node.id)
                 for node in parse_story_document(raw).dialogue_nodes] if raw else [("Gespräch beenden", None)],

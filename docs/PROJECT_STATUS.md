@@ -745,6 +745,16 @@ ScummVM-Interpreter zwei aufeinanderfolgende, unterschiedliche Sprechtexte
 ohne Antwortmenü sichtbar bestätigt (CI `42542244245`, 112 und 1056
 Textpixel, `passed: true`). Costume-Lippensync bleibt offen.
 
+**Lineare Sprechketten direkt im Studio authoren (2026-11-09, Implementierung):**
+Die Registerkarte „Dialogzeilen“ kann eine abschließende Gesprächszeile nun
+mit einer neuen Zeile fortsetzen und dabei einen anderen Sprecher derselben
+Szene wählen. Die Änderung läuft über den bestehenden Vorschau-/Übernahmeweg,
+speichert die neue Knotenverbindung im Story-JSON und wird vom nativen
+Dialog-Exporter ohne zusätzliche Laufzeit übernommen. Dialogknoten mit
+bereits vorhandener Antwortauswahl oder Folgekante können nicht überschrieben
+werden. 304 lokale Tests grün; der native Fixture-Aufbau benutzt dieselbe
+Studio-Operation. Eigenständiges ScummVM-Gate für diesen Zusammenschluss läuft.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

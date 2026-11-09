@@ -51,6 +51,11 @@ def main() -> int:
                            len(sys.argv) == 4 and sys.argv[3] != "--linear-multispeaker",
                            len(sys.argv) == 4 and sys.argv[3] == "--nested",
                            len(sys.argv) == 4 and sys.argv[3] in ("--multispeaker", "--linear-multispeaker"))
+    if len(sys.argv) == 4 and sys.argv[3] == "--linear-multispeaker":
+        # Exercise the same edit operation used by the Studio's dialogue tab.
+        from .studio_service import extend_dialogue_line
+        raw = extend_dialogue_line(raw, "HarborHint", "HarborFollowup",
+                                   "Ich zeige dir den Weg.", "HarborKeeper").story_json
     output = Path(sys.argv[2])
     build_story_document(raw, output)
     (output / "story.json").write_text(raw, encoding="utf-8")
