@@ -216,9 +216,18 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     after = []
                     if finished:
                         time.sleep(0.4)
-                        for _ in range(6):
+                        # Native actorSay can complete its final talk-stop
+                        # animation a few ticks after the text disappears.
+                        # Require six consecutive standing samples, not an
+                        # instantaneous switch on the first sample.
+                        stable = 0
+                        for _ in range(35):
                             _capture(output, "linear")
-                            after.append(gesture_ink())
+                            current = gesture_ink()
+                            after.append(current)
+                            stable = stable + 1 if current == baseline_red else 0
+                            if stable >= 6:
+                                break
                             time.sleep(0.3)
                         _capture(output, "gesture-stand")
                     # The stationary NPC contains twelve pixels close to the
@@ -229,8 +238,8 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     report.update({"gesture_message_finished": finished,
                                    "gesture_after_pixels": after,
                                    "gesture_peak_excess_pixels": excess,
-                                   "gesture_reset_verified": finished and bool(after)
-                                   and detect_gesture_return(colored, after)})
+                                   "gesture_reset_verified": finished and len(after) >= 6
+                                   and detect_gesture_return(colored, after[-6:])})
                     report["passed"] = report["passed"] and report["gesture_reset_verified"]
                     if not report["passed"]:
                         raise RuntimeError(f"Native Costume did not return to standing pose: {report}")
