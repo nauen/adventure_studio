@@ -136,8 +136,11 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 def gesture_ink() -> int:
                     with Image.open(output / "scummvm-linear.png") as frame:
                         rgb = frame.convert("RGB")
+                        # The camera follows Ego while walking to the NPC.
+                        # The speaker therefore moves left on screen even
+                        # though its authored world coordinates stay fixed.
                         return sum(close_rgb(rgb.getpixel((col, row)), (220, 80, 80), 25)
-                                   for row in range(296, 338) for col in range(615, 655))
+                                   for row in range(270, 375) for col in range(530, 675))
 
                 first = None
                 second = None
@@ -167,7 +170,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                                "answer_pixels_visible": 0,
                                "passed": bool(first and second and (not gesture or colored >= 10))})
                 if not report["passed"]:
-                    raise RuntimeError("Native two-speaker text or authored Costume gesture was not visible")
+                    raise RuntimeError(f"Native two-speaker text or authored Costume gesture was not visible: {report}")
                 return report
             if voice:
                 # The native cursor/actor walk to the NPC must complete first.
