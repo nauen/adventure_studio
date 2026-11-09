@@ -142,39 +142,26 @@ def run(game_directory: Path, output: Path, voice: bool = False,
             _click(330, 560)  # Re-select Talk to; SCUMM may reset the verb.
             _click(answer_x, answer_y)
             if multispeaker:
-                # The response is issued by a native Actor, not by VAR_EGO.
-                # Wait for the walk/answer-caption animation before checking
-                # a second, DIFFERENT text image above the NPC Actor.
-                from PIL import Image
-
-                def speech_ink() -> set[tuple[int, int]]:
-                    with Image.open(output / "scummvm-speaker.png") as source:
-                        image = source.convert("RGB")
-                        return {(x, y) for y in range(195, 370) for x in range(192, 832)
-                                if close_rgb(image.getpixel((x, y)), ANSWER_RGB, 15)}
-
-                opening_ink = None
+                # In stock ScummVM, actorSay uses the Actor's black speech
+                # color, unlike the player's magenta answer caption. The
+                # tested Actor position places its text in this clear strip
+                # inside the room, where neither an answer object nor the
+                # inherited verb GUI can produce black pixels.
                 text_pixels = 0
-                for frame_index in range(75):
+                for _ in range(60):
                     if process.poll() is not None:
                         raise RuntimeError("ScummVM exited while the native Actor was speaking")
                     _capture(output, "speaker")
-                    if frame_index % 8 == 0:
-                        from shutil import copyfile
-                        copyfile(output / "scummvm-speaker.png",
-                                 output / f"scummvm-speaker-{frame_index:02d}.png")
-                    ink = speech_ink()
-                    if opening_ink is None and len(ink) >= 20:
-                        opening_ink = ink
-                    elif opening_ink is not None and len(ink) >= 20 and len(
-                            opening_ink.symmetric_difference(ink)) > 150:
-                        text_pixels = len(ink)
+                    histogram = _run(["convert", str(output / "scummvm-speaker.png"),
+                                      "-crop", "500x32+300+184", "+repage",
+                                      "-format", "%c", "histogram:info:"])
+                    text_pixels = count_color_pixels(histogram, (0, 0, 0))
+                    if text_pixels >= 100:
                         break
                     time.sleep(0.25)
                 report["speaker_text_pixels"] = text_pixels
-                report["speaker_sample_frames"] = frame_index + 1
-                if text_pixels < 20:
-                    raise RuntimeError("No distinct native Actor speech after answer caption")
+                if text_pixels < 100:
+                    raise RuntimeError("No distinct black native Actor speech after answer caption")
             if nested:
                 nested_visible = False
                 for _ in range(35):
