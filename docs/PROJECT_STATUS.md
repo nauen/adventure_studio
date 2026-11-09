@@ -21,9 +21,13 @@ hierfür eigene indizierte COST-Gesten ab 28, ohne den gemeinsamen nativen
 Talk-Start-Slot 16 oder andere Zeilen zu überschreiben. Bei wiederholter
 Auswahl desselben Frames wird derselbe Slot verwendet; ein ausgeschöpfter
 Indexraum oder Namenskonflikt wird ausdrücklich gemeldet. 320 lokale
-Tests grün und natives COST-Quellmaterial erzeugt. **Pflichtgate noch
-offen:** Der neue stock-ScummVM-Test muss rot im ersten und grün im zweiten
-Satz derselben Figur sichtbar nachweisen. Bis dahin kein Merge.
+Tests grün und natives COST-Quellmaterial erzeugt. **Pflichtgate rot:**
+Die stock-ScummVM-Probe sieht 256 rote Pixel im ersten Satz, erreicht
+aber die zweite Textzeile desselben Actors nicht (`second_speaker_pixels=0`,
+PR #80, CI auf `46ef994` und `f23eb53`). Auch Wiederverwendung der
+nativen Standardgeste 24 als erster Slot behebt das nicht. Ungeklärt ist
+der sequenzielle `actorSay`-/`waitForMessage`-Pfad bei identischem Sprecher.
+Kein Merge, bevor beide Zeilen und der grüne Folgeframe nachgewiesen sind.
 **Nächstes Produktpaket:** Nach dem nativen Zeilenwechsel-Nachweis
 zeitgebundene, aus VOC-Dauer steuerbare Sprechframe-Folgen authoren.
 

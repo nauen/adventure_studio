@@ -14,8 +14,10 @@ Die Studio-Zuweisung verwaltet für jede unterschiedliche PNG-Pose eine
 eigene native COST-Animation ab Slot 28. Derselbe Actor kann zwei
 unterschiedliche Sprechframes in Folge verwenden, ohne seine globale
 Talk-Start-Animation zu ändern. 320 lokale Tests grün. Native
-ScummVM-Farbprobe (rot/grün in zwei Zeilen) vor Merge zwingend; danach
-zeitgebundene VOC-Sprechframes.
+ScummVM-Farbprobe (rot/grün in zwei Zeilen) vor Merge zwingend;
+der aktuelle CI-Lauf ist rot, weil die zweite Actor-Zeile nicht erscheint
+(PR #80). Vor zeitgebundenen VOC-Sprechframes diesen nativen
+Sequenz-Blocker beheben.
 
 **PNG-Sprechpose direkt aus der Dialogzeile (2026-11-09):** Die native
 Sprecherzeile bietet die Frames ihrer eigenen Costume an; ein Klick
