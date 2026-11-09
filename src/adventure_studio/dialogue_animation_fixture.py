@@ -43,9 +43,7 @@ def build(directory: Path) -> None:
     raw = canonical_json(document)
     line = next(identity for label, identity in dialogue_animation_lines(raw)
                 if label.startswith("SpeakerWitness"))
-    # Observe the stock engine's reserved talk start/stop slots separately
-    # from the optional Studio-authored end-state reset.
-    raw = edit_dialogue_animation(raw, line, "gesture", False)
+    raw = edit_dialogue_animation(raw, line, "gesture", True)
     project.write_text(raw, encoding="utf-8")
     export_document(parse_document(raw), directory / "resources")
 
