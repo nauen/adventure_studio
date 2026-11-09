@@ -145,6 +145,31 @@ def change_dialogue_line(raw: str, node_id: str, text: str,
         node, text=text.strip(), speaker_id=speaker)))
 
 
+def extend_dialogue_line(raw: str, node_id: str, new_node_id: str,
+                         text: str, speaker_id: str | None = None) -> StudioEdit:
+    """Append a spoken line to a terminal dialogue node (no answer required)."""
+    story = parse_story_document(raw)
+    parent = next((node for node in story.dialogue_nodes if node.id == node_id), None)
+    if parent is None:
+        raise ValueError("Unknown dialogue node ID")
+    if parent.next_node_id is not None or any(choice.node_id == node_id
+                                               for choice in story.dialogue_choices):
+        raise ValueError("Only a terminal dialogue line can be extended")
+    if (not isinstance(new_node_id, str) or not new_node_id.isascii()
+            or not new_node_id.isidentifier() or not new_node_id[0].isalpha()
+            or new_node_id in {node.id for node in story.dialogue_nodes}
+            or not isinstance(text, str) or not text.strip() or len(text) > 4096):
+        raise ValueError("New dialogue line requires a unique ASCII ID and text of 1..4096 characters")
+    dialogue = next(d for d in story.dialogues if d.id == parent.dialogue_id)
+    speaker = speaker_id if speaker_id is not None else parent.speaker_id
+    if speaker not in {character.id for character in story.characters
+                       if character.scene_id == dialogue.scene_id}:
+        raise ValueError("Dialogue speaker must be a character in the same scene")
+    node = DialogueNode(new_node_id, parent.dialogue_id, speaker, text.strip())
+    return _commit_many(story, (PutEntity("dialogue_node", node),
+                                PutEntity("dialogue_node", replace(parent, next_node_id=new_node_id))))
+
+
 def add_dialogue_choice(raw: str, node_id: str, choice_id: str, text: str,
                         target_node_id: str | None = None) -> StudioEdit:
     """Offer a new answer, optionally returning to an existing dialogue stage."""
