@@ -9,6 +9,13 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**PNG-Sprechpose direkt aus der Dialogzeile (2026-11-09):** Die native
+Sprecherzeile bietet die Frames ihrer eigenen Costume an; ein Klick
+übernimmt Frame, COST-Talk-Slots und Dialog-Geste. Geteilte Costumes
+werden vor unbeabsichtigtem Überschreiben geschützt. 319 lokale Tests
+grün; CI und interaktive Gradio-Abnahme offen. Darauf folgt
+zeilenspezifische Mehrfach-Sprechpose ohne globale Talk-Start-Kollision.
+
 **Neuer nativer Gesten-/Standpose-Nachweis (2026-11-09):** Eine
 Studio-authored Costume zeigt in stock ScummVM die rote Sprechpose
 (`256` Pixel) und danach eine stabile Standpose (`0` Pixel über sechs

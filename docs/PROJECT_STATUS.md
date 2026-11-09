@@ -14,6 +14,24 @@ Sequenzen authoren können.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
+**Neues Paket – PNG-Sprechpose direkt an der Dialogzeile (PR in Arbeit):**
+Der native Dialogeditor bietet nun die importierten Frames genau der
+gewählten Sprecherfigur an. Eine Aktion erzeugt daraus die nativen
+Talk-Start-/Stop-/Gestenanimationen und bindet die Geste an die Zeile.
+Eine zwischen mehreren Actors geteilte Costume wird dabei nicht still
+überschrieben, sondern mit konkreter Fehlermeldung abgewiesen; der Autor
+muss zuerst eine eigene Costume zuordnen. 319 lokale Tests grün,
+einschließlich des Dialog-zu-PNG-zu-COST-Quellpfads. Die bereits belegte
+stock-ScummVM-Sprechgesten-/Standpose-Semantik bleibt unverändert.
+**Offen:** CI des neuen Pakets und manuelle Gradio-Bedienabnahme.
+**Nächstes Produktpaket:** Mehrere verschiedene Sprechframes je Figur
+und Dialogzeile, ohne die globale native Talk-Start-Costume zu überschreiben.
+
+**Vorheriges Paket – auf `main` integriert:** PR #78 wurde als Commit
+`9fde9e97` mit vollständig grüner CI und nachgewiesener stock-ScummVM-
+Sprechgeste samt Standpose gemergt. Ältere Debugging-Absätze unten
+sind historische Befunde, keine aktuellen Blocker.
+
 **Aktuellster nativer Nachweis (vor Merge):** Der stock-ScummVM-Dialogtest
 hat die rote Sprechgeste mit 256 Pixeln sichtbar gemacht und später
 deren Rückkehr zu 0 Pixeln bestätigt. Nach Anpassung der Bildprobe auf
