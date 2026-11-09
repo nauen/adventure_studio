@@ -24,15 +24,19 @@ auch in mehrstufigen Dialogen;
 bereits vorhandene VOC-Aufnahmen bleiben kombinierbar. Stale-Text, fehlende
 Sprecher, Animationsindices und unpassende Blickrichtungen werden abgewiesen.
 314 lokale Tests grün, darunter lineare/Antwort-Dialoge, Roundtrip und
-SCUMM-Quellnachweis. Der erste native Klicklauf kompiliert und zeigt beide
-Sprecherzeilen, verfehlt aber den sichtbaren Gesten-Frame; die Reihenfolge
-von Sprech- und Animationsbefehl wurde daraufhin angepasst.
-**Offenes Pflichtgate:** Der neue Animations-Cue ist
-noch nicht in stock ScummVM visuell bestätigt; UI-Klickabnahme ebenfalls offen.
-Dies ist eine Teilimplementierung, kein abgeschlossener D03-Lippensync.
-**Nächstes Produktpaket:** Ein authored Zwei-Frame-Dialoggesten-Szenario
-über den regulären Spiel-ZIP-Export tatsächlich in stock ScummVM klicken,
-die geänderte Actor-Grafik sichtbar nachweisen und die UI-Bindung prüfen.
+SCUMM-Quellnachweis. Der erste native Klicklauf zeigte beide Sprecherzeilen,
+aber noch keinen sichtbaren Gesten-Frame. Nach Anpassung der Befehlsfolge
+(`actorSay` vor `animateActor`) und des kamerafolgenden Bildbereichs hat
+die neue stock-ScummVM-Klickprobe **beide Sprecherzeilen und den roten
+zweiten Costume-Frame** sichtbar bestätigt: `gesture_frame_pixels=14`,
+`first_speaker_pixels=152`, `second_speaker_pixels=1056`, `passed=true`,
+CI `42550554974` (Artefakt `native-v6-studio-dialogue-gesture`).
+**Offen:** Ein interaktiver Gradio-UI-Klickpfad und ein echter zeitlich
+präziser Lippen-/Sprach-Sync sind nicht nachgewiesen. D03 bleibt Teilfähigkeit.
+**Nächstes Produktpaket:** Die Actor-Geste aus importierten PNG-Frames im
+sichtbaren Gradio-Workflow auswählen, ihr Start-/Ende-Verhalten bei
+aufeinanderfolgenden Sprecherwechseln prüfen und den Zustand nach einer
+Sprechzeile sauber behandeln.
 
 ## Vorheriges Produktpaket: Sprecher-Costumes
 
