@@ -14,6 +14,24 @@ Sequenzen authoren können.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
+**Costume-Animation je nativer Sprecherzeile (Implementierung):** Im nativen
+Studio-Bereich kann eine Dialogzeile mit gebundenem `Speaker`-Actor eine
+indizierte Costume-Animation erhalten oder die Zuordnung wieder entfernen.
+Die neue, optionale `dialogue_animation_cues`-Sammlung bleibt im gemeinsamen
+Projekt-JSON erhalten. Beim Export löst `animateActor` die gewählte Animation
+unmittelbar vor dem zugehörigen `actorSay` aus, auch in mehrstufigen Dialogen;
+bereits vorhandene VOC-Aufnahmen bleiben kombinierbar. Stale-Text, fehlende
+Sprecher, Animationsindices und unpassende Blickrichtungen werden abgewiesen.
+314 lokale Tests grün, darunter lineare/Antwort-Dialoge, Roundtrip und
+SCUMM-Quellnachweis. **Offenes Pflichtgate:** Der neue Animations-Cue ist
+noch nicht in stock ScummVM visuell bestätigt; UI-Klickabnahme ebenfalls offen.
+Dies ist eine Teilimplementierung, kein abgeschlossener D03-Lippensync.
+**Nächstes Produktpaket:** Ein authored Zwei-Frame-Dialoggesten-Szenario
+über den regulären Spiel-ZIP-Export tatsächlich in stock ScummVM klicken,
+die geänderte Actor-Grafik sichtbar nachweisen und die UI-Bindung prüfen.
+
+## Vorheriges Produktpaket: Sprecher-Costumes
+
 **PNG-Costume einem Story-Sprecher zuweisen (Implementierung):** Nach dem
 Synchronisieren der Story mit dem nativen Studio-Projekt kann ein bereits
 vorhandener `Speaker<Figuren-ID>`-Actor eine aus PNG importierte Costume

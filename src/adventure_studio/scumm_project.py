@@ -162,6 +162,13 @@ class DialogueVoiceCue:
 
 
 @dataclass(frozen=True)
+class DialogueAnimationCue:
+    line_id: str
+    source_text: str
+    animation: str
+
+
+@dataclass(frozen=True)
 class VoiceLineStep:
     sound_id: str
     text: str
@@ -209,6 +216,7 @@ class GameDocument:
     sound_assets: tuple[SoundAsset, ...] = ()
     default_voice_language: str = "en"
     dialogue_voice_cues: tuple[DialogueVoiceCue, ...] = ()
+    dialogue_animation_cues: tuple[DialogueAnimationCue, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -326,6 +334,8 @@ def document_dict(document: GameDocument) -> dict:
                                        if cue.variants else {})}
                                    for cue in document.dialogue_voice_cues]}
            if document.dialogue_voice_cues else {}),
+        **({"dialogue_animation_cues": [vars(cue) for cue in document.dialogue_animation_cues]}
+           if document.dialogue_animation_cues else {}),
         "rooms": [{
             "name": room.name,
             "geometry": {"width": room.geometry.room_width, "height": room.geometry.room_height,
@@ -435,6 +445,10 @@ def _validate_document(document: GameDocument) -> None:
         sound_ids.add(asset.id)
     dialogue_lines = {}
     for room in document.rooms:
+        for hotspot in room.hotspots:
+            for index, line in enumerate(hotspot.talk_lines):
+                dialogue_lines[f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{index}"] = (
+                    room.name, line)
         prefix = f"room.{room.name.lower()}.dialogue"
         for rule_index, rule in enumerate(room.talk_rules):
             for stage_index, stage in enumerate((rule, *rule.stages)):
@@ -539,6 +553,35 @@ def _validate_document(document: GameDocument) -> None:
                 if (actor is None or actor.room != room.name or not line_id.startswith(
                         f"room.{room.name.lower()}.dialogue.")):
                     raise ValueError("Dialogue speech line requires a native Actor in its room")
+    line_actors = {}
+    line_directions = {}
+    for room in document.rooms:
+        for rule in room.talk_rules:
+            line_actors.update(rule.actor_lines)
+            line_directions.update(rule.actor_directions)
+        for hotspot in room.hotspots:
+            for index, actor_id in enumerate(hotspot.talk_actor_lines):
+                key = f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{index}"
+                line_actors[key] = actor_id
+                if hotspot.talk_face_directions and hotspot.talk_face_directions[index] is not None:
+                    line_directions[key] = hotspot.talk_face_directions[index]
+    seen_animations = set()
+    for cue in document.dialogue_animation_cues:
+        if (not isinstance(cue, DialogueAnimationCue) or not isinstance(cue.line_id, str)
+                or not isinstance(cue.source_text, str) or not isinstance(cue.animation, str)
+                or cue.line_id in seen_animations):
+            raise ValueError("Invalid or duplicate dialogue animation cue")
+        seen_animations.add(cue.line_id)
+        target = dialogue_lines.get(cue.line_id)
+        actor = actors_by_id.get(line_actors.get(cue.line_id))
+        if target is None or target[1] != cue.source_text or actor is None:
+            raise ValueError(f"Stale dialogue animation or missing native speaker: {cue.line_id}")
+        animation = next((item for item in costumes_by_name[actor.costume].animations
+                          if item.name == cue.animation), None)
+        direction = line_directions.get(cue.line_id, actor.direction)
+        if (animation is None or animation.index is None
+                or direction not in {item.direction for item in animation.directions}):
+            raise ValueError(f"Dialogue animation requires an indexed COST direction: {cue.line_id}")
     for rule in document.animation_rules:
         if not isinstance(rule, AnimationRule) or not isinstance(rule.condition, ActorCountCondition) or not isinstance(rule.effect, ObjectStateEffect):
             raise ValueError("Invalid typed animation rule")
@@ -748,7 +791,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets", "sound_assets", "default_voice_language", "dialogue_voice_cues"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets", "sound_assets", "default_voice_language", "dialogue_voice_cues", "dialogue_animation_cues"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -1136,10 +1179,19 @@ def parse_document(source: str) -> GameDocument:
             parsed_variants.append((variant["language"], variant["sound_id"]))
         voice_cues.append(DialogueVoiceCue(item["line_id"], item["source_text"],
                                           item["sound_id"], tuple(parsed_variants)))
+    raw_animations = data.get("dialogue_animation_cues", [])
+    if not isinstance(raw_animations, list):
+        raise ValueError("Invalid dialogue animation collection")
+    animation_cues = []
+    for raw_cue in raw_animations:
+        item = _only(raw_cue, {"line_id", "source_text", "animation"},
+                     {"line_id", "source_text", "animation"})
+        animation_cues.append(DialogueAnimationCue(**item))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
                             tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers),
                             tuple(interaction_sequences), tuple(music_assets), tuple(sound_assets),
-                            data.get("default_voice_language", "en"), tuple(voice_cues))
+                            data.get("default_voice_language", "en"), tuple(voice_cues),
+                            tuple(animation_cues))
     _validate_document(document)
     return document
 

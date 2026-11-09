@@ -10,7 +10,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
-                            DialogueVoiceCue,
+                            DialogueVoiceCue, DialogueAnimationCue,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -74,6 +74,63 @@ def dialogue_voice_lines(raw: str) -> tuple[tuple[str, str], ...]:
                         result.append((f"{room.name} / {choice.caption} / {line}",
                                        f"{base}.choice.{choice_index}.reply.{line_index}"))
     return tuple(result)
+
+
+def _dialogue_animation_targets(document):
+    targets = {}
+    for room in document.rooms:
+        for hotspot in room.hotspots:
+            for index, actor in enumerate(hotspot.talk_actor_lines):
+                key = f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{index}"
+                targets[key] = (hotspot.talk_lines[index], actor)
+        for rule_index, rule in enumerate(room.talk_rules):
+            actors = dict(rule.actor_lines)
+            for stage_index, stage in enumerate((rule, *rule.stages)):
+                prefix = f"room.{room.name.lower()}.dialogue.{rule_index}"
+                if stage_index:
+                    prefix += f".stage.{stage_index - 1}"
+                for index, line in enumerate(stage.opening_lines):
+                    key = f"{prefix}.opening.{index}"
+                    if key in actors:
+                        targets[key] = (line, actors[key])
+                for choice_index, choice in enumerate(stage.choices):
+                    for index, line in enumerate(choice.reply_lines):
+                        key = f"{prefix}.choice.{choice_index}.reply.{index}"
+                        if key in actors:
+                            targets[key] = (line, actors[key])
+    return targets
+
+
+def dialogue_animation_lines(raw: str) -> tuple[tuple[str, str], ...]:
+    targets = _dialogue_animation_targets(parse_document(raw))
+    return tuple((f"{actor} / {line}", key) for key, (line, actor) in targets.items())
+
+
+def dialogue_animation_choices(raw: str, line_id: str | None):
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        return (), None
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    options = tuple(animation.name for animation in costume.animations if animation.index is not None)
+    selected = next((cue.animation for cue in document.dialogue_animation_cues
+                     if cue.line_id == line_id), None)
+    return options, selected
+
+
+def edit_dialogue_animation(raw: str, line_id: str, animation: str | None) -> str:
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    cues = {cue.line_id: cue for cue in document.dialogue_animation_cues}
+    if animation is None:
+        cues.pop(line_id, None)
+    else:
+        cues[line_id] = DialogueAnimationCue(line_id, target[0], animation)
+    return _checked(replace(document, dialogue_animation_cues=tuple(
+        cues[key] for key in sorted(cues))))
 
 
 def edit_dialogue_voice(raw: str, line_id: str, language: str,
@@ -167,6 +224,7 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                        sound_assets=native.sound_assets,
                        default_voice_language=native.default_voice_language,
                        dialogue_voice_cues=native.dialogue_voice_cues)
+    composed = replace(composed, dialogue_animation_cues=native.dialogue_animation_cues)
     return canonical_json(composed)
 
 

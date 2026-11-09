@@ -95,6 +95,25 @@ def _tool(upstream: Path, name: str) -> Path:
     return candidates[0].resolve()
 
 
+def dialogue_animation_bindings(document, room) -> tuple[tuple[str, str, int], ...]:
+    """Resolve validated line cues to native actor symbols and costume indices."""
+    actors_by_id = {actor.id: actor for actor in document.actors}
+    costumes_by_name = {costume.name: costume for costume in document.costumes}
+    bindings = {line: actor for rule in room.talk_rules for line, actor in rule.actor_lines}
+    for hotspot in room.hotspots:
+        bindings.update((f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{index}", actor)
+                        for index, actor in enumerate(hotspot.talk_actor_lines))
+    result = []
+    for cue in document.dialogue_animation_cues:
+        if cue.line_id not in bindings:
+            continue
+        actor_id = bindings[cue.line_id]
+        costume = costumes_by_name[actors_by_id[actor_id].costume]
+        animation = next(item for item in costume.animations if item.name == cue.animation)
+        result.append((cue.line_id, actor_id, animation.index))
+    return tuple(result)
+
+
 def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                        runner: Callable = subprocess.run,
                        language_room_probe: bool = False,
@@ -206,14 +225,15 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         if not stock_fonts_probe:
             bootstrap = inject_multilingual_charset(bootstrap)
         shutil.copyfile(resources / "multilingual-font.char", road / "multilingual-font.char")
-    if localize_story or document.dialogue_voice_cues:
+    if localize_story or document.dialogue_voice_cues or document.dialogue_animation_cues:
         from .scumm_assets import scummc_room_source
         for room in document.rooms:
             (resources / f"{room.name}.scc").write_text(
                 scummc_room_source(room, language_catalog if localize_story else None,
                                    graphical_language_buttons=graphical_language_buttons,
                                    dialogue_voice_cues=tuple(cue for cue in document.dialogue_voice_cues
-                                                             if cue.line_id.startswith(f"room.{room.name.lower()}."))),
+                                                             if cue.line_id.startswith(f"room.{room.name.lower()}.")),
+                                   dialogue_animation_cues=dialogue_animation_bindings(document, room)),
                 encoding="utf-8")
     if localize_story:
         if language_catalog is None:

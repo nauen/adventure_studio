@@ -10,6 +10,7 @@ on:
       - 'src/adventure_studio/dialogue_demo.py'
       - 'src/adventure_studio/scumm_dialogue_probe.py'
       - 'src/adventure_studio/scumm_dialogue_voice_fixture.py'
+      - 'src/adventure_studio/dialogue_animation_fixture.py'
       - 'src/adventure_studio/studio_sequences.py'
       - 'src/adventure_studio/scumm_assets.py'
       - 'src/adventure_studio/scumm_project.py'
@@ -27,6 +28,7 @@ on:
       - 'src/adventure_studio/dialogue_demo.py'
       - 'src/adventure_studio/scumm_dialogue_probe.py'
       - 'src/adventure_studio/scumm_dialogue_voice_fixture.py'
+      - 'src/adventure_studio/dialogue_animation_fixture.py'
       - 'src/adventure_studio/studio_sequences.py'
       - 'src/adventure_studio/scumm_assets.py'
       - 'src/adventure_studio/scumm_project.py'
@@ -147,6 +149,29 @@ jobs:
             /tmp/dialogue-linear-evidence/scummvm.log
             /tmp/dialogue-linear-story/resources/Harbor.scc
             /tmp/dialogue-linear-story/project.json
+          if-no-files-found: ignore
+      - name: Play Studio-authored two-frame NPC dialogue gesture in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-gesture-story --linear-multispeaker
+          python -m adventure_studio.dialogue_animation_fixture /tmp/dialogue-gesture-story
+          cp -a /tmp/scummc-upstream /tmp/scummc-gesture-upstream
+          test -s /tmp/scummc-gesture-upstream/examples/road/DialogueFigure.cost && mv /tmp/scummc-gesture-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-gesture-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-gesture-story /tmp/scummc-gesture-upstream /tmp/dialogue-gesture-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --gesture /tmp/dialogue-gesture-game /tmp/dialogue-gesture-evidence
+      - name: Retain native dialogue animation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-dialogue-gesture
+          path: |
+            /tmp/dialogue-gesture-evidence/dialogue-report.json
+            /tmp/dialogue-gesture-evidence/scummvm-gesture-frame.png
+            /tmp/dialogue-gesture-evidence/scummvm-linear-second.png
+            /tmp/dialogue-gesture-evidence/scummvm.log
+            /tmp/dialogue-gesture-story/project.json
+            /tmp/dialogue-gesture-story/resources/Harbor.scc
           if-no-files-found: ignore
       - name: Retain native multi-Actor dialogue evidence
         if: always()
