@@ -24,6 +24,15 @@ selbst ist in den Screenshots nicht nachweisbar. COST-Standindex 12 und
 native Talk-Frame-Bindung sind implementiert; vor der Gestenprüfung muss
 die tatsächliche Sichtbarkeit der Sprecher-Actors nachgewiesen werden.
 
+**Native Actor-Sichtbarkeit nachgewiesen, Gestenstart offen:** In der
+kamerafolgenden Testszene steht der Witness sichtbar separat von Ego
+(`256` cyanfarbene Costume-Pixel). Die rote Animation 24 ist ebenfalls
+nativ darstellbar, wenn sie beim Raumeintritt startet (`256` rote Pixel).
+Während `actorSay` lässt sich dieselbe Geste bislang weder unmittelbar
+noch nach einem nativen Tick sichtbar starten. Nächstes vertikales Gate:
+Sprecher-Animation über den nativen Talk-Start-/Talk-Script-Mechanismus
+statt durch einen wirkungslosen direkten Animationsimpuls auslösen.
+
 
 **Sprechanimationen kontrolliert beenden (2026-11-09, Implementierung):**
 Optionale Standpose-Rücksetzung je Dialog-Cue im nativen Studio, nach

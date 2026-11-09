@@ -38,6 +38,19 @@ Stand 12, Sprechbeginn 16 und Sprechende 20; die Geste 24 wird über
 Gesten-Abnahme:** Die native Sprecherfigur muss selbst sichtbar sein,
 anschließend Geste und Rückkehr zur Standpose.
 
+**Präziser ScummVM-Nachweis:** Nach Trennung der Sprecherfigur von Ego
+und dem Talk-Hotspot ist die Witness-Stand-Costume tatsächlich sichtbar
+(`speaker_costume_pixels=256`, CI auf `f765992`). Wird dieselbe
+Costume-Animation 24 bereits beim Raumeintritt gestartet, zeigt
+ScummVM die roten Sprechframe-Pixel (`gesture_initial_pixels=256`,
+CI auf `7f096dc`). Bei der normalen Sprechzeile bleibt die Geste trotz
+`setActorTalkFrame(6,3)`, `actorSay`, einem `delay(1)`-Tick und
+`animateActor(...,24)` unsichtbar (`gesture_frame_pixels=0`, CI auf
+`64a110b`). Ursache ist damit die Interaktion der Actor-Sprechphase
+mit dem Animationsstart; eine native Talk-Start-/Talk-Script-Lösung
+ist erforderlich, bevor Geste und Rücksetzung als Produktfunktion
+freigegeben werden können.
+
 
 **Sprechgesten mit definierter Standpose (Implementierung):** Zu einer
 nativen Dialoganimation kann der Autor nun im Studio „Nach der Sprechzeile
