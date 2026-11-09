@@ -38,7 +38,7 @@ def detect_gesture_return(peak_pixels: int, after_pixels: list[int]) -> bool:
     if (type(peak_pixels) is not int or peak_pixels < 0 or len(after_pixels) != 6
         or any(type(value) is not int or value < 0 for value in after_pixels)):
         raise ValueError("Invalid gesture pixel measurements")
-    return len(set(after_pixels)) == 1 and peak_pixels - after_pixels[0] >= 2
+    return len(set(after_pixels)) == 1 and peak_pixels - after_pixels[0] >= 16
 
 
 def _run(command: list[str], timeout: int = 10) -> str:
@@ -147,37 +147,44 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                         # The camera follows Ego while walking to the NPC.
                         # The speaker therefore moves left on screen even
                         # though its authored world coordinates stay fixed.
+                        # A large part of the NPC costume is below y=375.
+                        # The old crop saw twelve stationary red head pixels
+                        # but missed the actual speaking frame on the body.
                         return sum(close_rgb(rgb.getpixel((col, row)), (220, 80, 80), 25)
-                                   for row in range(270, 375) for col in range(530, 675))
+                                   for row in range(320, 430) for col in range(530, 675))
 
                 first = None
                 second = None
                 colored = 0
+                baseline_red = None
                 for _ in range(85):
                     if process.poll() is not None:
                         raise RuntimeError("ScummVM exited during linear NPC dialogue")
                     _capture(output, "linear")
                     ink = line_ink()
-                    if gesture:
-                        visible_red = gesture_ink()
-                        if visible_red > colored:
-                            colored = visible_red
-                            _capture(output, "gesture-frame")
+                    visible_red = gesture_ink() if gesture else 0
                     if first is None and len(ink) >= 100:
                         first = ink
+                        baseline_red = visible_red
                         _capture(output, "linear-first")
                     elif first is not None and second is None and len(ink) >= 100 and len(
                             first.symmetric_difference(ink)) > 150:
                         second = ink
                         _capture(output, "linear-second")
-                    if second is not None and (not gesture or colored >= 10):
+                    if gesture and second is not None and visible_red > colored:
+                        colored = visible_red
+                        _capture(output, "gesture-frame")
+                    if second is not None and (not gesture or
+                                               colored >= (baseline_red or 0) + 16):
                         break
                     time.sleep(0.25)
                 report.update({"first_speaker_pixels": len(first or ()),
                                "second_speaker_pixels": len(second or ()),
                                "gesture_frame_pixels": colored,
+                               "gesture_baseline_pixels": baseline_red,
                                "answer_pixels_visible": 0,
-                               "passed": bool(first and second and (not gesture or colored >= 10))})
+                               "passed": bool(first and second and (not gesture or
+                                               colored >= (baseline_red or 0) + 16))})
                 if not report["passed"]:
                     raise RuntimeError(f"Native two-speaker text or authored Costume gesture was not visible: {report}")
                 if gesture:
