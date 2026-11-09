@@ -376,7 +376,7 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
             actor_id = f"Speaker{character.id}"
             if actor_id in active_speakers:
                 speaker_actors.append(ActorAsset(actor_id, figure.name, scene_id,
-                                                 185 + index * 35, 110,
+                                                 185 + index * 35, 70,
                                                  display_name=_text(character.name)))
     return GameDocument(story.chapters[0].id + "Game", tuple(result),
                         costumes=(figure,), actors=tuple(speaker_actors))

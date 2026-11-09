@@ -115,7 +115,8 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 time.sleep(0.6)
             # The inherited DOTT verb GUI is in fixed 1024x768 Xvfb coords.
             _click(330, 560)  # Talk to
-            x, y = _color_center(output, "before", ACTOR_RGB)
+            x, y = ((192 + 185 * 2 + 16, 184 + 110 * 2 + 16)
+                    if multispeaker else _color_center(output, "before", ACTOR_RGB))
             _click(x, y)
             if voice:
                 # The native cursor/actor walk to the NPC must complete first.
