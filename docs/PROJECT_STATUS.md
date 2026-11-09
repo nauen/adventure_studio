@@ -32,8 +32,14 @@ Die Bildartefakte aus CI `42552675686` machten die statische Farbe
 sichtbar. Der Export startet zusätzlich die konkrete native `stand`-
 Animation. Die korrigierte Klickprobe zeichnet den stärksten Gesten-
 Frame auf und fordert danach einen über mehrere Ticks stabilen
-Standzustand mit weniger Gestenpixeln als am Maximum.
-**Offenes Pflichtgate:** Visueller stock-ScummVM-Endzustand und eine
+Standzustand mit weniger Gestenpixeln als am Maximum. Die verschärfte
+native Probe in CI `42552675686` (vorher) und der anschließenden
+CI-Runde (12 rote Pixel vor und nach der Zeile, kein nachgewiesener
+Gestenüberschuss) zeigt, dass auch der bisherige visuelle Gestennachweis
+nicht hinreichend abgesichert war. Das ist ein offener Laufzeitfehler,
+kein bestätigter End-to-End-Erfolg; PR #78 bleibt deshalb ungemergt.
+**Offenes Pflichtgate:** Eine tatsächlich sichtbare native Sprechgeste,
+anschließende Standpose und eine
 durchgeklickte Gradio-UI-Bedienung stehen zum jetzigen Zeitpunkt aus.
 **Nächstes Produktpaket:** Nach bestandenem Standpose-Gate die Gesten beim
 Sprecherwechsel mit real importierten PNG-Frames im Editor-End-to-End-Fluss
@@ -54,10 +60,13 @@ Sprecher, Animationsindices und unpassende Blickrichtungen werden abgewiesen.
 SCUMM-Quellnachweis. Der erste native Klicklauf zeigte beide Sprecherzeilen,
 aber noch keinen sichtbaren Gesten-Frame. Nach Anpassung der Befehlsfolge
 (`actorSay` vor `animateActor`) und des kamerafolgenden Bildbereichs hat
-die neue stock-ScummVM-Klickprobe **beide Sprecherzeilen und den roten
-zweiten Costume-Frame** sichtbar bestätigt: `gesture_frame_pixels=14`,
+die damalige stock-ScummVM-Klickprobe beide Sprecherzeilen und 14
+rote Pixel im Actor-Bereich gezählt: `gesture_frame_pixels=14`,
 `first_speaker_pixels=152`, `second_speaker_pixels=1056`, `passed=true`,
 CI `42550554974` (Artefakt `native-v6-studio-dialogue-gesture`).
+Neuere Frame-Vergleiche zeigen zwölf gleichfarbige Pixel in der Standpose;
+die zwei zusätzlichen Pixel sind kein ausreichender Beleg für einen
+sichtbaren zweiten Costume-Frame. Die Geste ist nativ erneut zu beweisen.
 **Offen:** Ein interaktiver Gradio-UI-Klickpfad und ein echter zeitlich
 präziser Lippen-/Sprach-Sync sind nicht nachgewiesen. D03 bleibt Teilfähigkeit.
 **Nächstes Produktpaket:** Die Actor-Geste aus importierten PNG-Frames im
