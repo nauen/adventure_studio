@@ -9,6 +9,14 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Unabhängige Gesten pro Sprecherzeile (2026-11-09, Pflichtgate offen):**
+Die Studio-Zuweisung verwaltet für jede unterschiedliche PNG-Pose eine
+eigene native COST-Animation ab Slot 28. Derselbe Actor kann zwei
+unterschiedliche Sprechframes in Folge verwenden, ohne seine globale
+Talk-Start-Animation zu ändern. 320 lokale Tests grün. Native
+ScummVM-Farbprobe (rot/grün in zwei Zeilen) vor Merge zwingend; danach
+zeitgebundene VOC-Sprechframes.
+
 **PNG-Sprechpose direkt aus der Dialogzeile (2026-11-09):** Die native
 Sprecherzeile bietet die Frames ihrer eigenen Costume an; ein Klick
 übernimmt Frame, COST-Talk-Slots und Dialog-Geste. Geteilte Costumes

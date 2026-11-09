@@ -197,15 +197,52 @@ class DialogueAnimationTests(unittest.TestCase):
                 assign_dialogue_speaking_frame(raw, witness, "not-imported")
             updated = assign_dialogue_speaking_frame(raw, witness, "WitnessSpeaking")
             document = parse_document(updated)
-            self.assertEqual(document.dialogue_animation_cues[0].animation, "gesture")
+            self.assertEqual(document.dialogue_animation_cues[0].animation, "speak_WitnessSpeaking")
             self.assertEqual(document.dialogue_animation_cues[0].line_id, witness)
             self.assertIn("WitnessSpeaking", next(animation for animation in
-                document.costumes[1].animations if animation.name == "talk_start")
+                document.costumes[1].animations if animation.name == "speak_WitnessSpeaking")
                 .directions[0].commands)
+            self.assertEqual(next(animation for animation in document.costumes[1].animations
+                                  if animation.name == "talk_start").index, 16)
             self.assertEqual(document.costumes[0], original.costumes[0])
             source = scummc_room_source(document.rooms[0],
                 dialogue_animation_cues=dialogue_animation_bindings(document, document.rooms[0]))
-            self.assertIn("animateActor(SpeakerWitness,24);", source)
+            self.assertIn("animateActor(SpeakerWitness,28);", source)
+
+    def test_two_lines_of_same_actor_retain_independent_speaking_frames(self):
+        _story, raw = self.fixture()
+        document = parse_document(raw)
+        room = document.rooms[0]
+        hotspot = next(item for item in room.hotspots if item.talk_lines)
+        changed = replace(hotspot, talk_actor_lines=("SpeakerWitness", "SpeakerWitness"))
+        room = replace(room, hotspots=tuple(changed if item.id == hotspot.id else item
+                                            for item in room.hotspots))
+        costume = replace(document.costumes[0], name="WitnessCostume",
+                          frames=(*document.costumes[0].frames,
+                                  replace(document.costumes[0].frames[0], id="Smile"),
+                                  replace(document.costumes[0].frames[0], id="Frown")))
+        actors = tuple(replace(item, costume="WitnessCostume")
+                       if item.id == "SpeakerWitness" else item for item in document.actors)
+        raw = canonical_json(replace(document, rooms=(room, *document.rooms[1:]), actors=actors,
+                                     costumes=(*document.costumes, costume)))
+        lines = tuple(key for _, key in dialogue_animation_lines(raw))
+        raw = assign_dialogue_speaking_frame(raw, lines[0], "Smile")
+        raw = assign_dialogue_speaking_frame(raw, lines[1], "Frown")
+        result = parse_document(raw)
+        self.assertEqual([(cue.line_id, cue.animation) for cue in result.dialogue_animation_cues],
+                         [(lines[0], "speak_Smile"), (lines[1], "speak_Frown")])
+        selected = {animation.name: animation for animation in result.costumes[1].animations}
+        self.assertEqual((selected["speak_Smile"].index, selected["speak_Frown"].index), (28, 32))
+        self.assertEqual(selected["talk_start"].directions,
+                         next(animation for animation in costume.animations
+                              if animation.name == "talk_start").directions)
+        raw = assign_dialogue_speaking_frame(raw, lines[0], "Frown")
+        result = parse_document(raw)
+        self.assertEqual(len(result.costumes[1].animations), len(selected))
+        self.assertEqual(result.dialogue_animation_cues[0].animation, "speak_Frown")
+        source = scummc_room_source(result.rooms[0],
+            dialogue_animation_cues=dialogue_animation_bindings(result, result.rooms[0]))
+        self.assertEqual(source.count("animateActor(SpeakerWitness,32);"), 2)
 
 
 if __name__ == "__main__":

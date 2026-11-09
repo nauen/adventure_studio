@@ -602,7 +602,11 @@ def _validate_document(document: GameDocument) -> None:
             def commands_for(item):
                 return next((entry.commands for entry in item.directions
                              if entry.direction == direction), None) if item else None
-            if (commands_for(start) != commands_for(animation)
+            # Slot 16 is the Costume-wide default talk start. Independent
+            # gestures (index >= 28) are started explicitly by the dialogue
+            # script after actorSay and must not rewrite that shared slot.
+            if ((animation.index == 24 and commands_for(start) != commands_for(animation))
+                    or commands_for(start) is None
                     or commands_for(stop) != commands_for(stand)):
                 raise ValueError(f"Dialogue animation reset requires matching native talk frames: {cue.line_id}")
     for rule in document.animation_rules:

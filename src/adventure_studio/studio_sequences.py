@@ -14,7 +14,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
-from .studio_actors import set_costume_speaking_pose
+from .scumm_costume import CostumeAnimation, CostumeDirection
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
@@ -136,7 +136,7 @@ def dialogue_speaking_frames(raw: str, line_id: str | None) -> tuple[str, ...]:
 
 def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,
                                    reset_to_stand: bool = True) -> str:
-    """Author a speaker's imported PNG pose and bind it to a dialogue line in one edit."""
+    """Bind an independent indexed pose, leaving the Costume-wide talk slots intact."""
     document = parse_document(raw)
     target = _dialogue_animation_targets(document).get(line_id)
     if target is None:
@@ -147,8 +147,30 @@ def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,
     if sharing:
         raise ValueError("Die Costume wird auch von anderen Figuren verwendet: "
                          + ", ".join(sharing) + ". Bitte zuerst eine eigene Costume zuweisen")
-    updated = set_costume_speaking_pose(raw, actor.costume, frame_id)
-    return edit_dialogue_animation(updated, line_id, "gesture", reset_to_stand)
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    if frame_id not in {frame.id for frame in costume.frames}:
+        raise ValueError("Bitte ein vorhandenes Costume-Frame als Sprechpose wählen")
+    animation_name = f"speak_{frame_id}"
+    previous = next((item for item in costume.animations if item.name == animation_name), None)
+    if previous is not None:
+        if (previous.index is None or previous.index < 28 or
+                any(entry.commands != (frame_id,) for entry in previous.directions) or
+                {entry.direction for entry in previous.directions} != {"N", "E", "S", "W"}):
+            raise ValueError(f"Animation {animation_name} ist bereits anderweitig belegt")
+        updated = raw
+    else:
+        used = {item.index for item in costume.animations}
+        index = next((value for value in range(28, 253, 4) if value not in used), None)
+        if index is None:
+            raise ValueError("Keine weiteren nativen COST-Animationsindizes verfügbar")
+        animation = CostumeAnimation(animation_name, tuple(
+            CostumeDirection(direction, (frame_id,), True)
+            for direction in ("N", "E", "S", "W")), index)
+        updated_costume = replace(costume, animations=(*costume.animations, animation))
+        updated = canonical_json(replace(document, costumes=tuple(
+            updated_costume if item.name == actor.costume else item
+            for item in document.costumes)))
+    return edit_dialogue_animation(updated, line_id, animation_name, reset_to_stand)
 
 
 def edit_dialogue_animation(raw: str, line_id: str, animation: str | None,

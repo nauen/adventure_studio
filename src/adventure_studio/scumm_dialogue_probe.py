@@ -85,7 +85,8 @@ def _click(x: int, y: int) -> None:
 
 def run(game_directory: Path, output: Path, voice: bool = False,
         nested: bool = False, multispeaker: bool = False,
-        linear_multispeaker: bool = False, gesture: bool = False) -> dict:
+        linear_multispeaker: bool = False, gesture: bool = False,
+        multi_frame: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Virtual X display required")
     if not all((game_directory / f"tentacle.{part}").is_file() for part in ("000", "001")):
@@ -178,6 +179,17 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                         if visible_red > colored:
                             colored = visible_red
                             _capture(output, "gesture-frame")
+                    if multi_frame:
+                        with Image.open(output / "scummvm-linear.png") as frame:
+                            rgb = frame.convert("RGB")
+                            visible_green = sum(close_rgb(rgb.getpixel((col, row)), (50, 230, 70), 25)
+                                                for row in range(330, 430) for col in range(680, 810))
+                        if first is None:
+                            report["first_gesture_red"] = max(report.get("first_gesture_red", 0), visible_red)
+                        elif second is None:
+                            report["first_gesture_red"] = max(report.get("first_gesture_red", 0), visible_red)
+                        else:
+                            report["second_gesture_green"] = max(report.get("second_gesture_green", 0), visible_green)
                     if first is None and len(ink) >= 100:
                         first = ink
                         _capture(output, "linear-first")
@@ -186,7 +198,8 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                         second = ink
                         _capture(output, "linear-second")
                     if second is not None and (not gesture or
-                                               colored >= (baseline_red or 0) + 16):
+                                               colored >= (baseline_red or 0) + 16) and (not multi_frame or
+                                               report.get("second_gesture_green", 0) >= 16):
                         break
                     time.sleep(0.25)
                 report.update({"first_speaker_pixels": len(first or ()),
@@ -197,7 +210,9 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                                "answer_pixels_visible": 0,
                                "passed": bool(first and second and (not gesture or
                                                (speaker_visible >= 16 and
-                                                colored >= (baseline_red or 0) + 16)))})
+                                                colored >= (baseline_red or 0) + 16)) and
+                                              (not multi_frame or (report.get("first_gesture_red", 0) >= 16
+                                                                   and report.get("second_gesture_green", 0) >= 16)))})
                 if not report["passed"]:
                     raise RuntimeError(f"Native two-speaker text or authored Costume gesture was not visible: {report}")
                 if gesture:
@@ -358,13 +373,16 @@ def main() -> int:
     multispeaker = len(sys.argv) == 4 and sys.argv[1] == "--multispeaker"
     linear_multispeaker = len(sys.argv) == 4 and sys.argv[1] == "--linear-multispeaker"
     gesture = len(sys.argv) == 4 and sys.argv[1] == "--gesture"
-    if (len(sys.argv) != 3 and not voice and not nested and not multispeaker and not linear_multispeaker and not gesture):
-        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested|--multispeaker|--linear-multispeaker|--gesture] GAME_DIR OUTPUT_DIR")
+    multi_frame = len(sys.argv) == 4 and sys.argv[1] == "--multi-frame"
+    if (len(sys.argv) != 3 and not voice and not nested and not multispeaker and not linear_multispeaker and not gesture and not multi_frame):
+        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested|--multispeaker|--linear-multispeaker|--gesture|--multi-frame] GAME_DIR OUTPUT_DIR")
         return 2
-    report = run(Path(sys.argv[2] if voice or nested or multispeaker or linear_multispeaker or gesture else sys.argv[1]),
-                 Path(sys.argv[3] if voice or nested or multispeaker or linear_multispeaker or gesture else sys.argv[2]),
+    flagged = voice or nested or multispeaker or linear_multispeaker or gesture or multi_frame
+    report = run(Path(sys.argv[2] if flagged else sys.argv[1]),
+                 Path(sys.argv[3] if flagged else sys.argv[2]),
                  voice=voice, nested=nested, multispeaker=multispeaker,
-                 linear_multispeaker=linear_multispeaker or gesture, gesture=gesture)
+                 linear_multispeaker=linear_multispeaker or gesture or multi_frame,
+                 gesture=gesture or multi_frame, multi_frame=multi_frame)
     print(json.dumps(report, sort_keys=True))
     return 0 if report["passed"] else 1
 

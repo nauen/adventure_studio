@@ -174,6 +174,29 @@ jobs:
             /tmp/dialogue-gesture-story/project.json
             /tmp/dialogue-gesture-story/resources/Harbor.scc
           if-no-files-found: ignore
+      - name: Play two independent NPC line poses in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-frames-story --linear-multispeaker
+          python -m adventure_studio.dialogue_animation_fixture /tmp/dialogue-frames-story --multi-frame
+          cp -a /tmp/scummc-upstream /tmp/scummc-frames-upstream
+          test -s /tmp/scummc-frames-upstream/examples/road/DialogueFigure.cost && mv /tmp/scummc-frames-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-frames-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-frames-story /tmp/scummc-frames-upstream /tmp/dialogue-frames-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --multi-frame /tmp/dialogue-frames-game /tmp/dialogue-frames-evidence
+      - name: Retain independent NPC line-frame evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-dialogue-line-frames
+          path: |
+            /tmp/dialogue-frames-evidence/dialogue-report.json
+            /tmp/dialogue-frames-evidence/scummvm-linear-first.png
+            /tmp/dialogue-frames-evidence/scummvm-linear-second.png
+            /tmp/dialogue-frames-evidence/scummvm.log
+            /tmp/dialogue-frames-story/project.json
+            /tmp/dialogue-frames-story/resources/Harbor.scc
+          if-no-files-found: ignore
       - name: Retain native multi-Actor dialogue evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -14,6 +14,22 @@ Sequenzen authoren können.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
+**Zeilenspezifische NPC-Sprechframes (in Arbeit):** Ein und derselbe
+Sprecher kann jetzt verschiedene bereits importierte Costume-Frames an
+unterschiedliche Dialogzeilen binden. Der Dialogeditor erzeugt/recycelt
+hierfür eigene indizierte COST-Gesten ab 28, ohne den gemeinsamen nativen
+Talk-Start-Slot 16 oder andere Zeilen zu überschreiben. Bei wiederholter
+Auswahl desselben Frames wird derselbe Slot verwendet; ein ausgeschöpfter
+Indexraum oder Namenskonflikt wird ausdrücklich gemeldet. 320 lokale
+Tests grün und natives COST-Quellmaterial erzeugt. **Pflichtgate noch
+offen:** Der neue stock-ScummVM-Test muss rot im ersten und grün im zweiten
+Satz derselben Figur sichtbar nachweisen. Bis dahin kein Merge.
+**Nächstes Produktpaket:** Nach dem nativen Zeilenwechsel-Nachweis
+zeitgebundene, aus VOC-Dauer steuerbare Sprechframe-Folgen authoren.
+
+**Vorheriges Paket:** Die direkte Dialogzeilen-Zuweisung wurde mit PR #79
+als Commit `2b3186b` nach vollständig grüner CI in `main` integriert.
+
 **Neues Paket – PNG-Sprechpose direkt an der Dialogzeile (PR in Arbeit):**
 Der native Dialogeditor bietet nun die importierten Frames genau der
 gewählten Sprecherfigur an. Eine Aktion erzeugt daraus die nativen
