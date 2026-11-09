@@ -77,7 +77,7 @@ def _click(x: int, y: int) -> None:
 
 def run(game_directory: Path, output: Path, voice: bool = False,
         nested: bool = False, multispeaker: bool = False,
-        linear_multispeaker: bool = False) -> dict:
+        linear_multispeaker: bool = False, gesture: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Virtual X display required")
     if not all((game_directory / f"tentacle.{part}").is_file() for part in ("000", "001")):
@@ -85,7 +85,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
     output.mkdir(parents=True, exist_ok=True)
     report: dict = {"game": "dialogue-choices", "passed": False, "voice": voice,
                     "nested": nested, "multispeaker": multispeaker,
-                    "linear_multispeaker": linear_multispeaker}
+                    "linear_multispeaker": linear_multispeaker, "gesture": gesture}
     pcm_path = output / "dialogue-voice.raw"
     with (output / "scummvm.log").open("w", encoding="utf-8") as log:
         process = subprocess.Popen(["scummvm", f"--path={game_directory.resolve()}", "tentacle"],
@@ -133,28 +133,44 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                                 for col in range(300, 800)
                                 if close_rgb(rgb.getpixel((col, row)), (0, 0, 0), 10)}
 
+                def gesture_ink() -> int:
+                    with Image.open(output / "scummvm-linear.png") as frame:
+                        rgb = frame.convert("RGB")
+                        # The camera follows Ego while walking to the NPC.
+                        # The speaker therefore moves left on screen even
+                        # though its authored world coordinates stay fixed.
+                        return sum(close_rgb(rgb.getpixel((col, row)), (220, 80, 80), 25)
+                                   for row in range(270, 375) for col in range(530, 675))
+
                 first = None
                 second = None
+                colored = 0
                 for _ in range(85):
                     if process.poll() is not None:
                         raise RuntimeError("ScummVM exited during linear NPC dialogue")
                     _capture(output, "linear")
                     ink = line_ink()
+                    if gesture:
+                        colored = max(colored, gesture_ink())
                     if first is None and len(ink) >= 100:
                         first = ink
                         _capture(output, "linear-first")
-                    elif first is not None and len(ink) >= 100 and len(
+                    elif first is not None and second is None and len(ink) >= 100 and len(
                             first.symmetric_difference(ink)) > 150:
                         second = ink
                         _capture(output, "linear-second")
+                    if second is not None and (not gesture or colored >= 10):
+                        if gesture:
+                            _capture(output, "gesture-frame")
                         break
                     time.sleep(0.25)
                 report.update({"first_speaker_pixels": len(first or ()),
                                "second_speaker_pixels": len(second or ()),
+                               "gesture_frame_pixels": colored,
                                "answer_pixels_visible": 0,
-                               "passed": bool(first and second)})
+                               "passed": bool(first and second and (not gesture or colored >= 10))})
                 if not report["passed"]:
-                    raise RuntimeError("Two distinct linear Actor speech lines were not visible")
+                    raise RuntimeError(f"Native two-speaker text or authored Costume gesture was not visible: {report}")
                 return report
             if voice:
                 # The native cursor/actor walk to the NPC must complete first.
@@ -269,13 +285,14 @@ def main() -> int:
     nested = len(sys.argv) == 4 and sys.argv[1] == "--nested"
     multispeaker = len(sys.argv) == 4 and sys.argv[1] == "--multispeaker"
     linear_multispeaker = len(sys.argv) == 4 and sys.argv[1] == "--linear-multispeaker"
-    if (len(sys.argv) != 3 and not voice and not nested and not multispeaker and not linear_multispeaker):
-        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested|--multispeaker|--linear-multispeaker] GAME_DIR OUTPUT_DIR")
+    gesture = len(sys.argv) == 4 and sys.argv[1] == "--gesture"
+    if (len(sys.argv) != 3 and not voice and not nested and not multispeaker and not linear_multispeaker and not gesture):
+        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested|--multispeaker|--linear-multispeaker|--gesture] GAME_DIR OUTPUT_DIR")
         return 2
-    report = run(Path(sys.argv[2] if voice or nested or multispeaker or linear_multispeaker else sys.argv[1]),
-                 Path(sys.argv[3] if voice or nested or multispeaker or linear_multispeaker else sys.argv[2]),
+    report = run(Path(sys.argv[2] if voice or nested or multispeaker or linear_multispeaker or gesture else sys.argv[1]),
+                 Path(sys.argv[3] if voice or nested or multispeaker or linear_multispeaker or gesture else sys.argv[2]),
                  voice=voice, nested=nested, multispeaker=multispeaker,
-                 linear_multispeaker=linear_multispeaker)
+                 linear_multispeaker=linear_multispeaker or gesture, gesture=gesture)
     print(json.dumps(report, sort_keys=True))
     return 0 if report["passed"] else 1
 

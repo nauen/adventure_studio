@@ -14,6 +14,32 @@ Sequenzen authoren können.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
+**Costume-Animation je nativer Sprecherzeile (Implementierung):** Im nativen
+Studio-Bereich kann eine Dialogzeile mit gebundenem `Speaker`-Actor eine
+indizierte Costume-Animation erhalten oder die Zuordnung wieder entfernen.
+Die neue, optionale `dialogue_animation_cues`-Sammlung bleibt im gemeinsamen
+Projekt-JSON erhalten. Beim Export löst `animateActor` die gewählte Animation
+unmittelbar nach dem zugehörigen `actorSay` und vor `waitForMessage` aus,
+auch in mehrstufigen Dialogen;
+bereits vorhandene VOC-Aufnahmen bleiben kombinierbar. Stale-Text, fehlende
+Sprecher, Animationsindices und unpassende Blickrichtungen werden abgewiesen.
+314 lokale Tests grün, darunter lineare/Antwort-Dialoge, Roundtrip und
+SCUMM-Quellnachweis. Der erste native Klicklauf zeigte beide Sprecherzeilen,
+aber noch keinen sichtbaren Gesten-Frame. Nach Anpassung der Befehlsfolge
+(`actorSay` vor `animateActor`) und des kamerafolgenden Bildbereichs hat
+die neue stock-ScummVM-Klickprobe **beide Sprecherzeilen und den roten
+zweiten Costume-Frame** sichtbar bestätigt: `gesture_frame_pixels=14`,
+`first_speaker_pixels=152`, `second_speaker_pixels=1056`, `passed=true`,
+CI `42550554974` (Artefakt `native-v6-studio-dialogue-gesture`).
+**Offen:** Ein interaktiver Gradio-UI-Klickpfad und ein echter zeitlich
+präziser Lippen-/Sprach-Sync sind nicht nachgewiesen. D03 bleibt Teilfähigkeit.
+**Nächstes Produktpaket:** Die Actor-Geste aus importierten PNG-Frames im
+sichtbaren Gradio-Workflow auswählen, ihr Start-/Ende-Verhalten bei
+aufeinanderfolgenden Sprecherwechseln prüfen und den Zustand nach einer
+Sprechzeile sauber behandeln.
+
+## Vorheriges Produktpaket: Sprecher-Costumes
+
 **PNG-Costume einem Story-Sprecher zuweisen (Implementierung):** Nach dem
 Synchronisieren der Story mit dem nativen Studio-Projekt kann ein bereits
 vorhandener `Speaker<Figuren-ID>`-Actor eine aus PNG importierte Costume

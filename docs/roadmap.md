@@ -9,6 +9,16 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprechgesten je Dialogzeile (2026-11-09, Implementierung):** Native
+Dialogzeilen mit Actor-Bindung können im Studio eine bereits authorierte
+indizierte Costume-Animation auswählen. Gemeinsame JSON-Persistenz,
+Validierung der Sprecher-/Animations-/Blickrichtungsbindung und
+`animateActor` direkt nach `actorSay` im regulären ScummC-Pfad; 314 lokale Tests
+grün. Reale stock-ScummVM-Klick-/Sichtabnahme der authored Zwei-Frame-Geste
+bestanden (CI `42550554974`, 14 rote Gestenpixel und zwei verschiedene
+Sprechertexte). D03 bleibt Teilfähigkeit; als nächstes interaktiver
+Gradio-Pfad und definierter Animations-Endzustand/Sprecherwechsel.
+
 **Native Sprecher-Costumes aus PNG (2026-11-09, Implementierung):** Bereits
 erzeugte Story-Sprecher-Actors können im gemeinsamen Studio eine vom Autor
 importierte native Costume erhalten. Die Bindung bleibt in der versionierten

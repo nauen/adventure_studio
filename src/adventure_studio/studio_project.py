@@ -15,7 +15,7 @@ from .studio_sequences import compose_story_project
 
 NATIVE_FIELDS = frozenset(("costumes", "actors", "animation_rules",
                            "animation_input_rules", "animation_triggers",
-                           "interaction_sequences"))
+                           "interaction_sequences", "dialogue_animation_cues"))
 
 
 def canonical_studio_project(story_raw: str, native_raw: str | None = None) -> str:

@@ -31,7 +31,9 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                compose_story_project, import_room_music,
                                import_room_sound, room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
-                               dialogue_voice_lines, edit_dialogue_voice)
+                               dialogue_voice_lines, edit_dialogue_voice,
+                               dialogue_animation_lines, dialogue_animation_choices,
+                               edit_dialogue_animation)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -701,6 +703,13 @@ def make_app():
             with gr.Row():
                 native_dialogue_voice_save = gr.Button("Dialogaufnahme zuweisen / ersetzen")
                 native_dialogue_voice_remove = gr.Button("Dialogaufnahme entfernen")
+            gr.Markdown("**Sprecher-Animation:** Wähle eine Dialogzeile mit nativem Actor und eine seiner indizierten Costume-Animationen. Der Actor startet die Geste während der Sprechzeile. Die gewünschte Blickrichtung muss in der Animation vorhanden sein.")
+            with gr.Row():
+                native_dialogue_animation_line = gr.Dropdown(label="Sprecher-Dialogzeile")
+                native_dialogue_animation = gr.Dropdown(label="Costume-Animation")
+            with gr.Row():
+                native_dialogue_animation_save = gr.Button("Sprechanimation zuweisen")
+                native_dialogue_animation_remove = gr.Button("Sprechanimation entfernen")
             with gr.Row():
                 native_replace = gr.Button("Ausgewählten Schritt mit Formularwerten ersetzen")
                 native_up = gr.Button("Schritt nach oben")
@@ -1077,6 +1086,25 @@ def make_app():
         native_dialogue_voice_remove.click(
             lambda raw, line, language: native_edit(edit_dialogue_voice, raw, line, language, None, True),
             [native_state, native_dialogue_line, native_dialogue_language],
+            [native_state, *native_outputs, native_report])
+        native_state.change(
+            lambda raw: gr.update(choices=dialogue_animation_lines(raw) if raw else (), value=None),
+            [native_state], [native_dialogue_animation_line])
+        def dialogue_animation_update(raw, line):
+            if not raw:
+                return gr.update(choices=[], value=None)
+            choices, selected = dialogue_animation_choices(raw, line)
+            return gr.update(choices=choices, value=selected)
+        native_dialogue_animation_line.change(
+            dialogue_animation_update, [native_state, native_dialogue_animation_line],
+            [native_dialogue_animation])
+        native_dialogue_animation_save.click(
+            lambda *args: native_edit(edit_dialogue_animation, *args),
+            [native_state, native_dialogue_animation_line, native_dialogue_animation],
+            [native_state, *native_outputs, native_report])
+        native_dialogue_animation_remove.click(
+            lambda raw, line: native_edit(edit_dialogue_animation, raw, line, None),
+            [native_state, native_dialogue_animation_line],
             [native_state, *native_outputs, native_report])
         native_add.click(lambda *args: native_edit(append_sequence_step, *args),
                          [native_state, native_room, native_hotspot, native_verb,

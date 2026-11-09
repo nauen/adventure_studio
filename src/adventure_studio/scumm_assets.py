@@ -419,7 +419,7 @@ def indexed_bmp(room: RoomAsset) -> bytes:
 
 def scummc_room_source(room: RoomAsset, catalog=None,
                        graphical_language_buttons: bool = False,
-                       dialogue_voice_cues=()) -> str:
+                       dialogue_voice_cues=(), dialogue_animation_cues=()) -> str:
     _validate(room)
     if graphical_language_buttons and catalog is None:
         raise ValueError("Graphical language buttons require a language catalog")
@@ -434,6 +434,8 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         validate_catalog(catalog)
         translations = {line.id: dict(line.translations) for line in catalog.lines}
     cues = {cue.line_id: cue for cue in dialogue_voice_cues}
+    animation_cues = {line_id: (actor_id, index)
+                      for line_id, actor_id, index in dialogue_animation_cues}
     line_actors = {key: actor for rule in room.talk_rules for key, actor in rule.actor_lines}
     line_directions = {key: direction for rule in room.talk_rules
                        for key, direction in rule.actor_directions}
@@ -460,6 +462,9 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         return "".join(" " * indent + line + "\n" for line in dispatch.splitlines())
 
     def spoken(key: str, original: str, indent: int) -> str:
+        animation = animation_cues.get(key)
+        animate = (" " * indent + f"animateActor({animation[0]},{animation[1]});\n"
+                   if animation is not None else "")
         direction = line_directions.get(key)
         face = ""
         if direction is not None:
@@ -471,7 +476,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                     f"{pad}setCurrentActor(VAR_EGO);\n")
         cue = cues.get(key)
         if cue is None:
-            return face + say(key, original, indent) + " " * indent + "waitForMessage();\n"
+            return face + say(key, original, indent) + animate + " " * indent + "waitForMessage();\n"
         if cue.source_text != original:
             raise ValueError(f"Stale dialogue audio line: {key}")
         pad = " " * indent
@@ -490,7 +495,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
 
         stops = "".join(f"{pad}stopSound({sound_id});\n" for sound_id in sorted(
             {cue.sound_id, *(variant[1] for variant in cue.variants)}))
-        return face + sound("startSound") + say(key, original, indent) + \
+        return face + sound("startSound") + say(key, original, indent) + animate + \
             f"{pad}waitForMessage();\n" + stops
     def localized_name(hotspot: RoomHotspot) -> str:
         if catalog is None:
