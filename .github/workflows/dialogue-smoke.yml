@@ -130,7 +130,10 @@ jobs:
           PYTHONPATH: src
         run: |
           python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-linear-story --linear-multispeaker
-          python -m adventure_studio.scumm_toolchain /tmp/dialogue-linear-story /tmp/scummc-upstream /tmp/dialogue-linear-game
+          cp -a /tmp/scummc-upstream /tmp/scummc-linear-upstream
+          test -s /tmp/scummc-linear-upstream/examples/road/DialogueFigure.cost
+          mv /tmp/scummc-linear-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-multispeaker-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-linear-story /tmp/scummc-linear-upstream /tmp/dialogue-linear-game
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --linear-multispeaker /tmp/dialogue-linear-game /tmp/dialogue-linear-evidence
       - name: Retain native linear multi-Actor dialogue evidence
         if: always()
