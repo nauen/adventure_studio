@@ -14,6 +14,18 @@ Sequenzen authoren können.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
+**Sprechpose aus importiertem PNG-Frame (Implementierung):** Im
+Costume-Editor kann der Autor ein zuvor importiertes Frame auswählen und
+mit einem Klick als `gesture`-Sprechpose für alle vier Blickrichtungen
+zuweisen. Die Geste verwendet Index 24 und bleibt bis zum eigens
+autorisierten Standpose-Reset sichtbar; die vorhandene `stand`-Animation
+bleibt unberührt. Der Produktpfad nutzt das gleiche validierte
+Projekt-JSON wie der native Export. 317 lokale Tests grün, inklusive
+PNG-Import, vier Richtungen, ungültigem Frame und Costume-Exportpfad.
+**Offen:** Durchgeklickter Gradio-Pfad und der strenge stock-ScummVM-
+Sichtnachweis; PR #78 bleibt bis zu einem grünen nativen Gate offen.
+
+
 **Sprechgesten mit definierter Standpose (Implementierung):** Zu einer
 nativen Dialoganimation kann der Autor nun im Studio „Nach der Sprechzeile
 zur Standpose zurückkehren“ auswählen. Nach `waitForMessage` und optionalem
