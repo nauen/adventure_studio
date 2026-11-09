@@ -26,7 +26,11 @@ def build(directory: Path) -> None:
     document = replace(document,
                        costumes=tuple(updated if item.name == costume.name else item
                                       for item in document.costumes),
-                       actors=tuple(replace(actor, initial_animation="stand")
+                       # Keep NPC costumes away from the talk hotspot and
+                       # from Ego, who walks onto that hotspot before speech.
+                       actors=tuple(replace(actor, initial_animation="stand",
+                                            x=280 if actor.id == "SpeakerWitness" else 135,
+                                            y=100)
                                     if actor.costume == costume.name else actor
                                     for actor in document.actors))
     raw = canonical_json(document)

@@ -144,25 +144,30 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 def gesture_ink() -> int:
                     with Image.open(output / "scummvm-linear.png") as frame:
                         rgb = frame.convert("RGB")
-                        # The camera follows Ego while walking to the NPC.
-                        # The speaker therefore moves left on screen even
-                        # though its authored world coordinates stay fixed.
-                        # A large part of the NPC costume is below y=375.
-                        # The old crop saw twelve stationary red head pixels
-                        # but missed the actual speaking frame on the body.
+                        # The native fixture intentionally separates the
+                        # Witness actor from the clicked object and Ego.
                         return sum(close_rgb(rgb.getpixel((col, row)), (220, 80, 80), 25)
-                                   for row in range(320, 430) for col in range(530, 675))
+                                   for row in range(330, 430) for col in range(680, 810))
+
+                def speaker_ink() -> int:
+                    with Image.open(output / "scummvm-linear.png") as frame:
+                        rgb = frame.convert("RGB")
+                        return sum(close_rgb(rgb.getpixel((col, row)), (50, 220, 220), 12)
+                                   for row in range(330, 430) for col in range(680, 810))
 
                 first = None
                 second = None
                 colored = 0
                 baseline_red = None
+                speaker_visible = 0
                 for _ in range(85):
                     if process.poll() is not None:
                         raise RuntimeError("ScummVM exited during linear NPC dialogue")
                     _capture(output, "linear")
                     ink = line_ink()
                     visible_red = gesture_ink() if gesture else 0
+                    if gesture:
+                        speaker_visible = max(speaker_visible, speaker_ink())
                     if first is None and len(ink) >= 100:
                         first = ink
                         baseline_red = visible_red
@@ -182,9 +187,11 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                                "second_speaker_pixels": len(second or ()),
                                "gesture_frame_pixels": colored,
                                "gesture_baseline_pixels": baseline_red,
+                               "speaker_costume_pixels": speaker_visible,
                                "answer_pixels_visible": 0,
                                "passed": bool(first and second and (not gesture or
-                                               colored >= (baseline_red or 0) + 16))})
+                                               (speaker_visible >= 16 and
+                                                colored >= (baseline_red or 0) + 16)))})
                 if not report["passed"]:
                     raise RuntimeError(f"Native two-speaker text or authored Costume gesture was not visible: {report}")
                 if gesture:
