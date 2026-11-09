@@ -27,7 +27,9 @@ class DialogueAnimationTests(unittest.TestCase):
             CostumeDirection(direction, ("Pose",), False)
             for direction in ("N", "E", "S", "W")), 24)
         document = replace(document, costumes=(replace(
-            costume, animations=(*costume.animations, gesture)),))
+            costume, animations=tuple(replace(animation, index=20)
+                                      if animation.name == "stand" else animation
+                                      for animation in costume.animations) + (gesture,)),))
         return story, canonical_json(document)
 
     def test_linear_speaker_cue_survives_project_and_compiles_actor_command(self):
@@ -35,9 +37,9 @@ class DialogueAnimationTests(unittest.TestCase):
         lines = dialogue_animation_lines(raw)
         self.assertEqual(len(lines), 2)
         witness = next(key for label, key in lines if label.startswith("SpeakerWitness"))
-        self.assertEqual(dialogue_animation_choices(raw, witness), (("gesture",), None, True))
+        self.assertEqual(dialogue_animation_choices(raw, witness), (("stand", "gesture"), None, True))
         raw = edit_dialogue_animation(raw, witness, "gesture")
-        self.assertEqual(dialogue_animation_choices(raw, witness), (("gesture",), "gesture", True))
+        self.assertEqual(dialogue_animation_choices(raw, witness), (("stand", "gesture"), "gesture", True))
         document = parse_document(raw)
         self.assertEqual(canonical_json(document), raw)
         saved = canonical_studio_project(story, raw)
@@ -57,6 +59,7 @@ class DialogueAnimationTests(unittest.TestCase):
             'actorSay(SpeakerWitness,"Der Schluessel liegt am Boden.")'))
         self.assertIn("setCurrentActor(SpeakerWitness);\n            setActorStanding();\n"
                       "            setCurrentActor(VAR_EGO);", source[wait:])
+        self.assertIn("animateActor(SpeakerWitness,20);", source[wait:])
         self.assertEqual(parse_document(edit_dialogue_animation(raw, witness, None)).dialogue_animation_cues, ())
 
     def test_branching_reply_and_invalid_costume_fail_closed(self):
@@ -78,7 +81,7 @@ class DialogueAnimationTests(unittest.TestCase):
                        if label.startswith("SpeakerWitness"))
         legacy = edit_dialogue_animation(raw, witness, "gesture", False)
         self.assertNotIn("reset_to_stand", legacy)
-        self.assertEqual(dialogue_animation_choices(legacy, witness), (("gesture",), "gesture", False))
+        self.assertEqual(dialogue_animation_choices(legacy, witness), (("stand", "gesture"), "gesture", False))
         document = parse_document(legacy)
         source = scummc_room_source(document.rooms[0],
                                    dialogue_animation_cues=dialogue_animation_bindings(
@@ -102,12 +105,18 @@ class DialogueAnimationTests(unittest.TestCase):
         for actor in ("SpeakerHarborKeeper", "SpeakerWitness"):
             self.assertIn(f"setCurrentActor({actor});\n            setActorStanding();\n"
                           "            setCurrentActor(VAR_EGO);", source)
+            self.assertIn(f"animateActor({actor},20);", source)
 
         missing = replace(document.costumes[0], animations=tuple(
             animation for animation in document.costumes[0].animations
             if animation.name != "stand"))
         with self.assertRaisesRegex(ValueError, "stand pose"):
             parse_document(canonical_json(replace(document, costumes=(missing,))))
+        unindexed = replace(document.costumes[0], animations=tuple(
+            replace(animation, index=None) if animation.name == "stand" else animation
+            for animation in document.costumes[0].animations))
+        with self.assertRaisesRegex(ValueError, "indexed stand pose"):
+            parse_document(canonical_json(replace(document, costumes=(unindexed,))))
 
 
 if __name__ == "__main__":

@@ -434,8 +434,8 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         validate_catalog(catalog)
         translations = {line.id: dict(line.translations) for line in catalog.lines}
     cues = {cue.line_id: cue for cue in dialogue_voice_cues}
-    animation_cues = {line_id: (actor_id, index, reset)
-                      for line_id, actor_id, index, reset in dialogue_animation_cues}
+    animation_cues = {line_id: (actor_id, index, stand_index)
+                      for line_id, actor_id, index, stand_index in dialogue_animation_cues}
     line_actors = {key: actor for rule in room.talk_rules for key, actor in rule.actor_lines}
     line_directions = {key: direction for rule in room.talk_rules
                        for key, direction in rule.actor_directions}
@@ -468,7 +468,8 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         standing = (" " * indent + f"setCurrentActor({animation[0]});\n"
                     + " " * indent + "setActorStanding();\n"
                     + " " * indent + "setCurrentActor(VAR_EGO);\n"
-                    if animation is not None and animation[2] else "")
+                    + " " * indent + f"animateActor({animation[0]},{animation[2]});\n"
+                    if animation is not None and animation[2] is not None else "")
         direction = line_directions.get(key)
         face = ""
         if direction is not None:

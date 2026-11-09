@@ -591,8 +591,9 @@ def _validate_document(document: GameDocument) -> None:
         if cue.reset_to_stand:
             stand = next((item for item in costumes_by_name[actor.costume].animations
                           if item.name == "stand"), None)
-            if stand is None or direction not in {item.direction for item in stand.directions}:
-                raise ValueError(f"Dialogue animation reset requires a stand pose: {cue.line_id}")
+            if (stand is None or stand.index is None
+                    or direction not in {item.direction for item in stand.directions}):
+                raise ValueError(f"Dialogue animation reset requires an indexed stand pose: {cue.line_id}")
     for rule in document.animation_rules:
         if not isinstance(rule, AnimationRule) or not isinstance(rule.condition, ActorCountCondition) or not isinstance(rule.effect, ObjectStateEffect):
             raise ValueError("Invalid typed animation rule")

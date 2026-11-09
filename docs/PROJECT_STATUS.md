@@ -18,14 +18,19 @@ Sequenzen authoren können.
 nativen Dialoganimation kann der Autor nun im Studio „Nach der Sprechzeile
 zur Standpose zurückkehren“ auswählen. Nach `waitForMessage` und optionalem
 VOC-Stopp setzt der SCUMM-v6-Exporter den betroffenen Actor ausdrücklich
-mit `setCurrentActor`/`setActorStanding` zurück und stellt danach Ego als
-aktiven Actor wieder her. Beim Wechsel mehrerer Sprecher gilt das jeweils
-für die tatsächliche Actor-Bindung; fehlende `stand`-Richtungen werden
-abgewiesen. Das versionierte Projekt-JSON speichert `reset_to_stand` nur
+mit `setCurrentActor`/`setActorStanding` zurück, stellt danach Ego als
+aktiven Actor wieder her und startet die explizit indizierte `stand`-
+Costume-Animation. Beim Wechsel mehrerer Sprecher gilt das jeweils für
+die tatsächliche Actor-Bindung; fehlende `stand`-Richtungen oder ein
+fehlender nativer `stand`-Index werden abgewiesen. Neue PNG-Costumes
+erhalten dafür einen `stand`-Index 20. Das versionierte Projekt-JSON speichert `reset_to_stand` nur
 bei aktivierter Einstellung; ältere Cues ohne Feld behalten das bisherige
 Verhalten. 316 lokale Tests grün (einschließlich zweier Sprecher und
-Alt-JSON). Die bisherige native Zwei-Frame-Klickprobe wurde um einen
-mehrfach abgetasteten Endzustand erweitert.
+Alt-JSON). Die erste native Endzustandsprobe zeigte ein reales Problem:
+`setActorStanding` allein ließ den roten Gesten-Frame stehen
+(`gesture_after_pixels=[12,12,12,12,12,12]`). Daher startet der Export
+jetzt zusätzlich die konkrete native `stand`-Animation. Die bisherige
+Zwei-Frame-Klickprobe kontrolliert ihren Endzustand über mehrere Ticks.
 **Offenes Pflichtgate:** Visueller stock-ScummVM-Endzustand und eine
 durchgeklickte Gradio-UI-Bedienung stehen zum jetzigen Zeitpunkt aus.
 **Nächstes Produktpaket:** Nach bestandenem Standpose-Gate die Gesten beim

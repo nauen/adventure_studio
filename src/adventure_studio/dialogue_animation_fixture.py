@@ -20,7 +20,9 @@ def build(directory: Path) -> None:
         for direction in ("N", "E", "S", "W")), 24)
     updated = replace(costume, palette=tuple(palette),
                       frames=(*costume.frames, CostumeFrame("Speak", 8, 8, bytes([2] * 64), -4, -8)),
-                      animations=(*costume.animations, gesture))
+                      animations=tuple(replace(animation, index=20)
+                                       if animation.name == "stand" else animation
+                                       for animation in costume.animations) + (gesture,))
     document = replace(document, costumes=tuple(
         updated if item.name == costume.name else item for item in document.costumes))
     raw = canonical_json(document)
