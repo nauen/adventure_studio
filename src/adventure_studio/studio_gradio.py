@@ -14,7 +14,7 @@ from pathlib import Path
 from .studio_catalog import relationship_svg, story_catalog
 from .story_ai import preview_ai_response, propose_story_change
 from .studio_service import (accept_proposal, add_decoration, change_item,
-                             change_dialogue_line, extend_dialogue_line,
+                             change_dialogue_line, change_dialogue_facing, extend_dialogue_line,
                              add_dialogue_choice, extend_dialogue_choice,
                              change_position, change_puzzle, change_scene,
                              describe_story, item_position, prepare_proposal,
@@ -65,6 +65,11 @@ def puzzle_fields(raw: str, puzzle_id: str) -> tuple[str, str]:
 def dialogue_line_fields(raw: str, node_id: str) -> str:
     node = next((n for n in parse_story_document(raw).dialogue_nodes if n.id == node_id), None)
     return node.text if node else ""
+
+
+def dialogue_facing_fields(raw: str, node_id: str) -> str | None:
+    node = next((n for n in parse_story_document(raw).dialogue_nodes if n.id == node_id), None)
+    return node.face_direction if node else None
 
 
 def dialogue_speaker_fields(raw: str, node_id: str):
@@ -523,6 +528,11 @@ def make_app():
             dialogue_text = gr.Textbox(label="Sprechtext", lines=4)
             dialogue_speaker = gr.Dropdown(label="Sprecher dieser Zeile")
             save_dialogue = gr.Button("Dialogänderung prüfen")
+            dialogue_facing = gr.Dropdown(label="Blickrichtung beim Sprechen",
+                                          choices=[("Keine Änderung", None), ("Norden", "N"),
+                                                   ("Osten", "E"), ("Süden", "S"),
+                                                   ("Westen", "W")], value=None)
+            save_dialogue_facing = gr.Button("Blickrichtung prüfen")
             gr.Markdown("**Nächste Sprechzeile:** Eine abschließende Zeile ohne Antworten um eine weitere gesprochene Zeile ergänzen. So lassen sich lineare Gespräche mit Sprecherwechsel direkt im Studio aufbauen.")
             with gr.Row():
                 dialogue_linear_id = gr.Textbox(label="Neue Sprechzeilen-ID")
@@ -719,6 +729,8 @@ def make_app():
         item_select.change(item_fields, inputs=[state, item_select], outputs=[item_name, item_description])
         puzzle_select.change(puzzle_fields, inputs=[state, puzzle_select], outputs=[puzzle_title, puzzle_items])
         dialogue_node_select.change(dialogue_line_fields, inputs=[state, dialogue_node_select], outputs=[dialogue_text])
+        dialogue_node_select.change(dialogue_facing_fields,
+                                    inputs=[state, dialogue_node_select], outputs=[dialogue_facing])
         dialogue_node_select.change(lambda raw, node: gr.update(**dialogue_speaker_fields(raw, node)),
                                     inputs=[state, dialogue_node_select], outputs=[dialogue_speaker])
         def next_linear_speakers(raw, node_id):
@@ -737,6 +749,8 @@ def make_app():
                           [pending, report])
         save_dialogue.click(lambda *args: propose(change_dialogue_line, *args),
                             [state, dialogue_node_select, dialogue_text, dialogue_speaker], [pending, report])
+        save_dialogue_facing.click(lambda *args: propose(change_dialogue_facing, *args),
+                                   [state, dialogue_node_select, dialogue_facing], [pending, report])
         dialogue_linear_add.click(lambda *args: propose(extend_dialogue_line, *args),
                                   [state, dialogue_node_select, dialogue_linear_id,
                                    dialogue_linear_text, dialogue_linear_speaker], [pending, report])

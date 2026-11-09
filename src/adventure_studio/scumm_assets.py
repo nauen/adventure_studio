@@ -30,6 +30,7 @@ class RoomHotspot:
     exit_destination: str | None = None
     talk_lines: tuple[str, ...] = ()
     talk_actor_lines: tuple[str, ...] = ()
+    talk_face_directions: tuple[str | None, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,7 @@ class TalkRule:
     choices: tuple[TalkChoice, ...]
     stages: tuple[TalkStage, ...] = ()
     actor_lines: tuple[tuple[str, str], ...] = ()
+    actor_directions: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -239,6 +241,12 @@ def _validate(room: RoomAsset) -> None:
                 or any(not isinstance(actor, str) or not _IDENTIFIER.fullmatch(actor)
                        for actor in hotspot.talk_actor_lines)):
             raise ValueError("Linear dialogue Actor bindings must match every spoken line")
+        if hotspot.talk_face_directions and (
+                len(hotspot.talk_face_directions) != len(hotspot.talk_lines)
+                or len(hotspot.talk_actor_lines) != len(hotspot.talk_lines)
+                or any(direction not in (None, "N", "E", "S", "W")
+                       for direction in hotspot.talk_face_directions)):
+            raise ValueError("Linear dialogue facing cues require native Actors and aligned lines")
         for line in hotspot.talk_lines:
             _scumm_string(line)
         if any(type(v) is not int for v in (hotspot.x, hotspot.y, hotspot.width, hotspot.height)):
@@ -273,6 +281,11 @@ def _validate(room: RoomAsset) -> None:
                 or any(not isinstance(key, str) or not isinstance(actor, str)
                        for key, actor in dialogue.actor_lines)):
             raise ValueError("Duplicate or invalid dialogue actor line binding")
+        if (len(dict(dialogue.actor_directions)) != len(dialogue.actor_directions)
+                or any(key not in dict(dialogue.actor_lines)
+                       or direction not in ("N", "E", "S", "W")
+                       for key, direction in dialogue.actor_directions)):
+            raise ValueError("Dialogue facing cues require Actor bindings and cardinal directions")
         if not 1 <= len(dialogue.choices) <= 3 or len(dialogue.opening_lines) > 16:
             raise ValueError("Dialogue must offer one to three choices")
         stages = {stage.id: stage for stage in dialogue.stages}
@@ -422,9 +435,14 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         translations = {line.id: dict(line.translations) for line in catalog.lines}
     cues = {cue.line_id: cue for cue in dialogue_voice_cues}
     line_actors = {key: actor for rule in room.talk_rules for key, actor in rule.actor_lines}
+    line_directions = {key: direction for rule in room.talk_rules
+                       for key, direction in rule.actor_directions}
     for hotspot in room.hotspots:
         for index, actor in enumerate(hotspot.talk_actor_lines):
-            line_actors[f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{index}"] = actor
+            key = f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{index}"
+            line_actors[key] = actor
+            if hotspot.talk_face_directions and hotspot.talk_face_directions[index] is not None:
+                line_directions[key] = hotspot.talk_face_directions[index]
 
     def say(key: str, original: str, indent: int) -> str:
         actor = line_actors.get(key)
@@ -442,9 +460,18 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         return "".join(" " * indent + line + "\n" for line in dispatch.splitlines())
 
     def spoken(key: str, original: str, indent: int) -> str:
+        direction = line_directions.get(key)
+        face = ""
+        if direction is not None:
+            actor = line_actors[key]
+            native = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}[direction]
+            pad = " " * indent
+            face = (f"{pad}setCurrentActor({actor});\n"
+                    f"{pad}setActorDirection({native});\n"
+                    f"{pad}setCurrentActor(VAR_EGO);\n")
         cue = cues.get(key)
         if cue is None:
-            return say(key, original, indent) + " " * indent + "waitForMessage();\n"
+            return face + say(key, original, indent) + " " * indent + "waitForMessage();\n"
         if cue.source_text != original:
             raise ValueError(f"Stale dialogue audio line: {key}")
         pad = " " * indent
@@ -463,7 +490,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
 
         stops = "".join(f"{pad}stopSound({sound_id});\n" for sound_id in sorted(
             {cue.sound_id, *(variant[1] for variant in cue.variants)}))
-        return sound("startSound") + say(key, original, indent) + \
+        return face + sound("startSound") + say(key, original, indent) + \
             f"{pad}waitForMessage();\n" + stops
     def localized_name(hotspot: RoomHotspot) -> str:
         if catalog is None:
@@ -557,8 +584,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         if hotspot.talk_lines:
             parts.append("        case TalkTo:\n")
             for line_index, line in enumerate(hotspot.talk_lines):
-                parts.append(say(f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{line_index}", line, 12))
-                parts.append("            waitForMessage();\n")
+                parts.append(spoken(f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{line_index}", line, 12))
             parts.append("            return;\n")
         if speaker_rule:
             parts.append("        case TalkTo:\n")

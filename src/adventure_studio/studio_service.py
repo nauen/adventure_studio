@@ -145,6 +145,16 @@ def change_dialogue_line(raw: str, node_id: str, text: str,
         node, text=text.strip(), speaker_id=speaker)))
 
 
+def change_dialogue_facing(raw: str, node_id: str, direction: str | None) -> StudioEdit:
+    story = parse_story_document(raw)
+    node = next((node for node in story.dialogue_nodes if node.id == node_id), None)
+    if node is None:
+        raise ValueError("Unknown dialogue node ID")
+    if direction not in (None, "N", "E", "S", "W"):
+        raise ValueError("Dialogue facing must be north, east, south, west or disabled")
+    return _commit(story, PutEntity("dialogue_node", replace(node, face_direction=direction)))
+
+
 def extend_dialogue_line(raw: str, node_id: str, new_node_id: str,
                          text: str, speaker_id: str | None = None) -> StudioEdit:
     """Append a spoken line to a terminal dialogue node (no answer required)."""

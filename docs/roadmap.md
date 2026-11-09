@@ -67,6 +67,12 @@ hinzugefügten Folgesatz erweitert. 304 lokale Tests grün; native
 ScummVM-Abnahme der ersten beiden Sprecherzeilen mit angehängtem Folgesatz
 erfolgreich (CI `42543308699`). Sichtnachweis der dritten Zeile separat offen.
 
+**Actor-Blickrichtung während Dialogen (2026-11-09):** Der Studio-Editor
+speichert optionale N/E/S/W-Blickrichtungs-Cues pro Sprechzeile. Lineare und
+verzweigte Dialoge setzen den sprechenden Actor vor der Ausgabe nativ über
+`setActorDirection`, während ältere Story-v4-Dokumente unverändert bleiben.
+307 lokale Tests grün; neuer nativer Laufzeit- und Sichtnachweis offen.
+
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und
 [Abnahmeszenarien](scumm-v6-reference/SCENARIOS.md). Die
