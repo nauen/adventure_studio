@@ -148,9 +148,10 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 from PIL import Image
 
                 def speech_ink() -> set[tuple[int, int]]:
-                    with Image.open(output / "scummvm-speaker.png") as image:
+                    with Image.open(output / "scummvm-speaker.png") as source:
+                        image = source.convert("RGB")
                         return {(x, y) for y in range(195, 370) for x in range(192, 832)
-                                if close_rgb(image.getpixel((x, y))[:3], ANSWER_RGB, 15)}
+                                if close_rgb(image.getpixel((x, y)), ANSWER_RGB, 15)}
 
                 opening_ink = None
                 text_pixels = 0
