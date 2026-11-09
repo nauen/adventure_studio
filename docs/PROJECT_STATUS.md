@@ -26,11 +26,13 @@ fehlender nativer `stand`-Index werden abgewiesen. Neue PNG-Costumes
 erhalten dafür einen `stand`-Index 20. Das versionierte Projekt-JSON speichert `reset_to_stand` nur
 bei aktivierter Einstellung; ältere Cues ohne Feld behalten das bisherige
 Verhalten. 316 lokale Tests grün (einschließlich zweier Sprecher und
-Alt-JSON). Die erste native Endzustandsprobe zeigte ein reales Problem:
-`setActorStanding` allein ließ den roten Gesten-Frame stehen
-(`gesture_after_pixels=[12,12,12,12,12,12]`). Daher startet der Export
-jetzt zusätzlich die konkrete native `stand`-Animation. Die bisherige
-Zwei-Frame-Klickprobe kontrolliert ihren Endzustand über mehrere Ticks.
+Alt-JSON). Die erste native Endzustandsprobe wertete zwölf rote Pixel
+in der unveränderten Standpose fälschlich als verbliebene Sprechgeste.
+Die Bildartefakte aus CI `42552675686` machten die statische Farbe
+sichtbar. Der Export startet zusätzlich die konkrete native `stand`-
+Animation. Die korrigierte Klickprobe zeichnet den stärksten Gesten-
+Frame auf und fordert danach einen über mehrere Ticks stabilen
+Standzustand mit weniger Gestenpixeln als am Maximum.
 **Offenes Pflichtgate:** Visueller stock-ScummVM-Endzustand und eine
 durchgeklickte Gradio-UI-Bedienung stehen zum jetzigen Zeitpunkt aus.
 **Nächstes Produktpaket:** Nach bestandenem Standpose-Gate die Gesten beim

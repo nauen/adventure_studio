@@ -151,7 +151,10 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     _capture(output, "linear")
                     ink = line_ink()
                     if gesture:
-                        colored = max(colored, gesture_ink())
+                        visible_red = gesture_ink()
+                        if visible_red > colored:
+                            colored = visible_red
+                            _capture(output, "gesture-frame")
                     if first is None and len(ink) >= 100:
                         first = ink
                         _capture(output, "linear-first")
@@ -160,8 +163,6 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                         second = ink
                         _capture(output, "linear-second")
                     if second is not None and (not gesture or colored >= 10):
-                        if gesture:
-                            _capture(output, "gesture-frame")
                         break
                     time.sleep(0.25)
                 report.update({"first_speaker_pixels": len(first or ()),
@@ -192,9 +193,16 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                             after.append(gesture_ink())
                             time.sleep(0.3)
                         _capture(output, "gesture-stand")
+                    # The stationary NPC contains twelve pixels close to the
+                    # gesture palette color. Zero is therefore not a valid
+                    # standing baseline. Compare against the recorded peak,
+                    # and require the post-dialogue samples to be stable.
+                    excess = colored - max(after) if after else 0
                     report.update({"gesture_message_finished": finished,
                                    "gesture_after_pixels": after,
-                                   "gesture_reset_verified": finished and bool(after) and max(after) == 0})
+                                   "gesture_peak_excess_pixels": excess,
+                                   "gesture_reset_verified": finished and len(after) == 6
+                                   and len(set(after)) == 1 and excess >= 2})
                     report["passed"] = report["passed"] and report["gesture_reset_verified"]
                     if not report["passed"]:
                         raise RuntimeError(f"Native Costume did not return to standing pose: {report}")
