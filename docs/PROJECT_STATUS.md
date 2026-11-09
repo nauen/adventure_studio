@@ -767,8 +767,10 @@ Altdateien unverändert; die zugeordneten nativen Actors werden sowohl in
 linearen als auch verzweigten Gesprächen vor ihrer `actorSay`-Zeile mit
 `setCurrentActor`/`setActorDirection` gedreht. Die Gameplay-Fixture
 setzt unterschiedliche Richtungen für zwei Sprecher über dieselbe
-Studio-Service-Operation. 307 lokale Tests grün; native ScummVM- und
-eigenständige Sichtprüfung der Blickrichtung noch ausstehend. Individuelle
+Studio-Service-Operation. 307 lokale Tests grün; der native ScummVM-Dialoglauf
+`42545583240` mit WEST/EAST-Cues ist erfolgreich. Die Befehle stehen im
+kompilierten `Harbor.scc`; ein isolierter Bildnachweis der Blickrichtung
+bleibt ausstehend. Individuelle
 Sprech-/Gesten-Costumes und Lippenanimation bleiben offen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;

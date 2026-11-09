@@ -71,7 +71,8 @@ erfolgreich (CI `42543308699`). Sichtnachweis der dritten Zeile separat offen.
 speichert optionale N/E/S/W-Blickrichtungs-Cues pro Sprechzeile. Lineare und
 verzweigte Dialoge setzen den sprechenden Actor vor der Ausgabe nativ über
 `setActorDirection`, während ältere Story-v4-Dokumente unverändert bleiben.
-307 lokale Tests grün; neuer nativer Laufzeit- und Sichtnachweis offen.
+307 lokale Tests grün; nativer Dialoglauf mit WEST/EAST-Cues in stock
+ScummVM erfolgreich (CI `42545583240`). Isolierte Sichtprüfung offen.
 
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und
