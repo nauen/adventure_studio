@@ -33,6 +33,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
                                dialogue_animation_lines, dialogue_animation_choices,
+                               dialogue_speaking_frames, assign_dialogue_speaking_frame,
                                edit_dialogue_animation)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
@@ -713,6 +714,9 @@ def make_app():
             with gr.Row():
                 native_dialogue_animation_line = gr.Dropdown(label="Sprecher-Dialogzeile")
                 native_dialogue_animation = gr.Dropdown(label="Costume-Animation")
+            with gr.Row():
+                native_dialogue_speaking_frame = gr.Dropdown(label="PNG-Frame der Sprecherfigur")
+                native_dialogue_speaking_apply = gr.Button("PNG-Sprechpose dieser Zeile zuweisen")
             native_dialogue_reset = gr.Checkbox(label="Nach der Sprechzeile zur Standpose zurückkehren",
                                                 value=True)
             with gr.Row():
@@ -1116,6 +1120,14 @@ def make_app():
         native_dialogue_animation_line.change(
             dialogue_animation_update, [native_state, native_dialogue_animation_line],
             [native_dialogue_animation, native_dialogue_reset])
+        native_dialogue_animation_line.change(
+            lambda raw, line: gr.update(choices=dialogue_speaking_frames(raw, line) if raw else (),
+                                        value=None),
+            [native_state, native_dialogue_animation_line], [native_dialogue_speaking_frame])
+        native_dialogue_speaking_apply.click(
+            lambda *args: native_edit(assign_dialogue_speaking_frame, *args),
+            [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame,
+             native_dialogue_reset], [native_state, *native_outputs, native_report])
         native_dialogue_animation_save.click(
             lambda *args: native_edit(edit_dialogue_animation, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_animation,

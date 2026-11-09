@@ -14,6 +14,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
+from .studio_actors import set_costume_speaking_pose
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
@@ -120,6 +121,34 @@ def dialogue_animation_choices(raw: str, line_id: str | None):
     reset = next((cue.reset_to_stand for cue in document.dialogue_animation_cues
                   if cue.line_id == line_id), True)
     return options, selected, reset
+
+
+def dialogue_speaking_frames(raw: str, line_id: str | None) -> tuple[str, ...]:
+    """Offer only imported frames belonging to the selected native speaker."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        return ()
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    return tuple(frame.id for frame in costume.frames)
+
+
+def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,
+                                   reset_to_stand: bool = True) -> str:
+    """Author a speaker's imported PNG pose and bind it to a dialogue line in one edit."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    sharing = [item.id for item in document.actors
+               if item.id != actor.id and item.costume == actor.costume]
+    if sharing:
+        raise ValueError("Die Costume wird auch von anderen Figuren verwendet: "
+                         + ", ".join(sharing) + ". Bitte zuerst eine eigene Costume zuweisen")
+    updated = set_costume_speaking_pose(raw, actor.costume, frame_id)
+    return edit_dialogue_animation(updated, line_id, "gesture", reset_to_stand)
 
 
 def edit_dialogue_animation(raw: str, line_id: str, animation: str | None,

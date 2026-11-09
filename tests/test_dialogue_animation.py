@@ -14,7 +14,8 @@ from adventure_studio.scumm_toolchain import dialogue_animation_bindings
 from adventure_studio.studio_actors import add_costume_frame, set_costume_speaking_pose
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
 from adventure_studio.studio_sequences import (compose_story_project, dialogue_animation_lines,
-                                                dialogue_animation_choices, edit_dialogue_animation)
+                                                dialogue_animation_choices, edit_dialogue_animation,
+                                                dialogue_speaking_frames, assign_dialogue_speaking_frame)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -168,6 +169,43 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertTrue((resources / "DialogueFigure_SpeakImported.bmp").is_file())
             self.assertIn("animateActor(SpeakerWitness,24);", room_source)
             self.assertIn("animateActor(SpeakerWitness,12);", room_source)
+
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Test benötigt Pillow")
+    def test_speaker_line_assigns_imported_frame_without_changing_other_speaker(self):
+        from PIL import Image
+
+        _story, raw = self.fixture()
+        original = parse_document(raw)
+        witness = next(line for label, line in dialogue_animation_lines(raw)
+                       if label.startswith("SpeakerWitness"))
+        with self.assertRaisesRegex(ValueError, "auch von anderen Figuren"):
+            assign_dialogue_speaking_frame(raw, witness, "Pose")
+
+        # Real authors can give two speaking characters different native costumes.
+        costume = replace(original.costumes[0], name="WitnessCostume")
+        actors = tuple(replace(actor, costume="WitnessCostume")
+                       if actor.id == "SpeakerWitness" else actor
+                       for actor in original.actors)
+        raw = canonical_json(replace(original, actors=actors,
+                                     costumes=(*original.costumes, costume)))
+        with tempfile.TemporaryDirectory() as directory:
+            png = Path(directory) / "witness.png"
+            Image.new("RGBA", (8, 8), (230, 35, 35, 255)).save(png)
+            raw = add_costume_frame(raw, "WitnessCostume", str(png), "WitnessSpeaking")
+            self.assertIn("WitnessSpeaking", dialogue_speaking_frames(raw, witness))
+            with self.assertRaisesRegex(ValueError, "Costume-Frame"):
+                assign_dialogue_speaking_frame(raw, witness, "not-imported")
+            updated = assign_dialogue_speaking_frame(raw, witness, "WitnessSpeaking")
+            document = parse_document(updated)
+            self.assertEqual(document.dialogue_animation_cues[0].animation, "gesture")
+            self.assertEqual(document.dialogue_animation_cues[0].line_id, witness)
+            self.assertIn("WitnessSpeaking", next(animation for animation in
+                document.costumes[1].animations if animation.name == "talk_start")
+                .directions[0].commands)
+            self.assertEqual(document.costumes[0], original.costumes[0])
+            source = scummc_room_source(document.rooms[0],
+                dialogue_animation_cues=dialogue_animation_bindings(document, document.rooms[0]))
+            self.assertIn("animateActor(SpeakerWitness,24);", source)
 
 
 if __name__ == "__main__":
