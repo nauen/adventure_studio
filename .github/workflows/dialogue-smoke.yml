@@ -133,6 +133,7 @@ jobs:
           path: |
             /tmp/dialogue-multispeaker-evidence/dialogue-report.json
             /tmp/dialogue-multispeaker-evidence/scummvm-speaker.png
+            /tmp/dialogue-multispeaker-evidence/scummvm-speaker-*.png
             /tmp/dialogue-multispeaker-evidence/scummvm-dismissed.png
             /tmp/dialogue-multispeaker-evidence/scummvm.log
             /tmp/dialogue-multispeaker-story/resources/Harbor.scc

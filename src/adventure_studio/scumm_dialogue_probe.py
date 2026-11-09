@@ -155,10 +155,14 @@ def run(game_directory: Path, output: Path, voice: bool = False,
 
                 opening_ink = None
                 text_pixels = 0
-                for _ in range(75):
+                for frame_index in range(75):
                     if process.poll() is not None:
                         raise RuntimeError("ScummVM exited while the native Actor was speaking")
                     _capture(output, "speaker")
+                    if frame_index % 8 == 0:
+                        from shutil import copyfile
+                        copyfile(output / "scummvm-speaker.png",
+                                 output / f"scummvm-speaker-{frame_index:02d}.png")
                     ink = speech_ink()
                     if opening_ink is None and len(ink) >= 20:
                         opening_ink = ink
@@ -168,6 +172,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                         break
                     time.sleep(0.25)
                 report["speaker_text_pixels"] = text_pixels
+                report["speaker_sample_frames"] = frame_index + 1
                 if text_pixels < 20:
                     raise RuntimeError("No distinct native Actor speech after answer caption")
             if nested:
