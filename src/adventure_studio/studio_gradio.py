@@ -38,7 +38,8 @@ from .studio_actors import (add_actor, actor_summary, costume_names, costume_sum
                             create_costume, add_costume_frame, set_costume_animation,
                             move_actor, costume_animation_names, costume_animation_steps,
                             costume_timeline_images, edit_costume_timeline,
-                            render_costume_preview, set_actor_initial_animation)
+                            render_costume_preview, set_actor_initial_animation,
+                            set_actor_costume)
 
 
 EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
@@ -630,6 +631,7 @@ def make_app():
                     native_actor_direction = gr.Dropdown(label="Blickrichtung", choices=["N", "E", "S", "W"], value="S")
                 native_actor_button = gr.Button("Actor im gewählten Raum anlegen")
                 native_actor_move = gr.Button("Ausgewählten Actor an diese Position bewegen")
+                native_actor_costume_save = gr.Button("Ausgewähltem Actor diese Costume zuweisen")
                 native_actor_list = gr.Textbox(label="Actors im Projekt", lines=4, interactive=False)
                 with gr.Row():
                     native_actor_initial = gr.Dropdown(label="Startanimation des ausgewählten Actors",
@@ -937,6 +939,11 @@ def make_app():
                                 [native_state, native_actor, native_room, native_actor_x,
                                  native_actor_y, native_actor_direction],
                                 [native_state, *native_outputs, native_report])
+        native_actor_costume_save.click(
+            lambda raw, actor_id, costume: native_asset_edit(
+                set_actor_costume, raw, actor_id, costume),
+            [native_state, native_actor, native_costume_select],
+            [native_state, *native_outputs, native_report])
         native_actor_initial_save.click(
             lambda raw, actor_id, animation: native_asset_edit(
                 set_actor_initial_animation, raw, actor_id, animation),

@@ -317,6 +317,23 @@ def move_actor(raw: str, actor_id: str, room: str, x: int | float, y: int | floa
     return canonical_json(replace(document, actors=actors))
 
 
+def set_actor_costume(raw: str, actor_id: str, costume_name: str) -> str:
+    """Bind an existing Story or native Actor to an authored COST resource."""
+    document = parse_document(raw)
+    actor = next((actor for actor in document.actors if actor.id == actor_id), None)
+    if actor is None:
+        raise ValueError("Unbekannter Actor")
+    costume = next((item for item in document.costumes if item.name == costume_name), None)
+    if costume is None:
+        raise ValueError("Bitte eine vorhandene Costume auswählen")
+    if (actor.initial_animation is not None
+            and actor.initial_animation not in {animation.name for animation in costume.animations}):
+        raise ValueError("Die Startanimation des Actors fehlt in der gewählten Costume")
+    actors = tuple(replace(item, costume=costume_name) if item.id == actor_id else item
+                   for item in document.actors)
+    return canonical_json(replace(document, actors=actors))
+
+
 def set_actor_initial_animation(raw: str, actor_id: str, animation: str | None) -> str:
     """Select a native COST animation to play when the Actor first enters the game."""
     document = parse_document(raw)
