@@ -200,6 +200,25 @@ def add_dialogue_choice(raw: str, node_id: str, choice_id: str, text: str,
         choice_id, node_id, text.strip(), target_node_id)))
 
 
+def change_dialogue_choice(raw: str, choice_id: str, text: str,
+                           target_node_id: str | None) -> StudioEdit:
+    """Edit an existing answer without changing its stable identity or parent."""
+    story = parse_story_document(raw)
+    choice = next((item for item in story.dialogue_choices if item.id == choice_id), None)
+    if choice is None:
+        raise ValueError("Unknown dialogue answer ID")
+    if not isinstance(text, str) or not text.strip() or len(text) > 4096:
+        raise ValueError("Answer text must be 1..4096 characters")
+    if target_node_id == "":
+        target_node_id = None
+    parent = next(node for node in story.dialogue_nodes if node.id == choice.node_id)
+    if target_node_id is not None and target_node_id not in {
+            node.id for node in story.dialogue_nodes if node.dialogue_id == parent.dialogue_id}:
+        raise ValueError("Answer target must be in the same dialogue")
+    return _commit(story, PutEntity("dialogue_choice", replace(
+        choice, text=text.strip(), next_node_id=target_node_id)))
+
+
 def extend_dialogue_choice(raw: str, choice_id: str, new_node_id: str,
                            text: str, speaker_id: str | None = None) -> StudioEdit:
     """Atomically attach a new response node to a previously terminal answer."""
