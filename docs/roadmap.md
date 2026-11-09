@@ -9,6 +9,13 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Native Sprecher-Costumes aus PNG (2026-11-09, Implementierung):** Bereits
+erzeugte Story-Sprecher-Actors können im gemeinsamen Studio eine vom Autor
+importierte native Costume erhalten. Die Bindung bleibt in der versionierten
+Projektdatei und im COST-Export erhalten. 312 lokale Tests grün;
+interaktive Gradio-/stock-ScummVM-Sichtabnahme offen. Nächster Schritt:
+eine konkrete Costume-Animation je gesprochener Dialogzeile authoren.
+
 **Dialogantworten editieren (2026-11-09, Implementierung):** Der Studio-
 Dialogeditor kann vorhandene Antworttexte und Folgeziele bei stabilen IDs
 ändern. Der Story-Solver schützt vor verwaisten Knoten; der native

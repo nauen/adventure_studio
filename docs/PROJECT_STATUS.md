@@ -14,6 +14,23 @@ Sequenzen authoren können.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
+**PNG-Costume einem Story-Sprecher zuweisen (Implementierung):** Nach dem
+Synchronisieren der Story mit dem nativen Studio-Projekt kann ein bereits
+vorhandener `Speaker<Figuren-ID>`-Actor eine aus PNG importierte Costume
+erhalten. Die Gradio-Aktion „Ausgewähltem Actor diese Costume zuweisen“
+übernimmt die gewählte Costume ohne die Sprecher-ID, Position oder die
+Dialogbindung zu verändern. Ein vorhandener Startanimationsname muss in der
+neuen Costume existieren. Der gemeinsame Projekt-Roundtrip bewahrt die
+Zuordnung, und der reguläre Export erzeugt die native `.scost`-Ressource.
+312 lokale Tests grün (der PNG-Integrationstest benötigt das optionale Pillow);
+eine echte visuelle ScummVM-Probe mit der neuen
+Actor-Grafik und ein durchgeklickter Gradio-UI-Pfad sind noch offen.
+**Nächstes Produktpaket:** Pro Dialogzeile eine vorhandene Costume-Animation
+des zugeordneten Actors authoren, im nativen Skript auslösen und die sichtbare
+Framefolge in stock ScummVM prüfen.
+
+## Vorheriges Produktpaket (2026-11-09)
+
 **Bestehende Dialogantworten bearbeiten (Implementierung):** Im Gradio-Reiter
 „Dialogzeilen“ kann eine vorhandene Antwort ausgewählt, ihr Text geändert
 und ihr Zielknoten innerhalb desselben Gesprächs neu gesetzt oder das Gespräch
