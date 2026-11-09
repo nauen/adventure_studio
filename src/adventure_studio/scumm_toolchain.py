@@ -95,7 +95,7 @@ def _tool(upstream: Path, name: str) -> Path:
     return candidates[0].resolve()
 
 
-def dialogue_animation_bindings(document, room) -> tuple[tuple[str, str, int], ...]:
+def dialogue_animation_bindings(document, room) -> tuple[tuple[str, str, int, bool], ...]:
     """Resolve validated line cues to native actor symbols and costume indices."""
     actors_by_id = {actor.id: actor for actor in document.actors}
     costumes_by_name = {costume.name: costume for costume in document.costumes}
@@ -110,7 +110,7 @@ def dialogue_animation_bindings(document, room) -> tuple[tuple[str, str, int], .
         actor_id = bindings[cue.line_id]
         costume = costumes_by_name[actors_by_id[actor_id].costume]
         animation = next(item for item in costume.animations if item.name == cue.animation)
-        result.append((cue.line_id, actor_id, animation.index))
+        result.append((cue.line_id, actor_id, animation.index, cue.reset_to_stand))
     return tuple(result)
 
 

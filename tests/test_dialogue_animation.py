@@ -35,9 +35,9 @@ class DialogueAnimationTests(unittest.TestCase):
         lines = dialogue_animation_lines(raw)
         self.assertEqual(len(lines), 2)
         witness = next(key for label, key in lines if label.startswith("SpeakerWitness"))
-        self.assertEqual(dialogue_animation_choices(raw, witness), (("gesture",), None))
+        self.assertEqual(dialogue_animation_choices(raw, witness), (("gesture",), None, True))
         raw = edit_dialogue_animation(raw, witness, "gesture")
-        self.assertEqual(dialogue_animation_choices(raw, witness), (("gesture",), "gesture"))
+        self.assertEqual(dialogue_animation_choices(raw, witness), (("gesture",), "gesture", True))
         document = parse_document(raw)
         self.assertEqual(canonical_json(document), raw)
         saved = canonical_studio_project(story, raw)
@@ -53,6 +53,10 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertLess(source.index("animateActor(SpeakerWitness,24);"),
                         source.index("waitForMessage();", source.index(
                             'actorSay(SpeakerWitness,"Der Schluessel liegt am Boden.")')))
+        wait = source.index("waitForMessage();", source.index(
+            'actorSay(SpeakerWitness,"Der Schluessel liegt am Boden.")'))
+        self.assertIn("setCurrentActor(SpeakerWitness);\n            setActorStanding();\n"
+                      "            setCurrentActor(VAR_EGO);", source[wait:])
         self.assertEqual(parse_document(edit_dialogue_animation(raw, witness, None)).dialogue_animation_cues, ())
 
     def test_branching_reply_and_invalid_costume_fail_closed(self):
@@ -67,6 +71,43 @@ class DialogueAnimationTests(unittest.TestCase):
         changed_story = story.replace("Der Schluessel liegt am Boden.", "Der Weg liegt am Boden.")
         with self.assertRaisesRegex(ValueError, "Stale dialogue animation"):
             compose_story_project(changed_story, bound)
+
+    def test_legacy_animation_without_reset_stays_compatible(self):
+        story, raw = self.fixture()
+        witness = next(key for label, key in dialogue_animation_lines(raw)
+                       if label.startswith("SpeakerWitness"))
+        legacy = edit_dialogue_animation(raw, witness, "gesture", False)
+        self.assertNotIn("reset_to_stand", legacy)
+        self.assertEqual(dialogue_animation_choices(legacy, witness), (("gesture",), "gesture", False))
+        document = parse_document(legacy)
+        source = scummc_room_source(document.rooms[0],
+                                   dialogue_animation_cues=dialogue_animation_bindings(
+                                       document, document.rooms[0]))
+        self.assertIn("animateActor(SpeakerWitness,24);", source)
+        self.assertNotIn("setCurrentActor(SpeakerWitness);\n            setActorStanding();", source)
+        with self.assertRaisesRegex(ValueError, "Standpose-Einstellung"):
+            edit_dialogue_animation(raw, witness, "gesture", 1)
+
+    def test_consecutive_speakers_reset_their_own_costumes(self):
+        _story, raw = self.fixture()
+        lines = dialogue_animation_lines(raw)
+        for _label, line in lines:
+            raw = edit_dialogue_animation(raw, line, "gesture", True)
+        document = parse_document(raw)
+        source = scummc_room_source(document.rooms[0],
+                                   dialogue_animation_cues=dialogue_animation_bindings(
+                                       document, document.rooms[0]))
+        self.assertEqual(source.count("animateActor(SpeakerHarborKeeper,24);"), 1)
+        self.assertEqual(source.count("animateActor(SpeakerWitness,24);"), 1)
+        for actor in ("SpeakerHarborKeeper", "SpeakerWitness"):
+            self.assertIn(f"setCurrentActor({actor});\n            setActorStanding();\n"
+                          "            setCurrentActor(VAR_EGO);", source)
+
+        missing = replace(document.costumes[0], animations=tuple(
+            animation for animation in document.costumes[0].animations
+            if animation.name != "stand"))
+        with self.assertRaisesRegex(ValueError, "stand pose"):
+            parse_document(canonical_json(replace(document, costumes=(missing,))))
 
 
 if __name__ == "__main__":

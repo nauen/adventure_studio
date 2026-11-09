@@ -168,6 +168,7 @@ jobs:
           path: |
             /tmp/dialogue-gesture-evidence/dialogue-report.json
             /tmp/dialogue-gesture-evidence/scummvm-gesture-frame.png
+            /tmp/dialogue-gesture-evidence/scummvm-gesture-stand.png
             /tmp/dialogue-gesture-evidence/scummvm-linear-second.png
             /tmp/dialogue-gesture-evidence/scummvm.log
             /tmp/dialogue-gesture-story/project.json

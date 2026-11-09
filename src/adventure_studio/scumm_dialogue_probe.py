@@ -171,6 +171,33 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                                "passed": bool(first and second and (not gesture or colored >= 10))})
                 if not report["passed"]:
                     raise RuntimeError(f"Native two-speaker text or authored Costume gesture was not visible: {report}")
+                if gesture:
+                    # Wait until the last spoken message has actually left
+                    # the screen; only then may the authored standing reset
+                    # have executed. Sample across several animation ticks.
+                    finished = False
+                    for _ in range(55):
+                        if process.poll() is not None:
+                            raise RuntimeError("ScummVM exited before gesture reset")
+                        _capture(output, "linear")
+                        if len(line_ink()) < 20:
+                            finished = True
+                            break
+                        time.sleep(0.25)
+                    after = []
+                    if finished:
+                        time.sleep(0.4)
+                        for _ in range(6):
+                            _capture(output, "linear")
+                            after.append(gesture_ink())
+                            time.sleep(0.3)
+                        _capture(output, "gesture-stand")
+                    report.update({"gesture_message_finished": finished,
+                                   "gesture_after_pixels": after,
+                                   "gesture_reset_verified": finished and bool(after) and max(after) == 0})
+                    report["passed"] = report["passed"] and report["gesture_reset_verified"]
+                    if not report["passed"]:
+                        raise RuntimeError(f"Native Costume did not return to standing pose: {report}")
                 return report
             if voice:
                 # The native cursor/actor walk to the NPC must complete first.

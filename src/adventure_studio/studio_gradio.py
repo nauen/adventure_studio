@@ -707,6 +707,8 @@ def make_app():
             with gr.Row():
                 native_dialogue_animation_line = gr.Dropdown(label="Sprecher-Dialogzeile")
                 native_dialogue_animation = gr.Dropdown(label="Costume-Animation")
+            native_dialogue_reset = gr.Checkbox(label="Nach der Sprechzeile zur Standpose zurückkehren",
+                                                value=True)
             with gr.Row():
                 native_dialogue_animation_save = gr.Button("Sprechanimation zuweisen")
                 native_dialogue_animation_remove = gr.Button("Sprechanimation entfernen")
@@ -1092,15 +1094,16 @@ def make_app():
             [native_state], [native_dialogue_animation_line])
         def dialogue_animation_update(raw, line):
             if not raw:
-                return gr.update(choices=[], value=None)
-            choices, selected = dialogue_animation_choices(raw, line)
-            return gr.update(choices=choices, value=selected)
+                return gr.update(choices=[], value=None), True
+            choices, selected, reset = dialogue_animation_choices(raw, line)
+            return gr.update(choices=choices, value=selected), reset
         native_dialogue_animation_line.change(
             dialogue_animation_update, [native_state, native_dialogue_animation_line],
-            [native_dialogue_animation])
+            [native_dialogue_animation, native_dialogue_reset])
         native_dialogue_animation_save.click(
             lambda *args: native_edit(edit_dialogue_animation, *args),
-            [native_state, native_dialogue_animation_line, native_dialogue_animation],
+            [native_state, native_dialogue_animation_line, native_dialogue_animation,
+             native_dialogue_reset],
             [native_state, *native_outputs, native_report])
         native_dialogue_animation_remove.click(
             lambda raw, line: native_edit(edit_dialogue_animation, raw, line, None),

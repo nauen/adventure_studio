@@ -14,6 +14,26 @@ Sequenzen authoren können.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
+**Sprechgesten mit definierter Standpose (Implementierung):** Zu einer
+nativen Dialoganimation kann der Autor nun im Studio „Nach der Sprechzeile
+zur Standpose zurückkehren“ auswählen. Nach `waitForMessage` und optionalem
+VOC-Stopp setzt der SCUMM-v6-Exporter den betroffenen Actor ausdrücklich
+mit `setCurrentActor`/`setActorStanding` zurück und stellt danach Ego als
+aktiven Actor wieder her. Beim Wechsel mehrerer Sprecher gilt das jeweils
+für die tatsächliche Actor-Bindung; fehlende `stand`-Richtungen werden
+abgewiesen. Das versionierte Projekt-JSON speichert `reset_to_stand` nur
+bei aktivierter Einstellung; ältere Cues ohne Feld behalten das bisherige
+Verhalten. 316 lokale Tests grün (einschließlich zweier Sprecher und
+Alt-JSON). Die bisherige native Zwei-Frame-Klickprobe wurde um einen
+mehrfach abgetasteten Endzustand erweitert.
+**Offenes Pflichtgate:** Visueller stock-ScummVM-Endzustand und eine
+durchgeklickte Gradio-UI-Bedienung stehen zum jetzigen Zeitpunkt aus.
+**Nächstes Produktpaket:** Nach bestandenem Standpose-Gate die Gesten beim
+Sprecherwechsel mit real importierten PNG-Frames im Editor-End-to-End-Fluss
+prüfen; danach zeitgebundene Audio-/Lippen-Cues authoren.
+
+## Vorheriges Produktpaket: Dialoganimation
+
 **Costume-Animation je nativer Sprecherzeile (Implementierung):** Im nativen
 Studio-Bereich kann eine Dialogzeile mit gebundenem `Speaker`-Actor eine
 indizierte Costume-Animation erhalten oder die Zuordnung wieder entfernen.

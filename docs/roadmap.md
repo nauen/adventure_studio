@@ -9,6 +9,14 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprechanimationen kontrolliert beenden (2026-11-09, Implementierung):**
+Optionale Standpose-Rücksetzung je Dialog-Cue im nativen Studio, nach
+`waitForMessage` und ggf. VOC-Stopp. Sprecherwechsel verwenden den
+jeweiligen Actor, ältere Cue-JSONs bleiben unverändert. 316 lokale Tests
+grün; die erweiterte native ScummVM-Klickprobe muss den animierten Frame
+und dessen bleibendes Ende über mehrere Ticks noch bestätigen.
+Danach: Gradio-End-to-End und echte PNG-Costume-Sprecherwechsel.
+
 **Sprechgesten je Dialogzeile (2026-11-09, Implementierung):** Native
 Dialogzeilen mit Actor-Bindung können im Studio eine bereits authorierte
 indizierte Costume-Animation auswählen. Gemeinsame JSON-Persistenz,
