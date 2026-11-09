@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from dataclasses import replace
 import unittest
 
 from adventure_studio.dialogue_demo import dialogue_fixture
@@ -16,7 +17,10 @@ EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 class SpeakerCostumeBindingTests(unittest.TestCase):
     def test_png_costume_replaces_story_speaker_pose_in_export(self):
-        from PIL import Image
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("PNG authoring requires the optional Studio/Pillow dependency")
 
         story = dialogue_fixture(EXAMPLE.read_text(encoding="utf-8"), multispeaker=True)
         with TemporaryDirectory() as directory:
@@ -47,6 +51,19 @@ class SpeakerCostumeBindingTests(unittest.TestCase):
             resources.mkdir()
             export_document(document, resources)
             self.assertTrue((resources / "WitnessArt.scost").is_file())
+
+    def test_existing_costume_can_be_assigned_to_a_story_speaker(self):
+        from adventure_studio.scumm_project import canonical_json
+
+        story = dialogue_fixture(EXAMPLE.read_text(encoding="utf-8"), multispeaker=True)
+        document = parse_document(compose_story_project(story))
+        alternate = replace(document.costumes[0], name="AlternatePortrait")
+        native = canonical_json(replace(document, costumes=(*document.costumes, alternate)))
+        bound = parse_document(set_actor_costume(native, "SpeakerWitness", "AlternatePortrait"))
+        self.assertEqual(next(actor.costume for actor in bound.actors
+                              if actor.id == "SpeakerWitness"), "AlternatePortrait")
+        self.assertEqual(next(actor.costume for actor in bound.actors
+                              if actor.id == "SpeakerHarborKeeper"), "DialogueFigure")
 
     def test_rejects_missing_actor_or_costume(self):
         story = dialogue_fixture(EXAMPLE.read_text(encoding="utf-8"), multispeaker=True)

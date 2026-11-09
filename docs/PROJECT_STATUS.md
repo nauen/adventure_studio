@@ -22,7 +22,8 @@ erhalten. Die Gradio-Aktion „Ausgewähltem Actor diese Costume zuweisen“
 Dialogbindung zu verändern. Ein vorhandener Startanimationsname muss in der
 neuen Costume existieren. Der gemeinsame Projekt-Roundtrip bewahrt die
 Zuordnung, und der reguläre Export erzeugt die native `.scost`-Ressource.
-311 lokale Tests grün; eine echte visuelle ScummVM-Probe mit der neuen
+312 lokale Tests grün (der PNG-Integrationstest benötigt das optionale Pillow);
+eine echte visuelle ScummVM-Probe mit der neuen
 Actor-Grafik und ein durchgeklickter Gradio-UI-Pfad sind noch offen.
 **Nächstes Produktpaket:** Pro Dialogzeile eine vorhandene Costume-Animation
 des zugeordneten Actors authoren, im nativen Skript auslösen und die sichtbare
