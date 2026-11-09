@@ -28,7 +28,8 @@ def build(directory: Path) -> None:
                                       for item in document.costumes),
                        # Keep NPC costumes away from the talk hotspot and
                        # from Ego, who walks onto that hotspot before speech.
-                       actors=tuple(replace(actor, initial_animation="stand",
+                       actors=tuple(replace(actor, initial_animation=(
+                                                "gesture" if actor.id == "SpeakerWitness" else "stand"),
                                             x=280 if actor.id == "SpeakerWitness" else 135,
                                             y=100)
                                     if actor.costume == costume.name else actor

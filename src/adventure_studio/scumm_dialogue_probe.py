@@ -120,6 +120,13 @@ def run(game_directory: Path, output: Path, voice: bool = False,
             report.update({"answer_pixels_before": before, "actor_pixels": actor_count})
             if not ready:
                 raise RuntimeError(f"Initial scene/character not ready: {report}")
+            if gesture:
+                from PIL import Image
+                with Image.open(output / "scummvm-before.png") as image:
+                    rgb = image.convert("RGB")
+                    report["gesture_initial_pixels"] = sum(
+                        close_rgb(rgb.getpixel((col, row)), (220, 80, 80), 25)
+                        for row in range(330, 430) for col in range(680, 810))
             if voice:
                 _run(["xdotool", "key", "1"])  # sorted languages: de, en
                 time.sleep(0.6)
