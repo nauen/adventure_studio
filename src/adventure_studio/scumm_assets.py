@@ -29,6 +29,7 @@ class RoomHotspot:
     open_sprite_pixels: bytes | None = None
     exit_destination: str | None = None
     talk_lines: tuple[str, ...] = ()
+    talk_actor_lines: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -234,6 +235,10 @@ def _validate(room: RoomAsset) -> None:
         _scumm_string(hotspot.description)
         if len(hotspot.talk_lines) > 16:
             raise ValueError("Dialogue exceeds sixteen lines per actor hotspot")
+        if hotspot.talk_actor_lines and (len(hotspot.talk_actor_lines) != len(hotspot.talk_lines)
+                or any(not isinstance(actor, str) or not _IDENTIFIER.fullmatch(actor)
+                       for actor in hotspot.talk_actor_lines)):
+            raise ValueError("Linear dialogue Actor bindings must match every spoken line")
         for line in hotspot.talk_lines:
             _scumm_string(line)
         if any(type(v) is not int for v in (hotspot.x, hotspot.y, hotspot.width, hotspot.height)):
@@ -417,6 +422,9 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         translations = {line.id: dict(line.translations) for line in catalog.lines}
     cues = {cue.line_id: cue for cue in dialogue_voice_cues}
     line_actors = {key: actor for rule in room.talk_rules for key, actor in rule.actor_lines}
+    for hotspot in room.hotspots:
+        for index, actor in enumerate(hotspot.talk_actor_lines):
+            line_actors[f"room.{room.name.lower()}.object.{hotspot.id.lower()}.talk.{index}"] = actor
 
     def say(key: str, original: str, indent: int) -> str:
         actor = line_actors.get(key)

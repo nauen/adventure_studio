@@ -356,7 +356,9 @@ def document_dict(document: GameDocument) -> dict:
                           "pickup": h.pickup, "sprite_pixels": _encode_pixels(h.sprite_pixels),
                           "open_sprite_pixels": _encode_pixels(h.open_sprite_pixels),
                           "exit_destination": h.exit_destination,
-                          **({"talk_lines": list(h.talk_lines)} if h.talk_lines else {})} for h in room.hotspots],
+                          **({"talk_lines": list(h.talk_lines)} if h.talk_lines else {}),
+                          **({"talk_actor_lines": list(h.talk_actor_lines)}
+                             if h.talk_actor_lines else {})} for h in room.hotspots],
             "use_rules": [{"item_id": r.item_id, "target_id": r.target_id,
                            "response": r.response, "hide_target": r.hide_target,
                            "destination_room": r.destination_room, "open_target": r.open_target,
@@ -521,6 +523,11 @@ def _validate_document(document: GameDocument) -> None:
     actors_by_id = {actor.id: actor for actor in document.actors}
     rooms_by_name = {room.name: room for room in document.rooms}
     for room in document.rooms:
+        for hotspot in room.hotspots:
+            for actor_id in hotspot.talk_actor_lines:
+                actor = actors_by_id.get(actor_id)
+                if actor is None or actor.room != room.name:
+                    raise ValueError("Linear dialogue speaker requires a native Actor in its room")
         for dialogue in room.talk_rules:
             for line_id, actor_id in dialogue.actor_lines:
                 actor = actors_by_id.get(actor_id)
@@ -1035,7 +1042,8 @@ def parse_document(source: str) -> GameDocument:
         hotspots = []
         for item in room["hotspots"]:
             h = _only(item, {"id", "label", "description", "x", "y", "width", "height", "pickup",
-                             "sprite_pixels", "open_sprite_pixels", "exit_destination", "talk_lines"},
+                             "sprite_pixels", "open_sprite_pixels", "exit_destination", "talk_lines",
+                             "talk_actor_lines"},
                       {"id", "label", "description", "x", "y", "width", "height", "pickup",
                        "sprite_pixels", "open_sprite_pixels", "exit_destination"})
             if type(h["pickup"]) is not bool:
@@ -1043,11 +1051,15 @@ def parse_document(source: str) -> GameDocument:
             talk_lines = h.get("talk_lines", [])
             if not isinstance(talk_lines, list) or not all(isinstance(x, str) for x in talk_lines):
                 raise ValueError("Invalid dialogue lines")
+            talk_actor_lines = h.get("talk_actor_lines", [])
+            if (not isinstance(talk_actor_lines, list)
+                    or not all(isinstance(x, str) for x in talk_actor_lines)):
+                raise ValueError("Invalid linear dialogue Actor bindings")
             hotspots.append(RoomHotspot(
                 h["id"], h["label"], h["description"], h["x"], h["y"], h["width"], h["height"],
                 h["pickup"], _decode_pixels(h["sprite_pixels"]) if h["sprite_pixels"] is not None else None,
                 _decode_pixels(h["open_sprite_pixels"]) if h["open_sprite_pixels"] is not None else None,
-                h["exit_destination"], tuple(talk_lines),
+                h["exit_destination"], tuple(talk_lines), tuple(talk_actor_lines),
             ))
         rules = []
         for item in room["use_rules"]:

@@ -82,6 +82,7 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
             raise ValueError(f"Only one dialogue per character is supported: {actor.id}")
         lines = []
         line_speakers = []
+        linear_actor_ids: tuple[str, ...] = ()
         if dialogues:
             dialogue = dialogues[0]
             nodes = {n.id: n for n in story.dialogue_nodes if n.dialogue_id == dialogue.id}
@@ -178,16 +179,18 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                         bind(f"{base}.stage.{len(stages) - 1}.opening.0", nodes[node_id].speaker_id)
                 rules.append(TalkRule(actor.id, tuple(lines), root_choices, tuple(stages),
                                       tuple(actor_lines)))
-            elif multi:
-                raise ValueError("Multispeaker dialogue currently requires at least one answer stage")
-            elif len(lines) > 16:
-                raise ValueError("Dialogue opening exceeds sixteen lines")
+            else:
+                if len(lines) > 16:
+                    raise ValueError("Dialogue opening exceeds sixteen lines")
+                if multi:
+                    linear_actor_ids = tuple(f"Speaker{speaker}" for speaker in line_speakers)
         x = 185 + index * 35
         if x + 16 > room_width:
             raise ValueError("Too many characters for automatic room layout")
         result.append(RoomHotspot(actor.id, _text(actor.name), _text(actor.description),
                                   x, 110, 16, 16, sprite_pixels=_sprite(6, 3),
-                                  talk_lines=tuple(lines) if not rules or rules[-1].speaker_id != actor.id else ()))
+                                  talk_lines=tuple(lines) if not rules or rules[-1].speaker_id != actor.id else (),
+                                  talk_actor_lines=linear_actor_ids))
     return tuple(result), tuple(rules)
 
 
@@ -359,6 +362,8 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
         ))
     active_speakers = {actor for room in result for dialogue in room.talk_rules
                        for _line, actor in dialogue.actor_lines}
+    active_speakers.update(actor for room in result for hotspot in room.hotspots
+                           for actor in hotspot.talk_actor_lines)
     if not active_speakers:
         return GameDocument(story.chapters[0].id + "Game", tuple(result))
     palette = [(0, 0, 0)] * 48

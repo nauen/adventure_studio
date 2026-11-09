@@ -734,6 +734,17 @@ Die Antwort wird angeklickt, danach erscheint die separate schwarze
 eine von den Antwortobjekten getrennte Farbe. Mehrsprecher-Gespräche ohne
 Auswahlstufe und Costume-Lippensynchronisierung bleiben offen.
 
+**Lineare Mehrsprecher-Gespräche (2026-11-09, nativ bestätigt):**
+Auch Sprechketten ohne Antwortmenü exportieren jetzt die vom Story-Editor
+zugeordneten Figuren als native `actorSay`-Zeilen. Der SCUMM-Raum hält dafür
+optionale `talk_actor_lines` pro Hotspot; einstufige Altprojekte behalten
+ihre unveränderte JSON-Struktur und `egoSay`-Ausgabe. Die neuen Actor-Bindungen
+werden auf Vollständigkeit und Szenenzugehörigkeit geprüft. 301 lokale Tests
+sind grün. Die eigenständige native Zwei-Sprecher-Probe hat im unveränderten
+ScummVM-Interpreter zwei aufeinanderfolgende, unterschiedliche Sprechtexte
+ohne Antwortmenü sichtbar bestätigt (CI `42542244245`, 112 und 1056
+Textpixel, `passed: true`). Costume-Lippensync bleibt offen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

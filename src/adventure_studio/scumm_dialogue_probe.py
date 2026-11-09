@@ -76,14 +76,16 @@ def _click(x: int, y: int) -> None:
 
 
 def run(game_directory: Path, output: Path, voice: bool = False,
-        nested: bool = False, multispeaker: bool = False) -> dict:
+        nested: bool = False, multispeaker: bool = False,
+        linear_multispeaker: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Virtual X display required")
     if not all((game_directory / f"tentacle.{part}").is_file() for part in ("000", "001")):
         raise ValueError("Linked SCUMM dialogue game is missing")
     output.mkdir(parents=True, exist_ok=True)
     report: dict = {"game": "dialogue-choices", "passed": False, "voice": voice,
-                    "nested": nested, "multispeaker": multispeaker}
+                    "nested": nested, "multispeaker": multispeaker,
+                    "linear_multispeaker": linear_multispeaker}
     pcm_path = output / "dialogue-voice.raw"
     with (output / "scummvm.log").open("w", encoding="utf-8") as log:
         process = subprocess.Popen(["scummvm", f"--path={game_directory.resolve()}", "tentacle"],
@@ -116,8 +118,44 @@ def run(game_directory: Path, output: Path, voice: bool = False,
             # The inherited DOTT verb GUI is in fixed 1024x768 Xvfb coords.
             _click(330, 560)  # Talk to
             x, y = ((192 + 185 * 2 + 16, 184 + 110 * 2 + 16)
-                    if multispeaker else _color_center(output, "before", ACTOR_RGB))
+                    if multispeaker or linear_multispeaker else
+                    _color_center(output, "before", ACTOR_RGB))
             _click(x, y)
+            if linear_multispeaker:
+                # Each of two consecutive actorSay lines paints different
+                # black glyphs in the native room's top speech strip.
+                from PIL import Image
+
+                def line_ink() -> set[tuple[int, int]]:
+                    with Image.open(output / "scummvm-linear.png") as frame:
+                        rgb = frame.convert("RGB")
+                        return {(col, row) for row in range(184, 216)
+                                for col in range(300, 800)
+                                if close_rgb(rgb.getpixel((col, row)), (0, 0, 0), 10)}
+
+                first = None
+                second = None
+                for _ in range(85):
+                    if process.poll() is not None:
+                        raise RuntimeError("ScummVM exited during linear NPC dialogue")
+                    _capture(output, "linear")
+                    ink = line_ink()
+                    if first is None and len(ink) >= 100:
+                        first = ink
+                        _capture(output, "linear-first")
+                    elif first is not None and len(ink) >= 100 and len(
+                            first.symmetric_difference(ink)) > 150:
+                        second = ink
+                        _capture(output, "linear-second")
+                        break
+                    time.sleep(0.25)
+                report.update({"first_speaker_pixels": len(first or ()),
+                               "second_speaker_pixels": len(second or ()),
+                               "answer_pixels_visible": 0,
+                               "passed": bool(first and second)})
+                if not report["passed"]:
+                    raise RuntimeError("Two distinct linear Actor speech lines were not visible")
+                return report
             if voice:
                 # The native cursor/actor walk to the NPC must complete first.
                 time.sleep(3.6)
@@ -230,12 +268,14 @@ def main() -> int:
     voice = len(sys.argv) == 4 and sys.argv[1] == "--voice"
     nested = len(sys.argv) == 4 and sys.argv[1] == "--nested"
     multispeaker = len(sys.argv) == 4 and sys.argv[1] == "--multispeaker"
-    if (len(sys.argv) != 3 and not voice and not nested and not multispeaker):
-        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested|--multispeaker] GAME_DIR OUTPUT_DIR")
+    linear_multispeaker = len(sys.argv) == 4 and sys.argv[1] == "--linear-multispeaker"
+    if (len(sys.argv) != 3 and not voice and not nested and not multispeaker and not linear_multispeaker):
+        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested|--multispeaker|--linear-multispeaker] GAME_DIR OUTPUT_DIR")
         return 2
-    report = run(Path(sys.argv[2] if voice or nested or multispeaker else sys.argv[1]),
-                 Path(sys.argv[3] if voice or nested or multispeaker else sys.argv[2]),
-                 voice=voice, nested=nested, multispeaker=multispeaker)
+    report = run(Path(sys.argv[2] if voice or nested or multispeaker or linear_multispeaker else sys.argv[1]),
+                 Path(sys.argv[3] if voice or nested or multispeaker or linear_multispeaker else sys.argv[2]),
+                 voice=voice, nested=nested, multispeaker=multispeaker,
+                 linear_multispeaker=linear_multispeaker)
     print(json.dumps(report, sort_keys=True))
     return 0 if report["passed"] else 1
 

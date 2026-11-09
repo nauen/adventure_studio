@@ -125,6 +125,29 @@ jobs:
           python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-multispeaker-story --multispeaker
           python -m adventure_studio.scumm_toolchain /tmp/dialogue-multispeaker-story /tmp/scummc-upstream /tmp/dialogue-multispeaker-game
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --multispeaker /tmp/dialogue-multispeaker-game /tmp/dialogue-multispeaker-evidence
+      - name: Play a two-speaker conversation without choices in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-linear-story --linear-multispeaker
+          cp -a /tmp/scummc-upstream /tmp/scummc-linear-upstream
+          test -s /tmp/scummc-linear-upstream/examples/road/DialogueFigure.cost
+          mv /tmp/scummc-linear-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-multispeaker-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-linear-story /tmp/scummc-linear-upstream /tmp/dialogue-linear-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --linear-multispeaker /tmp/dialogue-linear-game /tmp/dialogue-linear-evidence
+      - name: Retain native linear multi-Actor dialogue evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-linear-multispeaker-dialogue
+          path: |
+            /tmp/dialogue-linear-evidence/dialogue-report.json
+            /tmp/dialogue-linear-evidence/scummvm-linear-first.png
+            /tmp/dialogue-linear-evidence/scummvm-linear-second.png
+            /tmp/dialogue-linear-evidence/scummvm.log
+            /tmp/dialogue-linear-story/resources/Harbor.scc
+            /tmp/dialogue-linear-story/project.json
+          if-no-files-found: ignore
       - name: Retain native multi-Actor dialogue evidence
         if: always()
         uses: actions/upload-artifact@v4
