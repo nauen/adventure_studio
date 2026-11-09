@@ -470,7 +470,8 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                        + " " * indent + f"setActorTalkFrame({animation[1] // 4},{animation[2] // 4});\n"
                        + " " * indent + "setCurrentActor(VAR_EGO);\n"
                        if animation is not None and animation[2] is not None else "")
-        animate = (" " * indent + f"animateActor({animation[0]},{animation[1]});\n"
+        animate = (" " * indent + "delay(1);\n"
+                   + " " * indent + f"animateActor({animation[0]},{animation[1]});\n"
                    if animation is not None else "")
         standing = (" " * indent + f"setCurrentActor({animation[0]});\n"
                     + " " * indent + "setActorStanding();\n"
