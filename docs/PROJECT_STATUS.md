@@ -20,8 +20,9 @@ mit einem Klick als `gesture`-Sprechpose für alle vier Blickrichtungen
 zuweisen. Die Geste verwendet Index 24 und bleibt bis zum eigens
 autorisierten Standpose-Reset sichtbar; die vorhandene `stand`-Animation
 bleibt unberührt. Der Produktpfad nutzt das gleiche validierte
-Projekt-JSON wie der native Export. 317 lokale Tests grün, inklusive
-PNG-Import, vier Richtungen, ungültigem Frame und Costume-Exportpfad.
+Projekt-JSON wie der native Export. 318 lokale Tests grün, inklusive
+PNG-Import, vier Richtungen, ungültigem Frame, nativer COST-Quelldatei
+und Dialog-Cue-Bindung im ScummC-Quellgenerator.
 **Offen:** Durchgeklickter Gradio-Pfad und der strenge stock-ScummVM-
 Sichtnachweis; PR #78 bleibt bis zu einem grünen nativen Gate offen.
 

@@ -13,8 +13,9 @@
 Im nativen Costume-Editor wird ein vorhandenes PNG-Frame als dauerhaft
 sichtbare `gesture`-Pose für alle vier Actor-Richtungen gesetzt. Die
 Standpose bleibt erhalten, der bestehende Dialog-Cue verwendet die
-indizierte Animation. 317 lokale Tests grün, native ScummVM-Bildprobe
-und interaktive Gradio-Abnahme noch ausstehend (PR #78).
+indizierte Animation. 318 lokale Tests grün (PNG-zu-COST und
+Dialog-Quellgenerierung), native ScummVM-Bildprobe und interaktive
+Gradio-Abnahme noch ausstehend (PR #78).
 
 
 **Sprechanimationen kontrolliert beenden (2026-11-09, Implementierung):**
