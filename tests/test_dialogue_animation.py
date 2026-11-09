@@ -64,7 +64,7 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertIn("setCurrentActor(SpeakerWitness);\n            setActorStanding();\n"
                       "            setActorTalkFrame(4,5);\n            setCurrentActor(VAR_EGO);", source[wait:])
         self.assertIn("animateActor(SpeakerWitness,12);", source[wait:])
-        self.assertIn("setActorTalkFrame(6,3);", source)
+        self.assertNotIn("setActorTalkFrame(6,3);", source)
         self.assertIn("setActorTalkFrame(4,5);", source[wait:])
         self.assertEqual(parse_document(edit_dialogue_animation(raw, witness, None)).dialogue_animation_cues, ())
 
