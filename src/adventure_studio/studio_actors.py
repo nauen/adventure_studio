@@ -75,6 +75,8 @@ def create_costume(raw: str, png_path: str, name: str) -> str:
                     for direction in ("N", "E", "S", "W"))
     costume = CostumeAsset(name, palette, (frame,), (
         CostumeAnimation("stand", directions, 12),
+        CostumeAnimation("talk_start", directions, 16),
+        CostumeAnimation("talk_stop", directions, 20),
         CostumeAnimation("gesture", actions, 24)))
     return canonical_json(replace(document, costumes=(*document.costumes, costume)))
 
@@ -169,11 +171,23 @@ def set_costume_speaking_pose(raw: str, costume_name: str, frame_id: str) -> str
     existing = next((animation for animation in costume.animations if animation.name == "gesture"), None)
     if existing is not None and existing.index not in (None, 24):
         raise ValueError("Die vorhandene gesture-Animation verwendet einen anderen nativen Index")
+    stand = next((animation for animation in costume.animations if animation.name == "stand"), None)
+    if stand is None or stand.index != 12:
+        raise ValueError("Die Sprechpose benötigt eine native stand-Animation mit Index 12")
+    for name, index in (("talk_start", 16), ("talk_stop", 20)):
+        previous = next((animation for animation in costume.animations if animation.name == name), None)
+        if previous is not None and previous.index != index:
+            raise ValueError(f"Die native {name}-Animation benötigt Index {index}")
     gesture = CostumeAnimation("gesture", tuple(
         CostumeDirection(direction, (frame_id,), True)
         for direction in ("N", "E", "S", "W")), 24)
-    animations = tuple(animation for animation in costume.animations if animation.name != "gesture")
-    updated = replace(costume, animations=(*animations, gesture))
+    talk_start = CostumeAnimation("talk_start", gesture.directions, 16)
+    talk_stop = CostumeAnimation("talk_stop", tuple(
+        CostumeDirection(direction.direction, direction.commands, True)
+        for direction in stand.directions), 20)
+    animations = tuple(animation for animation in costume.animations
+                       if animation.name not in ("gesture", "talk_start", "talk_stop"))
+    updated = replace(costume, animations=(*animations, talk_start, talk_stop, gesture))
     costumes = tuple(updated if item.name == costume_name else item for item in document.costumes)
     return canonical_json(replace(document, costumes=costumes))
 

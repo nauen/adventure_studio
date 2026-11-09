@@ -14,6 +14,21 @@ Sequenzen authoren können.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
+**Aktuellster nativer Nachweis (vor Merge):** Der stock-ScummVM-Dialogtest
+hat die rote Sprechgeste mit 256 Pixeln sichtbar gemacht und später
+deren Rückkehr zu 0 Pixeln bestätigt. Nach Anpassung der Bildprobe auf
+sechs *aufeinanderfolgende* Standframes ist der native Gesten-/Standpose-
+Schritt auf Commit `2dc5271` **grün**. Ausschlaggebend waren die
+reservierten COST-Talk-Start-/Stop-Slots 16/20 und ein begrenztes
+Endzustands-Wartefenster; die Geste 24 bleibt als editierbarer Cue
+erhalten. Der Studio-Ein-Klick-Pfad erzeugt jetzt selbst `talk_start`
+(Index 16) aus dem gewählten PNG-Frame und `talk_stop` (Index 20) aus
+der Standpose; der Validator prüft die Übereinstimmung bei aktiviertem
+Reset. 318 lokale Tests grün. **Noch offen:** vollständiger aktueller
+CI-Lauf und interaktive Gradio-Bedienabnahme. Die folgenden älteren
+Absätze dokumentieren die Fehlersuche, nicht mehr den letzten Status.
+
+
 **Sprechpose aus importiertem PNG-Frame (Implementierung):** Im
 Costume-Editor kann der Autor ein zuvor importiertes Frame auswählen und
 mit einem Klick als `gesture`-Sprechpose für alle vier Blickrichtungen

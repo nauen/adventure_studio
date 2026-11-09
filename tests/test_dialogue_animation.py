@@ -29,10 +29,15 @@ class DialogueAnimationTests(unittest.TestCase):
         gesture = CostumeAnimation("gesture", tuple(
             CostumeDirection(direction, ("Pose",), False)
             for direction in ("N", "E", "S", "W")), 24)
+        talk_start = CostumeAnimation("talk_start", gesture.directions, 16)
+        talk_stop = CostumeAnimation("talk_stop", tuple(
+            CostumeDirection(direction, ("Pose",))
+            for direction in ("N", "E", "S", "W")), 20)
         document = replace(document, costumes=(replace(
             costume, animations=tuple(replace(animation, index=12)
                                       if animation.name == "stand" else animation
-                                      for animation in costume.animations) + (gesture,)),))
+                                      for animation in costume.animations)
+                         + (talk_start, talk_stop, gesture)),))
         return story, canonical_json(document)
 
     def test_linear_speaker_cue_survives_project_and_compiles_actor_command(self):
@@ -40,9 +45,9 @@ class DialogueAnimationTests(unittest.TestCase):
         lines = dialogue_animation_lines(raw)
         self.assertEqual(len(lines), 2)
         witness = next(key for label, key in lines if label.startswith("SpeakerWitness"))
-        self.assertEqual(dialogue_animation_choices(raw, witness), (("stand", "gesture"), None, True))
+        self.assertEqual(dialogue_animation_choices(raw, witness), (("gesture",), None, True))
         raw = edit_dialogue_animation(raw, witness, "gesture")
-        self.assertEqual(dialogue_animation_choices(raw, witness), (("stand", "gesture"), "gesture", True))
+        self.assertEqual(dialogue_animation_choices(raw, witness), (("gesture",), "gesture", True))
         document = parse_document(raw)
         self.assertEqual(canonical_json(document), raw)
         saved = canonical_studio_project(story, raw)
@@ -88,7 +93,7 @@ class DialogueAnimationTests(unittest.TestCase):
                        if label.startswith("SpeakerWitness"))
         legacy = edit_dialogue_animation(raw, witness, "gesture", False)
         self.assertNotIn("reset_to_stand", legacy)
-        self.assertEqual(dialogue_animation_choices(legacy, witness), (("stand", "gesture"), "gesture", False))
+        self.assertEqual(dialogue_animation_choices(legacy, witness), (("gesture",), "gesture", False))
         document = parse_document(legacy)
         source = scummc_room_source(document.rooms[0],
                                    dialogue_animation_cues=dialogue_animation_bindings(
@@ -124,6 +129,11 @@ class DialogueAnimationTests(unittest.TestCase):
             for animation in document.costumes[0].animations))
         with self.assertRaisesRegex(ValueError, "indexed stand pose"):
             parse_document(canonical_json(replace(document, costumes=(unindexed,))))
+        missing_talk = replace(document.costumes[0], animations=tuple(
+            animation for animation in document.costumes[0].animations
+            if animation.name != "talk_start"))
+        with self.assertRaisesRegex(ValueError, "matching native talk frames"):
+            parse_document(canonical_json(replace(document, costumes=(missing_talk,))))
 
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Test benötigt Pillow")
     def test_imported_png_speaking_pose_reaches_native_dialogue_and_costume(self):
@@ -151,8 +161,10 @@ class DialogueAnimationTests(unittest.TestCase):
                                              dialogue_animation_cues=dialogue_animation_bindings(
                                                  document, document.rooms[0]))
             self.assertIn("anim gesture @ 24", costume_source)
+            self.assertIn("anim talk_start @ 16", costume_source)
+            self.assertIn("anim talk_stop @ 20", costume_source)
             self.assertIn("body(SpeakImported)", costume_source)
-            self.assertEqual(costume_source.count("body(SpeakImported)"), 4)
+            self.assertEqual(costume_source.count("body(SpeakImported)"), 8)
             self.assertTrue((resources / "DialogueFigure_SpeakImported.bmp").is_file())
             self.assertIn("animateActor(SpeakerWitness,24);", room_source)
             self.assertIn("animateActor(SpeakerWitness,12);", room_source)

@@ -9,6 +9,15 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Neuer nativer Gesten-/Standpose-Nachweis (2026-11-09):** Eine
+Studio-authored Costume zeigt in stock ScummVM die rote Sprechpose
+(`256` Pixel) und danach eine stabile Standpose (`0` Pixel über sechs
+aufeinanderfolgende Frames); der native Schritt ist auf `2dc5271`
+grün. Der reguläre PNG-Ein-Klick-Pfad schreibt dafür die reservierten
+`talk_start`-/`talk_stop`-Slots 16/20 und den Gesten-Cue 24. Noch offen:
+aktuelle Gesamt-CI und durchgeklickte Gradio-Abnahme (PR #78).
+
+
 **Sprechpose mit einem Klick aus PNG-Frame (2026-11-09, Implementierung):**
 Im nativen Costume-Editor wird ein vorhandenes PNG-Frame als dauerhaft
 sichtbare `gesture`-Pose für alle vier Actor-Richtungen gesetzt. Die

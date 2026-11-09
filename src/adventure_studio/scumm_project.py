@@ -589,11 +589,22 @@ def _validate_document(document: GameDocument) -> None:
                 or direction not in {item.direction for item in animation.directions}):
             raise ValueError(f"Dialogue animation requires an indexed COST direction: {cue.line_id}")
         if cue.reset_to_stand:
-            stand = next((item for item in costumes_by_name[actor.costume].animations
+            costume_animations = costumes_by_name[actor.costume].animations
+            stand = next((item for item in costume_animations
                           if item.name == "stand"), None)
             if (stand is None or stand.index != 12
                     or direction not in {item.direction for item in stand.directions}):
                 raise ValueError(f"Dialogue animation reset requires an indexed stand pose: {cue.line_id}")
+            start = next((item for item in costume_animations
+                          if item.name == "talk_start" and item.index == 16), None)
+            stop = next((item for item in costume_animations
+                         if item.name == "talk_stop" and item.index == 20), None)
+            def commands_for(item):
+                return next((entry.commands for entry in item.directions
+                             if entry.direction == direction), None) if item else None
+            if (commands_for(start) != commands_for(animation)
+                    or commands_for(stop) != commands_for(stand)):
+                raise ValueError(f"Dialogue animation reset requires matching native talk frames: {cue.line_id}")
     for rule in document.animation_rules:
         if not isinstance(rule, AnimationRule) or not isinstance(rule.condition, ActorCountCondition) or not isinstance(rule.effect, ObjectStateEffect):
             raise ValueError("Invalid typed animation rule")

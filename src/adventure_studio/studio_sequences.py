@@ -113,7 +113,8 @@ def dialogue_animation_choices(raw: str, line_id: str | None):
         return (), None, True
     actor = next(item for item in document.actors if item.id == target[1])
     costume = next(item for item in document.costumes if item.name == actor.costume)
-    options = tuple(animation.name for animation in costume.animations if animation.index is not None)
+    options = tuple(animation.name for animation in costume.animations
+                    if animation.index is not None and animation.index >= 24)
     selected = next((cue.animation for cue in document.dialogue_animation_cues
                      if cue.line_id == line_id), None)
     reset = next((cue.reset_to_stand for cue in document.dialogue_animation_cues

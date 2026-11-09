@@ -600,7 +600,7 @@ def make_app():
                     native_frame_file = gr.File(label="Weiteres Frame-PNG", file_types=[".png"], type="filepath")
                     native_frame_id = gr.Textbox(label="Neue Frame-ID")
                     native_frame_button = gr.Button("Frame zur Costume hinzufügen")
-                gr.Markdown("**Sprechpose aus PNG:** Importiere oben ein zweites Frame und wähle es hier. Ein Klick setzt es als dauerhaft sichtbare `gesture`-Pose für alle vier Blickrichtungen (nativer Index 24). Die vorhandene Standpose bleibt erhalten.")
+                gr.Markdown("**Sprechpose aus PNG:** Importiere oben ein zweites Frame und wähle es hier. Ein Klick setzt `gesture` (Index 24) und den nativen Sprechbeginn `talk_start` (Index 16) für alle vier Blickrichtungen. `talk_stop` (Index 20) verwendet die erhaltene Standpose.")
                 with gr.Row():
                     native_speaking_frame = gr.Dropdown(label="Frame für die Sprechpose")
                     native_speaking_save = gr.Button("Frame als Sprechpose verwenden")
