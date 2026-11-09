@@ -52,8 +52,10 @@ SCUMM-Gesprächsmenü-UI und Sprecherwechsel bleiben weitere Produktpakete.
 **Sprecher-Authoring (2026-11-09, Teilstand):** Der Story-Editor ordnet
 Sprechzeilen und neue Antwortknoten jetzt einer Figur derselben Szene zu.
 Der Compiler erzeugt jetzt SCUMM-Actors mit eigenem Costume und `actorSay`
-für die zugeordneten Sprechzeilen. Die Interpreterprobe und deren
-Sprecherausgabe müssen noch erfolgreich nachgewiesen werden.
+für die zugeordneten Sprechzeilen. In stock ScummVM ist die zweite,
+vom Antworttext verschiedene Sprecherzeile nachgewiesen (CI `42540762070`).
+Dialoge ohne Antwortauswahl und die Kopplung von Costume-/Lippenanimation
+an Sprachaufnahmen bleiben die nächsten D03-Teilschritte.
 
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und

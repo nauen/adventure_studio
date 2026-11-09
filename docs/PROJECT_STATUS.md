@@ -726,9 +726,13 @@ der bestehende Story-JSON-Vertrag bleibt unverändert. 299 lokale Tests
 grün. Der Story-zu-SCUMM-Adapter ordnet Sprecher in Gesprächen mit
 Antwortauswahl eigenen nativen Actors mit Costume zu und gibt ihre Zeilen
 mit `actorSay` aus; die Zeilenbindung bleibt im Projekt-JSON erhalten.
-**Noch kein Interpreter-Nachweis:** Die neue Actor-Sprechprobe ist im
-Dialog-Workflow angelegt; ihr Laufzeitergebnis steht aus. Mehrsprecher-
-Gespräche ohne Auswahlstufe werden weiterhin ausdrücklich abgelehnt.
+Die neue native Actor-Sprechprobe ist in stock ScummVM erfolgreich
+(CI `42540762070`, Artefakt `native-v6-studio-multispeaker-dialogue`):
+Die Antwort wird angeklickt, danach erscheint die separate schwarze
+`actorSay`-Zeile des Zeugen mit `speaker_text_pixels = 1700`;
+`answer_pixels_dismissed = 0`, `passed = true`. Die Actor-Costume nutzt
+eine von den Antwortobjekten getrennte Farbe. Mehrsprecher-Gespräche ohne
+Auswahlstufe und Costume-Lippensynchronisierung bleiben offen.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
