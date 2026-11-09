@@ -1,0 +1,47 @@
+{
+  "format_version": 1,
+  "story": {
+    "chapters": [
+      {
+        "id": "intro",
+        "title": "Das verlassene Hafenhaus",
+        "synopsis": "Ein alter Schluessel fuehrt zum Keller."
+      }
+    ],
+    "scenes": [
+      {
+        "id": "Harbor",
+        "chapter_id": "intro",
+        "title": "Hafenhaus",
+        "description": "Vor dem alten Haus liegt ein verrosteter Schluessel."
+      },
+      {
+        "id": "Cellar",
+        "chapter_id": "intro",
+        "title": "Keller",
+        "description": "Ein kuehler, verlassener Keller."
+      }
+    ],
+    "characters": [],
+    "items": [
+      {
+        "id": "Key",
+        "name": "Schluessel",
+        "description": "Ein verrosteter Schluessel.",
+        "scene_id": "Harbor",
+        "role": "pickup"
+      }
+    ],
+    "puzzles": [
+      {
+        "id": "Unlock",
+        "title": "Die Kellertuer ist jetzt offen.",
+        "scene_id": "Harbor",
+        "requires": ["Key"],
+        "opens_scene_id": "Cellar"
+      }
+    ],
+    "starting_scene_id": "Harbor",
+    "final_puzzle_id": "Unlock"
+  }
+}

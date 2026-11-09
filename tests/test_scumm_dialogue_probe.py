@@ -27,6 +27,7 @@ class DialogueProbeTests(unittest.TestCase):
         self.assertTrue(detect_gesture_return(28, [12] * 6))
         self.assertFalse(detect_gesture_return(12, [12] * 6))
         self.assertFalse(detect_gesture_return(13, [12] * 6))
+        self.assertFalse(detect_gesture_return(26, [12] * 6))
         self.assertFalse(detect_gesture_return(28, [12, 12, 13, 12, 12, 12]))
         with self.assertRaises(ValueError):
             detect_gesture_return(28, [12] * 5)

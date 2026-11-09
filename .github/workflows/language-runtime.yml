@@ -1,0 +1,222 @@
+name: SCUMM v6 multilingual gameplay probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/language-runtime.yml'
+      - 'src/adventure_studio/scumm_bootstrap.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/scumm_font.py'
+      - 'src/adventure_studio/scumm_assets.py'
+      - 'src/adventure_studio/story_localization.py'
+      - 'src/adventure_studio/story_language_fixture.py'
+      - 'src/adventure_studio/scumm_font_probe.py'
+      - 'src/adventure_studio/scumm_language_package.py'
+      - 'src/adventure_studio/scumm_language_runtime_probe.py'
+      - 'src/adventure_studio/scumm_save_load_probe.py'
+      - 'src/adventure_studio/scumm_language_buttons.py'
+      - 'src/adventure_studio/localization.py'
+      - 'examples/language_probe.json'
+      - 'examples/mini_story_language_en.json'
+  pull_request:
+    paths:
+      - '.github/workflows/language-runtime.yml'
+      - 'src/adventure_studio/scumm_bootstrap.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/scumm_font.py'
+      - 'src/adventure_studio/scumm_language_package.py'
+      - 'src/adventure_studio/scumm_language_runtime_probe.py'
+      - 'src/adventure_studio/scumm_save_load_probe.py'
+
+jobs:
+  language:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Cache downloaded Ubuntu packages
+        uses: actions/cache@v4
+        with:
+          path: /tmp/scumm-language-apt
+          key: ubuntu-24.04-scumm-language-apt-v1
+      - name: Install ScummC, ScummVM and multilingual font dependencies
+        timeout-minutes: 35
+        run: |
+          sudo mkdir -p /tmp/scumm-language-apt/partial
+          # Azure's Ubuntu mirror repeatedly stalled on scummvm-data (72 MB).
+          # Use the canonical Ubuntu mirror for this research-only workflow.
+          sudo grep -R -l 'azure.archive.ubuntu.com' /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null | sudo xargs -r sed -i 's@azure.archive.ubuntu.com@archive.ubuntu.com@g'
+          if sudo grep -R 'azure.archive.ubuntu.com' /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null; then exit 1; fi
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Dir::Cache::archives=/tmp/scumm-language-apt -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core fonts-ipafont-gothic
+          python -m pip install 'Pillow>=10,<13' 'fonttools>=4,<6'
+      - name: Build upstream ScummC and original room assets
+        run: |
+          git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-language
+          test -f /tmp/scummc-language/man/tools/scc.xml
+          grep -Fq '$(SRCDIR)/man/%.xml' /tmp/scummc-language/Makefile.target
+          sed -i 's@$(SRCDIR)/man/%.xml@$(SRCDIR)/man/tools/%.xml@g; s@$(SRCDIR)/man/header.xslt@$(SRCDIR)/man/tools/header.xslt@g' /tmp/scummc-language/Makefile.target
+          cd /tmp/scummc-language
+          ./configure
+          make -j2
+          cd examples/road
+          make
+          test -s vera-gui.char
+      - name: Build SCUMM game with one five-language font package
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/mini_story_language_en.json /tmp/language-story
+          CHAR_BIN=$(find /tmp/scummc-language -type f -name char -executable -print -quit)
+          LATIN_FONT=$(find /usr/share/fonts -type f -name DejaVuSans.ttf -print -quit)
+          CJK_FONT=$(find /usr/share/fonts -type f \( -iname 'ipag.ttf' -o -iname 'ipagp.ttf' \) -print -quit)
+          test -n "$CHAR_BIN" && test -n "$LATIN_FONT" && test -n "$CJK_FONT"
+          python -m adventure_studio.story_language_fixture /tmp/language-story/project.json /tmp/language-story/story-language-catalog.json
+          python -m adventure_studio.scumm_language_package /tmp/language-story/story-language-catalog.json "$LATIN_FONT" "$CJK_FONT" "$CHAR_BIN" /tmp/language-story/resources
+          python -m adventure_studio.scumm_toolchain /tmp/language-story /tmp/scummc-language /tmp/language-game --language-room-probe --localize-story --screen-language-gui
+          grep -Fq 'setVerbName("DE")' /tmp/language-story/resources/bootstrap.scc
+          grep -Fq 'LanguageJa' /tmp/language-story/resources/common.sch
+          test -s /tmp/language-game/tentacle.000
+          test -s /tmp/language-game/tentacle.001
+      - name: Select languages and test Polish persistence across room transition
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_language_runtime_probe /tmp/language-game /tmp/language-evidence --screen-language-gui
+      - name: Verify actual save and restored room and language
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/language-game /tmp/save-load-evidence
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          result = json.loads(Path('/tmp/save-load-evidence/save-load-menu-report.json').read_text())
+          required = ('save_created_verified', 'load_restored_room_verified',
+                      'load_restored_language_verified')
+          missing = [name for name in required if not result.get(name)]
+          if missing:
+              raise SystemExit(f'SCUMM save/load regression: {missing}; report={result}')
+          print('SCUMM save, room restore and language restore verified')
+          PY
+      - name: Stress native save and reload in six isolated sessions
+        timeout-minutes: 20
+        continue-on-error: true
+        env:
+          PYTHONPATH: src
+        run: |
+          mkdir -p /tmp/save-stress-evidence
+          for attempt in 1 2 3 4 5 6; do
+            echo "SCUMM save/load stress session $attempt of 6"
+            xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/language-game "/tmp/save-stress-evidence/run-$attempt" > "/tmp/save-stress-evidence/run-$attempt.stdout.log" 2>&1 || true
+          done
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('/tmp/save-stress-evidence')
+          runs = []
+          for number in range(1, 7):
+              report_file = root / f'run-{number}' / 'save-load-menu-report.json'
+              if report_file.is_file():
+                  report = json.loads(report_file.read_text())
+                  runs.append({
+                      'run': number,
+                      'save_created': report['save_created_verified'],
+                      'room_restored': report['load_restored_room_verified'],
+                      'language_restored': report['load_restored_language_verified'],
+                      'save_attempts': report['save_attempts'],
+                      'attempts_without_slot': report['save_attempts_without_slot'],
+                      'diagnostic_screenshots': report['save_gate_diagnostic_screenshots'],
+                  })
+              else:
+                  runs.append({'run': number, 'error': 'Probe exited without a report'})
+          failures = [run for run in runs if not all(run.get(key) for key in
+                      ('save_created', 'room_restored', 'language_restored'))]
+          summary = {'sessions': runs, 'completed': len(runs), 'failed': len(failures),
+                     'first_attempt_rejections': sum(run.get('attempts_without_slot', 0)
+                                                     for run in runs)}
+          (root / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
+          print(json.dumps(summary, sort_keys=True))
+          if failures:
+              raise SystemExit(f'{len(failures)} of 6 independent save/load sessions failed')
+          PY
+      - name: Compare save menu with original ScummC GUI font
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/mini_story_language_en.json /tmp/stock-font-story
+          python -m adventure_studio.scumm_toolchain /tmp/stock-font-story /tmp/scummc-language /tmp/stock-font-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/stock-font-game /tmp/stock-font-evidence --no-polish --nonblocking-menu-probe
+      - name: Rebuild identical localized game using stock text fonts
+        env:
+          PYTHONPATH: src
+        run: |
+          cp -a /tmp/language-story /tmp/localized-stock-font-story
+          python -m adventure_studio.scumm_toolchain /tmp/localized-stock-font-story /tmp/scummc-language /tmp/localized-stock-font-game --language-room-probe --localize-story --screen-language-gui --stock-fonts-probe
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_save_load_probe /tmp/localized-stock-font-game /tmp/localized-stock-font-evidence --nonblocking-menu-probe
+      - name: Compare stock and multilingual menu glyph regions
+        run: |
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+          from PIL import Image, ImageChops
+
+          sources = {
+              "multilingual": Path("/tmp/save-load-evidence/save-menu-after-ctrl-f5.png"),
+              "stock": Path("/tmp/stock-font-evidence/save-menu-after-ctrl-f5.png"),
+              "localized_stock_fonts": Path("/tmp/localized-stock-font-evidence/save-menu-after-ctrl-f5.png"),
+          }
+          menus = {}
+          stats = {}
+          for name, path in sources.items():
+              with Image.open(path) as image:
+                  # Known 1024x768 Xvfb menu text area from the CI screenshot.
+                  crop = image.convert("RGB").crop((365, 250, 630, 425))
+                  menus[name] = crop.copy()
+                  colors = Counter(crop.getdata())
+                  stats[name] = {
+                      "frequent_colors": [[list(rgb), count] for rgb, count in colors.most_common(6)],
+                      "nonblack_pixels": sum(n for rgb, n in colors.items() if max(rgb) > 35),
+                  }
+          pixels = ImageChops.difference(menus["multilingual"], menus["stock"]).getdata()
+          stats["cross_font_changed_pixels"] = sum(1 for pixel in pixels if max(pixel) >= 24)
+          targeted_pixels = ImageChops.difference(menus["multilingual"], menus["localized_stock_fonts"]).getdata()
+          stats["same_game_font_only_changed_pixels"] = sum(1 for pixel in targeted_pixels if max(pixel) >= 24)
+          output = Path("/tmp/save-load-evidence/menu-font-comparison.json")
+          output.write_text(json.dumps(stats, indent=2, sort_keys=True) + chr(10))
+          print(json.dumps(stats, sort_keys=True))
+          PY
+      - name: Upload linked game and screenshots for visual inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multilingual-game-runtime-evidence
+          if-no-files-found: ignore
+          path: |
+            /tmp/language-game/tentacle.000
+            /tmp/language-game/tentacle.001
+            /tmp/language-story/resources/language-package.json
+            /tmp/language-evidence/*.png
+            /tmp/language-evidence/*.json
+            /tmp/language-evidence/scummvm.log
+            /tmp/save-load-evidence/*.png
+            /tmp/save-load-evidence/*.json
+            /tmp/save-load-evidence/*.log
+            /tmp/save-stress-evidence/*.json
+            /tmp/save-stress-evidence/*.log
+            /tmp/save-stress-evidence/*/*.png
+            /tmp/save-stress-evidence/*/*.json
+            /tmp/save-stress-evidence/*/*.log
+            /tmp/stock-font-evidence/*.png
+            /tmp/stock-font-evidence/*.json
+            /tmp/stock-font-evidence/*.log
+            /tmp/localized-stock-font-evidence/*.png
+            /tmp/localized-stock-font-evidence/*.json
+            /tmp/localized-stock-font-evidence/*.log

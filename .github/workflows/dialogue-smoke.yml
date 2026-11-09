@@ -1,0 +1,290 @@
+name: SCUMM dialogue gameplay smoke
+
+# Dialogue interaction is an independent compatibility gate. A music, palette
+# or unrelated puzzle failure must not hide a successful answer click test.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/dialogue-smoke.yml'
+      - 'src/adventure_studio/dialogue_demo.py'
+      - 'src/adventure_studio/scumm_dialogue_probe.py'
+      - 'src/adventure_studio/scumm_dialogue_voice_fixture.py'
+      - 'src/adventure_studio/dialogue_animation_fixture.py'
+      - 'src/adventure_studio/studio_sequences.py'
+      - 'src/adventure_studio/scumm_assets.py'
+      - 'src/adventure_studio/scumm_project.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/scumm_launch.py'
+      - 'examples/recipe_story.json'
+      - 'examples/recipe_chain_story.json'
+      - 'examples/recipe_graph_story.json'
+      - 'tests/test_scumm_dialogue_probe.py'
+      - 'tests/test_story_v4.py'
+  pull_request:
+    paths:
+      - '.github/workflows/dialogue-smoke.yml'
+      - 'src/adventure_studio/dialogue_demo.py'
+      - 'src/adventure_studio/scumm_dialogue_probe.py'
+      - 'src/adventure_studio/scumm_dialogue_voice_fixture.py'
+      - 'src/adventure_studio/dialogue_animation_fixture.py'
+      - 'src/adventure_studio/studio_sequences.py'
+      - 'src/adventure_studio/scumm_assets.py'
+      - 'src/adventure_studio/scumm_project.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/scumm_launch.py'
+      - 'examples/recipe_story.json'
+      - 'examples/recipe_chain_story.json'
+      - 'examples/recipe_graph_story.json'
+      - 'tests/test_scumm_dialogue_probe.py'
+      - 'tests/test_story_v4.py'
+
+jobs:
+  dialogue:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install multilingual native font renderer
+        run: |
+          python -m pip install 'Pillow>=10,<12' 'fonttools>=4,<5'
+      - name: Verify deterministic compiler and probe contracts
+        run: |
+          PYTHONPATH=src:tests python -m unittest discover -s tests -p test_story_v4.py -v
+          PYTHONPATH=src:tests python -m unittest discover -s tests -p test_scumm_dialogue_probe.py -v
+      - name: Install ScummC build tools and ScummVM interaction dependencies
+        timeout-minutes: 18
+        run: |
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core
+      - name: Build compatible upstream ScummC tools
+        run: |
+          git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
+          test -f /tmp/scummc-upstream/man/tools/scc.xml
+          test -f /tmp/scummc-upstream/man/tools/header.xslt
+          grep -Fq '$(SRCDIR)/man/%.xml' /tmp/scummc-upstream/Makefile.target
+          sed -i 's@$(SRCDIR)/man/%.xml@$(SRCDIR)/man/tools/%.xml@g; s@$(SRCDIR)/man/header.xslt@$(SRCDIR)/man/tools/header.xslt@g' /tmp/scummc-upstream/Makefile.target
+          cd /tmp/scummc-upstream
+          ./configure
+          make -j2
+      - name: Prepare upstream road assets required by the compiler
+        working-directory: /tmp/scummc-upstream/examples/road
+        run: |
+          make
+          test -s vera-gui.char
+      - name: Build bounded branching dialogue as SCUMM v6 game files
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-story --choices
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-story /tmp/scummc-upstream /tmp/dialogue-game
+          cp /tmp/dialogue-story/story.json /tmp/dialogue-game/story.json
+          test -s /tmp/dialogue-game/tentacle.000
+          test -s /tmp/dialogue-game/tentacle.001
+      - name: Click character and verify answer-object transitions in real ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe /tmp/dialogue-game /tmp/dialogue-evidence
+      - name: Play German VOC voice in authored opening and answer dialogue lines
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.scumm_dialogue_voice_fixture /tmp/dialogue-story
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-story /tmp/scummc-upstream /tmp/dialogue-voice-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --voice /tmp/dialogue-voice-game /tmp/dialogue-voice-evidence
+      - name: Retain native voiced NPC dialogue gameplay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-dialogue-voice
+          path: |
+            /tmp/dialogue-voice-evidence/dialogue-report.json
+            /tmp/dialogue-voice-evidence/dialogue-voice.raw
+            /tmp/dialogue-voice-evidence/scummvm-spoken.png
+            /tmp/dialogue-voice-evidence/scummvm-options.png
+            /tmp/dialogue-voice-evidence/scummvm-dismissed.png
+            /tmp/dialogue-voice-evidence/scummvm.log
+            /tmp/dialogue-story/project.json
+            /tmp/dialogue-story/resources/Harbor.scc
+          if-no-files-found: ignore
+      - name: Play nested NPC answers and return to first menu in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-nested-story --nested
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-nested-story /tmp/scummc-upstream /tmp/dialogue-nested-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --nested /tmp/dialogue-nested-game /tmp/dialogue-nested-evidence
+      - name: Play NPC reply through its own native Actor in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-multispeaker-story --multispeaker
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-multispeaker-story /tmp/scummc-upstream /tmp/dialogue-multispeaker-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --multispeaker /tmp/dialogue-multispeaker-game /tmp/dialogue-multispeaker-evidence
+      - name: Play a two-speaker conversation without choices in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-linear-story --linear-multispeaker
+          cp -a /tmp/scummc-upstream /tmp/scummc-linear-upstream
+          test -s /tmp/scummc-linear-upstream/examples/road/DialogueFigure.cost
+          mv /tmp/scummc-linear-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-multispeaker-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-linear-story /tmp/scummc-linear-upstream /tmp/dialogue-linear-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --linear-multispeaker /tmp/dialogue-linear-game /tmp/dialogue-linear-evidence
+      - name: Retain native linear multi-Actor dialogue evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-linear-multispeaker-dialogue
+          path: |
+            /tmp/dialogue-linear-evidence/dialogue-report.json
+            /tmp/dialogue-linear-evidence/scummvm-linear-first.png
+            /tmp/dialogue-linear-evidence/scummvm-linear-second.png
+            /tmp/dialogue-linear-evidence/scummvm.log
+            /tmp/dialogue-linear-story/resources/Harbor.scc
+            /tmp/dialogue-linear-story/project.json
+          if-no-files-found: ignore
+      - name: Play Studio-authored two-frame NPC dialogue gesture in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-gesture-story --linear-multispeaker
+          python -m adventure_studio.dialogue_animation_fixture /tmp/dialogue-gesture-story
+          cp -a /tmp/scummc-upstream /tmp/scummc-gesture-upstream
+          test -s /tmp/scummc-gesture-upstream/examples/road/DialogueFigure.cost && mv /tmp/scummc-gesture-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-gesture-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-gesture-story /tmp/scummc-gesture-upstream /tmp/dialogue-gesture-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --gesture /tmp/dialogue-gesture-game /tmp/dialogue-gesture-evidence
+      - name: Retain native dialogue animation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-dialogue-gesture
+          path: |
+            /tmp/dialogue-gesture-evidence/dialogue-report.json
+            /tmp/dialogue-gesture-evidence/scummvm-gesture-frame.png
+            /tmp/dialogue-gesture-evidence/scummvm-gesture-stand.png
+            /tmp/dialogue-gesture-evidence/scummvm-linear-second.png
+            /tmp/dialogue-gesture-evidence/scummvm.log
+            /tmp/dialogue-gesture-story/project.json
+            /tmp/dialogue-gesture-story/resources/Harbor.scc
+          if-no-files-found: ignore
+      - name: Retain native multi-Actor dialogue evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-multispeaker-dialogue
+          path: |
+            /tmp/dialogue-multispeaker-evidence/dialogue-report.json
+            /tmp/dialogue-multispeaker-evidence/scummvm-speaker.png
+            /tmp/dialogue-multispeaker-evidence/scummvm-dismissed.png
+            /tmp/dialogue-multispeaker-evidence/scummvm.log
+            /tmp/dialogue-multispeaker-story/resources/Harbor.scc
+            /tmp/dialogue-multispeaker-story/project.json
+          if-no-files-found: ignore
+      - name: Retain native nested dialogue and return evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-nested-dialogue
+          path: |
+            /tmp/dialogue-nested-evidence/dialogue-report.json
+            /tmp/dialogue-nested-evidence/scummvm-options.png
+            /tmp/dialogue-nested-evidence/scummvm-nested.png
+            /tmp/dialogue-nested-evidence/scummvm-returned.png
+            /tmp/dialogue-nested-evidence/scummvm-dismissed.png
+            /tmp/dialogue-nested-evidence/scummvm.log
+            /tmp/dialogue-nested-story/project.json
+            /tmp/dialogue-nested-story/resources/Harbor.scc
+          if-no-files-found: ignore
+      - name: Build recipe adventure entirely from story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/recipe_story.json /tmp/recipe-story
+          python -m adventure_studio.scumm_toolchain /tmp/recipe-story /tmp/scummc-upstream /tmp/recipe-game
+          test -s /tmp/recipe-game/tentacle.000
+          test -s /tmp/recipe-game/tentacle.001
+      - name: Verify inventory recipe in both orders in real ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-game /tmp/recipe-forward-evidence --recipe-only
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-game /tmp/recipe-reverse-evidence --recipe-reverse-only
+      - name: Build two-stage recipe chain from story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/recipe_chain_story.json /tmp/recipe-chain-story
+          python -m adventure_studio.scumm_toolchain /tmp/recipe-chain-story /tmp/scummc-upstream /tmp/recipe-chain-game
+          test -s /tmp/recipe-chain-game/tentacle.000
+          test -s /tmp/recipe-chain-game/tentacle.001
+      - name: Complete two consecutive recipes in real ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-chain-game /tmp/recipe-chain-evidence --recipe-chain-only
+      - name: Build converging three-recipe graph from story JSON
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.story_document examples/recipe_graph_story.json /tmp/recipe-graph-story
+          python -m adventure_studio.scumm_toolchain /tmp/recipe-graph-story /tmp/scummc-upstream /tmp/recipe-graph-game
+          test -s /tmp/recipe-graph-game/tentacle.000
+          test -s /tmp/recipe-graph-game/tentacle.001
+      - name: Play both recipe branches and the final combination in ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-graph-game /tmp/recipe-graph-evidence --recipe-graph-only
+      - name: Autoplan converging recipe graph and replay in ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-graph-game /tmp/recipe-graph-auto-evidence --recipe-auto-only
+      - name: Upload playable dialogue game
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dialogue-game-preview
+          if-no-files-found: ignore
+          path: |
+            /tmp/dialogue-game/tentacle.000
+            /tmp/dialogue-game/tentacle.001
+            /tmp/dialogue-game/story.json
+      - name: Upload screenshots, state report and engine log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dialogue-evidence
+          if-no-files-found: ignore
+          path: |
+            /tmp/dialogue-evidence/*.png
+            /tmp/dialogue-evidence/*.json
+            /tmp/dialogue-evidence/scummvm.log
+      - name: Upload recipe combination evidence in both directions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recipe-combination-evidence
+          if-no-files-found: ignore
+          path: |
+            /tmp/recipe-forward-evidence/*.png
+            /tmp/recipe-forward-evidence/*.json
+            /tmp/recipe-forward-evidence/scummvm.log
+            /tmp/recipe-reverse-evidence/*.png
+            /tmp/recipe-reverse-evidence/*.json
+            /tmp/recipe-reverse-evidence/scummvm.log
+            /tmp/recipe-chain-evidence/*.png
+            /tmp/recipe-chain-evidence/*.json
+            /tmp/recipe-chain-evidence/scummvm.log
+            /tmp/recipe-graph-evidence/*.png
+            /tmp/recipe-graph-evidence/*.json
+            /tmp/recipe-graph-evidence/scummvm.log
+            /tmp/recipe-graph-auto-evidence/*.png
+            /tmp/recipe-graph-auto-evidence/*.json
