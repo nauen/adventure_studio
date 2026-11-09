@@ -13,7 +13,8 @@ import unicodedata
 from .image_pipeline import ImageProvider, ImageRequest, IndexedImage
 from .story_fixture_image import DeterministicStoryImageProvider, _PALETTE
 from .scumm_assets import CombineRule, RoomAsset, RoomHotspot, TalkChoice, TalkRule, TalkStage, UseRule
-from .scumm_project import GameDocument
+from .scumm_project import ActorAsset, GameDocument
+from .scumm_costume import CostumeAsset, CostumeFrame, CostumeDirection, CostumeAnimation
 from .story import Story, verify_story
 from .targets import RoomGeometry
 
@@ -75,11 +76,12 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
     for index, actor in enumerate(c for c in story.characters if c.scene_id == scene_id):
         if not _ID.fullmatch(actor.id):
             raise ValueError("Character ID is not a valid SCUMM identifier")
-        dialogues = [d for d in story.dialogues if d.scene_id == scene_id and any(
-            n.dialogue_id == d.id and n.speaker_id == actor.id for n in story.dialogue_nodes)]
+        dialogues = [d for d in story.dialogues if d.scene_id == scene_id and
+                     next(n for n in story.dialogue_nodes if n.id == d.entry_node_id).speaker_id == actor.id]
         if len(dialogues) > 1:
             raise ValueError(f"Only one dialogue per character is supported: {actor.id}")
         lines = []
+        line_speakers = []
         if dialogues:
             dialogue = dialogues[0]
             nodes = {n.id: n for n in story.dialogue_nodes if n.dialogue_id == dialogue.id}
@@ -87,8 +89,17 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                        for node_id in nodes}
             entry_choice_node = None
 
-            def follow(start: str | None) -> tuple[tuple[str, ...], str | None]:
+            multi = len({n.speaker_id for n in nodes.values()}) > 1
+            actor_lines = []
+            base = f"room.{scene_id.lower()}.dialogue.{len(rules)}"
+
+            def bind(key: str, speaker: str) -> None:
+                if multi:
+                    actor_lines.append((key, f"Speaker{speaker}"))
+
+            def follow(start: str | None) -> tuple[tuple[str, ...], str | None, tuple[str, ...]]:
                 collected = []
+                speakers = []
                 visited = set()
                 current = start
                 while current is not None:
@@ -96,15 +107,14 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                         raise ValueError("Dialogue line cycle without choice point")
                     visited.add(current)
                     node = nodes[current]
-                    if node.speaker_id != actor.id:
-                        raise ValueError("Current SCUMM compiler requires one speaker per dialogue")
                     if by_node[current]:
-                        return tuple(collected), current
+                        return tuple(collected), current, tuple(speakers)
                     collected.append(_text(node.text))
+                    speakers.append(node.speaker_id)
                     if len(collected) > 16:
                         raise ValueError("Dialogue text chain exceeds sixteen lines")
                     current = node.next_node_id
-                return tuple(collected), None
+                return tuple(collected), None, tuple(speakers)
 
             current = dialogue.entry_node_id
             visited = set()
@@ -113,13 +123,15 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                     raise ValueError("Dialogue line cycle without choices")
                 visited.add(current)
                 node = nodes[current]
-                if node.speaker_id != actor.id:
-                    raise ValueError("Current SCUMM compiler requires one speaker per dialogue")
                 lines.append(_text(node.text))
+                line_speakers.append(node.speaker_id)
                 current = node.next_node_id
             if current is not None:
                 entry_choice_node = current
                 lines.append(_text(nodes[current].text))
+                line_speakers.append(nodes[current].speaker_id)
+                for line_index, speaker in enumerate(line_speakers):
+                    bind(f"{base}.opening.{line_index}", speaker)
                 if len(lines) > 16:
                     raise ValueError("Dialogue opening exceeds sixteen lines")
                 stages = []
@@ -137,7 +149,7 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                         raise ValueError("SCUMM dialogue UI supports at most three answers per stage")
                     stage_choices = []
                     for choice_index, choice in enumerate(source_choices):
-                        response, target = follow(choice.next_node_id)
+                        response, target, response_speakers = follow(choice.next_node_id)
                         if target is not None:
                             pending.append(target)
                         answer_id = (f"Answer{actor.id}{choice_index + 1}" if node_id == entry_choice_node
@@ -145,7 +157,7 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                         answer_x = 240 + choice_index * 24
                         # Preserve the proven flat-dialogue layout. Nested
                         # stages must fit both rows inside the 144px viewport.
-                        answer_y = (120 if len(stage_numbers) > 1 else 130) if node_id == entry_choice_node else 100
+                        answer_y = (120 if len(stage_numbers) > 1 or multi else 130) if node_id == entry_choice_node else 100
                         if answer_x + 16 > room_width or not _ID.fullmatch(answer_id):
                             raise ValueError("Dialogue answer hotspot exceeds room exporter limits")
                         result.append(RoomHotspot(answer_id, _text(choice.text), _text(choice.text),
@@ -154,12 +166,20 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                         stage_choices.append(TalkChoice(answer_id, _text(choice.text), response,
                                                         "Entry" if target == entry_choice_node else
                                                         f"Stage{target}" if target is not None else None))
+                        prefix = (base if node_id == entry_choice_node else
+                                  f"{base}.stage.{len(stages)}")
+                        for line_index, speaker in enumerate(response_speakers):
+                            bind(f"{prefix}.choice.{choice_index}.reply.{line_index}", speaker)
                     if node_id == entry_choice_node:
                         root_choices = tuple(stage_choices)
                     else:
                         stages.append(TalkStage(f"Stage{node_id}", (_text(nodes[node_id].text),),
                                                 tuple(stage_choices)))
-                rules.append(TalkRule(actor.id, tuple(lines), root_choices, tuple(stages)))
+                        bind(f"{base}.stage.{len(stages) - 1}.opening.0", nodes[node_id].speaker_id)
+                rules.append(TalkRule(actor.id, tuple(lines), root_choices, tuple(stages),
+                                      tuple(actor_lines)))
+            elif multi:
+                raise ValueError("Multispeaker dialogue currently requires at least one answer stage")
             elif len(lines) > 16:
                 raise ValueError("Dialogue opening exceeds sixteen lines")
         x = 185 + index * 35
@@ -337,4 +357,26 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
             goal_text=_text(ordered_puzzles[-1].title) if goal else None,
             talk_rules=talk_rules,
         ))
-    return GameDocument(story.chapters[0].id + "Game", tuple(result))
+    active_speakers = {actor for room in result for dialogue in room.talk_rules
+                       for _line, actor in dialogue.actor_lines}
+    if not active_speakers:
+        return GameDocument(story.chapters[0].id + "Game", tuple(result))
+    palette = [(0, 0, 0)] * 48
+    # Keep costume ink distinct from the magenta answer-object probe color.
+    palette[17] = (50, 220, 220)
+    figure = CostumeAsset("DialogueFigure", tuple(palette),
+                          (CostumeFrame("Pose", 8, 8, bytes([1] * 64), -4, -8),),
+                          (CostumeAnimation("stand", tuple(
+                              CostumeDirection(direction, ("Pose",))
+                              for direction in ("N", "E", "S", "W"))),))
+    speaker_actors = []
+    for scene_id in route:
+        characters = [char for char in story.characters if char.scene_id == scene_id]
+        for index, character in enumerate(characters):
+            actor_id = f"Speaker{character.id}"
+            if actor_id in active_speakers:
+                speaker_actors.append(ActorAsset(actor_id, figure.name, scene_id,
+                                                 185 + index * 35, 70,
+                                                 display_name=_text(character.name)))
+    return GameDocument(story.chapters[0].id + "Game", tuple(result),
+                        costumes=(figure,), actors=tuple(speaker_actors))

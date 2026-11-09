@@ -374,6 +374,9 @@ def document_dict(document: GameDocument) -> dict:
             **({"music_id": room.music_id} if room.music_id is not None else {}),
             **({"talk_rules": [{"speaker_id": rule.speaker_id,
                                  "opening_lines": list(rule.opening_lines),
+                                 **({"actor_lines": [{"line_id": key, "actor_id": actor}
+                                                     for key, actor in rule.actor_lines]}
+                                    if rule.actor_lines else {}),
                                  "choices": [{"object_id": c.object_id,
                                               "caption": c.caption,
                                               "reply_lines": list(c.reply_lines),
@@ -517,6 +520,13 @@ def _validate_document(document: GameDocument) -> None:
         raise ValueError("Project needs exactly one goal room")
     actors_by_id = {actor.id: actor for actor in document.actors}
     rooms_by_name = {room.name: room for room in document.rooms}
+    for room in document.rooms:
+        for dialogue in room.talk_rules:
+            for line_id, actor_id in dialogue.actor_lines:
+                actor = actors_by_id.get(actor_id)
+                if (actor is None or actor.room != room.name or not line_id.startswith(
+                        f"room.{room.name.lower()}.dialogue.")):
+                    raise ValueError("Dialogue speech line requires a native Actor in its room")
     for rule in document.animation_rules:
         if not isinstance(rule, AnimationRule) or not isinstance(rule.condition, ActorCountCondition) or not isinstance(rule.effect, ObjectStateEffect):
             raise ValueError("Invalid typed animation rule")
@@ -957,7 +967,7 @@ def parse_document(source: str) -> GameDocument:
             raise ValueError("Invalid dialogue rules")
         talk_rules = []
         for raw_talk in raw_talk_rules:
-            talk = _only(raw_talk, {"speaker_id", "opening_lines", "choices", "stages"},
+            talk = _only(raw_talk, {"speaker_id", "opening_lines", "choices", "stages", "actor_lines"},
                          {"speaker_id", "opening_lines", "choices"})
             if (not isinstance(talk["speaker_id"], str)
                     or not isinstance(talk["opening_lines"], list)
@@ -995,8 +1005,17 @@ def parse_document(source: str) -> GameDocument:
                                                     choice.get("next_stage_id")))
                 stages.append(TalkStage(stage["id"], tuple(stage["opening_lines"]),
                                         tuple(stage_choices)))
+            raw_actor_lines = talk.get("actor_lines", [])
+            if not isinstance(raw_actor_lines, list):
+                raise ValueError("Invalid dialogue Actor line bindings")
+            actor_lines = []
+            for raw_binding in raw_actor_lines:
+                binding = _only(raw_binding, {"line_id", "actor_id"}, {"line_id", "actor_id"})
+                if not isinstance(binding["line_id"], str) or not isinstance(binding["actor_id"], str):
+                    raise ValueError("Invalid dialogue Actor line binding")
+                actor_lines.append((binding["line_id"], binding["actor_id"]))
             talk_rules.append(TalkRule(talk["speaker_id"], tuple(talk["opening_lines"]),
-                                       tuple(choices), tuple(stages)))
+                                       tuple(choices), tuple(stages), tuple(actor_lines)))
         raw_cycles = room.get("palette_cycles", [])
         if not isinstance(raw_cycles, list) or len(raw_cycles) > 16:
             raise ValueError("Invalid palette cycles")

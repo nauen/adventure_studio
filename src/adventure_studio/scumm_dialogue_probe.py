@@ -76,14 +76,14 @@ def _click(x: int, y: int) -> None:
 
 
 def run(game_directory: Path, output: Path, voice: bool = False,
-        nested: bool = False) -> dict:
+        nested: bool = False, multispeaker: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Virtual X display required")
     if not all((game_directory / f"tentacle.{part}").is_file() for part in ("000", "001")):
         raise ValueError("Linked SCUMM dialogue game is missing")
     output.mkdir(parents=True, exist_ok=True)
     report: dict = {"game": "dialogue-choices", "passed": False, "voice": voice,
-                    "nested": nested}
+                    "nested": nested, "multispeaker": multispeaker}
     pcm_path = output / "dialogue-voice.raw"
     with (output / "scummvm.log").open("w", encoding="utf-8") as log:
         process = subprocess.Popen(["scummvm", f"--path={game_directory.resolve()}", "tentacle"],
@@ -115,7 +115,8 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 time.sleep(0.6)
             # The inherited DOTT verb GUI is in fixed 1024x768 Xvfb coords.
             _click(330, 560)  # Talk to
-            x, y = _color_center(output, "before", ACTOR_RGB)
+            x, y = ((192 + 185 * 2 + 16, 184 + 110 * 2 + 16)
+                    if multispeaker else _color_center(output, "before", ACTOR_RGB))
             _click(x, y)
             if voice:
                 # The native cursor/actor walk to the NPC must complete first.
@@ -137,9 +138,30 @@ def run(game_directory: Path, output: Path, voice: bool = False,
             # one ImageMagick bounding box: its center can lie in the gap.
             # Keep the flat fixture's native input position unchanged.
             answer_x = 192 + 240 * 2 + 16
-            answer_y = 184 + (120 if nested else 130) * 2 + 16
+            answer_y = 184 + (120 if nested or multispeaker else 130) * 2 + 16
             _click(330, 560)  # Re-select Talk to; SCUMM may reset the verb.
             _click(answer_x, answer_y)
+            if multispeaker:
+                # In stock ScummVM, actorSay uses the Actor's black speech
+                # color, unlike the player's magenta answer caption. The
+                # tested Actor position places its text in this clear strip
+                # inside the room, where neither an answer object nor the
+                # inherited verb GUI can produce black pixels.
+                text_pixels = 0
+                for _ in range(60):
+                    if process.poll() is not None:
+                        raise RuntimeError("ScummVM exited while the native Actor was speaking")
+                    _capture(output, "speaker")
+                    histogram = _run(["convert", str(output / "scummvm-speaker.png"),
+                                      "-crop", "500x32+300+184", "+repage",
+                                      "-format", "%c", "histogram:info:"])
+                    text_pixels = count_color_pixels(histogram, (0, 0, 0))
+                    if text_pixels >= 100:
+                        break
+                    time.sleep(0.25)
+                report["speaker_text_pixels"] = text_pixels
+                if text_pixels < 100:
+                    raise RuntimeError("No distinct black native Actor speech after answer caption")
             if nested:
                 nested_visible = False
                 for _ in range(35):
@@ -207,12 +229,13 @@ def run(game_directory: Path, output: Path, voice: bool = False,
 def main() -> int:
     voice = len(sys.argv) == 4 and sys.argv[1] == "--voice"
     nested = len(sys.argv) == 4 and sys.argv[1] == "--nested"
-    if (len(sys.argv) != 3 and not voice and not nested):
-        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested] GAME_DIR OUTPUT_DIR")
+    multispeaker = len(sys.argv) == 4 and sys.argv[1] == "--multispeaker"
+    if (len(sys.argv) != 3 and not voice and not nested and not multispeaker):
+        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested|--multispeaker] GAME_DIR OUTPUT_DIR")
         return 2
-    report = run(Path(sys.argv[2] if voice or nested else sys.argv[1]),
-                 Path(sys.argv[3] if voice or nested else sys.argv[2]),
-                 voice=voice, nested=nested)
+    report = run(Path(sys.argv[2] if voice or nested or multispeaker else sys.argv[1]),
+                 Path(sys.argv[3] if voice or nested or multispeaker else sys.argv[2]),
+                 voice=voice, nested=nested, multispeaker=multispeaker)
     print(json.dumps(report, sort_keys=True))
     return 0 if report["passed"] else 1
 
