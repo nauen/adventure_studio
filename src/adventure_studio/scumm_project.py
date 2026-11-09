@@ -358,7 +358,9 @@ def document_dict(document: GameDocument) -> dict:
                           "exit_destination": h.exit_destination,
                           **({"talk_lines": list(h.talk_lines)} if h.talk_lines else {}),
                           **({"talk_actor_lines": list(h.talk_actor_lines)}
-                             if h.talk_actor_lines else {})} for h in room.hotspots],
+                             if h.talk_actor_lines else {}),
+                          **({"talk_face_directions": list(h.talk_face_directions)}
+                             if h.talk_face_directions else {})} for h in room.hotspots],
             "use_rules": [{"item_id": r.item_id, "target_id": r.target_id,
                            "response": r.response, "hide_target": r.hide_target,
                            "destination_room": r.destination_room, "open_target": r.open_target,
@@ -379,6 +381,9 @@ def document_dict(document: GameDocument) -> dict:
                                  **({"actor_lines": [{"line_id": key, "actor_id": actor}
                                                      for key, actor in rule.actor_lines]}
                                     if rule.actor_lines else {}),
+                                 **({"actor_directions": [{"line_id": key, "direction": direction}
+                                                           for key, direction in rule.actor_directions]}
+                                    if rule.actor_directions else {}),
                                  "choices": [{"object_id": c.object_id,
                                               "caption": c.caption,
                                               "reply_lines": list(c.reply_lines),
@@ -974,7 +979,7 @@ def parse_document(source: str) -> GameDocument:
             raise ValueError("Invalid dialogue rules")
         talk_rules = []
         for raw_talk in raw_talk_rules:
-            talk = _only(raw_talk, {"speaker_id", "opening_lines", "choices", "stages", "actor_lines"},
+            talk = _only(raw_talk, {"speaker_id", "opening_lines", "choices", "stages", "actor_lines", "actor_directions"},
                          {"speaker_id", "opening_lines", "choices"})
             if (not isinstance(talk["speaker_id"], str)
                     or not isinstance(talk["opening_lines"], list)
@@ -1021,8 +1026,18 @@ def parse_document(source: str) -> GameDocument:
                 if not isinstance(binding["line_id"], str) or not isinstance(binding["actor_id"], str):
                     raise ValueError("Invalid dialogue Actor line binding")
                 actor_lines.append((binding["line_id"], binding["actor_id"]))
+            raw_directions = talk.get("actor_directions", [])
+            if not isinstance(raw_directions, list):
+                raise ValueError("Invalid dialogue Actor direction bindings")
+            directions = []
+            for item in raw_directions:
+                binding = _only(item, {"line_id", "direction"}, {"line_id", "direction"})
+                if not isinstance(binding["line_id"], str) or not isinstance(binding["direction"], str):
+                    raise ValueError("Invalid dialogue Actor direction binding")
+                directions.append((binding["line_id"], binding["direction"]))
             talk_rules.append(TalkRule(talk["speaker_id"], tuple(talk["opening_lines"]),
-                                       tuple(choices), tuple(stages), tuple(actor_lines)))
+                                       tuple(choices), tuple(stages), tuple(actor_lines),
+                                       tuple(directions)))
         raw_cycles = room.get("palette_cycles", [])
         if not isinstance(raw_cycles, list) or len(raw_cycles) > 16:
             raise ValueError("Invalid palette cycles")
@@ -1043,7 +1058,7 @@ def parse_document(source: str) -> GameDocument:
         for item in room["hotspots"]:
             h = _only(item, {"id", "label", "description", "x", "y", "width", "height", "pickup",
                              "sprite_pixels", "open_sprite_pixels", "exit_destination", "talk_lines",
-                             "talk_actor_lines"},
+                             "talk_actor_lines", "talk_face_directions"},
                       {"id", "label", "description", "x", "y", "width", "height", "pickup",
                        "sprite_pixels", "open_sprite_pixels", "exit_destination"})
             if type(h["pickup"]) is not bool:
@@ -1055,11 +1070,17 @@ def parse_document(source: str) -> GameDocument:
             if (not isinstance(talk_actor_lines, list)
                     or not all(isinstance(x, str) for x in talk_actor_lines)):
                 raise ValueError("Invalid linear dialogue Actor bindings")
+            talk_face_directions = h.get("talk_face_directions", [])
+            if (not isinstance(talk_face_directions, list)
+                    or any(direction is not None and not isinstance(direction, str)
+                           for direction in talk_face_directions)):
+                raise ValueError("Invalid linear dialogue facing cues")
             hotspots.append(RoomHotspot(
                 h["id"], h["label"], h["description"], h["x"], h["y"], h["width"], h["height"],
                 h["pickup"], _decode_pixels(h["sprite_pixels"]) if h["sprite_pixels"] is not None else None,
                 _decode_pixels(h["open_sprite_pixels"]) if h["open_sprite_pixels"] is not None else None,
                 h["exit_destination"], tuple(talk_lines), tuple(talk_actor_lines),
+                tuple(talk_face_directions),
             ))
         rules = []
         for item in room["use_rules"]:

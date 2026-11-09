@@ -760,6 +760,19 @@ enthalten. Für die dritte Zeile existiert noch kein eigener visueller
 Laufzeitnachweis. Der übergreifende Kompatibilitätslauf `42543308664`
 war nach einem nicht reproduzierten PNG-Frame-Fehler im zweiten Versuch grün.
 
+**Actor-Blickrichtung je Dialogzeile (2026-11-09, Implementierung):**
+In „Dialogzeilen“ lässt sich pro gesprochenem Knoten eine optionale Richtung
+N/O/S/W auswählen oder entfernen. Der persistierte Story-v4-Vertrag lässt
+Altdateien unverändert; die zugeordneten nativen Actors werden sowohl in
+linearen als auch verzweigten Gesprächen vor ihrer `actorSay`-Zeile mit
+`setCurrentActor`/`setActorDirection` gedreht. Die Gameplay-Fixture
+setzt unterschiedliche Richtungen für zwei Sprecher über dieselbe
+Studio-Service-Operation. 307 lokale Tests grün; der native ScummVM-Dialoglauf
+`42545583240` mit WEST/EAST-Cues ist erfolgreich. Die Befehle stehen im
+kompilierten `Harbor.scc`; ein isolierter Bildnachweis der Blickrichtung
+bleibt ausstehend. Individuelle
+Sprech-/Gesten-Costumes und Lippenanimation bleiben offen.
+
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.
 

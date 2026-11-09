@@ -66,7 +66,11 @@ def parse_story_document(raw: str) -> Story:
         expected = {field.name for field in fields(entity_type)}
         parsed = []
         for entry in entries:
-            values = _object(entry, expected, entity_type.__name__)
+            if entity_type is DialogueNode and isinstance(entry, dict):
+                # Optional v4 extension: old story documents remain byte-compatible.
+                values = _object(entry, expected - {"face_direction"}, entity_type.__name__) if "face_direction" not in entry else _object(entry, expected, entity_type.__name__)
+            else:
+                values = _object(entry, expected, entity_type.__name__)
             for field_name, value in values.items():
                 if (entity_type is Puzzle and field_name == "requires"
                         or entity_type is Recipe and field_name == "ingredients"):
@@ -75,7 +79,8 @@ def parse_story_document(raw: str) -> Story:
                     for item_id in value:
                         _text(item_id, field_name)
                 elif ((entity_type is Puzzle and field_name == "opens_scene_id")
-                      or (entity_type in (DialogueNode, DialogueChoice) and field_name == "next_node_id")) and value is None:
+                      or (entity_type in (DialogueNode, DialogueChoice) and field_name == "next_node_id")
+                      or (entity_type is DialogueNode and field_name == "face_direction")) and value is None:
                     continue
                 elif entity_type is Placement and field_name in ("x", "y"):
                     if type(value) is not int or value < 0:
@@ -100,6 +105,9 @@ def parse_story_document(raw: str) -> Story:
 def canonical_story_json(story: Story) -> str:
     validate_story(story)
     data = asdict(story)
+    for node in data["dialogue_nodes"]:
+        if node["face_direction"] is None:
+            del node["face_direction"]
     version = (4 if story.dialogues or story.dialogue_nodes or story.dialogue_choices or story.assets
                else 3 if story.placements else 2 if story.recipes else 1)
     if version == 1:

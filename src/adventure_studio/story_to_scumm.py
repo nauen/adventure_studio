@@ -83,6 +83,7 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
         lines = []
         line_speakers = []
         linear_actor_ids: tuple[str, ...] = ()
+        linear_directions: tuple[str | None, ...] = ()
         if dialogues:
             dialogue = dialogues[0]
             nodes = {n.id: n for n in story.dialogue_nodes if n.dialogue_id == dialogue.id}
@@ -90,13 +91,17 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                        for node_id in nodes}
             entry_choice_node = None
 
-            multi = len({n.speaker_id for n in nodes.values()}) > 1
+            multi = (len({n.speaker_id for n in nodes.values()}) > 1
+                     or any(n.face_direction is not None for n in nodes.values()))
             actor_lines = []
+            actor_directions = []
             base = f"room.{scene_id.lower()}.dialogue.{len(rules)}"
 
-            def bind(key: str, speaker: str) -> None:
+            def bind(key: str, speaker: str, direction: str | None) -> None:
                 if multi:
                     actor_lines.append((key, f"Speaker{speaker}"))
+                if direction is not None:
+                    actor_directions.append((key, direction))
 
             def follow(start: str | None) -> tuple[tuple[str, ...], str | None, tuple[str, ...]]:
                 collected = []
@@ -111,7 +116,7 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                     if by_node[current]:
                         return tuple(collected), current, tuple(speakers)
                     collected.append(_text(node.text))
-                    speakers.append(node.speaker_id)
+                    speakers.append((node.speaker_id, node.face_direction))
                     if len(collected) > 16:
                         raise ValueError("Dialogue text chain exceeds sixteen lines")
                     current = node.next_node_id
@@ -125,14 +130,14 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                 visited.add(current)
                 node = nodes[current]
                 lines.append(_text(node.text))
-                line_speakers.append(node.speaker_id)
+                line_speakers.append((node.speaker_id, node.face_direction))
                 current = node.next_node_id
             if current is not None:
                 entry_choice_node = current
                 lines.append(_text(nodes[current].text))
-                line_speakers.append(nodes[current].speaker_id)
-                for line_index, speaker in enumerate(line_speakers):
-                    bind(f"{base}.opening.{line_index}", speaker)
+                line_speakers.append((nodes[current].speaker_id, nodes[current].face_direction))
+                for line_index, (speaker, direction) in enumerate(line_speakers):
+                    bind(f"{base}.opening.{line_index}", speaker, direction)
                 if len(lines) > 16:
                     raise ValueError("Dialogue opening exceeds sixteen lines")
                 stages = []
@@ -169,28 +174,33 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                                                         f"Stage{target}" if target is not None else None))
                         prefix = (base if node_id == entry_choice_node else
                                   f"{base}.stage.{len(stages)}")
-                        for line_index, speaker in enumerate(response_speakers):
-                            bind(f"{prefix}.choice.{choice_index}.reply.{line_index}", speaker)
+                        for line_index, (speaker, direction) in enumerate(response_speakers):
+                            bind(f"{prefix}.choice.{choice_index}.reply.{line_index}", speaker, direction)
                     if node_id == entry_choice_node:
                         root_choices = tuple(stage_choices)
                     else:
                         stages.append(TalkStage(f"Stage{node_id}", (_text(nodes[node_id].text),),
                                                 tuple(stage_choices)))
-                        bind(f"{base}.stage.{len(stages) - 1}.opening.0", nodes[node_id].speaker_id)
+                        bind(f"{base}.stage.{len(stages) - 1}.opening.0",
+                             nodes[node_id].speaker_id, nodes[node_id].face_direction)
                 rules.append(TalkRule(actor.id, tuple(lines), root_choices, tuple(stages),
-                                      tuple(actor_lines)))
+                                      tuple(actor_lines), tuple(actor_directions)))
             else:
                 if len(lines) > 16:
                     raise ValueError("Dialogue opening exceeds sixteen lines")
                 if multi:
-                    linear_actor_ids = tuple(f"Speaker{speaker}" for speaker in line_speakers)
+                    linear_actor_ids = tuple(f"Speaker{speaker}" for speaker, _ in line_speakers)
+                    linear_directions = (tuple(direction for _, direction in line_speakers)
+                                         if any(direction is not None for _, direction in line_speakers)
+                                         else ())
         x = 185 + index * 35
         if x + 16 > room_width:
             raise ValueError("Too many characters for automatic room layout")
         result.append(RoomHotspot(actor.id, _text(actor.name), _text(actor.description),
                                   x, 110, 16, 16, sprite_pixels=_sprite(6, 3),
                                   talk_lines=tuple(lines) if not rules or rules[-1].speaker_id != actor.id else (),
-                                  talk_actor_lines=linear_actor_ids))
+                                  talk_actor_lines=linear_actor_ids,
+                                  talk_face_directions=linear_directions))
     return tuple(result), tuple(rules)
 
 

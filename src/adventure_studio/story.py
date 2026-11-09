@@ -88,6 +88,7 @@ class DialogueNode:
     speaker_id: str
     text: str
     next_node_id: str | None = None
+    face_direction: str | None = None
 
 
 @dataclass(frozen=True)
@@ -211,6 +212,8 @@ def validate_story(story: Story) -> None:
         speaker = characters.get(node.speaker_id)
         if speaker is None or speaker.scene_id != dialogue.scene_id:
             raise ValueError(f"Invalid dialogue speaker: {node.id}")
+        if node.face_direction is not None and node.face_direction not in ("N", "E", "S", "W"):
+            raise ValueError(f"Invalid dialogue facing direction: {node.id}")
         if node.next_node_id is not None and (node.next_node_id not in dialogue_nodes
                 or dialogue_nodes[node.next_node_id].dialogue_id != node.dialogue_id):
             raise ValueError(f"Unknown dialogue successor: {node.id}")
