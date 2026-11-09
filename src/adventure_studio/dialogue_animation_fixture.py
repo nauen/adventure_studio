@@ -23,8 +23,12 @@ def build(directory: Path) -> None:
                       animations=tuple(replace(animation, index=12)
                                        if animation.name == "stand" else animation
                                        for animation in costume.animations) + (gesture,))
-    document = replace(document, costumes=tuple(
-        updated if item.name == costume.name else item for item in document.costumes))
+    document = replace(document,
+                       costumes=tuple(updated if item.name == costume.name else item
+                                      for item in document.costumes),
+                       actors=tuple(replace(actor, initial_animation="stand")
+                                    if actor.costume == costume.name else actor
+                                    for actor in document.actors))
     raw = canonical_json(document)
     line = next(identity for label, identity in dialogue_animation_lines(raw)
                 if label.startswith("SpeakerWitness"))
