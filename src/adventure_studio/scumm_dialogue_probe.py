@@ -138,7 +138,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
             # one ImageMagick bounding box: its center can lie in the gap.
             # Keep the flat fixture's native input position unchanged.
             answer_x = 192 + 240 * 2 + 16
-            answer_y = 184 + (120 if nested else 130) * 2 + 16
+            answer_y = 184 + (120 if nested or multispeaker else 130) * 2 + 16
             _click(330, 560)  # Re-select Talk to; SCUMM may reset the verb.
             _click(answer_x, answer_y)
             if multispeaker:

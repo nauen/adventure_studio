@@ -157,7 +157,7 @@ def _character_dialogue_objects(story: Story, scene_id: str, room_width: int
                         answer_x = 240 + choice_index * 24
                         # Preserve the proven flat-dialogue layout. Nested
                         # stages must fit both rows inside the 144px viewport.
-                        answer_y = (120 if len(stage_numbers) > 1 else 130) if node_id == entry_choice_node else 100
+                        answer_y = (120 if len(stage_numbers) > 1 or multi else 130) if node_id == entry_choice_node else 100
                         if answer_x + 16 > room_width or not _ID.fullmatch(answer_id):
                             raise ValueError("Dialogue answer hotspot exceeds room exporter limits")
                         result.append(RoomHotspot(answer_id, _text(choice.text), _text(choice.text),
