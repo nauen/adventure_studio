@@ -12,6 +12,27 @@ Bytecode, lauffähig in ScummVM ohne eigene Adventure-Studio-Engine.
 Die kreative Oberfläche soll später auch komplexe, cineastische
 Sequenzen authoren können.
 
+## Aktuelles Produktpaket (2026-11-09)
+
+**Bestehende Dialogantworten bearbeiten (Implementierung):** Im Gradio-Reiter
+„Dialogzeilen“ kann eine vorhandene Antwort ausgewählt, ihr Text geändert
+und ihr Zielknoten innerhalb desselben Gesprächs neu gesetzt oder das Gespräch
+beendet werden. Die stabile Antwort-ID und ihr Ursprungsknoten bleiben erhalten.
+Die Änderung folgt dem bestehenden Prüfen-/Übernehmen-Ablauf; die
+Story-Validierung weist unerreichbare Gesprächszeilen und unzulässige
+Verbindungen ab. Der reguläre Story-zu-SCUMM-Pfad übernimmt neue Texte und
+Antwortverläufe. 309 lokale Tests grün, einschließlich produktivem Service-
+und Quellgenerierungsnachweis. Eine eigene interaktive Gradio- und native
+ScummVM-Klickabnahme dieser neuen Editoroperation steht aus; die bereits
+nachgewiesene native Antwortmechanik wird nicht erneut als neues Feature
+behauptet.
+
+**Nächstes Produktpaket:** Eine sichtbare, vom Autor gewählte Costume-
+Animation pro Sprechzeile an die tatsächlichen nativen Sprecher-Actors
+binden und im Studio samt stock-ScummVM-Gameplay prüfen. Der derzeitige
+automatisch erzeugte Dialog-Costume besitzt nur eine Standpose; die
+Bild-/Frame-Bindung muss daher real in den gemeinsamen Authoring-Pfad.
+
 ## Gesichert vorhandene Grundlagen
 
 - Versionierte Story-/Projektmodelle, deterministische Validierung

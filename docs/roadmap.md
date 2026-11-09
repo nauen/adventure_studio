@@ -9,6 +9,13 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Dialogantworten editieren (2026-11-09, Implementierung):** Der Studio-
+Dialogeditor kann vorhandene Antworttexte und Folgeziele bei stabilen IDs
+ändern. Der Story-Solver schützt vor verwaisten Knoten; der native
+SCUMM-Quellpfad nutzt den geänderten Graphen. 309 lokale Tests grün;
+interaktive UI-/ScummVM-Abnahme dieser Operation bleibt offen. Nächstes
+vertikales Paket: autorierte sichtbare Costume-Animation pro Sprecherzeile.
+
 1. **P1 – Vollständiger nativer SCUMM-v6-Generator (jetzt):**
    Raumgrafiken, Masken, Walkboxen, Objekte, Actors/Costumes, Animation,
    zeitabhängige Aktionen, Rätsel, Kamera, Cutscenes, Dialog, Audio und

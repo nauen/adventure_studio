@@ -15,7 +15,7 @@ from .studio_catalog import relationship_svg, story_catalog
 from .story_ai import preview_ai_response, propose_story_change
 from .studio_service import (accept_proposal, add_decoration, change_item,
                              change_dialogue_line, change_dialogue_facing, extend_dialogue_line,
-                             add_dialogue_choice, extend_dialogue_choice,
+                             add_dialogue_choice, change_dialogue_choice, extend_dialogue_choice,
                              change_position, change_puzzle, change_scene,
                              describe_story, item_position, prepare_proposal,
                              report_text, scene_preview, translation_draft, validate_translation_draft)
@@ -70,6 +70,17 @@ def dialogue_line_fields(raw: str, node_id: str) -> str:
 def dialogue_facing_fields(raw: str, node_id: str) -> str | None:
     node = next((n for n in parse_story_document(raw).dialogue_nodes if n.id == node_id), None)
     return node.face_direction if node else None
+
+
+def dialogue_choice_fields(raw: str, choice_id: str):
+    story = parse_story_document(raw)
+    choice = next((c for c in story.dialogue_choices if c.id == choice_id), None)
+    if choice is None:
+        return "", {"choices": [("Gespräch beenden", None)], "value": None}
+    parent = next(n for n in story.dialogue_nodes if n.id == choice.node_id)
+    return choice.text, {"choices": [("Gespräch beenden", None)] + [
+        (n.id, n.id) for n in story.dialogue_nodes if n.dialogue_id == parent.dialogue_id],
+        "value": choice.next_node_id}
 
 
 def dialogue_speaker_fields(raw: str, node_id: str):
@@ -545,6 +556,12 @@ def make_app():
                 dialogue_answer_text = gr.Textbox(label="Antworttext")
                 dialogue_answer_target = gr.Dropdown(label="Zielknoten", choices=[("Gespräch beenden", None)])
             dialogue_answer_add = gr.Button("Antwort hinzufügen: Änderung prüfen")
+            gr.Markdown("**Bestehende Antwort bearbeiten:** Antworttext und Folgeknoten ändern, ohne die stabile Antwort-ID zu verlieren.")
+            dialogue_edit_choice = gr.Dropdown(label="Antwort auswählen")
+            with gr.Row():
+                dialogue_edit_text = gr.Textbox(label="Antworttext bearbeiten")
+                dialogue_edit_target = gr.Dropdown(label="Weiter zu", choices=[("Gespräch beenden", None)])
+            dialogue_edit_save = gr.Button("Antwortänderung prüfen")
             gr.Markdown("**Antwort fortsetzen:** Eine bisher abschließende Antwort erhält eine neue gesprochene Zeile. Anschließend können an diese Zeile weitere Antworten angehängt werden.")
             with gr.Row():
                 dialogue_terminal_choice = gr.Dropdown(label="Abschließende Antwort")
@@ -779,6 +796,18 @@ def make_app():
         dialogue_answer_add.click(lambda *args: propose(add_dialogue_choice, *args),
                                   [state, dialogue_node_select, dialogue_answer_id,
                                    dialogue_answer_text, dialogue_answer_target], [pending, report])
+        state.change(lambda raw: gr.update(
+            choices=[(f"{choice.id}: {choice.text[:48]}", choice.id)
+                     for choice in parse_story_document(raw).dialogue_choices] if raw else [], value=None),
+            [state], [dialogue_edit_choice])
+        def selected_answer(raw, choice_id):
+            answer_text, target = dialogue_choice_fields(raw, choice_id)
+            return answer_text, gr.update(**target)
+        dialogue_edit_choice.change(selected_answer, [state, dialogue_edit_choice],
+                                    [dialogue_edit_text, dialogue_edit_target])
+        dialogue_edit_save.click(lambda *args: propose(change_dialogue_choice, *args),
+                                 [state, dialogue_edit_choice, dialogue_edit_text,
+                                  dialogue_edit_target], [pending, report])
         dialogue_extend.click(lambda *args: propose(extend_dialogue_choice, *args),
                               [state, dialogue_terminal_choice, dialogue_new_node_id,
                                dialogue_new_node_text, dialogue_new_speaker], [pending, report])
