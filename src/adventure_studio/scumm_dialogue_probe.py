@@ -165,7 +165,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 first = None
                 second = None
                 colored = 0
-                baseline_red = None
+                baseline_red = report.get("gesture_initial_pixels", 0)
                 speaker_visible = 0
                 for _ in range(85):
                     if process.poll() is not None:
@@ -175,17 +175,16 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     visible_red = gesture_ink() if gesture else 0
                     if gesture:
                         speaker_visible = max(speaker_visible, speaker_ink())
+                        if visible_red > colored:
+                            colored = visible_red
+                            _capture(output, "gesture-frame")
                     if first is None and len(ink) >= 100:
                         first = ink
-                        baseline_red = visible_red
                         _capture(output, "linear-first")
                     elif first is not None and second is None and len(ink) >= 100 and len(
                             first.symmetric_difference(ink)) > 150:
                         second = ink
                         _capture(output, "linear-second")
-                    if gesture and second is not None and visible_red > colored:
-                        colored = visible_red
-                        _capture(output, "gesture-frame")
                     if second is not None and (not gesture or
                                                colored >= (baseline_red or 0) + 16):
                         break
