@@ -14,6 +14,93 @@ Sequenzen authoren können.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
+**Aktuellster nativer Nachweis (vor Merge):** Der stock-ScummVM-Dialogtest
+hat die rote Sprechgeste mit 256 Pixeln sichtbar gemacht und später
+deren Rückkehr zu 0 Pixeln bestätigt. Nach Anpassung der Bildprobe auf
+sechs *aufeinanderfolgende* Standframes ist der native Gesten-/Standpose-
+Schritt auf Commit `2dc5271` **grün**. Ausschlaggebend waren die
+reservierten COST-Talk-Start-/Stop-Slots 16/20 und ein begrenztes
+Endzustands-Wartefenster; die Geste 24 bleibt als editierbarer Cue
+erhalten. Der Studio-Ein-Klick-Pfad erzeugt jetzt selbst `talk_start`
+(Index 16) aus dem gewählten PNG-Frame und `talk_stop` (Index 20) aus
+der Standpose; der Validator prüft die Übereinstimmung bei aktiviertem
+Reset. 318 lokale Tests grün. **Noch offen:** vollständiger aktueller
+CI-Lauf und interaktive Gradio-Bedienabnahme. Die folgenden älteren
+Absätze dokumentieren die Fehlersuche, nicht mehr den letzten Status.
+
+
+**Sprechpose aus importiertem PNG-Frame (Implementierung):** Im
+Costume-Editor kann der Autor ein zuvor importiertes Frame auswählen und
+mit einem Klick als `gesture`-Sprechpose für alle vier Blickrichtungen
+zuweisen. Die Geste verwendet Index 24 und bleibt bis zum eigens
+autorisierten Standpose-Reset sichtbar; die vorhandene `stand`-Animation
+bleibt unberührt. Der Produktpfad nutzt das gleiche validierte
+Projekt-JSON wie der native Export. 318 lokale Tests grün, inklusive
+PNG-Import, vier Richtungen, ungültigem Frame, nativer COST-Quelldatei
+und Dialog-Cue-Bindung im ScummC-Quellgenerator.
+**Offen:** Durchgeklickter Gradio-Pfad und der strenge stock-ScummVM-
+Sichtnachweis; PR #78 bleibt bis zu einem grünen nativen Gate offen.
+
+**Native Fehleranalyse (2026-11-09):** Der zuerst fehlende CI-Start war
+ein unvollständiger Git-Baum auf dem Feature-Branch; Commit `a091769`
+hat den vollständigen Repository-Baum samt Workflows wiederhergestellt.
+Die danach regulär laufenden nativen Dialogjobs zeigen Sprechertexte,
+aber keine nachweisbare zweite NPC-Costume-Grafik. Auch der explizite
+`stand`-Start in der Test-Fixture brachte keine zusätzlichen
+Actor-Farbpixel im Bildbereich. Reservierte COST-Slots sind jetzt
+Stand 12, Sprechbeginn 16 und Sprechende 20; die Geste 24 wird über
+`setActorTalkFrame` an den Sprecher gebunden. **Offenes Gate vor der
+Gesten-Abnahme:** Die native Sprecherfigur muss selbst sichtbar sein,
+anschließend Geste und Rückkehr zur Standpose.
+
+**Präziser ScummVM-Nachweis:** Nach Trennung der Sprecherfigur von Ego
+und dem Talk-Hotspot ist die Witness-Stand-Costume tatsächlich sichtbar
+(`speaker_costume_pixels=256`, CI auf `f765992`). Wird dieselbe
+Costume-Animation 24 bereits beim Raumeintritt gestartet, zeigt
+ScummVM die roten Sprechframe-Pixel (`gesture_initial_pixels=256`,
+CI auf `7f096dc`). Bei der normalen Sprechzeile bleibt die Geste trotz
+`setActorTalkFrame(6,3)`, `actorSay`, einem `delay(1)`-Tick und
+`animateActor(...,24)` unsichtbar (`gesture_frame_pixels=0`, CI auf
+`64a110b`). Ursache ist damit die Interaktion der Actor-Sprechphase
+mit dem Animationsstart; eine native Talk-Start-/Talk-Script-Lösung
+ist erforderlich, bevor Geste und Rücksetzung als Produktfunktion
+freigegeben werden können.
+
+
+**Sprechgesten mit definierter Standpose (Implementierung):** Zu einer
+nativen Dialoganimation kann der Autor nun im Studio „Nach der Sprechzeile
+zur Standpose zurückkehren“ auswählen. Nach `waitForMessage` und optionalem
+VOC-Stopp setzt der SCUMM-v6-Exporter den betroffenen Actor ausdrücklich
+mit `setCurrentActor`/`setActorStanding` zurück, stellt danach Ego als
+aktiven Actor wieder her und startet die explizit indizierte `stand`-
+Costume-Animation. Beim Wechsel mehrerer Sprecher gilt das jeweils für
+die tatsächliche Actor-Bindung; fehlende `stand`-Richtungen oder ein
+fehlender nativer `stand`-Index werden abgewiesen. Neue PNG-Costumes
+erhalten dafür den nativen `stand`-Index 12. Der Dialogexport konfiguriert
+zusätzlich die Actor-Talk-Frames auf den Gesten- und Stand-Index. Das versionierte Projekt-JSON speichert `reset_to_stand` nur
+bei aktivierter Einstellung; ältere Cues ohne Feld behalten das bisherige
+Verhalten. 316 lokale Tests grün (einschließlich zweier Sprecher und
+Alt-JSON). Die erste native Endzustandsprobe wertete zwölf rote Pixel
+in der unveränderten Standpose fälschlich als verbliebene Sprechgeste.
+Die Bildartefakte aus CI `42552675686` machten die statische Farbe
+sichtbar. Der Export startet zusätzlich die konkrete native `stand`-
+Animation. Die korrigierte Klickprobe zeichnet den stärksten Gesten-
+Frame auf und fordert danach einen über mehrere Ticks stabilen
+Standzustand mit weniger Gestenpixeln als am Maximum. Die verschärfte
+native Probe in CI `42552675686` (vorher) und der anschließenden
+CI-Runde (12 rote Pixel vor und nach der Zeile, kein nachgewiesener
+Gestenüberschuss) zeigt, dass auch der bisherige visuelle Gestennachweis
+nicht hinreichend abgesichert war. Das ist ein offener Laufzeitfehler,
+kein bestätigter End-to-End-Erfolg; PR #78 bleibt deshalb ungemergt.
+**Offenes Pflichtgate:** Eine tatsächlich sichtbare native Sprechgeste,
+anschließende Standpose und eine
+durchgeklickte Gradio-UI-Bedienung stehen zum jetzigen Zeitpunkt aus.
+**Nächstes Produktpaket:** Nach bestandenem Standpose-Gate die Gesten beim
+Sprecherwechsel mit real importierten PNG-Frames im Editor-End-to-End-Fluss
+prüfen; danach zeitgebundene Audio-/Lippen-Cues authoren.
+
+## Vorheriges Produktpaket: Dialoganimation
+
 **Costume-Animation je nativer Sprecherzeile (Implementierung):** Im nativen
 Studio-Bereich kann eine Dialogzeile mit gebundenem `Speaker`-Actor eine
 indizierte Costume-Animation erhalten oder die Zuordnung wieder entfernen.
@@ -27,10 +114,13 @@ Sprecher, Animationsindices und unpassende Blickrichtungen werden abgewiesen.
 SCUMM-Quellnachweis. Der erste native Klicklauf zeigte beide Sprecherzeilen,
 aber noch keinen sichtbaren Gesten-Frame. Nach Anpassung der Befehlsfolge
 (`actorSay` vor `animateActor`) und des kamerafolgenden Bildbereichs hat
-die neue stock-ScummVM-Klickprobe **beide Sprecherzeilen und den roten
-zweiten Costume-Frame** sichtbar bestätigt: `gesture_frame_pixels=14`,
+die damalige stock-ScummVM-Klickprobe beide Sprecherzeilen und 14
+rote Pixel im Actor-Bereich gezählt: `gesture_frame_pixels=14`,
 `first_speaker_pixels=152`, `second_speaker_pixels=1056`, `passed=true`,
 CI `42550554974` (Artefakt `native-v6-studio-dialogue-gesture`).
+Neuere Frame-Vergleiche zeigen zwölf gleichfarbige Pixel in der Standpose;
+die zwei zusätzlichen Pixel sind kein ausreichender Beleg für einen
+sichtbaren zweiten Costume-Frame. Die Geste ist nativ erneut zu beweisen.
 **Offen:** Ein interaktiver Gradio-UI-Klickpfad und ein echter zeitlich
 präziser Lippen-/Sprach-Sync sind nicht nachgewiesen. D03 bleibt Teilfähigkeit.
 **Nächstes Produktpaket:** Die Actor-Geste aus importierten PNG-Frames im

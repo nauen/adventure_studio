@@ -26,6 +26,7 @@ from adventure_studio.studio_export import export_native_project
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
 from adventure_studio.studio_actors import (add_actor, create_costume, move_actor,
                                            add_costume_frame, set_costume_animation,
+                                           costume_frame_names, set_costume_speaking_pose,
                                            costume_timeline_images, edit_costume_timeline,
                                            render_costume_preview, set_actor_initial_animation)
 from test_scumm_toolchain import fake_upstream
@@ -413,6 +414,17 @@ class NativeSequenceEditorTests(unittest.TestCase):
                     wave.putpixel((x, y), (40, 130, 220, 255) if x < 4 else (220, 60, 80, 255))
             wave.save(second)
             raw = add_costume_frame(raw, "PixelCostume", str(second), "Pose1")
+            self.assertEqual(costume_frame_names(raw, "PixelCostume"), ("Pose0", "Pose1"))
+            with self.assertRaisesRegex(ValueError, "vorhandenes Costume-Frame"):
+                set_costume_speaking_pose(raw, "PixelCostume", "NotImported")
+            raw = set_costume_speaking_pose(raw, "PixelCostume", "Pose1")
+            speaking = next(animation for animation in parse_document(raw).costumes[-1].animations
+                            if animation.name == "gesture")
+            self.assertEqual(speaking.index, 24)
+            self.assertEqual({direction.direction for direction in speaking.directions},
+                             {"N", "E", "S", "W"})
+            self.assertTrue(all(direction.commands == ("Pose1",) and direction.loop
+                                for direction in speaking.directions))
             raw = set_costume_animation(raw, "PixelCostume", "wave", 28, "E",
                                         "Pose0, COUNT, Pose1", False)
             raw = set_actor_initial_animation(raw, "PixelHero", "wave")

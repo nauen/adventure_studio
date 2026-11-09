@@ -38,6 +38,7 @@ from .scumm_project import canonical_json as canonical_project_json, parse_docum
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
                             create_costume, add_costume_frame, set_costume_animation,
+                            costume_frame_names, set_costume_speaking_pose,
                             move_actor, costume_animation_names, costume_animation_steps,
                             costume_timeline_images, edit_costume_timeline,
                             render_costume_preview, set_actor_initial_animation,
@@ -358,6 +359,7 @@ def make_app():
             updated = action(raw, *args)
             chosen = (args[1] if action is create_costume else args[0]
                       if action in (add_costume_frame, set_costume_animation,
+                                    set_costume_speaking_pose,
                                     edit_costume_timeline) else
                       args[1] if action is add_actor else None)
             selected_actor = args[0] if action is set_actor_initial_animation else (
@@ -598,6 +600,10 @@ def make_app():
                     native_frame_file = gr.File(label="Weiteres Frame-PNG", file_types=[".png"], type="filepath")
                     native_frame_id = gr.Textbox(label="Neue Frame-ID")
                     native_frame_button = gr.Button("Frame zur Costume hinzufügen")
+                gr.Markdown("**Sprechpose aus PNG:** Importiere oben ein zweites Frame und wähle es hier. Ein Klick setzt `gesture` (Index 24) und den nativen Sprechbeginn `talk_start` (Index 16) für alle vier Blickrichtungen. `talk_stop` (Index 20) verwendet die erhaltene Standpose.")
+                with gr.Row():
+                    native_speaking_frame = gr.Dropdown(label="Frame für die Sprechpose")
+                    native_speaking_save = gr.Button("Frame als Sprechpose verwenden")
                 gr.Markdown("**Animation gestalten:** Frame-IDs in der gewünschten Reihenfolge durch Komma trennen. `COUNT`, `SHOW`, `HIDE` und `NOP` sind native Costume-Kommandos. Der Index muss durch vier teilbar sein; `gesture` verwendet zunächst 24.")
                 with gr.Row():
                     native_anim_name = gr.Textbox(label="Animationsname", value="gesture")
@@ -703,10 +709,12 @@ def make_app():
             with gr.Row():
                 native_dialogue_voice_save = gr.Button("Dialogaufnahme zuweisen / ersetzen")
                 native_dialogue_voice_remove = gr.Button("Dialogaufnahme entfernen")
-            gr.Markdown("**Sprecher-Animation:** Wähle eine Dialogzeile mit nativem Actor und eine seiner indizierten Costume-Animationen. Der Actor startet die Geste während der Sprechzeile. Die gewünschte Blickrichtung muss in der Animation vorhanden sein.")
+            gr.Markdown("**Sprecher-Animation:** Wähle eine Dialogzeile mit nativem Actor und eine seiner indizierten Costume-Animationen. Der Actor startet die Geste während der Sprechzeile. Für die Rückkehr zur Standpose muss zusätzlich die Costume-Animation `stand` den nativen Stand-Index 12 besitzen (bei neuen PNG-Costumes automatisch). Beide Animationen müssen die gewünschte Blickrichtung unterstützen.")
             with gr.Row():
                 native_dialogue_animation_line = gr.Dropdown(label="Sprecher-Dialogzeile")
                 native_dialogue_animation = gr.Dropdown(label="Costume-Animation")
+            native_dialogue_reset = gr.Checkbox(label="Nach der Sprechzeile zur Standpose zurückkehren",
+                                                value=True)
             with gr.Row():
                 native_dialogue_animation_save = gr.Button("Sprechanimation zuweisen")
                 native_dialogue_animation_remove = gr.Button("Sprechanimation entfernen")
@@ -852,6 +860,16 @@ def make_app():
         native_frame_button.click(lambda *args: native_asset_edit(add_costume_frame, *args),
                                   [native_state, native_costume_select, native_frame_file, native_frame_id],
                                   [native_state, *native_outputs, native_report])
+        native_speaking_save.click(lambda *args: native_asset_edit(set_costume_speaking_pose, *args),
+                                   [native_state, native_costume_select, native_speaking_frame],
+                                   [native_state, *native_outputs, native_report])
+        def speaking_frame_choices(raw, name):
+            frames = costume_frame_names(raw, name) if raw and name else ()
+            return gr.update(choices=frames, value=frames[-1] if frames else None)
+        native_state.change(speaking_frame_choices, [native_state, native_costume_select],
+                            [native_speaking_frame])
+        native_costume_select.change(speaking_frame_choices, [native_state, native_costume_select],
+                                     [native_speaking_frame])
         native_anim_button.click(lambda *args: native_asset_edit(set_costume_animation, *args),
                                  [native_state, native_costume_select, native_anim_name,
                                   native_anim_index, native_anim_direction, native_anim_commands,
@@ -1092,15 +1110,16 @@ def make_app():
             [native_state], [native_dialogue_animation_line])
         def dialogue_animation_update(raw, line):
             if not raw:
-                return gr.update(choices=[], value=None)
-            choices, selected = dialogue_animation_choices(raw, line)
-            return gr.update(choices=choices, value=selected)
+                return gr.update(choices=[], value=None), True
+            choices, selected, reset = dialogue_animation_choices(raw, line)
+            return gr.update(choices=choices, value=selected), reset
         native_dialogue_animation_line.change(
             dialogue_animation_update, [native_state, native_dialogue_animation_line],
-            [native_dialogue_animation])
+            [native_dialogue_animation, native_dialogue_reset])
         native_dialogue_animation_save.click(
             lambda *args: native_edit(edit_dialogue_animation, *args),
-            [native_state, native_dialogue_animation_line, native_dialogue_animation],
+            [native_state, native_dialogue_animation_line, native_dialogue_animation,
+             native_dialogue_reset],
             [native_state, *native_outputs, native_report])
         native_dialogue_animation_remove.click(
             lambda raw, line: native_edit(edit_dialogue_animation, raw, line, None),

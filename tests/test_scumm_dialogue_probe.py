@@ -1,6 +1,7 @@
 import unittest
 
-from adventure_studio.scumm_dialogue_probe import detect_answer_transition, initial_dialogue_ready
+from adventure_studio.scumm_dialogue_probe import (detect_answer_transition,
+                                                   detect_gesture_return, initial_dialogue_ready)
 
 
 class DialogueProbeTests(unittest.TestCase):
@@ -21,6 +22,15 @@ class DialogueProbeTests(unittest.TestCase):
         for counts in ((True, 200, 0), (-1, 200, 0), (0, 200, 0.1)):
             with self.subTest(counts=counts), self.assertRaises(ValueError):
                 detect_answer_transition(*counts)
+
+    def test_gesture_return_uses_stationary_color_baseline(self):
+        self.assertTrue(detect_gesture_return(28, [12] * 6))
+        self.assertFalse(detect_gesture_return(12, [12] * 6))
+        self.assertFalse(detect_gesture_return(13, [12] * 6))
+        self.assertFalse(detect_gesture_return(26, [12] * 6))
+        self.assertFalse(detect_gesture_return(28, [12, 12, 13, 12, 12, 12]))
+        with self.assertRaises(ValueError):
+            detect_gesture_return(28, [12] * 5)
 
 
 if __name__ == "__main__":

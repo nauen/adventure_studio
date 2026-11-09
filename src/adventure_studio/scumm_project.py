@@ -166,6 +166,7 @@ class DialogueAnimationCue:
     line_id: str
     source_text: str
     animation: str
+    reset_to_stand: bool = False
 
 
 @dataclass(frozen=True)
@@ -334,7 +335,11 @@ def document_dict(document: GameDocument) -> dict:
                                        if cue.variants else {})}
                                    for cue in document.dialogue_voice_cues]}
            if document.dialogue_voice_cues else {}),
-        **({"dialogue_animation_cues": [vars(cue) for cue in document.dialogue_animation_cues]}
+        **({"dialogue_animation_cues": [{"line_id": cue.line_id,
+                                         "source_text": cue.source_text,
+                                         "animation": cue.animation,
+                                         **({"reset_to_stand": True} if cue.reset_to_stand else {})}
+                                        for cue in document.dialogue_animation_cues]}
            if document.dialogue_animation_cues else {}),
         "rooms": [{
             "name": room.name,
@@ -569,6 +574,7 @@ def _validate_document(document: GameDocument) -> None:
     for cue in document.dialogue_animation_cues:
         if (not isinstance(cue, DialogueAnimationCue) or not isinstance(cue.line_id, str)
                 or not isinstance(cue.source_text, str) or not isinstance(cue.animation, str)
+                or type(cue.reset_to_stand) is not bool
                 or cue.line_id in seen_animations):
             raise ValueError("Invalid or duplicate dialogue animation cue")
         seen_animations.add(cue.line_id)
@@ -579,9 +585,26 @@ def _validate_document(document: GameDocument) -> None:
         animation = next((item for item in costumes_by_name[actor.costume].animations
                           if item.name == cue.animation), None)
         direction = line_directions.get(cue.line_id, actor.direction)
-        if (animation is None or animation.index is None
+        if (animation is None or animation.index is None or animation.index < 24
                 or direction not in {item.direction for item in animation.directions}):
             raise ValueError(f"Dialogue animation requires an indexed COST direction: {cue.line_id}")
+        if cue.reset_to_stand:
+            costume_animations = costumes_by_name[actor.costume].animations
+            stand = next((item for item in costume_animations
+                          if item.name == "stand"), None)
+            if (stand is None or stand.index != 12
+                    or direction not in {item.direction for item in stand.directions}):
+                raise ValueError(f"Dialogue animation reset requires an indexed stand pose: {cue.line_id}")
+            start = next((item for item in costume_animations
+                          if item.name == "talk_start" and item.index == 16), None)
+            stop = next((item for item in costume_animations
+                         if item.name == "talk_stop" and item.index == 20), None)
+            def commands_for(item):
+                return next((entry.commands for entry in item.directions
+                             if entry.direction == direction), None) if item else None
+            if (commands_for(start) != commands_for(animation)
+                    or commands_for(stop) != commands_for(stand)):
+                raise ValueError(f"Dialogue animation reset requires matching native talk frames: {cue.line_id}")
     for rule in document.animation_rules:
         if not isinstance(rule, AnimationRule) or not isinstance(rule.condition, ActorCountCondition) or not isinstance(rule.effect, ObjectStateEffect):
             raise ValueError("Invalid typed animation rule")
@@ -1184,7 +1207,7 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Invalid dialogue animation collection")
     animation_cues = []
     for raw_cue in raw_animations:
-        item = _only(raw_cue, {"line_id", "source_text", "animation"},
+        item = _only(raw_cue, {"line_id", "source_text", "animation", "reset_to_stand"},
                      {"line_id", "source_text", "animation"})
         animation_cues.append(DialogueAnimationCue(**item))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),

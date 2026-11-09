@@ -33,6 +33,14 @@ def initial_dialogue_ready(scene_visible: bool, actor_pixels: int, answer_pixels
     return scene_visible and actor_pixels >= 40 and answer_pixels < 10
 
 
+def detect_gesture_return(peak_pixels: int, after_pixels: list[int]) -> bool:
+    """Require transient gesture pixels above a stable, nonzero stand baseline."""
+    if (type(peak_pixels) is not int or peak_pixels < 0 or len(after_pixels) != 6
+        or any(type(value) is not int or value < 0 for value in after_pixels)):
+        raise ValueError("Invalid gesture pixel measurements")
+    return len(set(after_pixels)) == 1 and peak_pixels - after_pixels[0] >= 16
+
+
 def _run(command: list[str], timeout: int = 10) -> str:
     result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
     if result.returncode:
@@ -112,6 +120,13 @@ def run(game_directory: Path, output: Path, voice: bool = False,
             report.update({"answer_pixels_before": before, "actor_pixels": actor_count})
             if not ready:
                 raise RuntimeError(f"Initial scene/character not ready: {report}")
+            if gesture:
+                from PIL import Image
+                with Image.open(output / "scummvm-before.png") as image:
+                    rgb = image.convert("RGB")
+                    report["gesture_initial_pixels"] = sum(
+                        close_rgb(rgb.getpixel((col, row)), (220, 80, 80), 25)
+                        for row in range(330, 430) for col in range(680, 810))
             if voice:
                 _run(["xdotool", "key", "1"])  # sorted languages: de, en
                 time.sleep(0.6)
@@ -136,22 +151,33 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 def gesture_ink() -> int:
                     with Image.open(output / "scummvm-linear.png") as frame:
                         rgb = frame.convert("RGB")
-                        # The camera follows Ego while walking to the NPC.
-                        # The speaker therefore moves left on screen even
-                        # though its authored world coordinates stay fixed.
+                        # The native fixture intentionally separates the
+                        # Witness actor from the clicked object and Ego.
                         return sum(close_rgb(rgb.getpixel((col, row)), (220, 80, 80), 25)
-                                   for row in range(270, 375) for col in range(530, 675))
+                                   for row in range(330, 430) for col in range(680, 810))
+
+                def speaker_ink() -> int:
+                    with Image.open(output / "scummvm-linear.png") as frame:
+                        rgb = frame.convert("RGB")
+                        return sum(close_rgb(rgb.getpixel((col, row)), (50, 220, 220), 12)
+                                   for row in range(330, 430) for col in range(680, 810))
 
                 first = None
                 second = None
                 colored = 0
+                baseline_red = report.get("gesture_initial_pixels", 0)
+                speaker_visible = 0
                 for _ in range(85):
                     if process.poll() is not None:
                         raise RuntimeError("ScummVM exited during linear NPC dialogue")
                     _capture(output, "linear")
                     ink = line_ink()
+                    visible_red = gesture_ink() if gesture else 0
                     if gesture:
-                        colored = max(colored, gesture_ink())
+                        speaker_visible = max(speaker_visible, speaker_ink())
+                        if visible_red > colored:
+                            colored = visible_red
+                            _capture(output, "gesture-frame")
                     if first is None and len(ink) >= 100:
                         first = ink
                         _capture(output, "linear-first")
@@ -159,18 +185,64 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                             first.symmetric_difference(ink)) > 150:
                         second = ink
                         _capture(output, "linear-second")
-                    if second is not None and (not gesture or colored >= 10):
-                        if gesture:
-                            _capture(output, "gesture-frame")
+                    if second is not None and (not gesture or
+                                               colored >= (baseline_red or 0) + 16):
                         break
                     time.sleep(0.25)
                 report.update({"first_speaker_pixels": len(first or ()),
                                "second_speaker_pixels": len(second or ()),
                                "gesture_frame_pixels": colored,
+                               "gesture_baseline_pixels": baseline_red,
+                               "speaker_costume_pixels": speaker_visible,
                                "answer_pixels_visible": 0,
-                               "passed": bool(first and second and (not gesture or colored >= 10))})
+                               "passed": bool(first and second and (not gesture or
+                                               (speaker_visible >= 16 and
+                                                colored >= (baseline_red or 0) + 16)))})
                 if not report["passed"]:
                     raise RuntimeError(f"Native two-speaker text or authored Costume gesture was not visible: {report}")
+                if gesture:
+                    # Wait until the last spoken message has actually left
+                    # the screen; only then may the authored standing reset
+                    # have executed. Sample across several animation ticks.
+                    finished = False
+                    for _ in range(55):
+                        if process.poll() is not None:
+                            raise RuntimeError("ScummVM exited before gesture reset")
+                        _capture(output, "linear")
+                        if len(line_ink()) < 20:
+                            finished = True
+                            break
+                        time.sleep(0.25)
+                    after = []
+                    if finished:
+                        time.sleep(0.4)
+                        # Native actorSay can complete its final talk-stop
+                        # animation a few ticks after the text disappears.
+                        # Require six consecutive standing samples, not an
+                        # instantaneous switch on the first sample.
+                        stable = 0
+                        for _ in range(35):
+                            _capture(output, "linear")
+                            current = gesture_ink()
+                            after.append(current)
+                            stable = stable + 1 if current == baseline_red else 0
+                            if stable >= 6:
+                                break
+                            time.sleep(0.3)
+                        _capture(output, "gesture-stand")
+                    # The stationary NPC contains twelve pixels close to the
+                    # gesture palette color. Zero is therefore not a valid
+                    # standing baseline. Compare against the recorded peak,
+                    # and require the post-dialogue samples to be stable.
+                    excess = colored - max(after) if after else 0
+                    report.update({"gesture_message_finished": finished,
+                                   "gesture_after_pixels": after,
+                                   "gesture_peak_excess_pixels": excess,
+                                   "gesture_reset_verified": finished and len(after) >= 6
+                                   and detect_gesture_return(colored, after[-6:])})
+                    report["passed"] = report["passed"] and report["gesture_reset_verified"]
+                    if not report["passed"]:
+                        raise RuntimeError(f"Native Costume did not return to standing pose: {report}")
                 return report
             if voice:
                 # The native cursor/actor walk to the NPC must complete first.

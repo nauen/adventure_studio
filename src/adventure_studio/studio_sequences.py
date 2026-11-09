@@ -110,17 +110,23 @@ def dialogue_animation_choices(raw: str, line_id: str | None):
     document = parse_document(raw)
     target = _dialogue_animation_targets(document).get(line_id)
     if target is None:
-        return (), None
+        return (), None, True
     actor = next(item for item in document.actors if item.id == target[1])
     costume = next(item for item in document.costumes if item.name == actor.costume)
-    options = tuple(animation.name for animation in costume.animations if animation.index is not None)
+    options = tuple(animation.name for animation in costume.animations
+                    if animation.index is not None and animation.index >= 24)
     selected = next((cue.animation for cue in document.dialogue_animation_cues
                      if cue.line_id == line_id), None)
-    return options, selected
+    reset = next((cue.reset_to_stand for cue in document.dialogue_animation_cues
+                  if cue.line_id == line_id), True)
+    return options, selected, reset
 
 
-def edit_dialogue_animation(raw: str, line_id: str, animation: str | None) -> str:
+def edit_dialogue_animation(raw: str, line_id: str, animation: str | None,
+                            reset_to_stand: bool = True) -> str:
     document = parse_document(raw)
+    if type(reset_to_stand) is not bool:
+        raise ValueError("Die Standpose-Einstellung muss aktiviert oder deaktiviert sein")
     target = _dialogue_animation_targets(document).get(line_id)
     if target is None:
         raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
@@ -128,7 +134,7 @@ def edit_dialogue_animation(raw: str, line_id: str, animation: str | None) -> st
     if animation is None:
         cues.pop(line_id, None)
     else:
-        cues[line_id] = DialogueAnimationCue(line_id, target[0], animation)
+        cues[line_id] = DialogueAnimationCue(line_id, target[0], animation, reset_to_stand)
     return _checked(replace(document, dialogue_animation_cues=tuple(
         cues[key] for key in sorted(cues))))
 

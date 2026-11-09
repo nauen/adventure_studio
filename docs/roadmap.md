@@ -9,6 +9,50 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Neuer nativer Gesten-/Standpose-Nachweis (2026-11-09):** Eine
+Studio-authored Costume zeigt in stock ScummVM die rote Sprechpose
+(`256` Pixel) und danach eine stabile Standpose (`0` Pixel über sechs
+aufeinanderfolgende Frames); der native Schritt ist auf `2dc5271`
+grün. Der reguläre PNG-Ein-Klick-Pfad schreibt dafür die reservierten
+`talk_start`-/`talk_stop`-Slots 16/20 und den Gesten-Cue 24. Noch offen:
+aktuelle Gesamt-CI und durchgeklickte Gradio-Abnahme (PR #78).
+
+
+**Sprechpose mit einem Klick aus PNG-Frame (2026-11-09, Implementierung):**
+Im nativen Costume-Editor wird ein vorhandenes PNG-Frame als dauerhaft
+sichtbare `gesture`-Pose für alle vier Actor-Richtungen gesetzt. Die
+Standpose bleibt erhalten, der bestehende Dialog-Cue verwendet die
+indizierte Animation. 318 lokale Tests grün (PNG-zu-COST und
+Dialog-Quellgenerierung), native ScummVM-Bildprobe und interaktive
+Gradio-Abnahme noch ausstehend (PR #78).
+
+**Blocker im nativen Sprecher-Rendering:** Der vollständige Feature-Branch
+und die GitHub-Actions-Workflows wurden wiederhergestellt. Die SCUMM-
+Compiler- und Dialogtextprüfungen laufen, aber die Sprecher-Costume
+selbst ist in den Screenshots nicht nachweisbar. COST-Standindex 12 und
+native Talk-Frame-Bindung sind implementiert; vor der Gestenprüfung muss
+die tatsächliche Sichtbarkeit der Sprecher-Actors nachgewiesen werden.
+
+**Native Actor-Sichtbarkeit nachgewiesen, Gestenstart offen:** In der
+kamerafolgenden Testszene steht der Witness sichtbar separat von Ego
+(`256` cyanfarbene Costume-Pixel). Die rote Animation 24 ist ebenfalls
+nativ darstellbar, wenn sie beim Raumeintritt startet (`256` rote Pixel).
+Während `actorSay` lässt sich dieselbe Geste bislang weder unmittelbar
+noch nach einem nativen Tick sichtbar starten. Nächstes vertikales Gate:
+Sprecher-Animation über den nativen Talk-Start-/Talk-Script-Mechanismus
+statt durch einen wirkungslosen direkten Animationsimpuls auslösen.
+
+
+**Sprechanimationen kontrolliert beenden (2026-11-09, Implementierung):**
+Optionale Standpose-Rücksetzung je Dialog-Cue im nativen Studio, nach
+`waitForMessage` und ggf. VOC-Stopp mit nativer `stand`-Animation 12
+und Actor-Talk-Frame-Bindung. Sprecherwechsel verwenden den
+jeweiligen Actor, ältere Cue-JSONs bleiben unverändert. 316 lokale Tests
+grün; die erste native Probe belegte, dass `setActorStanding` allein das
+Bild nicht zurücksetzt. Die korrigierte ScummVM-Klickprobe muss den
+animierten Frame und dessen bleibendes Ende über mehrere Ticks bestätigen.
+Danach: Gradio-End-to-End und echte PNG-Costume-Sprecherwechsel.
+
 **Sprechgesten je Dialogzeile (2026-11-09, Implementierung):** Native
 Dialogzeilen mit Actor-Bindung können im Studio eine bereits authorierte
 indizierte Costume-Animation auswählen. Gemeinsame JSON-Persistenz,

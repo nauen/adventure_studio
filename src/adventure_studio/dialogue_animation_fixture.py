@@ -16,17 +16,34 @@ def build(directory: Path) -> None:
     palette = list(costume.palette)
     palette[18] = (220, 80, 80)
     gesture = CostumeAnimation("gesture", tuple(
-        CostumeDirection(direction, ("Pose", "Speak"), True)
+        CostumeDirection(direction, ("Speak",), True)
         for direction in ("N", "E", "S", "W")), 24)
+    talk_start = CostumeAnimation("talk_start", tuple(
+        CostumeDirection(direction, ("Speak",), True)
+        for direction in ("N", "E", "S", "W")), 16)
+    talk_stop = CostumeAnimation("talk_stop", tuple(
+        CostumeDirection(direction, ("Pose",), True)
+        for direction in ("N", "E", "S", "W")), 20)
     updated = replace(costume, palette=tuple(palette),
                       frames=(*costume.frames, CostumeFrame("Speak", 8, 8, bytes([2] * 64), -4, -8)),
-                      animations=(*costume.animations, gesture))
-    document = replace(document, costumes=tuple(
-        updated if item.name == costume.name else item for item in document.costumes))
+                      animations=tuple(replace(animation, index=12)
+                                       if animation.name == "stand" else animation
+                                       for animation in costume.animations)
+                                 + (talk_start, talk_stop, gesture))
+    document = replace(document,
+                       costumes=tuple(updated if item.name == costume.name else item
+                                      for item in document.costumes),
+                       # Keep NPC costumes away from the talk hotspot and
+                       # from Ego, who walks onto that hotspot before speech.
+                       actors=tuple(replace(actor, initial_animation="stand",
+                                            x=280 if actor.id == "SpeakerWitness" else 135,
+                                            y=100)
+                                    if actor.costume == costume.name else actor
+                                    for actor in document.actors))
     raw = canonical_json(document)
     line = next(identity for label, identity in dialogue_animation_lines(raw)
                 if label.startswith("SpeakerWitness"))
-    raw = edit_dialogue_animation(raw, line, "gesture")
+    raw = edit_dialogue_animation(raw, line, "gesture", True)
     project.write_text(raw, encoding="utf-8")
     export_document(parse_document(raw), directory / "resources")
 
