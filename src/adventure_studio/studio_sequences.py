@@ -150,6 +150,12 @@ def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,
     costume = next(item for item in document.costumes if item.name == actor.costume)
     if frame_id not in {frame.id for frame in costume.frames}:
         raise ValueError("Bitte ein vorhandenes Costume-Frame als Sprechpose wählen")
+    default = next((item for item in costume.animations if item.name == "gesture"
+                    and item.index == 24), None)
+    if (default is not None and
+            {entry.direction for entry in default.directions} == {"N", "E", "S", "W"} and
+            all(entry.commands == (frame_id,) for entry in default.directions)):
+        return edit_dialogue_animation(raw, line_id, "gesture", reset_to_stand)
     animation_name = f"speak_{frame_id}"
     previous = next((item for item in costume.animations if item.name == animation_name), None)
     if previous is not None:

@@ -244,6 +244,21 @@ class DialogueAnimationTests(unittest.TestCase):
             dialogue_animation_cues=dialogue_animation_bindings(result, result.rooms[0]))
         self.assertEqual(source.count("animateActor(SpeakerWitness,32);"), 2)
 
+    def test_existing_matching_gesture_is_reused_without_duplicate_slot(self):
+        _story, raw = self.fixture()
+        document = parse_document(raw)
+        witness = next(key for label, key in dialogue_animation_lines(raw)
+                       if label.startswith("SpeakerWitness"))
+        costume = replace(document.costumes[0], name="WitnessCostume")
+        actors = tuple(replace(actor, costume="WitnessCostume")
+                       if actor.id == "SpeakerWitness" else actor for actor in document.actors)
+        raw = canonical_json(replace(document, actors=actors,
+                                     costumes=(*document.costumes, costume)))
+        updated = assign_dialogue_speaking_frame(raw, witness, "Pose")
+        self.assertEqual(parse_document(updated).dialogue_animation_cues[0].animation, "gesture")
+        self.assertEqual(len(parse_document(updated).costumes[1].animations),
+                         len(costume.animations))
+
 
 if __name__ == "__main__":
     unittest.main()
