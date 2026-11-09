@@ -20,7 +20,7 @@ def build(directory: Path) -> None:
         for direction in ("N", "E", "S", "W")), 24)
     updated = replace(costume, palette=tuple(palette),
                       frames=(*costume.frames, CostumeFrame("Speak", 8, 8, bytes([2] * 64), -4, -8)),
-                      animations=tuple(replace(animation, index=20)
+                      animations=tuple(replace(animation, index=12)
                                        if animation.name == "stand" else animation
                                        for animation in costume.animations) + (gesture,))
     document = replace(document, costumes=tuple(

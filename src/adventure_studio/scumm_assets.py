@@ -463,10 +463,18 @@ def scummc_room_source(room: RoomAsset, catalog=None,
 
     def spoken(key: str, original: str, indent: int) -> str:
         animation = animation_cues.get(key)
+        # Actor speech can restart the costume's talk-start animation on
+        # subsequent frames. Point that native talk slot at the authored
+        # gesture rather than relying on animateActor alone.
+        talk_frames = (" " * indent + f"setCurrentActor({animation[0]});\n"
+                       + " " * indent + f"setActorTalkFrame({animation[1] // 4},{animation[2] // 4});\n"
+                       + " " * indent + "setCurrentActor(VAR_EGO);\n"
+                       if animation is not None and animation[2] is not None else "")
         animate = (" " * indent + f"animateActor({animation[0]},{animation[1]});\n"
                    if animation is not None else "")
         standing = (" " * indent + f"setCurrentActor({animation[0]});\n"
                     + " " * indent + "setActorStanding();\n"
+                    + " " * indent + "setActorTalkFrame(4,5);\n"
                     + " " * indent + "setCurrentActor(VAR_EGO);\n"
                     + " " * indent + f"animateActor({animation[0]},{animation[2]});\n"
                     if animation is not None and animation[2] is not None else "")
@@ -481,7 +489,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                     f"{pad}setCurrentActor(VAR_EGO);\n")
         cue = cues.get(key)
         if cue is None:
-            return face + say(key, original, indent) + animate + " " * indent + "waitForMessage();\n" + standing
+            return face + talk_frames + say(key, original, indent) + animate + " " * indent + "waitForMessage();\n" + standing
         if cue.source_text != original:
             raise ValueError(f"Stale dialogue audio line: {key}")
         pad = " " * indent
@@ -500,7 +508,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
 
         stops = "".join(f"{pad}stopSound({sound_id});\n" for sound_id in sorted(
             {cue.sound_id, *(variant[1] for variant in cue.variants)}))
-        return face + sound("startSound") + say(key, original, indent) + animate + \
+        return face + talk_frames + sound("startSound") + say(key, original, indent) + animate + \
             f"{pad}waitForMessage();\n" + stops + standing
     def localized_name(hotspot: RoomHotspot) -> str:
         if catalog is None:

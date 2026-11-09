@@ -585,13 +585,13 @@ def _validate_document(document: GameDocument) -> None:
         animation = next((item for item in costumes_by_name[actor.costume].animations
                           if item.name == cue.animation), None)
         direction = line_directions.get(cue.line_id, actor.direction)
-        if (animation is None or animation.index is None
+        if (animation is None or animation.index is None or animation.index < 24
                 or direction not in {item.direction for item in animation.directions}):
             raise ValueError(f"Dialogue animation requires an indexed COST direction: {cue.line_id}")
         if cue.reset_to_stand:
             stand = next((item for item in costumes_by_name[actor.costume].animations
                           if item.name == "stand"), None)
-            if (stand is None or stand.index is None
+            if (stand is None or stand.index != 12
                     or direction not in {item.direction for item in stand.directions}):
                 raise ValueError(f"Dialogue animation reset requires an indexed stand pose: {cue.line_id}")
     for rule in document.animation_rules:

@@ -20,8 +20,8 @@ Gradio-Abnahme noch ausstehend (PR #78).
 
 **Sprechanimationen kontrolliert beenden (2026-11-09, Implementierung):**
 Optionale Standpose-Rücksetzung je Dialog-Cue im nativen Studio, nach
-`waitForMessage` und ggf. VOC-Stopp mit explizit indizierter `stand`-
-Animation. Sprecherwechsel verwenden den
+`waitForMessage` und ggf. VOC-Stopp mit nativer `stand`-Animation 12
+und Actor-Talk-Frame-Bindung. Sprecherwechsel verwenden den
 jeweiligen Actor, ältere Cue-JSONs bleiben unverändert. 316 lokale Tests
 grün; die erste native Probe belegte, dass `setActorStanding` allein das
 Bild nicht zurücksetzt. Die korrigierte ScummVM-Klickprobe muss den

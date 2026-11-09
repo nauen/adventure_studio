@@ -74,7 +74,7 @@ def create_costume(raw: str, png_path: str, name: str) -> str:
     actions = tuple(CostumeDirection(direction, (frame.id,), loop=False)
                     for direction in ("N", "E", "S", "W"))
     costume = CostumeAsset(name, palette, (frame,), (
-        CostumeAnimation("stand", directions, 20),
+        CostumeAnimation("stand", directions, 12),
         CostumeAnimation("gesture", actions, 24)))
     return canonical_json(replace(document, costumes=(*document.costumes, costume)))
 

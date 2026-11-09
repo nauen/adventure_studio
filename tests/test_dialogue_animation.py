@@ -30,7 +30,7 @@ class DialogueAnimationTests(unittest.TestCase):
             CostumeDirection(direction, ("Pose",), False)
             for direction in ("N", "E", "S", "W")), 24)
         document = replace(document, costumes=(replace(
-            costume, animations=tuple(replace(animation, index=20)
+            costume, animations=tuple(replace(animation, index=12)
                                       if animation.name == "stand" else animation
                                       for animation in costume.animations) + (gesture,)),))
         return story, canonical_json(document)
@@ -61,8 +61,10 @@ class DialogueAnimationTests(unittest.TestCase):
         wait = source.index("waitForMessage();", source.index(
             'actorSay(SpeakerWitness,"Der Schluessel liegt am Boden.")'))
         self.assertIn("setCurrentActor(SpeakerWitness);\n            setActorStanding();\n"
-                      "            setCurrentActor(VAR_EGO);", source[wait:])
-        self.assertIn("animateActor(SpeakerWitness,20);", source[wait:])
+                      "            setActorTalkFrame(4,5);\n            setCurrentActor(VAR_EGO);", source[wait:])
+        self.assertIn("animateActor(SpeakerWitness,12);", source[wait:])
+        self.assertIn("setActorTalkFrame(6,3);", source)
+        self.assertIn("setActorTalkFrame(4,5);", source[wait:])
         self.assertEqual(parse_document(edit_dialogue_animation(raw, witness, None)).dialogue_animation_cues, ())
 
     def test_branching_reply_and_invalid_costume_fail_closed(self):
@@ -107,8 +109,8 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(source.count("animateActor(SpeakerWitness,24);"), 1)
         for actor in ("SpeakerHarborKeeper", "SpeakerWitness"):
             self.assertIn(f"setCurrentActor({actor});\n            setActorStanding();\n"
-                          "            setCurrentActor(VAR_EGO);", source)
-            self.assertIn(f"animateActor({actor},20);", source)
+                          "            setActorTalkFrame(4,5);\n            setCurrentActor(VAR_EGO);", source)
+            self.assertIn(f"animateActor({actor},12);", source)
 
         missing = replace(document.costumes[0], animations=tuple(
             animation for animation in document.costumes[0].animations
@@ -151,7 +153,7 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual(costume_source.count("body(SpeakImported)"), 4)
             self.assertTrue((resources / "DialogueFigure_SpeakImported.bmp").is_file())
             self.assertIn("animateActor(SpeakerWitness,24);", room_source)
-            self.assertIn("animateActor(SpeakerWitness,20);", room_source)
+            self.assertIn("animateActor(SpeakerWitness,12);", room_source)
 
 
 if __name__ == "__main__":

@@ -36,7 +36,8 @@ aktiven Actor wieder her und startet die explizit indizierte `stand`-
 Costume-Animation. Beim Wechsel mehrerer Sprecher gilt das jeweils für
 die tatsächliche Actor-Bindung; fehlende `stand`-Richtungen oder ein
 fehlender nativer `stand`-Index werden abgewiesen. Neue PNG-Costumes
-erhalten dafür einen `stand`-Index 20. Das versionierte Projekt-JSON speichert `reset_to_stand` nur
+erhalten dafür den nativen `stand`-Index 12. Der Dialogexport konfiguriert
+zusätzlich die Actor-Talk-Frames auf den Gesten- und Stand-Index. Das versionierte Projekt-JSON speichert `reset_to_stand` nur
 bei aktivierter Einstellung; ältere Cues ohne Feld behalten das bisherige
 Verhalten. 316 lokale Tests grün (einschließlich zweier Sprecher und
 Alt-JSON). Die erste native Endzustandsprobe wertete zwölf rote Pixel
