@@ -1098,3 +1098,132 @@ def parse_document(source: str) -> GameDocument:
         if not isinstance(room["palette"], list):
             raise ValueError("Palette must be a list")
         rooms.append(RoomAsset(
+            room["name"], RoomGeometry(g["width"], g["height"], g["viewport_width"], g["viewport_height"]),
+            _decode_pixels(room["pixels"]), tuple(tuple(rgb) for rgb in room["palette"]),
+            tuple(hotspots), room["demo_walk_to_x"], tuple(rules), room["goal_text"], tuple(combinations),
+            tuple(cycles),
+            room.get("music_id"),
+            tuple(talk_rules),
+            tuple(planes), tuple(boxes), routes, scale, tuple(curves), room.get("demo_walk_to_y"), tuple(camera_cues),
+        ))
+    raw_music = data.get("music_assets", [])
+    if not isinstance(raw_music, list):
+        raise ValueError("Music assets must be a list")
+    music_assets = []
+    for raw_asset in raw_music:
+        asset = _only(raw_asset, {"id", "midi"}, {"id", "midi"})
+        music_assets.append(MusicAsset(asset["id"], _decode_pixels(asset["midi"])))
+    raw_sounds = data.get("sound_assets", [])
+    if not isinstance(raw_sounds, list):
+        raise ValueError("Sound assets must be a list")
+    sound_assets = []
+    for raw_asset in raw_sounds:
+        asset = _only(raw_asset, {"id", "room", "voc"}, {"id", "room", "voc"})
+        sound_assets.append(SoundAsset(asset["id"], asset["room"], _decode_pixels(asset["voc"])))
+    raw_cues = data.get("dialogue_voice_cues", [])
+    if not isinstance(raw_cues, list):
+        raise ValueError("Invalid dialogue voice collection")
+    voice_cues = []
+    for raw_cue in raw_cues:
+        item = _only(raw_cue, {"line_id", "source_text", "sound_id", "variants"},
+                     {"line_id", "source_text", "sound_id"})
+        variants = item.get("variants", [])
+        if not isinstance(variants, list):
+            raise ValueError("Invalid dialogue voice variants")
+        parsed_variants = []
+        for raw_variant in variants:
+            variant = _only(raw_variant, {"language", "sound_id"}, {"language", "sound_id"})
+            parsed_variants.append((variant["language"], variant["sound_id"]))
+        voice_cues.append(DialogueVoiceCue(item["line_id"], item["source_text"],
+                                          item["sound_id"], tuple(parsed_variants)))
+    document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
+                            tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers),
+                            tuple(interaction_sequences), tuple(music_assets), tuple(sound_assets),
+                            data.get("default_voice_language", "en"), tuple(voice_cues))
+    _validate_document(document)
+    return document
+
+
+def canonical_json(document: GameDocument) -> str:
+    return json.dumps(document_dict(document), sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n"
+
+
+def export_document(document: GameDocument, directory: Path) -> None:
+    """Generate identical files for identical inputs; never interpret code."""
+    _validate_document(document)
+    rooms, costumes = _align_costume_room_palettes(document)
+    write_game_sources(rooms, directory)
+    for asset in document.music_assets:
+        (directory / f"{asset.id}.mid").write_bytes(asset.midi)
+    for asset in document.sound_assets:
+        (directory / f"{asset.id}.voc").write_bytes(asset.voc)
+    for costume in costumes:
+        write_costume_sources(costume, directory)
+
+
+def _align_costume_room_palettes(document: GameDocument) -> tuple[tuple[RoomAsset, ...], tuple[CostumeAsset, ...]]:
+    """Give linked COSTs a shared 16..47 color map in the exported room resources.
+
+    The room and Costume authoring data remain unchanged. ScummC COST palette
+    entries are absolute *room* palette indices, not RGB entries of their own.
+    """
+    used_costumes = {actor.costume for actor in document.actors}
+    if not used_costumes:
+        return document.rooms, document.costumes
+    linked = [costume for costume in document.costumes if costume.name in used_costumes]
+    if any(costume.palette_first != 16 or costume.palette_last != 47 for costume in linked):
+        raise ValueError("Native Actor palette composition requires 16..47 COST slots")
+    reserved = set()
+    for room in document.rooms:
+        reserved.update(value for value in room.pixels if 16 <= value <= 47)
+        for hotspot in room.hotspots:
+            for pixels in (hotspot.sprite_pixels, hotspot.open_sprite_pixels):
+                if pixels is not None:
+                    reserved.update(value for value in pixels if 16 <= value <= 47)
+    free = (slot for slot in range(17, 48) if slot not in reserved)
+    global_colors: dict[tuple[int, int, int], int] = {}
+    revised = []
+    for costume in document.costumes:
+        if costume.name not in used_costumes:
+            revised.append(costume)
+            continue
+        mapping = {0: 0}
+        for frame in costume.frames:
+            for index in sorted(set(frame.pixels) - {0}):
+                if index in mapping:
+                    continue
+                rgb = costume.palette[costume.palette_first + index]
+                if rgb not in global_colors:
+                    slot = next(free, None)
+                    if slot is None:
+                        raise ValueError("Native room palette has no free COST color slots (exporter limit)")
+                    global_colors[rgb] = slot
+                mapping[index] = global_colors[rgb] - 16
+        palette = list(costume.palette)
+        for color, slot in global_colors.items():
+            palette[slot] = color
+        revised.append(replace(costume, palette=tuple(palette),
+                               frames=tuple(replace(frame, pixels=bytes(mapping[p] for p in frame.pixels))
+                                            for frame in costume.frames)))
+    rooms = []
+    for room in document.rooms:
+        palette = list(room.palette)
+        palette.extend([(0, 0, 0)] * max(0, 48 - len(palette)))
+        for rgb, slot in global_colors.items():
+            palette[slot] = rgb
+        rooms.append(replace(room, palette=tuple(palette)))
+    return tuple(rooms), tuple(revised)
+
+
+def main() -> int:
+    if len(sys.argv) != 3:
+        print("Usage: python -m adventure_studio.scumm_project PROJECT.json OUTPUT_DIRECTORY")
+        return 2
+    source = Path(sys.argv[1]).read_text(encoding="utf-8")
+    document = parse_document(source)
+    export_document(document, Path(sys.argv[2]))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
