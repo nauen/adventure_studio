@@ -468,6 +468,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         # talk frames here prevents that automatic speaking pose.
         animate = (" " * indent + "delay(1);\n"
                    + " " * indent + f"animateActor({animation[0]},{animation[1]});\n"
+                   + " " * indent + "delay(60);\n"
                    if animation is not None else "")
         standing = (" " * indent + f"setCurrentActor({animation[0]});\n"
                     + " " * indent + "setActorStanding();\n"

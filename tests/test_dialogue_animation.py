@@ -54,6 +54,7 @@ class DialogueAnimationTests(unittest.TestCase):
                                        rebuilt, rebuilt.rooms[0]))
         self.assertIn("animateActor(SpeakerWitness,24);", source)
         self.assertIn("delay(1);\n            animateActor(SpeakerWitness,24);", source)
+        self.assertIn("animateActor(SpeakerWitness,24);\n            delay(60);", source)
         self.assertGreater(source.index("animateActor(SpeakerWitness,24);"),
                            source.index('actorSay(SpeakerWitness,"Der Schluessel liegt am Boden.")'))
         self.assertLess(source.index("animateActor(SpeakerWitness,24);"),
