@@ -723,10 +723,12 @@ Bestehende Sprechzeilen und neu an abschließende Antworten angehängte
 Dialogknoten können im Studio jetzt ausdrücklich einer Figur derselben Szene
 zugeordnet werden. Die fachliche Validierung verhindert fremde Szenen;
 der bestehende Story-JSON-Vertrag bleibt unverändert. 299 lokale Tests
-grün. **Noch kein nativer Mehrsprecher-Nachweis:** Der aktuelle
-Story-zu-SCUMM-Adapter lehnt unterschiedliche Sprecher innerhalb eines
-Gesprächs weiterhin klar ab. Nächstes Gate ist eine Actor-Zuordnung mit
-`actorSay`-Ausgabe und echter ScummVM-Gesprächsprobe.
+grün. Der Story-zu-SCUMM-Adapter ordnet Sprecher in Gesprächen mit
+Antwortauswahl eigenen nativen Actors mit Costume zu und gibt ihre Zeilen
+mit `actorSay` aus; die Zeilenbindung bleibt im Projekt-JSON erhalten.
+**Noch kein Interpreter-Nachweis:** Die neue Actor-Sprechprobe ist im
+Dialog-Workflow angelegt; ihr Laufzeitergebnis steht aus. Mehrsprecher-
+Gespräche ohne Auswahlstufe werden weiterhin ausdrücklich abgelehnt.
 
 Die ältere Liste unten bleibt als historischer Arbeitsvorrat erhalten;
 ihre ungekreuzten Kästchen sind nicht der aktuelle Capability-Nachweis.

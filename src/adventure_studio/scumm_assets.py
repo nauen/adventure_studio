@@ -74,6 +74,7 @@ class TalkRule:
     opening_lines: tuple[str, ...]
     choices: tuple[TalkChoice, ...]
     stages: tuple[TalkStage, ...] = ()
+    actor_lines: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -263,6 +264,10 @@ def _validate(room: RoomAsset) -> None:
         if dialogue.speaker_id not in ids or dialogue.speaker_id in used_speakers:
             raise ValueError("Invalid or duplicate dialogue speaker hotspot")
         used_speakers.add(dialogue.speaker_id)
+        if (len(dict(dialogue.actor_lines)) != len(dialogue.actor_lines)
+                or any(not isinstance(key, str) or not isinstance(actor, str)
+                       for key, actor in dialogue.actor_lines)):
+            raise ValueError("Duplicate or invalid dialogue actor line binding")
         if not 1 <= len(dialogue.choices) <= 3 or len(dialogue.opening_lines) > 16:
             raise ValueError("Dialogue must offer one to three choices")
         stages = {stage.id: stage for stage in dialogue.stages}
@@ -411,16 +416,22 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         validate_catalog(catalog)
         translations = {line.id: dict(line.translations) for line in catalog.lines}
     cues = {cue.line_id: cue for cue in dialogue_voice_cues}
+    line_actors = {key: actor for rule in room.talk_rules for key, actor in rule.actor_lines}
 
     def say(key: str, original: str, indent: int) -> str:
+        actor = line_actors.get(key)
         if catalog is None:
-            return " " * indent + f"egoSay({_scumm_string(original)});\n"
+            call = (f"actorSay({actor},{_scumm_string(original)})" if actor else
+                    f"egoSay({_scumm_string(original)})")
+            return " " * indent + call + ";\n"
         entry = translations.get(key)
         from .story_localization import source_matches_compiled
         if entry is None or not source_matches_compiled(entry.get(catalog.source_language, ""), original):
             raise ValueError(f"Missing or stale SCUMM translation: {key}")
-        return "".join(" " * indent + line + "\n"
-                       for line in scumm_language_dispatch(catalog, key).splitlines())
+        dispatch = scumm_language_dispatch(catalog, key)
+        if actor:
+            dispatch = dispatch.replace("egoSay(", f"actorSay({actor},")
+        return "".join(" " * indent + line + "\n" for line in dispatch.splitlines())
 
     def spoken(key: str, original: str, indent: int) -> str:
         cue = cues.get(key)

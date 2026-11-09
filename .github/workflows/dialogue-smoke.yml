@@ -118,6 +118,26 @@ jobs:
           python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-nested-story --nested
           python -m adventure_studio.scumm_toolchain /tmp/dialogue-nested-story /tmp/scummc-upstream /tmp/dialogue-nested-game
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --nested /tmp/dialogue-nested-game /tmp/dialogue-nested-evidence
+      - name: Play NPC reply through its own native Actor in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-multispeaker-story --multispeaker
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-multispeaker-story /tmp/scummc-upstream /tmp/dialogue-multispeaker-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --multispeaker /tmp/dialogue-multispeaker-game /tmp/dialogue-multispeaker-evidence
+      - name: Retain native multi-Actor dialogue evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-multispeaker-dialogue
+          path: |
+            /tmp/dialogue-multispeaker-evidence/dialogue-report.json
+            /tmp/dialogue-multispeaker-evidence/scummvm-speaker.png
+            /tmp/dialogue-multispeaker-evidence/scummvm-dismissed.png
+            /tmp/dialogue-multispeaker-evidence/scummvm.log
+            /tmp/dialogue-multispeaker-story/resources/Harbor.scc
+            /tmp/dialogue-multispeaker-story/project.json
+          if-no-files-found: ignore
       - name: Retain native nested dialogue and return evidence
         if: always()
         uses: actions/upload-artifact@v4

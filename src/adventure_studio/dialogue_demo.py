@@ -10,7 +10,8 @@ from .story import Character, Dialogue, DialogueChoice, DialogueNode
 from .story_document import canonical_story_json, parse_story_document, build_story_document
 
 
-def dialogue_fixture(raw: str, choices: bool = False, nested: bool = False) -> str:
+def dialogue_fixture(raw: str, choices: bool = False, nested: bool = False,
+                     multispeaker: bool = False) -> str:
     story = parse_story_document(raw)
     if story.characters or story.dialogues or story.dialogue_nodes or story.dialogue_choices or story.assets:
         raise ValueError("Dialogue fixture requires an unmodified story")
@@ -32,18 +33,25 @@ def dialogue_fixture(raw: str, choices: bool = False, nested: bool = False) -> s
             raise ValueError("Nested dialogue needs choices")
         options += (DialogueChoice("AskAgain", "HarborHint", "Nochmal fragen.", "HarborHello"),
                     DialogueChoice("Finish", "HarborHint", "Das reicht.", None))
-    return canonical_story_json(replace(story, characters=(actor,),
+    if multispeaker:
+        if not choices:
+            raise ValueError("Multispeaker dialogue needs choices")
+        witness = Character("Witness", "Zeuge", "Ein Zeuge sieht zu.", story.starting_scene_id)
+        nodes = tuple(replace(node, speaker_id="Witness") if node.id == "HarborHint" else node
+                      for node in nodes)
+    return canonical_story_json(replace(story, characters=(actor, witness) if multispeaker else (actor,),
                                         dialogues=(greeting,), dialogue_nodes=nodes,
                                         dialogue_choices=options))
 
 
 def main() -> int:
     if (len(sys.argv) not in (3, 4)
-            or (len(sys.argv) == 4 and sys.argv[3] not in ("--choices", "--nested"))):
-        print("Usage: python -m adventure_studio.dialogue_demo STORY.json OUTPUT_DIRECTORY [--choices|--nested]")
+            or (len(sys.argv) == 4 and sys.argv[3] not in ("--choices", "--nested", "--multispeaker"))):
+        print("Usage: python -m adventure_studio.dialogue_demo STORY.json OUTPUT_DIRECTORY [--choices|--nested|--multispeaker]")
         return 2
     raw = dialogue_fixture(Path(sys.argv[1]).read_text(encoding="utf-8"), len(sys.argv) == 4,
-                           len(sys.argv) == 4 and sys.argv[3] == "--nested")
+                           len(sys.argv) == 4 and sys.argv[3] == "--nested",
+                           len(sys.argv) == 4 and sys.argv[3] == "--multispeaker")
     output = Path(sys.argv[2])
     build_story_document(raw, output)
     (output / "story.json").write_text(raw, encoding="utf-8")

@@ -51,8 +51,9 @@ SCUMM-Gesprächsmenü-UI und Sprecherwechsel bleiben weitere Produktpakete.
 
 **Sprecher-Authoring (2026-11-09, Teilstand):** Der Story-Editor ordnet
 Sprechzeilen und neue Antwortknoten jetzt einer Figur derselben Szene zu.
-Die native Mehrsprecher-Ausgabe ist ausdrücklich noch gesperrt; als nächstes
-muss sie tatsächliche SCUMM-Actors und deren `actorSay`-Zeilen erzeugen.
+Der Compiler erzeugt jetzt SCUMM-Actors mit eigenem Costume und `actorSay`
+für die zugeordneten Sprechzeilen. Die Interpreterprobe und deren
+Sprecherausgabe müssen noch erfolgreich nachgewiesen werden.
 
 Die [Referenzbibliothek](scumm-v6-reference/README.md) ist der dauerhafte
 technische Zugang zu ScummC-/ScummVM-Primitiven und

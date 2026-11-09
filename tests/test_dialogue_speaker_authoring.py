@@ -7,6 +7,9 @@ import unittest
 from adventure_studio.dialogue_demo import dialogue_fixture
 from adventure_studio.story import Character
 from adventure_studio.story_document import canonical_story_json, parse_story_document
+from adventure_studio.story_to_scumm import compile_story_to_scumm
+from adventure_studio.scumm_project import canonical_json, parse_document
+from adventure_studio.scumm_assets import scummc_room_source
 from adventure_studio.studio_gradio import dialogue_speaker_fields
 from adventure_studio.studio_service import (add_dialogue_choice, change_dialogue_line,
                                              extend_dialogue_choice)
@@ -33,6 +36,12 @@ class DialogueSpeakerAuthoringTests(unittest.TestCase):
         self.assertEqual((node.speaker_id, node.text), ("Witness", "Der Zeuge antwortet."))
         self.assertIn(("Zeuge", "Witness"), dialogue_speaker_fields(second.story_json,
                                                                      "WitnessReply")["choices"])
+        native = compile_story_to_scumm(parse_story_document(second.story_json))
+        self.assertEqual(tuple(a.id for a in native.actors), ("SpeakerHarborKeeper", "SpeakerWitness"))
+        self.assertEqual(canonical_json(parse_document(canonical_json(native))), canonical_json(native))
+        source = scummc_room_source(native.rooms[0])
+        self.assertIn('actorSay(SpeakerWitness,"Das weiss ich.")', source)
+        self.assertIn('actorSay(SpeakerWitness,"Der Zeuge antwortet.")', source)
 
     def test_foreign_scene_speaker_is_rejected(self):
         story = parse_story_document(self.raw)
