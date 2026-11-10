@@ -10,12 +10,14 @@ import json
 import os
 from pathlib import Path
 
+from PIL import Image
 from playwright.sync_api import expect, sync_playwright
 
 from adventure_studio.scumm_project import parse_document
 from adventure_studio.studio_sequences import (
     dialogue_animation_lines, dialogue_speaking_frame_selection,
     dialogue_speaking_sequence_selection, dialogue_ending_timeline,
+    dialogue_ending_animation_selection,
 )
 from adventure_studio.studio_actors import costume_direction_speaking_frame
 
@@ -351,6 +353,35 @@ def main() -> None:
             assert ending_cues[second[1]].ending_animation is None
             assert len(dialogue_ending_timeline(ending_raw, first[1], "N")[1]) == 2
             assert dialogue_speaking_sequence_selection(ending_raw, first[1], "N") == "SpeakAlt, Speak, SpeakAlt"
+            # Import actual *new image files* from the NPC dialogue panel
+            # without visiting Costume editor controls.
+            speaking_png = evidence / "fresh-speaking.png"
+            ending_png = evidence / "fresh-ending.png"
+            Image.new("RGBA", (8, 8), (180, 50, 130, 255)).save(speaking_png)
+            Image.new("RGBA", (8, 8), (40, 180, 180, 255)).save(ending_png)
+            png_id = page.locator("#native-dialogue-png-id textarea, #native-dialogue-png-id input")
+            page.locator("#native-dialogue-png-file input[type=file]").set_input_files(str(speaking_png))
+            png_id.fill("FreshSpeaking")
+            page.locator("#native-dialogue-png-import").click()
+            expect(sequence_input).to_have_value(
+                "SpeakAlt, Speak, SpeakAlt, FreshSpeaking", timeout=20000)
+            page.locator('#native-dialogue-png-file button[aria-label="Clear"]').click()
+            page.locator("#native-dialogue-png-file input[type=file]").set_input_files(str(ending_png))
+            png_id.fill("FreshEnding")
+            select_option(page, "native-dialogue-png-target", "Abschlussfolge")
+            page.locator("#native-dialogue-png-import").click()
+            expect(ending_gallery.locator("img")).to_have_count(3, timeout=20000)
+            page.locator("#native-project-export-button").click()
+            expect(sequence_link.first).to_be_visible(timeout=20000)
+            with page.expect_download() as imported_info:
+                sequence_link.first.click()
+            imported_file = evidence / "direct-png-import-project.json"
+            imported_info.value.save_as(str(imported_file))
+            imported_raw = imported_file.read_text(encoding="utf-8")
+            assert dialogue_speaking_sequence_selection(imported_raw, first[1], "N").endswith(
+                "FreshSpeaking")
+            assert dialogue_ending_timeline(imported_raw, first[1], "N")[1][-1][0] == "3. FreshEnding"
+            assert dialogue_ending_animation_selection(imported_raw, second[1])[1] is None
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
@@ -359,6 +390,7 @@ def main() -> None:
                 "native_dialogue_phases": True,
                 "native_ending_gesture": True,
                 "direct_png_ending_timeline": True,
+                "direct_png_file_import": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

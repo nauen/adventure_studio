@@ -46,7 +46,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
 from .studio_sequences import (dialogue_ending_animation_selection,
                                edit_dialogue_ending_animation,
                                dialogue_ending_timeline,
-                               edit_dialogue_ending_timeline, dialogue_ending_timeline_preview)
+                               edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
+                               import_dialogue_png_frame)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -219,7 +220,7 @@ def make_app():
             edit = action(raw, *args)
             proposal = prepare_proposal(raw, edit)
             return proposal, "VORSCHAU – noch nicht übernommen:\n" + report_text(edit.report)
-        except ValueError as error:
+        except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
 
     def propose_puzzle(raw, puzzle_id, title, required):
@@ -364,7 +365,7 @@ def make_app():
                 room = identity.split("|", 1)[0]
             return (updated, *native_selectors(updated, room, identity),
                     "Interaktionsablauf geändert und validiert")
-        except ValueError as error:
+        except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
 
     def native_asset_edit(action, raw, *args):
@@ -755,6 +756,20 @@ def make_app():
                 label="Blickrichtung der gespeicherten Sprechanimation",
                 choices=[("Nord", "N"), ("Ost", "E"), ("Süd", "S"), ("West", "W")],
                 value="S", elem_id="native-dialogue-direction")
+            with gr.Accordion("PNG-Datei direkt für diese Dialogzeile importieren", open=True):
+                gr.Markdown("Importiere eine **neue PNG-Datei** in die eigene Costume der gewählten Sprecherfigur. Der Frame wird sofort an die Sprech- oder Abschlussfolge **dieser Zeile und Blickrichtung** angehängt. Bestehende Frames und die anderen Richtungen bleiben erhalten. Bei ungültigen Pixeln, voller nativer Palette oder geteilter Costume wird nichts gespeichert. Für Abschlussfolgen muss bereits eine Sprechanimation der Zeile zugewiesen sein; ihre Dauer steht unten bei den Abschluss-Ticks.")
+                with gr.Row():
+                    native_dialogue_png_file = gr.File(
+                        label="Neues PNG-Bild", file_types=[".png"], type="filepath",
+                        elem_id="native-dialogue-png-file")
+                    native_dialogue_png_id = gr.Textbox(
+                        label="Neue native Frame-ID", elem_id="native-dialogue-png-id")
+                    native_dialogue_png_target = gr.Dropdown(
+                        label="An welche Folge anhängen?",
+                        choices=["Sprechfolge", "Abschlussfolge"], value="Sprechfolge",
+                        elem_id="native-dialogue-png-target")
+                native_dialogue_png_import = gr.Button(
+                    "PNG importieren und Frame anhängen", elem_id="native-dialogue-png-import")
             native_dialogue_direction_sequence_apply = gr.Button(
                 "Nur Sprechfolge dieser Blickrichtung speichern",
                 elem_id="native-dialogue-direction-sequence-apply")
@@ -1396,6 +1411,12 @@ def make_app():
         native_dialogue_ending_remove.click(
             lambda raw, line: native_edit(edit_dialogue_ending_animation, raw, line, None, 0),
             [native_state, native_dialogue_animation_line],
+            [native_state, *native_outputs, native_report])
+        native_dialogue_png_import.click(
+            lambda *args: native_edit(import_dialogue_png_frame, *args),
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_png_file, native_dialogue_png_id, native_dialogue_png_target,
+             native_dialogue_ending_ticks, native_dialogue_reset],
             [native_state, *native_outputs, native_report])
         def dialogue_ending_timeline_view(raw, line, direction, selected_frame):
             images, steps, frames = dialogue_ending_timeline(raw, line, direction)

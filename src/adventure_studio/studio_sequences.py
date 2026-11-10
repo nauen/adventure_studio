@@ -15,7 +15,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
-from .studio_actors import (set_costume_speaking_pose, render_costume_frame,
+from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render_costume_frame,
                             costume_timeline_images, render_costume_preview)
 from .scumm_costume import CostumeAnimation, CostumeDirection
 
@@ -281,6 +281,45 @@ def edit_dialogue_ending_timeline(raw: str, line_id: str, direction: str,
         else:
             raise ValueError("Unbekannte Abschluss-Timeline-Aktion")
     return assign_dialogue_ending_sequence(raw, line_id, direction, ", ".join(sequence), ticks)
+
+
+def import_dialogue_png_frame(raw: str, line_id: str, direction: str,
+                              png_path: str, frame_id: str, target: str,
+                              ending_ticks: int | float = 12,
+                              reset_to_stand: bool = True) -> str:
+    """Import actual PNG pixels and append them to one authored dialogue channel.
+
+    Both operations are atomic with respect to the returned project JSON: a
+    missing actor, invalid image, full native palette or invalid cue cannot
+    leave an orphan imported frame in the editor state.
+    """
+    document = parse_document(raw)
+    selected = _dialogue_animation_targets(document).get(line_id)
+    if selected is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    if direction not in ("N", "E", "S", "W"):
+        raise ValueError("Bitte eine gültige Blickrichtung N/E/S/W auswählen")
+    if target not in ("Sprechfolge", "Abschlussfolge"):
+        raise ValueError("Bitte Sprechfolge oder Abschlussfolge auswählen")
+    if not isinstance(frame_id, str) or not frame_id.strip():
+        raise ValueError("Bitte eine eindeutige native PNG-Frame-ID eingeben")
+    actor = next(item for item in document.actors if item.id == selected[1])
+    sharing = [item.id for item in document.actors
+               if item.id != actor.id and item.costume == actor.costume]
+    if sharing:
+        raise ValueError("Die Costume wird auch von anderen Figuren verwendet: "
+                         + ", ".join(sharing) + ". Bitte zuerst eine eigene Costume zuweisen")
+    # In particular, reject a duplicate before PNG decoding or any animation
+    # reassignment. Existing native Costume frame IDs are immutable.
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    if frame_id in {frame.id for frame in costume.frames}:
+        raise ValueError("Die PNG-Frame-ID existiert bereits in dieser Costume")
+    imported = add_costume_frame(raw, costume.name, png_path, frame_id)
+    if target == "Sprechfolge":
+        return edit_dialogue_speaking_timeline(
+            imported, line_id, direction, None, "Anhängen", frame_id, reset_to_stand)
+    return edit_dialogue_ending_timeline(
+        imported, line_id, direction, None, "Anhängen", frame_id, ending_ticks)
 
 
 def dialogue_ending_timeline_preview(raw: str, line_id: str, direction: str,
