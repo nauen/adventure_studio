@@ -4,7 +4,7 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Aktuelles Produktpaket (2026-11-10, CI-Abnahme offen):**
+**Neues Produktpaket (2026-11-10, native Abnahme bestanden):**
 Im NPC-Dialogeditor kann man jetzt einzelne PNGs **aus der vorgesehenen
 Importauswahl entfernen**, ohne die anderen bereits hochgeladenen Dateien
 erneut auszuwählen. Die verbleibenden Bilder behalten ihre manuell
@@ -12,8 +12,14 @@ festgelegte Abspielreihenfolge. Vorschau und atomarer SCUMM-v6-COST-Import
 berücksichtigen ausschließlich diese Bilder; selbst ein vollständig
 geleerter Import wird klar zurückgewiesen. Die ursprünglichen Uploads
 bleiben für diese Sitzung als Dateikarten sichtbar; die als solche
-beschriftete Importauswahl ist verbindlich. 334 lokale Tests grün,
-Chromium- und native CI-Abnahme noch offen. **Nächstes Paket:** Vorher
+beschriftete Importauswahl ist verbindlich. 334 lokale Tests und alle fünf
+CI-Checks der finalen Commit-Spitze grün. Zwei Chromium-Läufe prüfen drei
+Uploads, Umordnen, Ausschließen des dritten Bilds und Export/Reimport
+der beiden verbleibenden; der unveränderte stock-ScummVM-Dialog mit
+zweiframiger Abschlussgeste und Standrückkehr bestand ebenfalls
+(PR #111, Merge `33c28f5`, Chromium Jobs `130188492998` /
+`130188465475`, native Job `130188494313`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Vorher
 ausgeschlossene PNGs wieder in die Importauswahl aufnehmen, ohne Neu-Upload.
 
 **Neues Produktpaket (2026-11-10, native Abnahme bestanden):**
