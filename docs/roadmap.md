@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Native animierte Sprechsequenz (2026-11-10, CI offen):** Der Autor
+legt im Costume-Editor je N/E/S/W eine Folge vorhandener PNG-Frames fest.
+Der bestehende Dialog-Cue verwendet die native COST-`gesture`-Animation;
+die Frames folgen während der NPC-Zeile der Interpreter-Abspielrate.
+Gespeichert werden die Frames als wiederholte `gesture`- und `talk_start`-
+Folge ohne Änderung an `stand`, `talk_stop` oder den anderen Richtungen.
+Lokale Modell-, Exportquellen- und JSON-Regression grün. Eigener
+stock-ScummVM-Test mit zwei sichtbaren, aufeinanderfolgenden Farbframes
+**innerhalb einer Dialogzeile**, anschließend sechs Standframes,
+ist im Dialog-CI vorgesehen und noch nicht bestanden. Danach:
+zeilenspezifische Sequenzen mehrerer Dialogzeilen.
+
 **Vier native Richtungs-Sprechposen (2026-11-10, native Abnahme bestanden):**
 Eine regulär exportierte vierteilige Actor-Sprechkette dreht den Actor vor
 jeder Zeile auf N/E/S/W und verwendet pro Costume-Richtung einen anderen
