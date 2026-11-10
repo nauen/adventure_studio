@@ -4,6 +4,17 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Aktuelles Produktpaket (2026-11-11, CI-Abnahme offen):**
+Zuvor ausgeschlossene PNG-Dateien lassen sich im NPC-Dialogeditor **ohne
+Neu-Upload wieder in die vorbereitete Importauswahl aufnehmen**. Das
+Wiederaufnehmen hängt das Bild an die bestehende Reihenfolge an;
+Verschieben, erneutes Ausschließen, Frame-ID-Vorschau und atomarer nativer
+COST-Import bleiben konsistent. Selbst wenn vorher alle Bilder entfernt
+wurden, lässt sich ein beliebiges hochgeladenes PNG wieder auswählen.
+334 lokale Tests grün; Chromium- und stock-ScummVM-Abnahme noch offen.
+**Nächstes Paket:** Bild-Miniaturvorschau der vorbereiteten PNG-Importfolge
+vor dem Speichern, nicht nur Dateinamen und Frame-IDs.
+
 **Neues Produktpaket (2026-11-10, native Abnahme bestanden):**
 Im NPC-Dialogeditor kann man jetzt einzelne PNGs **aus der vorgesehenen
 Importauswahl entfernen**, ohne die anderen bereits hochgeladenen Dateien

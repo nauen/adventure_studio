@@ -35,7 +35,8 @@ from adventure_studio.studio_sequences import (
     import_dialogue_png_frame, dialogue_costume_isolation_preview,
     isolate_dialogue_speaker_costume, dialogue_png_batch_preview,
     import_dialogue_png_batch, dialogue_png_batch_order,
-    move_dialogue_png_batch_frame, remove_dialogue_png_batch_frame)
+    move_dialogue_png_batch_frame, remove_dialogue_png_batch_frame,
+    dialogue_png_batch_excluded, restore_dialogue_png_batch_frame)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -74,6 +75,20 @@ class DialogueAnimationTests(unittest.TestCase):
                                           order=(0, 4))
             remaining, next_selected = remove_dialogue_png_batch_frame(paths, order, 1)
             self.assertEqual((remaining, next_selected), ((2, 1), 1))
+            self.assertEqual(dialogue_png_batch_excluded(paths, remaining),
+                             (("1. 01-red.png", 0),))
+            restored, restored_selected = restore_dialogue_png_batch_frame(
+                paths, remaining, 0)
+            self.assertEqual((restored, restored_selected), ((2, 1, 0), 2))
+            self.assertEqual(dialogue_png_batch_excluded(paths, restored), ())
+            self.assertIn("3. 01-red.png → Frame_01_red",
+                          dialogue_png_batch_preview(raw, first, paths, restored))
+            with self.assertRaisesRegex(ValueError, "ausgeschlossenes PNG"):
+                restore_dialogue_png_batch_frame(paths, restored, 0)
+            restored_import = import_dialogue_png_batch(raw, first, "W", paths,
+                                                         "Sprechfolge", order=restored)
+            self.assertEqual(dialogue_speaking_sequence_selection(restored_import, first, "W"),
+                             "Pose, Frame_03_magenta, Frame_02_green, Frame_01_red")
             self.assertEqual(dialogue_png_batch_order(paths, remaining),
                              (paths[2], paths[1]))
             self.assertNotIn("01-red.png", dialogue_png_batch_preview(
@@ -92,6 +107,11 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual((remaining, next_selected), ((1,), 0))
             remaining, next_selected = remove_dialogue_png_batch_frame(paths, remaining, 0)
             self.assertEqual((remaining, next_selected), ((), None))
+            self.assertEqual(len(dialogue_png_batch_excluded(paths, remaining)), 3)
+            restored_empty, restored_position = restore_dialogue_png_batch_frame(
+                paths, remaining, 1)
+            self.assertEqual((restored_empty, restored_position), ((1,), 0))
+            self.assertEqual(dialogue_png_batch_order(paths, restored_empty), (paths[1],))
             self.assertIn("Alle PNG-Dateien", dialogue_png_batch_preview(raw, first, paths, remaining))
             with self.assertRaisesRegex(ValueError, "mindestens eine"):
                 import_dialogue_png_batch(raw, first, "W", paths, "Sprechfolge",

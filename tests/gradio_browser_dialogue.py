@@ -453,6 +453,16 @@ def main() -> None:
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-A\.png → Batch_A\s*$"),
                 timeout=20000)
+            select_option(page, "native-dialogue-png-batch-excluded", "3. Batch-Excluded.png")
+            page.locator("#native-dialogue-png-batch-restore").click()
+            expect(batch_preview).to_have_value(
+                re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-A\.png → Batch_A\s*3\. Batch-Excluded\.png → Batch_Excluded\s*$"),
+                timeout=20000)
+            select_option(page, "native-dialogue-png-batch-selected", "2. Batch-A.png")
+            page.locator("#native-dialogue-png-batch-remove").click()
+            expect(batch_preview).to_have_value(
+                re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-Excluded\.png → Batch_Excluded\s*$"),
+                timeout=20000)
             page.locator("#native-dialogue-png-batch-import").click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
             page.locator("#native-project-export-button").click()
@@ -464,8 +474,8 @@ def main() -> None:
             batch_document = parse_document(batch_file.read_text(encoding="utf-8"))
             batch_raw = batch_file.read_text(encoding="utf-8")
             last_two = dialogue_ending_timeline(batch_raw, first[1], "N")[1][-2:]
-            assert last_two == (("5. Batch_B", 4), ("6. Batch_A", 5))
-            assert "Batch_Excluded" not in batch_raw
+            assert last_two == (("5. Batch_B", 4), ("6. Batch_Excluded", 5))
+            assert "Batch_A" not in batch_raw
             assert next(actor for actor in batch_document.actors
                         if actor.id == "SpeakerHarborKeeper").costume == "WitnessCostume"
             (evidence / "result.json").write_text(json.dumps({
@@ -481,6 +491,7 @@ def main() -> None:
                 "ordered_atomic_png_batch": True,
                 "reordered_png_batch": True,
                 "removed_staged_png_without_reupload": True,
+                "restored_staged_png_without_reupload": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
