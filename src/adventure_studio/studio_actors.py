@@ -235,6 +235,35 @@ def costume_timeline_images(raw: str, costume_name: str | None,
     return results
 
 
+def render_costume_frame(raw: str, costume_name: str, frame_id: str):
+    """Display an authored native COST bitmap, with its indexed palette.
+
+    This is a still Editor preview. Native animation timing, actor movement,
+    and ScummVM's renderer are intentionally not simulated here.
+    """
+    from PIL import Image
+
+    costume = next((item for item in parse_document(raw).costumes
+                    if item.name == costume_name), None)
+    if costume is None:
+        raise ValueError("Die Costume der Sprecherfigur ist nicht vorhanden")
+    frame = next((item for item in costume.frames if item.id == frame_id), None)
+    if frame is None:
+        raise ValueError("Das gewählte PNG-Frame gehört nicht zur Sprecher-Costume")
+    rgba = bytes(channel for value in frame.pixels for channel in
+                 ((*costume.palette[costume.palette_first + value], 255)
+                  if value else (0, 0, 0, 0)))
+    original = Image.frombytes("RGBA", (frame.width, frame.height), rgba)
+    scale = min(8, 224 / max(frame.width, frame.height))
+    image = original.resize((max(1, round(frame.width * scale)),
+                             max(1, round(frame.height * scale))),
+                            Image.Resampling.NEAREST)
+    canvas = Image.new("RGB", (256, 256), (36, 40, 48))
+    canvas.paste(image, ((256 - image.width) // 2,
+                         (256 - image.height) // 2), image)
+    return canvas
+
+
 def render_costume_preview(raw: str, costume_name: str, animation_name: str,
                            direction: str, frame_duration_ms: int | float,
                            destination: Path) -> Path:
