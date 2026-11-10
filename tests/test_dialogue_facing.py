@@ -43,6 +43,15 @@ class DialogueFacingTests(unittest.TestCase):
         self.assertIn("setCurrentActor(SpeakerWitness);", source)
         self.assertIn("setActorDirection(NORTH);", source)
 
+    def test_animated_speaker_reapplies_facing_after_actor_say(self):
+        edit = change_dialogue_facing(self.raw, "HarborHello", "N")
+        room = compile_story_to_scumm(parse_story_document(edit.story_json)).rooms[0]
+        source = scummc_room_source(room, dialogue_animation_cues=(
+            ("room.harbor.object.harborkeeper.talk.0", "SpeakerHarborKeeper", 24, 12),))
+        spoken = source.index('actorSay(SpeakerHarborKeeper,"Was suchst du hier?")')
+        gesture = source.index("animateActor(SpeakerHarborKeeper,24);", spoken)
+        self.assertIn("setActorDirection(NORTH);", source[spoken:gesture])
+
     def test_legacy_story_unchanged_and_invalid_cues_rejected(self):
         story = parse_story_document(self.raw)
         self.assertNotIn('"face_direction"', canonical_story_json(story))
