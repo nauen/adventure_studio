@@ -12,13 +12,19 @@ Bytecode, lauffähig in ScummVM ohne eigene Adventure-Studio-Engine.
 Die kreative Oberfläche soll später auch komplexe, cineastische
 Sequenzen authoren können.
 
-**Neues Produktpaket (2026-11-10, PR in Prüfung):** Dialogzeilen derselben
-Figur können verschiedene importierte PNG-Sprechframes verwenden. Die erste
-Pose bleibt auf dem nativen `gesture`-/`talk_start`-Pfad, weitere Posen
-bekommen eigene stabile COST-Animationsslots ab 28, ohne die bisherige
-Talk-Start-Costume zu überschreiben. Ein Regressionstest prüft zwei Posen
-derselben Figur, Wiederverwendung des Slots und den COST-/SCUMM-Quellpfad.
-**Offen:** vollständige CI, native Sichtprobe und manuelle Gradio-Abnahme.
+**Aktuelles Produktpaket (2026-11-10, PR #81):** Im Studio lassen sich
+zwei oder mehr Dialogzeilen derselben Figur mit unterschiedlichen importierten
+PNG-Sprechframes versehen. Die erste Pose nutzt die bewährte native
+`gesture`-/`talk_start`-Zuordnung, weitere Posen bekommen stabile
+COST-Animationsslots ab 28. Ein anderer Dialog-Cue bleibt dabei unverändert;
+gleiche Frames werden wiederverwendet und gemeinsam genutzte Costumes geschützt.
+Der Editor-zu-COST-/SCUMM-Quellpfad ist regressionsgetestet. **Native E2E-Abnahme:
+zwei unterscheidbare Posen derselben Figur sichtbar in stock ScummVM**, der
+native Schritt ist auf Commit `eb5ba420` zweimal erfolgreich (GitHub-Actions-Dialogschritt `Play two different PNG speaking poses`). Die früher belegte
+Standpose bleibt als Abschlussprüfung erhalten.
+**Noch offen:** Abschluss der Gesamt-CI und manuelle Gradio-Bedienabnahme.
+**Nächstes Paket:** Sichtbare Auswahl/Rückmeldung der bereits einer Dialogzeile
+zugeordneten PNG-Sprechpose im Gradio-Editor und interaktive Bedienabnahme.
 
 ## Aktuelles Produktpaket (2026-11-09)
 
