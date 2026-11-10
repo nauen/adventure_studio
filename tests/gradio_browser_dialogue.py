@@ -34,7 +34,16 @@ def displayed_value(page, elem_id: str) -> str:
 
 
 def await_selection(page, elem_id: str, label: str) -> None:
-    expect.poll(lambda: displayed_value(page, elem_id), timeout=15000).to_contain(label)
+    page.wait_for_function(
+        """({id, label}) => {
+            const element = document.getElementById(id);
+            if (!element) return false;
+            const input = element.querySelector('input');
+            return (input && input.value === label) ||
+                   element.textContent.trim() === label;
+        }""",
+        arg={"id": elem_id, "label": label}, timeout=15000,
+    )
 
 
 def main() -> None:
