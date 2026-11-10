@@ -14,7 +14,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
-from .studio_actors import set_costume_speaking_pose
+from .studio_actors import set_costume_speaking_pose, render_costume_frame
 from .scumm_costume import CostumeAnimation, CostumeDirection
 
 
@@ -152,6 +152,19 @@ def dialogue_speaking_frame_selection(raw: str, line_id: str | None
     selected = (commands_for_pose[0] if len(commands_for_pose) == 1
                 and commands_for_pose[0] in frames else None)
     return frames, selected
+
+
+def dialogue_speaking_frame_preview(raw: str | None, line_id: str | None,
+                                    frame_id: str | None):
+    """Preview the selected NPC's actual indexed frame, not a running animation."""
+    if not raw or not line_id or not frame_id:
+        return None
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        return None
+    actor = next(item for item in document.actors if item.id == target[1])
+    return render_costume_frame(raw, actor.costume, frame_id)
 
 
 def dialogue_speaking_frames(raw: str, line_id: str | None) -> tuple[str, ...]:
