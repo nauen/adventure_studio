@@ -124,15 +124,39 @@ def dialogue_animation_choices(raw: str, line_id: str | None):
     return options, selected, reset
 
 
-def dialogue_speaking_frames(raw: str, line_id: str | None) -> tuple[str, ...]:
-    """Offer only imported frames belonging to the selected native speaker."""
+def dialogue_speaking_frame_selection(raw: str, line_id: str | None
+                                      ) -> tuple[tuple[str, ...], str | None]:
+    """Resolve the saved line-specific pose to its PNG frame for the editor.
+
+    Native COST animations may contain several frames, direction-dependent
+    frames or commands. In those cases no single PNG can be truthfully
+    preselected; the explicit Costume-animation selector remains available.
+    """
     document = parse_document(raw)
     target = _dialogue_animation_targets(document).get(line_id)
     if target is None:
-        return ()
+        return (), None
     actor = next(item for item in document.actors if item.id == target[1])
     costume = next(item for item in document.costumes if item.name == actor.costume)
-    return tuple(frame.id for frame in costume.frames)
+    frames = tuple(frame.id for frame in costume.frames)
+    cue = next((item for item in document.dialogue_animation_cues
+                if item.line_id == line_id), None)
+    animation = next((item for item in costume.animations
+                      if cue is not None and item.name == cue.animation), None)
+    if animation is None or not animation.directions:
+        return frames, None
+    commands = {direction.commands for direction in animation.directions}
+    if len(commands) != 1:
+        return frames, None
+    commands_for_pose = next(iter(commands))
+    selected = (commands_for_pose[0] if len(commands_for_pose) == 1
+                and commands_for_pose[0] in frames else None)
+    return frames, selected
+
+
+def dialogue_speaking_frames(raw: str, line_id: str | None) -> tuple[str, ...]:
+    """Offer only imported frames belonging to the selected native speaker."""
+    return dialogue_speaking_frame_selection(raw, line_id)[0]
 
 
 def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,
