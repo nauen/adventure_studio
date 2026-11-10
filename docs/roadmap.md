@@ -9,13 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Ausgewählte PNG-Dateien vor dem nativen Dialog-Stapelimport umsortieren (2026-11-10, CI offen):**
+**Ausgewählte PNG-Dateien vor dem nativen Dialog-Stapelimport umsortieren (2026-11-10, native Abnahme bestanden):**
 Die Autorin oder der Autor wählt ein Upload-Frame und verschiebt es per
 Schaltfläche nach oben/unten. Das Auswahlfeld und die Vorschau zeigen die
 Reihenfolge, die anschließend atomar als native Sprech- oder Abschlussfolge
 importiert wird. Frische Dateiauswahl setzt die alte Sortierung zurück;
 ein nicht zur Dateiauswahl passender Sortierzustand wird abgelehnt.
-334 lokale Python-Tests grün, Chromium- und CI-Nachweise offen.
+334 lokale Python-Tests und sechs CI-Checks grün. Chromium-Umsortierung,
+Vorschau und Export/Reimport in zwei UI-Läufen nachgewiesen; bestehende
+native Zweiframe-Abschlussfolge samt Standzustand in stock ScummVM in
+zwei Läufen bestanden (PR #109, Merge `e974946`, Chromium Jobs
+`130181832614` / `130181718511`, native Jobs `130181832477` /
+`130181719158`). Menschliche Bedienabnahme offen.
 Anschließend: einzelne Upload-Dateien vor dem Import entfernen.
 
 **Mehrere PNG-Dateien als eine native Dialogfolge importieren (2026-11-10, native Abnahme bestanden):**
