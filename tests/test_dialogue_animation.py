@@ -26,12 +26,44 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 dialogue_speaking_timeline,
                                                 edit_dialogue_speaking_timeline,
                                                 dialogue_speaking_timeline_preview)
+from adventure_studio.studio_sequences import (
+    dialogue_animation_phase_selection, edit_dialogue_animation_phases)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    def test_native_speaking_phase_ticks_are_per_line_and_backwards_compatible(self):
+        _story, raw = self.fixture()
+        first, second = (key for _label, key in dialogue_animation_lines(raw))
+        raw = edit_dialogue_animation(raw, first, "gesture", True)
+        raw = edit_dialogue_animation(raw, second, "gesture", True)
+        self.assertEqual(dialogue_animation_phase_selection(raw, first), (1, 60))
+        self.assertNotIn('"start_delay_ticks"', raw)
+        self.assertNotIn('"minimum_animation_ticks"', raw)
+        revised = edit_dialogue_animation_phases(raw, first, 12, 24)
+        self.assertEqual(dialogue_animation_phase_selection(revised, first), (12, 24))
+        self.assertEqual(dialogue_animation_phase_selection(revised, second), (1, 60))
+        rebuilt = canonical_json(parse_document(revised))
+        self.assertEqual(rebuilt, revised)
+        room = parse_document(revised).rooms[0]
+        script = scummc_room_source(room, dialogue_animation_cues=dialogue_animation_bindings(
+            parse_document(revised), room))
+        self.assertIn("delay(12);\n            animateActor(", script)
+        self.assertIn("delay(24);\n            waitForMessage();", script)
+        self.assertIn("delay(1);\n            animateActor(", script)
+        self.assertIn("delay(60);\n            waitForMessage();", script)
+        reassigned = edit_dialogue_animation(revised, first, "gesture", False)
+        self.assertEqual(dialogue_animation_phase_selection(reassigned, first), (12, 24))
+        zero = edit_dialogue_animation_phases(reassigned, first, 0, 0)
+        self.assertEqual(dialogue_animation_phase_selection(zero, first), (0, 0))
+        for start, minimum in ((-1, 20), (1.5, 20), (1, -2), (1, 2.2), (True, 1)):
+            with self.subTest(start=start, minimum=minimum), self.assertRaises(ValueError):
+                edit_dialogue_animation_phases(revised, first, start, minimum)
+        with self.assertRaisesRegex(ValueError, "zuerst"):
+            edit_dialogue_animation_phases(raw, "room.unknown", 1, 60)
+
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "Timeline benötigt Pillow")
     def test_dialogue_frame_timeline_edits_one_direction_and_previews_gif(self):
         _story, raw = self.fixture()

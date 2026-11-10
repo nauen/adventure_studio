@@ -41,7 +41,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_speaking_sequence_selection,
                                dialogue_speaking_timeline, edit_dialogue_speaking_timeline,
                                dialogue_speaking_timeline_preview,
-                               edit_dialogue_animation)
+                               dialogue_animation_phase_selection,
+                               edit_dialogue_animation_phases, edit_dialogue_animation)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -786,6 +787,18 @@ def make_app():
                 elem_id="native-dialogue-direction-status")
             native_dialogue_reset = gr.Checkbox(label="Nach der Sprechzeile zur Standpose zurückkehren",
                                                 value=True, elem_id="native-dialogue-reset")
+            with gr.Accordion("Native Sprechphasen dieser Dialogzeile", open=True):
+                gr.Markdown("**Textbeginn → Vorlauf → native Sprechgeste → Mindestlaufzeit → Ende des Dialogtexts abwarten → Standpose.** Beide Werte sind ganze native `delay`-Ticks des SCUMM-v6-Skripts, keine Millisekunden oder automatische Wort-Synchronisation. Bei 0 entfällt die jeweilige Verzögerung. Erst eine Sprechanimation zuweisen, dann die Phasen speichern.")
+                with gr.Row():
+                    native_dialogue_phase_start = gr.Number(
+                        label="Vorlauf bis Sprechgeste (native Ticks)", precision=0,
+                        value=1, elem_id="native-dialogue-phase-start")
+                    native_dialogue_phase_minimum = gr.Number(
+                        label="Mindestlaufzeit vor Dialogende-Wait (native Ticks)",
+                        precision=0, value=60, elem_id="native-dialogue-phase-minimum")
+                    native_dialogue_phase_save = gr.Button(
+                        "Sprechphasen dieser Zeile speichern",
+                        elem_id="native-dialogue-phase-save")
             with gr.Row():
                 native_dialogue_animation_save = gr.Button("Sprechanimation zuweisen")
                 native_dialogue_animation_remove = gr.Button("Sprechanimation entfernen")
@@ -1315,6 +1328,15 @@ def make_app():
             [native_state, native_dialogue_animation_line, native_dialogue_direction,
              native_dialogue_timeline_duration],
             [native_dialogue_timeline_preview_image, native_dialogue_timeline_preview_status])
+        for source in (native_state, native_dialogue_animation_line):
+            source.change(dialogue_animation_phase_selection,
+                          [native_state, native_dialogue_animation_line],
+                          [native_dialogue_phase_start, native_dialogue_phase_minimum])
+        native_dialogue_phase_save.click(
+            lambda *args: native_edit(edit_dialogue_animation_phases, *args),
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_phase_start, native_dialogue_phase_minimum],
+            [native_state, *native_outputs, native_report])
         native_dialogue_animation_save.click(
             lambda *args: native_edit(edit_dialogue_animation, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_animation,

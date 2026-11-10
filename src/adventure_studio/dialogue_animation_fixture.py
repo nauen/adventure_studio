@@ -9,7 +9,8 @@ from .scumm_project import canonical_json, export_document, parse_document
 from .studio_sequences import (dialogue_animation_lines, edit_dialogue_animation,
                                assign_dialogue_speaking_frame,
                                assign_dialogue_speaking_sequence,
-                               assign_dialogue_direction_speaking_sequence)
+                               assign_dialogue_direction_speaking_sequence,
+                               edit_dialogue_animation_phases)
 from .studio_actors import (set_costume_direction_speaking_pose,
                             set_costume_direction_speaking_sequence)
 
@@ -88,6 +89,10 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
             raw, lines[0], "W", "Speak, SpeakAlt")
         raw = assign_dialogue_direction_speaking_sequence(
             raw, lines[1], "E", "SpeakBlue, SpeakYellow")
+        # Exercise authored native script phases in the same playable game:
+        # the first line waits 12 ticks before its W gesture and at least 90
+        # ticks after starting it; the second retains legacy 1/60 ticks.
+        raw = edit_dialogue_animation_phases(raw, lines[0], 12, 90)
     elif line_sequences:
         lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
                       if label.startswith("SpeakerWitness"))

@@ -4,6 +4,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Neues Produktpaket (2026-11-10, Implementierung; CI offen):**
+Der Autor kann für **jede NPC-Dialogzeile** die zwei nativen Sprechphasen
+einstellen: den Vorlauf bis zum Start ihrer COST-Sprechgeste und ihre
+Mindestlaufzeit vor dem `waitForMessage`. Der Editor verwendet ganzzahlige
+SCUMM-Skript-Ticks, keine Millisekunden. Werte 0/1/N, getrennte Zeilen
+und unveränderte ältere JSON-Projekte sind modellseitig unterstützt;
+die bestehenden Defaults `delay(1)` und `delay(60)` bleiben erhalten.
+Die neue Kombination mit unterschiedlichen Richtungskanälen wird in einem
+regulär exportierten ScummVM-Dialog geprüft. **329 lokale Tests grün;
+Browser- und native CI-Abnahme noch offen.** Kein automatischer
+Silben-/Wort-Lippensync. **Nächstes Produktpaket:** Ein optionaler,
+zeilenspezifischer Abschlussgesten-Kanal am nativen Dialogende.
+
 **Neues Produktpaket (2026-11-10, Abnahme bestanden):**
 Die eigene Sprechfolge einer NPC-Dialogzeile und Blickrichtung lässt sich
 im Studio jetzt **grafisch als Frame-Timeline** bearbeiten: aus importierten
