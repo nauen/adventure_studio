@@ -44,20 +44,27 @@ def dialogue_fixture(raw: str, choices: bool = False, nested: bool = False,
 
 def main() -> int:
     if (len(sys.argv) not in (3, 4)
-            or (len(sys.argv) == 4 and sys.argv[3] not in ("--choices", "--nested", "--multispeaker", "--linear-multispeaker"))):
-        print("Usage: python -m adventure_studio.dialogue_demo STORY.json OUTPUT_DIRECTORY [--choices|--nested|--multispeaker|--linear-multispeaker]")
+            or (len(sys.argv) == 4 and sys.argv[3] not in ("--choices", "--nested", "--multispeaker", "--linear-multispeaker", "--four-facing"))):
+        print("Usage: python -m adventure_studio.dialogue_demo STORY.json OUTPUT_DIRECTORY [--choices|--nested|--multispeaker|--linear-multispeaker|--four-facing]")
         return 2
     raw = dialogue_fixture(Path(sys.argv[1]).read_text(encoding="utf-8"),
-                           len(sys.argv) == 4 and sys.argv[3] != "--linear-multispeaker",
+                           len(sys.argv) == 4 and sys.argv[3] not in ("--linear-multispeaker", "--four-facing"),
                            len(sys.argv) == 4 and sys.argv[3] == "--nested",
-                           len(sys.argv) == 4 and sys.argv[3] in ("--multispeaker", "--linear-multispeaker"))
-    if len(sys.argv) == 4 and sys.argv[3] == "--linear-multispeaker":
+                           len(sys.argv) == 4 and sys.argv[3] in ("--multispeaker", "--linear-multispeaker", "--four-facing"))
+    if len(sys.argv) == 4 and sys.argv[3] in ("--linear-multispeaker", "--four-facing"):
         # Exercise the same edit operation used by the Studio's dialogue tab.
         from .studio_service import extend_dialogue_line, change_dialogue_facing
         raw = extend_dialogue_line(raw, "HarborHint", "HarborFollowup",
                                    "Ich zeige dir den Weg.", "HarborKeeper").story_json
-        raw = change_dialogue_facing(raw, "HarborHello", "W").story_json
-        raw = change_dialogue_facing(raw, "HarborHint", "E").story_json
+        if sys.argv[3] == "--four-facing":
+            raw = extend_dialogue_line(raw, "HarborFollowup", "HarborLast",
+                                       "Wir sehen uns wieder.", "Witness").story_json
+            for node, direction in (("HarborHello", "N"), ("HarborHint", "E"),
+                                    ("HarborFollowup", "S"), ("HarborLast", "W")):
+                raw = change_dialogue_facing(raw, node, direction).story_json
+        else:
+            raw = change_dialogue_facing(raw, "HarborHello", "W").story_json
+            raw = change_dialogue_facing(raw, "HarborHint", "E").story_json
     output = Path(sys.argv[2])
     build_story_document(raw, output)
     (output / "story.json").write_text(raw, encoding="utf-8")

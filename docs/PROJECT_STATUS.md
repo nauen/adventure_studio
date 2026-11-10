@@ -4,6 +4,18 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Aktuelles Produktpaket (2026-11-10, native Abnahme in Arbeit):**
+Ein durch den produktiven Story-/Studio-Pfad erstelltes Vier-Zeilen-Gespräch
+setzt den selben NPC vor jeder Zeile auf N/E/S/W. Dessen Costume enthält
+vier unterschiedlich gefärbte PNG-äquivalente Sprechframes, mit den
+vorhandenen Richtungs-Authoring-Operationen als `gesture` und `talk_start`
+gebunden. Ein neuer stock-ScummVM-Klicktest prüft die sichtbare Farbfolge
+und danach sechs stabile Standframes; das GitHub-Gate muss noch laufen.
+323 lokale Tests grün, generierter SCUMM-Quelltext enthält alle vier
+`setActorDirection`-Befehle. **Nicht als V behaupten, bevor der native
+Bildnachweis grün ist.** Nächstes Arbeitspaket nach Abnahme: zeitabhängige
+Sprechframe-Wechsel je Zeile authoren und sichtbar prüfen (D03).
+
 **Neues Produktpaket (2026-11-10, Implementierung):** Im Costume-Editor kann
 der Autor ein importiertes PNG-Frame gezielt für Nord, Ost, Süd oder West
 als Sprechpose setzen. Der bestehende native `gesture`-Slot 24 und
