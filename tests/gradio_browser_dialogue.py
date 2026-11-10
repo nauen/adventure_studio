@@ -247,7 +247,11 @@ def main() -> None:
             expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            # Wait for the direction-change callback to finish before typing:
+            # otherwise its late text update can overwrite the author's edit.
+            sequence_input.fill("SpeakAlt")
             select_option(page, "native-dialogue-direction", "Nord")
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("SpeakAlt, Speak")
             page.locator("#native-dialogue-direction-sequence-apply").click()
             expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
