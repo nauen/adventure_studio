@@ -284,9 +284,12 @@ class DialogueAnimationTests(unittest.TestCase):
         rules = tuple(replace(rule, actor_lines=tuple(
             (key, "SpeakerWitness") for key, _actor in rule.actor_lines))
             for rule in room.talk_rules)
+        hotspots = tuple(replace(hotspot, talk_actor_lines=tuple(
+            "SpeakerWitness" for _actor in hotspot.talk_actor_lines))
+            if hotspot.talk_actor_lines else hotspot for hotspot in room.hotspots)
         raw = canonical_json(replace(original, actors=actors,
             costumes=(*original.costumes, costume),
-            rooms=(replace(room, talk_rules=rules), *original.rooms[1:])))
+            rooms=(replace(room, talk_rules=rules, hotspots=hotspots), *original.rooms[1:])))
         lines = tuple(key for _label, key in dialogue_animation_lines(raw))
         self.assertGreaterEqual(len(lines), 2)
         with tempfile.TemporaryDirectory() as directory:
