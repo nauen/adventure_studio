@@ -153,8 +153,15 @@ def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,
         raise ValueError("Bitte ein vorhandenes Costume-Frame als Sprechpose wählen")
 
     gesture = next((item for item in costume.animations if item.name == "gesture"), None)
-    if gesture is None:
-        # Preserve the original stock-ScummVM talk slots for the first pose.
+    gesture_users = {
+        cue.line_id for cue in document.dialogue_animation_cues
+        if cue.animation == "gesture"
+        and (speaker := _dialogue_animation_targets(document).get(cue.line_id)) is not None
+        and next(item for item in document.actors if item.id == speaker[1]).costume == costume.name
+    }
+    if gesture is None or not gesture_users or gesture_users == {line_id}:
+        # The first assignment may replace an unused legacy gesture, while
+        # another line's active gesture must never be overwritten.
         updated = set_costume_speaking_pose(raw, actor.costume, frame_id)
         return edit_dialogue_animation(updated, line_id, "gesture", reset_to_stand)
 
