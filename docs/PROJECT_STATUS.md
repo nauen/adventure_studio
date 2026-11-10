@@ -4,6 +4,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Neues Produktpaket (2026-11-10, Implementierung; CI-Abnahme offen):**
+Die eigene **Abschluss-PNG-Folge pro NPC-Zeile und Blickrichtung** lässt
+sich nun direkt im Dialogeditor aufbauen, anhängen, verschieben,
+Frames entfernen und als GIF ansehen, ohne den Costume-Editor zu öffnen.
+Die erste Änderung reserviert einen stabilen eigenen COST-Slot und bindet
+ihn nach dem Dialog-Wait mit positiver nativer Tick-Dauer ein. Andere
+Dialogzeilen und Richtungskanäle bleiben erhalten. Bestehende Projekte
+behalten ihre bisherigen Cues. **331 lokale Tests grün**; Browser-
+Authoring, Export/Reimport und der stock-ScummVM-Beleg des neuen
+Authoring-Pfads werden in der CI geprüft. Menschliche UI-Abnahme offen.
+**Nächstes Paket nach bestandener CI:** Eigene neue PNG-Bilder direkt
+in der Dialogansicht importieren und als Sprech-/Abschlussframes zuweisen.
+
 **Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Eine einzelne NPC-Dialogzeile kann jetzt nach `waitForMessage()` eine
 **eigene optionale Abschlussgeste** aus einer vorhandenen indizierten

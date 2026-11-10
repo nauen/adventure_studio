@@ -167,6 +167,136 @@ def edit_dialogue_ending_animation(raw: str, line_id: str,
         for item in document.dialogue_animation_cues)))
 
 
+def dialogue_ending_timeline(raw: str, line_id: str | None, direction: str):
+    """Read the authored ending COST frames for one line and facing."""
+    if direction not in ("N", "E", "S", "W"):
+        raise ValueError("Bitte eine gültige Blickrichtung N/E/S/W auswählen")
+    if not raw:
+        return [], (), ()
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        return [], (), ()
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    cue = next((item for item in document.dialogue_animation_cues
+                if item.line_id == line_id), None)
+    animation = next((item for item in costume.animations
+                      if cue and item.name == cue.ending_animation), None)
+    selected = next((item for item in animation.directions
+                     if item.direction == direction), None) if animation else None
+    steps = selected.commands if selected else ()
+    images = (costume_timeline_images(raw, costume.name, animation.name, direction)
+              if selected and all(step in {f.id for f in costume.frames} for step in steps)
+              else [])
+    return (images, tuple((f"{i + 1}. {step}", i) for i, step in enumerate(steps)),
+            tuple(frame.id for frame in costume.frames))
+
+
+def assign_dialogue_ending_sequence(raw: str, line_id: str, direction: str,
+                                    frame_ids: str, ticks: int | float = 12) -> str:
+    """Create/re-edit a private native ending COST channel without the Costume editor."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    if direction not in ("N", "E", "S", "W"):
+        raise ValueError("Bitte eine gültige Blickrichtung N/E/S/W auswählen")
+    cue = next((item for item in document.dialogue_animation_cues
+                if item.line_id == line_id), None)
+    if cue is None:
+        raise ValueError("Bitte zuerst eine Sprechanimation für diese Dialogzeile zuweisen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    sharing = [item.id for item in document.actors
+               if item.id != actor.id and item.costume == actor.costume]
+    if sharing:
+        raise ValueError("Die Costume wird auch von anderen Figuren verwendet: "
+                         + ", ".join(sharing) + ". Bitte zuerst eine eigene Costume zuweisen")
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    if not isinstance(frame_ids, str) or not frame_ids.strip():
+        raise ValueError("Bitte mindestens ein importiertes PNG-Frame auswählen")
+    sequence = tuple(part.strip() for part in frame_ids.split(","))
+    available = {frame.id for frame in costume.frames}
+    if any(not part or part not in available for part in sequence):
+        raise ValueError("Die Abschlussfolge darf nur vorhandene PNG-Frames enthalten")
+    name = "ending_line_" + sha1(line_id.encode("utf-8")).hexdigest()[:12]
+    previous = next((item for item in costume.animations if item.name == name), None)
+    if any(other.line_id != line_id and
+           (other.animation == name or other.ending_animation == name)
+           for other in document.dialogue_animation_cues):
+        raise ValueError("Der native Abschluss-Slot gehört einer anderen Dialogzeile")
+    if previous is None:
+        occupied = {item.index for item in costume.animations if item.index is not None}
+        index = next((slot for slot in range(28, 253, 4) if slot not in occupied), None)
+        if index is None:
+            raise ValueError("Keine freien nativen Costume-Animationsslots für Abschlussfolgen")
+        base = next((item for item in costume.animations
+                     if item.name == (cue.ending_animation or cue.animation)), None)
+    else:
+        if previous.index is None or previous.index < 28:
+            raise ValueError("Vorhandene Abschlussanimation verwendet einen reservierten Slot")
+        index, base = previous.index, previous
+    if base is None or {item.direction for item in base.directions} != {"N", "E", "S", "W"}:
+        raise ValueError("Die Abschlussfolge benötigt eine bestehende Animation mit vier Blickrichtungen")
+    directions = tuple(CostumeDirection(item.direction, sequence, True)
+                       if item.direction == direction else item
+                       for item in base.directions)
+    animation = CostumeAnimation(name, directions, index)
+    updated_costume = replace(costume, animations=tuple(
+        item for item in costume.animations if item.name != name) + (animation,))
+    updated = canonical_json(replace(document, costumes=tuple(
+        updated_costume if item.name == costume.name else item for item in document.costumes)))
+    return edit_dialogue_ending_animation(updated, line_id, name, ticks)
+
+
+def edit_dialogue_ending_timeline(raw: str, line_id: str, direction: str,
+                                  step_number: int | float | None, operation: str,
+                                  frame_id: str | None = None,
+                                  ticks: int | float = 12) -> str:
+    """Append, reorder or remove a PNG in the line-specific ending timeline."""
+    _, steps, available = dialogue_ending_timeline(raw, line_id, direction)
+    if not available:
+        raise ValueError("Bitte eine Sprecher-Dialogzeile mit PNG-Costume auswählen")
+    if steps and any(part.split(". ", 1)[1] not in available for part, _ in steps):
+        raise ValueError("Diese Abschlussanimation enthält native Kommandos")
+    sequence = [part.split(". ", 1)[1] for part, _ in steps]
+    if operation == "Anhängen":
+        if frame_id not in available:
+            raise ValueError("Bitte ein vorhandenes PNG-Frame auswählen")
+        sequence.append(frame_id)
+    else:
+        if (type(step_number) not in (int, float) or int(step_number) != step_number
+                or not 0 <= int(step_number) < len(sequence)):
+            raise ValueError("Bitte einen gültigen Abschlussframe-Schritt auswählen")
+        index = int(step_number)
+        if operation == "Entfernen":
+            if len(sequence) == 1:
+                raise ValueError("Zum Entfernen der gesamten Abschlussgeste den Entfernen-Button nutzen")
+            sequence.pop(index)
+        elif operation in ("Nach links", "Nach rechts"):
+            other = index + (-1 if operation == "Nach links" else 1)
+            if not 0 <= other < len(sequence):
+                raise ValueError("Abschlussframe ist bereits am Rand")
+            sequence[index], sequence[other] = sequence[other], sequence[index]
+        else:
+            raise ValueError("Unbekannte Abschluss-Timeline-Aktion")
+    return assign_dialogue_ending_sequence(raw, line_id, direction, ", ".join(sequence), ticks)
+
+
+def dialogue_ending_timeline_preview(raw: str, line_id: str, direction: str,
+                                     duration_ms: int | float, destination: Path) -> Path:
+    """Editor-only GIF of an authored native ending sequence."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    cue = next((item for item in document.dialogue_animation_cues
+                if item.line_id == line_id), None)
+    if target is None or cue is None or cue.ending_animation is None:
+        raise ValueError("Bitte zuerst eine Abschlussgeste für diese Dialogzeile speichern")
+    actor = next(item for item in document.actors if item.id == target[1])
+    return render_costume_preview(raw, actor.costume, cue.ending_animation,
+                                  direction, duration_ms, destination)
+
+
 def edit_dialogue_animation_phases(raw: str, line_id: str,
                                   start_delay_ticks: int | float,
                                   minimum_animation_ticks: int | float) -> str:

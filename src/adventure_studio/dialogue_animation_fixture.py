@@ -11,10 +11,9 @@ from .studio_sequences import (dialogue_animation_lines, edit_dialogue_animation
                                assign_dialogue_speaking_sequence,
                                assign_dialogue_direction_speaking_sequence,
                                edit_dialogue_animation_phases,
-                               edit_dialogue_ending_animation)
+                               assign_dialogue_ending_sequence)
 from .studio_actors import (set_costume_direction_speaking_pose,
-                            set_costume_direction_speaking_sequence,
-                            set_costume_animation)
+                            set_costume_direction_speaking_sequence)
 
 
 def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
@@ -99,10 +98,9 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
         # the first line waits 12 ticks before its W gesture and at least 90
         # ticks after starting it; the second retains legacy 1/60 ticks.
         raw = edit_dialogue_animation_phases(raw, lines[0], 12, 90)
-        for face in ("N", "E", "S", "W"):
-            raw = set_costume_animation(raw, "WitnessCostume", "closing_line", 36,
-                                        face, "SpeakMagenta", False)
-        raw = edit_dialogue_ending_animation(raw, lines[0], "closing_line", 45)
+        # The very same direct PNG ending-authoring function as the Studio UI
+        # must produce the magenta native gameplay frame, not a hand-built slot.
+        raw = assign_dialogue_ending_sequence(raw, lines[0], "W", "SpeakMagenta", 45)
     elif line_sequences:
         lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
                       if label.startswith("SpeakerWitness"))

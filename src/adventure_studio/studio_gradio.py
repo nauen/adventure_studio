@@ -44,7 +44,9 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_animation_phase_selection,
                                edit_dialogue_animation_phases, edit_dialogue_animation)
 from .studio_sequences import (dialogue_ending_animation_selection,
-                               edit_dialogue_ending_animation)
+                               edit_dialogue_ending_animation,
+                               dialogue_ending_timeline,
+                               edit_dialogue_ending_timeline, dialogue_ending_timeline_preview)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -802,13 +804,39 @@ def make_app():
                         "Sprechphasen dieser Zeile speichern",
                         elem_id="native-dialogue-phase-save")
             with gr.Accordion("Optionale Abschlussgeste dieser Dialogzeile", open=True):
-                gr.Markdown("Nach dem tatsächlichen Ende des Dialogtexts (`waitForMessage`) kann eine **vorhandene indizierte Costume-Animation** der Sprecherfigur starten. Sie läuft für die gewählten nativen Skript-Ticks; anschließend folgt die Standpose, falls aktiviert. Ohne Abschlussgeste bleibt das bisherige Verhalten erhalten. Erstelle eine eigene Animation bei Bedarf im Costume-Editor.")
+                gr.Markdown("Nach dem tatsächlichen Ende des Dialogtexts (`waitForMessage`) startet die optionale native Abschlussgeste. Du kannst eine bestehende Costume-Animation wählen **oder hier direkt eine eigene PNG-Framefolge für die gewählte Blickrichtung erstellen**. Andere Richtungen und Dialogzeilen bleiben erhalten. Die Laufzeit wird in nativen Skript-Ticks angegeben.")
                 with gr.Row():
                     native_dialogue_ending_animation = gr.Dropdown(
                         label="Costume-Abschlussanimation", elem_id="native-dialogue-ending-animation")
                     native_dialogue_ending_ticks = gr.Number(
                         label="Abschlussgeste zeigen (native Ticks)", value=12, precision=0,
                         elem_id="native-dialogue-ending-ticks")
+                native_dialogue_ending_gallery = gr.Gallery(
+                    label="Abschluss-PNG-Folge · gewählte Blickrichtung", columns=6,
+                    object_fit="contain", height=180, elem_id="native-dialogue-ending-gallery")
+                with gr.Row():
+                    native_dialogue_ending_step = gr.Dropdown(
+                        label="Abschlussframe", elem_id="native-dialogue-ending-step")
+                    native_dialogue_ending_frame = gr.Dropdown(
+                        label="Importiertes PNG-Frame anhängen", elem_id="native-dialogue-ending-frame")
+                with gr.Row():
+                    native_dialogue_ending_append = gr.Button(
+                        "Abschlussframe anhängen", elem_id="native-dialogue-ending-append")
+                    native_dialogue_ending_left = gr.Button(
+                        "Nach links", elem_id="native-dialogue-ending-left")
+                    native_dialogue_ending_right = gr.Button(
+                        "Nach rechts", elem_id="native-dialogue-ending-right")
+                    native_dialogue_ending_delete_frame = gr.Button(
+                        "Frame entfernen", elem_id="native-dialogue-ending-delete-frame")
+                with gr.Row():
+                    native_dialogue_ending_preview_duration = gr.Number(
+                        label="Editor-Vorschau: ms pro Bild", value=180, precision=0,
+                        elem_id="native-dialogue-ending-preview-duration")
+                    native_dialogue_ending_play = gr.Button(
+                        "Abschlussfolge abspielen", elem_id="native-dialogue-ending-play")
+                native_dialogue_ending_preview = gr.Image(
+                    label="Abschlussfolge · nur Editor-GIF", interactive=False,
+                    format="gif", elem_id="native-dialogue-ending-preview")
                 with gr.Row():
                     native_dialogue_ending_save = gr.Button(
                         "Abschlussgeste dieser Zeile speichern", elem_id="native-dialogue-ending-save")
@@ -1369,6 +1397,46 @@ def make_app():
             lambda raw, line: native_edit(edit_dialogue_ending_animation, raw, line, None, 0),
             [native_state, native_dialogue_animation_line],
             [native_state, *native_outputs, native_report])
+        def dialogue_ending_timeline_view(raw, line, direction, selected_frame):
+            images, steps, frames = dialogue_ending_timeline(raw, line, direction)
+            return (images, gr.update(choices=steps, value=0 if steps else None),
+                    gr.update(choices=frames, value=(selected_frame if selected_frame in frames
+                                                     else frames[0] if frames else None)))
+
+        for source in (native_state, native_dialogue_animation_line, native_dialogue_direction):
+            source.change(dialogue_ending_timeline_view,
+                          [native_state, native_dialogue_animation_line, native_dialogue_direction,
+                           native_dialogue_ending_frame],
+                          [native_dialogue_ending_gallery, native_dialogue_ending_step,
+                           native_dialogue_ending_frame])
+        native_dialogue_ending_gallery.select(select_timeline_step,
+                                              outputs=[native_dialogue_ending_step])
+        for button, operation in (
+                (native_dialogue_ending_append, "Anhängen"),
+                (native_dialogue_ending_left, "Nach links"),
+                (native_dialogue_ending_right, "Nach rechts"),
+                (native_dialogue_ending_delete_frame, "Entfernen")):
+            button.click(lambda raw, line, direction, step, frame, ticks, op=operation:
+                         native_edit(edit_dialogue_ending_timeline, raw, line, direction,
+                                     step, op, frame, ticks),
+                         [native_state, native_dialogue_animation_line, native_dialogue_direction,
+                          native_dialogue_ending_step, native_dialogue_ending_frame,
+                          native_dialogue_ending_ticks],
+                         [native_state, *native_outputs, native_report])
+
+        def dialogue_ending_play(raw, line, direction, duration):
+            path = Path(tempfile.mkdtemp(prefix="adventure-studio-ending-preview-")) / "ending.gif"
+            try:
+                rendered = dialogue_ending_timeline_preview(raw, line, direction, duration, path)
+                return str(rendered)
+            except (ValueError, OSError) as error:
+                raise gr.Error(f"Abschlussvorschau nicht möglich: {error}") from error
+
+        native_dialogue_ending_play.click(
+            dialogue_ending_play,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_ending_preview_duration],
+            [native_dialogue_ending_preview])
         native_dialogue_animation_save.click(
             lambda *args: native_edit(edit_dialogue_animation, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_animation,

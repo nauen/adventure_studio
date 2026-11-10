@@ -29,13 +29,81 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 dialogue_speaking_timeline_preview)
 from adventure_studio.studio_sequences import (
     dialogue_animation_phase_selection, edit_dialogue_animation_phases,
-    dialogue_ending_animation_selection, edit_dialogue_ending_animation)
+    dialogue_ending_animation_selection, edit_dialogue_ending_animation,
+    dialogue_ending_timeline, assign_dialogue_ending_sequence,
+    edit_dialogue_ending_timeline, dialogue_ending_timeline_preview)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Timeline benötigt Pillow")
+    def test_png_ending_timeline_owns_native_slot_and_preserves_line_directions(self):
+        _story, raw = self.fixture()
+        original = parse_document(raw)
+        raw = canonical_json(replace(original,
+            costumes=(*original.costumes, replace(original.costumes[0], name="WitnessCostume")),
+            actors=tuple(replace(actor, costume="WitnessCostume")
+                         if actor.id == "SpeakerWitness" else actor
+                         for actor in original.actors)))
+        first, second = (key for _label, key in dialogue_animation_lines(raw))
+        raw = edit_dialogue_animation(raw, first, "gesture")
+        raw = edit_dialogue_animation(raw, second, "gesture")
+        self.assertEqual(dialogue_ending_timeline(raw, first, "W")[1], ())
+        raw = edit_dialogue_ending_timeline(raw, first, "W", None, "Anhängen", "Pose", 18)
+        raw = edit_dialogue_ending_timeline(raw, first, "W", 0, "Anhängen", "Pose", 18)
+        raw = edit_dialogue_ending_timeline(raw, first, "W", 0, "Nach rechts", ticks=18)
+        images, steps, frames = dialogue_ending_timeline(raw, first, "W")
+        self.assertEqual(tuple(label for label, _ in steps), ("1. Pose", "2. Pose"))
+        self.assertEqual(len(images), 2)
+        self.assertIn("Pose", frames)
+        raw = edit_dialogue_ending_timeline(raw, first, "W", 0, "Entfernen", ticks=18)
+        first_cue = next(cue for cue in parse_document(raw).dialogue_animation_cues
+                         if cue.line_id == first)
+        self.assertTrue(first_cue.ending_animation.startswith("ending_line_"))
+        self.assertEqual(first_cue.ending_animation_ticks, 18)
+        self.assertEqual(dialogue_ending_animation_selection(raw, second)[1], None)
+        document = parse_document(raw)
+        ending = next(a for a in document.costumes[0].animations
+                      if a.name == first_cue.ending_animation)
+        self.assertGreaterEqual(ending.index, 28)
+        self.assertEqual(next(d.commands for d in ending.directions if d.direction == "W"),
+                         ("Pose",))
+        self.assertEqual(next(d.commands for d in ending.directions if d.direction == "E"),
+                         ("Pose",))
+        before_index = ending.index
+        raw = assign_dialogue_ending_sequence(raw, first, "E", "Pose, Pose, Pose", 24)
+        self.assertEqual(dialogue_ending_timeline(raw, first, "W")[1], (("1. Pose", 0),))
+        self.assertEqual(len(dialogue_ending_timeline(raw, first, "E")[1]), 3)
+        reloaded = canonical_json(parse_document(raw))
+        self.assertEqual(raw, reloaded)
+        document = parse_document(reloaded)
+        self.assertEqual(next(a.index for a in document.costumes[0].animations
+                              if a.name == first_cue.ending_animation), before_index)
+        script = scummc_room_source(document.rooms[0], dialogue_animation_cues=
+                                    dialogue_animation_bindings(document, document.rooms[0]))
+        self.assertIn(f"animateActor(SpeakerHarborKeeper,{before_index});\n            delay(24);", script)
+        with tempfile.TemporaryDirectory() as directory:
+            export_document(document, Path(directory) / "resources")
+            source = (Path(directory) / "resources" / "DialogueFigure.scost").read_text()
+            self.assertIn(f"anim {first_cue.ending_animation} @ {before_index}", source)
+            self.assertIn("body(Pose, Pose, Pose)", source)
+            preview = dialogue_ending_timeline_preview(reloaded, first, "E", 180,
+                                                       Path(directory) / "ending.gif")
+            self.assertTrue(preview.is_file())
+        with self.assertRaisesRegex(ValueError, "mindestens ein"):
+            assign_dialogue_ending_sequence(raw, first, "W", "")
+        with self.assertRaisesRegex(ValueError, "vorhandene PNG"):
+            assign_dialogue_ending_sequence(raw, first, "W", "Unknown")
+        with self.assertRaisesRegex(ValueError, "gültige Blickrichtung"):
+            assign_dialogue_ending_sequence(raw, first, "NW", "Pose")
+        with self.assertRaisesRegex(ValueError, "Entfernen"):
+            edit_dialogue_ending_timeline(raw, first, "W", 0, "Entfernen")
+        removed = edit_dialogue_ending_animation(raw, first, None, 0)
+        self.assertIsNone(dialogue_ending_animation_selection(removed, first)[1])
+        self.assertEqual(dialogue_ending_timeline(removed, first, "W")[1], ())
+
     def test_optional_native_ending_animation_is_per_line_after_message(self):
         _story, raw = self.fixture()
         first, second = (key for _label, key in dialogue_animation_lines(raw))
