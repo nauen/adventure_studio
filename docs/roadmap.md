@@ -9,13 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Einzelne Upload-PNGs vor dem nativen Dialog-Stapelimport ausschließen (2026-11-10, CI offen):**
+**Einzelne Upload-PNGs vor dem nativen Dialog-Stapelimport ausschließen (2026-11-10, native Abnahme bestanden):**
 Ein PNG wird in der Importauswahl gewählt und mit einem Klick ausgeschlossen.
 Die übrigen hochgeladenen Bilder bleiben in der bisherigen Sortierung
 erhalten und lassen sich ohne neue Dateiauswahl atomar als native Sprech-
 oder Abschlussfolge importieren. Bei 0 verbleibenden Bildern wird nichts
 geschrieben; doppelte oder ungültige Referenzen werden abgelehnt.
-334 lokale Tests grün, Chromium-/ScummVM-CI-Abnahme offen.
+334 lokale Tests und fünf finale CI-Checks grün. Zwei Chromium-Läufe
+bestätigen das Ausschließen des dritten Uploads nach dem Umordnen und
+den JSON-Export/Reimport der zwei gewünschten Frames. Der bestehende
+native Zweiframe-Abschlussdialog mit Standpose bestand im stock ScummVM
+(PR #111, Merge `33c28f5`, Chromium Jobs `130188492998` /
+`130188465475`, native Job `130188494313`). Menschliche Bedienabnahme offen.
 Anschließend: ausgeschlossene Uploads ohne erneute Dateiauswahl reaktivieren.
 
 **Ausgewählte PNG-Dateien vor dem nativen Dialog-Stapelimport umsortieren (2026-11-10, native Abnahme bestanden):**
