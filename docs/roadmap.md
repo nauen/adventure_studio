@@ -9,15 +9,16 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Native Sprechphasen pro NPC-Zeile (2026-11-10, CI offen):**
+**Native Sprechphasen pro NPC-Zeile (2026-11-10, native Abnahme bestanden):**
 Vorlauf bis zur Sprechanimation und Mindestlaufzeit bis zum
 `waitForMessage` sind jetzt als native ganze Skript-Ticks pro Zeile
 authorbar. Das bestehende `actorSay`/`animateActor`-/Stand-Verhalten
 bleibt erhalten, und alte Projekte verwenden weiterhin 1/60 Ticks.
-Modell-/Exporter-/Kompatibilitätstest lokal grün. Der echte Gradio-
-Chromium-Ablauf (zwei Zeilen, Export/Reimport) und der Stock-ScummVM-
-Dialog mit zeitlich angepasster West-Geste sowie unveränderter Ost-Geste
-stehen als CI-Abnahme aus. Kein Anspruch auf exakten Wort-Lippensync.
+Modell-/Exporter-/Kompatibilitätstest, echter Gradio-Chromium-Ablauf
+(zwei Zeilen, Export/Reimport) und der Stock-ScummVM-Dialog mit 12/90-
+Tick-West-Geste sowie unveränderter 1/60-Tick-Ost-Geste sind bestanden
+(CI `42901243477`, Job `130127449346`, PR #97, Merge `208e619`).
+Kein Anspruch auf exakten Wort-Lippensync; menschliche UI-Abnahme offen.
 Danach: eigene native Abschlussgeste pro Dialogzeile.
 
 **Grafische NPC-Sprech-Timeline pro Zeile/Richtung (2026-11-10, Abnahme bestanden):**
