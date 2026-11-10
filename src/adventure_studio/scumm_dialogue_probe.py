@@ -185,8 +185,9 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     if gesture:
                         speaker_visible = max(speaker_visible, speaker_ink())
                         if two_poses:
-                            if second is None:
-                                first_pose_red = max(first_pose_red, visible_red)
+                            # Text glyph changes are independent of the
+                            # COST pose interval; measure the color directly.
+                            first_pose_red = max(first_pose_red, visible_red)
                             if first_pose_red >= baseline_red + 16:
                                 visible_green = gesture_ink((35, 225, 35))
                                 if visible_green > second_pose_green:
