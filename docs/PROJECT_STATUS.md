@@ -4,6 +4,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-10, PR in Prüfung):** Nach Auswahl einer nativen
+Sprecher-Dialogzeile zeigt der Gradio-Editor die bereits zugewiesene
+PNG-Sprechpose wieder an. Er liest dazu die persistierte Dialog-Cue-Animation
+und löst einen einzelnen, für alle vorhandenen Blickrichtungen eindeutigen
+COST-Frame auf. Mehrteilige/uneindeutige Costume-Animationen werden nicht
+als einzelnes PNG ausgegeben; der Animationsselektor bleibt verfügbar.
+Die ausgewählte Dialogzeile bleibt beim Speichern erhalten und die Editorfelder
+werden aus dem aktualisierten Projekt neu gelesen; veraltete Zeilen werden
+zurückgesetzt. Ein gezielter Roundtrip-/Reassignment-/Mehrframe-Test ist grün.
+**Offen:** vollständige Gradio-CI und interaktive manuelle Bedienabnahme.
+**Nächster Schritt:** Manuelle Bedienabnahme des Gradio-Pfads mit importierten
+PNG-Frames, Zeilenwechsel, Speichern und erneutem Laden.
+
 ## Nordstern
 
 Ein vollständiger, originaler SCUMM-v6-Generator für klassische

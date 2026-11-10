@@ -27,6 +27,7 @@ on:
       - 'tests/test_story_v4.py'
       - 'tests/test_studio_export.py'
       - 'tests/test_studio_position.py'
+      - 'tests/test_dialogue_animation.py'
   pull_request:
     paths:
       - '.github/workflows/studio.yml'
@@ -52,6 +53,7 @@ on:
       - 'tests/test_story_v4.py'
       - 'tests/test_studio_export.py'
       - 'tests/test_studio_position.py'
+      - 'tests/test_dialogue_animation.py'
 
 jobs:
   smoke:
@@ -74,6 +76,7 @@ jobs:
           python -m unittest discover -s tests -p test_story_ai.py -v
           python -m unittest discover -s tests -p test_studio_catalog.py -v
           python -m unittest discover -s tests -p test_studio_sequences.py -v
+          python -m unittest discover -s tests -p test_dialogue_animation.py -v
           python -m unittest discover -s tests -p test_story_protocol.py -v
           python -m unittest discover -s tests -p test_story_v4.py -v
       - name: Instantiate real Gradio Blocks and callbacks

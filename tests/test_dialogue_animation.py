@@ -15,7 +15,9 @@ from adventure_studio.studio_actors import add_costume_frame, set_costume_speaki
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
 from adventure_studio.studio_sequences import (compose_story_project, dialogue_animation_lines,
                                                 dialogue_animation_choices, edit_dialogue_animation,
-                                                dialogue_speaking_frames, assign_dialogue_speaking_frame)
+                                                dialogue_speaking_frames,
+                                                dialogue_speaking_frame_selection,
+                                                assign_dialogue_speaking_frame)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -136,6 +138,66 @@ class DialogueAnimationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "matching native talk frames"):
             parse_document(canonical_json(replace(document, costumes=(missing_talk,))))
 
+    def test_saved_speaking_frames_are_selected_per_line_after_roundtrip(self):
+        _story, raw = self.fixture()
+        document = parse_document(raw)
+        costume = replace(document.costumes[0], name="WitnessCostume")
+        second_frame = replace(costume.frames[0], id="SecondPose")
+        costume = replace(costume, frames=(*costume.frames, second_frame))
+        actors = tuple(replace(actor, costume="WitnessCostume")
+                       if actor.id == "SpeakerWitness" else actor
+                       for actor in document.actors)
+        room = document.rooms[0]
+        rules = tuple(replace(rule, actor_lines=tuple(
+            (line_id, "SpeakerWitness") for line_id, _actor in rule.actor_lines))
+            for rule in room.talk_rules)
+        hotspots = tuple(replace(hotspot, talk_actor_lines=tuple(
+            "SpeakerWitness" for _actor in hotspot.talk_actor_lines))
+            if hotspot.talk_actor_lines else hotspot for hotspot in room.hotspots)
+        raw = canonical_json(replace(document, actors=actors,
+            costumes=(*document.costumes, costume),
+            rooms=(replace(room, talk_rules=rules, hotspots=hotspots), *document.rooms[1:])))
+        lines = tuple(identity for _label, identity in dialogue_animation_lines(raw))
+        self.assertEqual(dialogue_speaking_frame_selection(raw, None), ((), None))
+        self.assertEqual(dialogue_speaking_frame_selection(raw, "invalid"), ((), None))
+        self.assertEqual(dialogue_speaking_frame_selection(raw, lines[0]),
+                         (("Pose", "SecondPose"), None))
+        raw = assign_dialogue_speaking_frame(raw, lines[0], "Pose", True)
+        raw = assign_dialogue_speaking_frame(raw, lines[1], "SecondPose", True)
+        reopened = canonical_json(parse_document(raw))
+        self.assertEqual(dialogue_speaking_frame_selection(reopened, lines[0]),
+                         (("Pose", "SecondPose"), "Pose"))
+        self.assertEqual(dialogue_speaking_frame_selection(reopened, lines[1]),
+                         (("Pose", "SecondPose"), "SecondPose"))
+        self.assertEqual(dialogue_animation_choices(reopened, lines[1])[1],
+                         "pose_SecondPose")
+
+        # Editing a cue or removing it must update/clear the saved selection
+        # without altering the other line's imported PNG pose.
+        changed = assign_dialogue_speaking_frame(reopened, lines[1], "Pose")
+        self.assertEqual(dialogue_speaking_frame_selection(changed, lines[1])[1], "Pose")
+        self.assertEqual(dialogue_speaking_frame_selection(changed, lines[0])[1], "Pose")
+        removed = edit_dialogue_animation(changed, lines[1], None)
+        self.assertEqual(dialogue_speaking_frame_selection(removed, lines[1])[1], None)
+        self.assertEqual(dialogue_speaking_frame_selection(removed, lines[0])[1], "Pose")
+
+        # Manually authored multi-frame COST timelines are not equivalent
+        # to any single PNG frame and must not be displayed as one.
+        native = parse_document(removed)
+        figure = next(item for item in native.costumes if item.name == "WitnessCostume")
+        gesture = next(item for item in figure.animations if item.name == "gesture")
+        complex_animation = replace(gesture, name="pose_complex", index=32,
+                                    directions=tuple(
+            replace(direction, commands=("Pose", "SecondPose"))
+            for direction in gesture.directions))
+        revised = replace(figure, animations=(*figure.animations, complex_animation))
+        document_with_timeline = replace(native, costumes=tuple(
+            revised if item.name == figure.name else item for item in native.costumes))
+        complex_raw = edit_dialogue_animation(canonical_json(document_with_timeline),
+                                              lines[1], "pose_complex", True)
+        self.assertEqual(dialogue_speaking_frame_selection(complex_raw, lines[1]),
+                         (("Pose", "SecondPose"), None))
+
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Test benötigt Pillow")
     def test_imported_png_speaking_pose_reaches_native_dialogue_and_costume(self):
         from PIL import Image
@@ -222,9 +284,12 @@ class DialogueAnimationTests(unittest.TestCase):
         rules = tuple(replace(rule, actor_lines=tuple(
             (key, "SpeakerWitness") for key, _actor in rule.actor_lines))
             for rule in room.talk_rules)
+        hotspots = tuple(replace(hotspot, talk_actor_lines=tuple(
+            "SpeakerWitness" for _actor in hotspot.talk_actor_lines))
+            if hotspot.talk_actor_lines else hotspot for hotspot in room.hotspots)
         raw = canonical_json(replace(original, actors=actors,
             costumes=(*original.costumes, costume),
-            rooms=(replace(room, talk_rules=rules), *original.rooms[1:])))
+            rooms=(replace(room, talk_rules=rules, hotspots=hotspots), *original.rooms[1:])))
         lines = tuple(key for _label, key in dialogue_animation_lines(raw))
         self.assertGreaterEqual(len(lines), 2)
         with tempfile.TemporaryDirectory() as directory:
