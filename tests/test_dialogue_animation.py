@@ -37,7 +37,7 @@ from adventure_studio.studio_sequences import (
     import_dialogue_png_batch, dialogue_png_batch_order,
     move_dialogue_png_batch_frame, remove_dialogue_png_batch_frame,
     dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
-    dialogue_png_batch_thumbnails)
+    dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -65,6 +65,23 @@ class DialogueAnimationTests(unittest.TestCase):
                 (paths[0], "1. Frame_01_red"), (paths[1], "2. Frame_02_green"),
                 (paths[2], "3. Frame_03_magenta")])
             self.assertEqual(dialogue_png_batch_thumbnails(None), [])
+            animation = root / "staged.gif"
+            dialogue_png_batch_animation_preview(paths, (2, 0), 180, animation)
+            with Image.open(animation) as preview_image:
+                self.assertEqual(preview_image.n_frames, 2)
+                self.assertEqual(preview_image.info["duration"], 180)
+                preview_image.seek(0)
+                self.assertEqual(preview_image.convert("RGB").getpixel((4, 4)),
+                                 (200, 45, 205))
+                preview_image.seek(1)
+                self.assertEqual(preview_image.convert("RGB").getpixel((4, 4)),
+                                 (220, 80, 80))
+            with self.assertRaisesRegex(ValueError, "mindestens eine"):
+                dialogue_png_batch_animation_preview(paths, (), 180, animation)
+            with self.assertRaisesRegex(ValueError, "Reihenfolge passt nicht"):
+                dialogue_png_batch_animation_preview(paths, (0, 0), 180, animation)
+            with self.assertRaisesRegex(ValueError, "Framezeit"):
+                dialogue_png_batch_animation_preview(paths, None, 12, animation)
             order, selected = move_dialogue_png_batch_frame(paths, None, 2, -1)
             self.assertEqual((order, selected), ((0, 2, 1), 1))
             order, selected = move_dialogue_png_batch_frame(paths, order, selected, -1)

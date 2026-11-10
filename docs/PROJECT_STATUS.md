@@ -4,6 +4,16 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket in Prüfung (2026-11-11):** Im NPC-Dialogeditor lässt sich
+die noch nicht gespeicherte PNG-Importauswahl in ihrer aktuellen Reihenfolge
+als animiertes GIF abspielen. Die frei wählbare Bilddauer (40–2000 ms)
+gilt nur für die Editor-Vorschau, nicht für native COST-Ticks; Änderung der
+Auswahl verwirft die alte Vorschau. Der Import und Projekt-JSON bleiben
+unverändert. Gezielte lokale Dialogtests grün; Browser- und CI-Abnahme
+der neuen Bedienfunktion sowie menschliche Abnahme stehen noch aus.
+**Nächstes Paket nach Abnahme:** Vorabvorschau mit erkennbarem aktuellem
+Frame und direkter Navigation durch die geplante Importfolge.
+
 **Neues Produktpaket (2026-11-11, native Abnahme bestanden):**
 Der NPC-Dialogeditor zeigt die **tatsächlichen PNG-Bildpixel vor dem
 Import als beschriftete Miniatur-Galerie** in genau der Reihenfolge der

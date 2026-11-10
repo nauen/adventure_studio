@@ -490,6 +490,12 @@ def main() -> None:
                 re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-Excluded\.png → Batch_Excluded\s*$"),
                 timeout=20000)
             await_batch_gallery_colors(page, [(225, 110, 40), (65, 120, 215)])
+            # Preview the actual staged sequence, without committing it.
+            page.locator("#native-dialogue-png-batch-duration input").fill("240")
+            page.locator("#native-dialogue-png-batch-play").click()
+            animated = page.locator("#native-dialogue-png-batch-animation img")
+            expect(animated.first).to_be_visible(timeout=20000)
+            expect(page.get_by_text("240 ms pro Bild nur in der Editor-Vorschau", exact=False)).to_be_visible()
             page.locator("#native-dialogue-png-batch-import").click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
             page.locator("#native-project-export-button").click()
@@ -520,6 +526,7 @@ def main() -> None:
                 "removed_staged_png_without_reupload": True,
                 "restored_staged_png_without_reupload": True,
                 "staged_png_pixel_thumbnail_order": True,
+                "staged_png_animated_preview": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
