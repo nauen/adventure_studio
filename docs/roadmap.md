@@ -9,7 +9,7 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Geteilte Sprecher-Costume im NPC-Dialogeditor vereinzeln (2026-11-10, CI offen):**
+**Geteilte Sprecher-Costume im NPC-Dialogeditor vereinzeln (2026-11-10, native Abnahme bestanden):**
 Ist eine Costume an mehrere Actors gebunden, legt der Autor im
 Dialogeditor eine private vollständige Kopie für die gewählte
 Sprecherfigur an. Der UI-Dialog benennt vorher Quelle, neues Ziel und
@@ -17,8 +17,11 @@ andere betroffene Figuren. Original-COST-Palette/Frames/Animationen
 bleiben erhalten, andere Actors unverändert, sämtliche Dialogzeilen
 des gewählten Actors verwenden seine neue Costume-Referenz. Danach
 können PNG-Sprech-/Abschlussframes ohne globale Nebeneffekte importiert
-werden. 333 lokale Tests grün; Chromium-Folgeklickweg sowie nativer
-ScummVM-Dialogbeleg auf der kopierten Costume im CI-Gate offen.
+werden. 333 lokale Tests und sechs CI-Checks grün; Chromium-Folgeklickweg
+samt Export/Reimport und nativer ScummVM-Dialogbeleg auf der kopierten
+Costume bestanden (PR #105, Merge `1595e1c`, native Jobs
+`130167489043` / `130167388424`, Browser `130167488068` /
+`130167388133`). Menschliche UI-Abnahme offen.
 Anschließend: Mehrere PNGs als geordnete Folge auf einmal importieren.
 
 **PNG-Bilddatei direkt für Dialog-PNG-Folgen importieren (2026-11-10, native Abnahme bestanden):**
