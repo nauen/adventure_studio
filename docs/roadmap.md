@@ -9,14 +9,16 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Direkte Abschluss-PNG-Folge im NPC-Dialogeditor (2026-11-10, CI offen):**
+**Direkte Abschluss-PNG-Folge im NPC-Dialogeditor (2026-11-10, native Abnahme bestanden):**
 Ein Autor kann aus bereits importierten PNG-Costume-Frames eine eigene
 zeilenspezifische native Abschlussanimation für eine Blickrichtung
 gestalten: anhängen, umordnen, entfernen, GIF-Vorschau. Eigener stabiler
 COST-Slot, native Tick-Anbindung nach `waitForMessage`, Erhalt aller
 anderen Richtungen/Zeilen und älterer JSON-Projekte. 331 lokale Tests
-grün. Chromium-Export/Reimport und stock-ScummVM-Frameprobe auf dem
-neuen Authoring-Pfad im CI-Gate offen; menschliche Bedienabnahme offen.
+und sechs CI-Checks grün. Chromium-Export/Reimport und stock-ScummVM-
+Frameprobe des neuen PNG-Authoring-Pfads bestanden (PR #101,
+Merge `8557ea0`, Jobs `130151091545` und `130151090189`).
+Menschliche Bedienabnahme offen.
 Anschließend: PNG-Bilddateien direkt im Dialogeditor importieren.
 
 **Optionale native Abschlussgeste pro NPC-Zeile (2026-11-10, native Abnahme bestanden):**
