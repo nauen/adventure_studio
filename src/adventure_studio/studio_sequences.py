@@ -394,21 +394,23 @@ def _dialogue_png_batch_entries(paths: list[str] | tuple[str, ...] | None
 def dialogue_png_batch_order(paths: list[str] | tuple[str, ...] | None,
                              order: list[int] | tuple[int, ...] | None = None
                              ) -> tuple[str, ...]:
-    """Resolve the visible upload order without changing uploaded files."""
-    entries = _dialogue_png_batch_entries(paths)
-    indexes = tuple(range(len(entries))) if order is None else tuple(order)
-    if (len(indexes) != len(entries) or
+    """Resolve included uploads, in order, without deleting staged files."""
+    if not isinstance(paths, (list, tuple)) or not paths:
+        raise ValueError("Bitte mindestens eine PNG-Datei auswählen")
+    indexes = tuple(range(len(paths))) if order is None else tuple(order)
+    if (len(indexes) > len(paths) or
             any(type(index) is not int for index in indexes) or
-            set(indexes) != set(range(len(entries)))):
+            len(set(indexes)) != len(indexes) or
+            any(index not in range(len(paths)) for index in indexes)):
         raise ValueError("Die PNG-Reihenfolge passt nicht mehr zur Dateiauswahl; bitte neu auswählen")
-    return tuple(entries[index][0] for index in indexes)
+    return tuple(paths[index] for index in indexes)
 
 
 def move_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
                                   order: list[int] | tuple[int, ...] | None,
                                   selected: int | None, step: int
                                   ) -> tuple[tuple[int, ...], int]:
-    """Move one selected upload while preserving a validated permutation."""
+    """Move one selected upload while preserving valid inclusion indexes."""
     ordered = dialogue_png_batch_order(paths, order)
     indexes = list(range(len(ordered))) if order is None else list(order)
     if type(selected) is not int or selected not in range(len(indexes)):
@@ -422,6 +424,19 @@ def move_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
     return tuple(indexes), selected
 
 
+def remove_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
+                                    order: list[int] | tuple[int, ...] | None,
+                                    selected: int | None
+                                    ) -> tuple[tuple[int, ...], int | None]:
+    """Exclude one staged PNG without re-uploading or touching project JSON."""
+    ordered = dialogue_png_batch_order(paths, order)
+    if type(selected) is not int or selected not in range(len(ordered)):
+        raise ValueError("Bitte zuerst ein PNG-Frame auswählen")
+    indexes = list(range(len(paths))) if order is None else list(order)
+    indexes.pop(selected)
+    return tuple(indexes), min(selected, len(indexes) - 1) if indexes else None
+
+
 def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
                                paths: list[str] | tuple[str, ...] | None,
                                order: list[int] | tuple[int, ...] | None = None) -> str:
@@ -429,7 +444,10 @@ def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
     if not paths:
         return "Noch keine PNG-Dateien ausgewählt"
     try:
-        entries = _dialogue_png_batch_entries(dialogue_png_batch_order(paths, order))
+        included = dialogue_png_batch_order(paths, order)
+        if not included:
+            return "Alle PNG-Dateien aus der Importauswahl entfernt; bitte neue Dateien auswählen"
+        entries = _dialogue_png_batch_entries(included)
     except ValueError as error:
         return str(error)
     existing = set(dialogue_speaking_frames(raw, line_id)) if raw and line_id else set()

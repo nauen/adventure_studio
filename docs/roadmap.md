@@ -9,6 +9,15 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Einzelne Upload-PNGs vor dem nativen Dialog-Stapelimport ausschließen (2026-11-10, CI offen):**
+Ein PNG wird in der Importauswahl gewählt und mit einem Klick ausgeschlossen.
+Die übrigen hochgeladenen Bilder bleiben in der bisherigen Sortierung
+erhalten und lassen sich ohne neue Dateiauswahl atomar als native Sprech-
+oder Abschlussfolge importieren. Bei 0 verbleibenden Bildern wird nichts
+geschrieben; doppelte oder ungültige Referenzen werden abgelehnt.
+334 lokale Tests grün, Chromium-/ScummVM-CI-Abnahme offen.
+Anschließend: ausgeschlossene Uploads ohne erneute Dateiauswahl reaktivieren.
+
 **Ausgewählte PNG-Dateien vor dem nativen Dialog-Stapelimport umsortieren (2026-11-10, native Abnahme bestanden):**
 Die Autorin oder der Autor wählt ein Upload-Frame und verschiebt es per
 Schaltfläche nach oben/unten. Das Auswahlfeld und die Vorschau zeigen die
