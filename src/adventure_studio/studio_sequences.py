@@ -482,6 +482,18 @@ def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
                      for i, (path, frame_id) in enumerate(entries, 1))
 
 
+def dialogue_png_batch_thumbnails(paths: list[str] | tuple[str, ...] | None,
+                                  order: list[int] | tuple[int, ...] | None = None
+                                  ) -> list[tuple[str, str]]:
+    """Display actual uploaded pixels in exactly the prospective COST order."""
+    if not paths:
+        return []
+    included = dialogue_png_batch_order(paths, order)
+    return [(path, f"{position}. {frame_id}")
+            for position, path in enumerate(included, 1)
+            for _source, frame_id in _dialogue_png_batch_entries((path,))]
+
+
 def import_dialogue_png_batch(raw: str, line_id: str, direction: str,
                               paths: list[str] | tuple[str, ...] | None, target: str,
                               ending_ticks: int | float = 12,

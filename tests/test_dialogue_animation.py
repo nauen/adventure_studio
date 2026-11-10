@@ -36,7 +36,8 @@ from adventure_studio.studio_sequences import (
     isolate_dialogue_speaker_costume, dialogue_png_batch_preview,
     import_dialogue_png_batch, dialogue_png_batch_order,
     move_dialogue_png_batch_frame, remove_dialogue_png_batch_frame,
-    dialogue_png_batch_excluded, restore_dialogue_png_batch_frame)
+    dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
+    dialogue_png_batch_thumbnails)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -60,12 +61,18 @@ class DialogueAnimationTests(unittest.TestCase):
             plan = dialogue_png_batch_preview(raw, first, paths)
             self.assertIn("1. 01-red.png → Frame_01_red", plan)
             self.assertIn("3. 03-magenta.png → Frame_03_magenta", plan)
+            self.assertEqual(dialogue_png_batch_thumbnails(paths), [
+                (paths[0], "1. Frame_01_red"), (paths[1], "2. Frame_02_green"),
+                (paths[2], "3. Frame_03_magenta")])
+            self.assertEqual(dialogue_png_batch_thumbnails(None), [])
             order, selected = move_dialogue_png_batch_frame(paths, None, 2, -1)
             self.assertEqual((order, selected), ((0, 2, 1), 1))
             order, selected = move_dialogue_png_batch_frame(paths, order, selected, -1)
             self.assertEqual((order, selected), ((2, 0, 1), 0))
             self.assertEqual(dialogue_png_batch_order(paths, order),
                              (paths[2], paths[0], paths[1]))
+            self.assertEqual(dialogue_png_batch_thumbnails(paths, order)[0],
+                             (paths[2], "1. Frame_03_magenta"))
             self.assertIn("1. 03-magenta.png → Frame_03_magenta",
                           dialogue_png_batch_preview(raw, first, paths, order))
             with self.assertRaisesRegex(ValueError, "Reihenfolge passt nicht"):
@@ -77,6 +84,9 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual((remaining, next_selected), ((2, 1), 1))
             self.assertEqual(dialogue_png_batch_excluded(paths, remaining),
                              (("1. 01-red.png", 0),))
+            self.assertEqual([path for path, _caption in
+                              dialogue_png_batch_thumbnails(paths, remaining)],
+                             [paths[2], paths[1]])
             restored, restored_selected = restore_dialogue_png_batch_frame(
                 paths, remaining, 0)
             self.assertEqual((restored, restored_selected), ((2, 1, 0), 2))
@@ -107,6 +117,7 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual((remaining, next_selected), ((1,), 0))
             remaining, next_selected = remove_dialogue_png_batch_frame(paths, remaining, 0)
             self.assertEqual((remaining, next_selected), ((), None))
+            self.assertEqual(dialogue_png_batch_thumbnails(paths, remaining), [])
             self.assertEqual(len(dialogue_png_batch_excluded(paths, remaining)), 3)
             restored_empty, restored_position = restore_dialogue_png_batch_frame(
                 paths, remaining, 1)
