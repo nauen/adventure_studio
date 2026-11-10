@@ -451,9 +451,8 @@ def main() -> None:
             select_option(page, "native-dialogue-png-batch-selected", "3. Batch-Excluded.png")
             page.locator("#native-dialogue-png-batch-remove").click()
             expect(batch_preview).to_have_value(
-                re.compile(r"1\. Batch-B\.png → Batch_B.*2\. Batch-A\.png → Batch_A", re.S),
+                re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-A\.png → Batch_A\s*$"),
                 timeout=20000)
-            assert "Batch-Excluded" not in batch_preview.input_value()
             page.locator("#native-dialogue-png-batch-import").click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
             page.locator("#native-project-export-button").click()
