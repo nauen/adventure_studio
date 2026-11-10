@@ -1203,7 +1203,10 @@ def make_app():
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
              native_dialogue_direction_status])
-        native_dialogue_animation_line.change(
+        # Programmatic dropdown refreshes from native_state already render
+        # the previews. Only real user selection should request them again;
+        # overlapping identical Gradio image writes can truncate HTTP PNGs.
+        native_dialogue_animation_line.input(
             dialogue_animation_update,
             [native_state, native_dialogue_animation_line, native_dialogue_direction],
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
@@ -1211,12 +1214,12 @@ def make_app():
              native_dialogue_speaking_sequence,
              native_dialogue_direction_status])
         for direction_control in (native_dialogue_animation, native_dialogue_direction):
-            direction_control.change(
+            direction_control.input(
                 dialogue_direction_animation_preview,
                 [native_state, native_dialogue_animation_line,
                  native_dialogue_animation, native_dialogue_direction],
                 [native_dialogue_direction_preview, native_dialogue_direction_status])
-        native_dialogue_speaking_frame.change(
+        native_dialogue_speaking_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
             [native_dialogue_speaking_preview])
