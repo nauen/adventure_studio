@@ -21,7 +21,14 @@ from adventure_studio.studio_sequences import (
 def select_option(page, elem_id: str, label: str) -> None:
     """Select a Gradio Dropdown option by the text visible to authors."""
     dropdown = page.locator("#" + elem_id)
-    dropdown.click()
+    entry = dropdown.locator('input[role="combobox"]')
+    entry.click()
+    entry.fill(label)
+    options_id = entry.get_attribute("aria-controls")
+    if options_id:
+        options = page.locator('[id="' + options_id + '"]')
+        print("Dropdown", elem_id, "expanded", entry.get_attribute("aria-expanded"),
+              "options", options.inner_text()[:1200] if options.count() else "none")
     page.get_by_text(label, exact=True).last.click(timeout=12000)
 
 
