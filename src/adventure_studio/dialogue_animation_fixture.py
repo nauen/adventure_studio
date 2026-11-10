@@ -8,21 +8,23 @@ from .scumm_costume import CostumeAnimation, CostumeDirection, CostumeFrame
 from .scumm_project import canonical_json, export_document, parse_document
 from .studio_sequences import (dialogue_animation_lines, edit_dialogue_animation,
                                assign_dialogue_speaking_frame,
-                               assign_dialogue_speaking_sequence)
+                               assign_dialogue_speaking_sequence,
+                               assign_dialogue_direction_speaking_sequence)
 from .studio_actors import (set_costume_direction_speaking_pose,
                             set_costume_direction_speaking_sequence)
 
 
 def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
-          animated: bool = False, line_sequences: bool = False) -> None:
+          animated: bool = False, line_sequences: bool = False,
+          line_directions: bool = False) -> None:
     project = directory / "project.json"
     document = parse_document(project.read_text(encoding="utf-8"))
     costume = next(item for item in document.costumes if item.name == "DialogueFigure")
     palette = list(costume.palette)
     palette[18] = (220, 80, 80)
-    if two_poses or four_facing or animated or line_sequences:
+    if two_poses or four_facing or animated or line_sequences or line_directions:
         palette[19] = (35, 225, 35)
-    if four_facing or line_sequences:
+    if four_facing or line_sequences or line_directions:
         palette[20] = (70, 70, 230)
         palette[21] = (240, 220, 30)
     gesture = CostumeAnimation("gesture", tuple(
@@ -35,8 +37,8 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
         CostumeDirection(direction, ("Pose",), True)
         for direction in ("N", "E", "S", "W")), 20)
     additional = ((CostumeFrame("SpeakAlt", 8, 8, bytes([3] * 64), -4, -8),)
-                  if two_poses or four_facing or animated or line_sequences else ())
-    if four_facing or line_sequences:
+                  if two_poses or four_facing or animated or line_sequences or line_directions else ())
+    if four_facing or line_sequences or line_directions:
         additional += (CostumeFrame("SpeakBlue", 8, 8, bytes([4] * 64), -4, -8),
                        CostumeFrame("SpeakYellow", 8, 8, bytes([5] * 64), -4, -8))
     updated = replace(costume, palette=tuple(palette),
@@ -56,7 +58,7 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
                                             y=100)
                                     if actor.costume == costume.name else actor
                                     for actor in document.actors))
-    if two_poses or four_facing or animated or line_sequences:
+    if two_poses or four_facing or animated or line_sequences or line_directions:
         # The editor forbids mutating an asset shared by distinct actors.
         # Give the Witness its own real Costume before authoring two poses.
         document = replace(document,
@@ -75,7 +77,18 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
             for room in document.rooms)
         document = replace(document, rooms=rooms)
     raw = canonical_json(document)
-    if line_sequences:
+    if line_directions:
+        lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
+                      if label.startswith("SpeakerWitness"))
+        if len(lines) < 2:
+            raise ValueError("Directional speaking lines require two native lines")
+        # The authored linear story faces the first speaker West, the second
+        # East. Other directions intentionally remain on the old red pose.
+        raw = assign_dialogue_direction_speaking_sequence(
+            raw, lines[0], "W", "Speak, SpeakAlt")
+        raw = assign_dialogue_direction_speaking_sequence(
+            raw, lines[1], "E", "SpeakBlue, SpeakYellow")
+    elif line_sequences:
         lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
                       if label.startswith("SpeakerWitness"))
         if len(lines) < 2:
@@ -118,13 +131,14 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
 
 
 def main() -> int:
-    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("--two-poses", "--four-facing", "--animated", "--line-sequences")):
-        print("Usage: python -m adventure_studio.dialogue_animation_fixture BUILD_DIRECTORY [--two-poses|--four-facing|--animated|--line-sequences]")
+    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("--two-poses", "--four-facing", "--animated", "--line-sequences", "--line-directions")):
+        print("Usage: python -m adventure_studio.dialogue_animation_fixture BUILD_DIRECTORY [--two-poses|--four-facing|--animated|--line-sequences|--line-directions]")
         return 2
     build(Path(sys.argv[1]), two_poses=len(sys.argv) == 3 and sys.argv[2] == "--two-poses",
           four_facing=len(sys.argv) == 3 and sys.argv[2] == "--four-facing",
           animated=len(sys.argv) == 3 and sys.argv[2] == "--animated",
-          line_sequences=len(sys.argv) == 3 and sys.argv[2] == "--line-sequences")
+          line_sequences=len(sys.argv) == 3 and sys.argv[2] == "--line-sequences",
+          line_directions=len(sys.argv) == 3 and sys.argv[2] == "--line-directions")
     return 0
 
 

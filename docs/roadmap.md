@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Richtungsspezifische animierte NPC-Zeilen (2026-11-10, CI offen):**
+Ein einzelner Dialog-Cue hält weiterhin seinen eigenen nativen COST-Slot,
+kann darin aber je Nord/Ost/Süd/West eine unterschiedliche 1..N-
+Framefolge verwenden. Der Studio-Dialogeditor speichert nur den gewählten
+Richtungskanal; andere Richtungen und Zeilen bleiben erhalten. Der
+vorhandene zeilenspezifische Cue wird nicht neu nummeriert. Lokale
+JSON-/COST-/Skript-Verträge geprüft; der echte Chromium-Authoring-Pfad
+und ein stock-ScummVM-Dialog mit westlicher rot/grüner und östlicher
+blau/gelber Animation stehen als Abnahme aus. Danach folgt die
+grafische Mehrframe-Timeline je Dialogzeile und Richtung.
+
 **Unabhängige Mehrframe-Folgen pro NPC-Zeile (2026-11-10, native Abnahme bestanden):**
 Der Dialogeditor speichert 1..N importierte Frame-IDs als eigene native
 COST-Animation pro Zeile, mit einem stabilen Animationsnamen/-slot und

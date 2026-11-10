@@ -262,6 +262,31 @@ jobs:
             /tmp/dialogue-line-sequences-story/project.json
             /tmp/dialogue-line-sequences-story/resources/Harbor.scc
           if-no-files-found: ignore
+      - name: Play direction-specific multi-frame NPC lines in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-directional-lines-story --linear-multispeaker
+          python -m adventure_studio.dialogue_animation_fixture /tmp/dialogue-directional-lines-story --line-directions
+          cp -a /tmp/scummc-upstream /tmp/scummc-directional-lines-upstream
+          test -s /tmp/scummc-directional-lines-upstream/examples/road/DialogueFigure.cost
+          mv /tmp/scummc-directional-lines-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-directional-lines-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-directional-lines-story /tmp/scummc-directional-lines-upstream /tmp/dialogue-directional-lines-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_speaking_sequence_probe /tmp/dialogue-directional-lines-game /tmp/dialogue-directional-lines-evidence --two-lines
+      - name: Retain direction-specific native line evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-directional-speaking-lines
+          path: |
+            /tmp/dialogue-directional-lines-evidence/speaking-sequence-report.json
+            /tmp/dialogue-directional-lines-evidence/scummvm-frame-*.png
+            /tmp/dialogue-directional-lines-evidence/scummvm-stand.png
+            /tmp/dialogue-directional-lines-evidence/scummvm-checkpoint-*.png
+            /tmp/dialogue-directional-lines-evidence/scummvm.log
+            /tmp/dialogue-directional-lines-story/project.json
+            /tmp/dialogue-directional-lines-story/resources/Harbor.scc
+          if-no-files-found: ignore
       - name: Retain native dialogue animation evidence
         if: always()
         uses: actions/upload-artifact@v4
