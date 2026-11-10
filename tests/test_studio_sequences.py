@@ -36,6 +36,8 @@ from test_scumm_toolchain import fake_upstream
 
 class NativeSequenceEditorTests(unittest.TestCase):
     def test_directional_png_speaking_pose_preserves_other_directions_and_native_slots(self):
+        if importlib.util.find_spec("PIL") is None:
+            self.skipTest("PNG import requires the optional Studio Pillow dependency")
         from PIL import Image
         from adventure_studio.scumm_costume import costume_source
         with tempfile.TemporaryDirectory() as directory:
