@@ -9,12 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Ausgeschlossene Upload-PNGs ohne Neu-Upload reaktivieren (2026-11-11, CI offen):**
+**Ausgeschlossene Upload-PNGs ohne Neu-Upload reaktivieren (2026-11-11, native Abnahme bestanden):**
 Das Dropdown listet die noch hochgeladenen, aber ausgeschlossenen Bilder.
 Ein Klick hängt das gewählte Bild ans Ende der aktuellen Importauswahl.
 Es kann anschließend sortiert oder wieder entfernt werden; auch 0 → 1
 funktioniert. Validierte Reihenfolge und native COST-Ausgabe behalten
-ihre bestehenden Grenzen. 334 lokale Tests grün, Browser-/Gameplay-CI offen.
+ihre bestehenden Grenzen. 334 lokale Tests und sechs finale CI-Checks
+grün. Chromium-Entfernen/Wiederaufnehmen mit anschließender Auswahländerung
+und Export/Reimport zweimal nachgewiesen; bestehende native zweiframige
+Abschlussanimation mit Standzustand im stock ScummVM zweimal bestanden
+(PR #113, Merge `36187ac`, Chromium `130193752594` / `130193639385`,
+native Jobs `130193752872` / `130196817977`). Ein vorher fehlgeschlagener
+unveränderter Tür-Frame-Sichttest wurde ohne Prüfungsänderung erfolgreich
+wiederholt. Menschliche UI-Abnahme offen.
 Anschließend: Miniaturvorschau für die vorbereitete PNG-Folge.
 
 **Einzelne Upload-PNGs vor dem nativen Dialog-Stapelimport ausschließen (2026-11-10, native Abnahme bestanden):**
