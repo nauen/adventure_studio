@@ -33,6 +33,23 @@ zurückgesetzt. Ein gezielter Roundtrip-/Reassignment-/Mehrframe-Test ist grün.
 **Nächster Schritt:** Manuelle Bedienabnahme des Gradio-Pfads mit importierten
 PNG-Frames, Zeilenwechsel, Speichern und erneutem Laden.
 
+**Produktpaket (2026-11-10, PR in Prüfung):** Der native NPC-Dialogeditor
+zeigt nun eine direkte 256×256-Bildvorschau der gewählten Sprecher-PNG-Pose.
+Die Vorschau rendert den tatsächlich gespeicherten indizierten Costume-Frame
+mit dessen SCUMM-Palette; sie ist ausdrücklich eine statische Editor-Vorschau,
+keine Simulation des ScummVM-Animations-Timings. Nach Dialogzeilenwechsel,
+Frameauswahl (auch vor dem Zuweisen), Speichern und Projekt-Reimport wird
+die Anzeige aktualisiert oder ohne gültige Auswahl geleert. Ein Pillow-Test
+prüft beide unterschiedlichen Costume-Palettenfarben und die unveränderte
+Dialogzuordnung bei vorläufiger Auswahl. Der reale Chromium-Klicktest
+prüft rote und grüne Bildpixel in der Oberfläche und den gespeicherten
+Roundtrip; Core- und Gradio-CI auf Code-Commit `f940d93` grün.
+**Offen:** PR-Gesamt-CI und menschliche Bedienabnahme.
+**Nächstes Paket:** Die Sprechpose im Dialogeditor bei der Auswahl visuell
+neben dem Actor bzw. der jeweiligen Dialogzeile darstellen, mit
+gezielter Ausrichtung für unterschiedliche Blickrichtungen; weiterhin
+ohne vollständigen Lippensync zu behaupten.
+
 ## Nordstern
 
 Ein vollständiger, originaler SCUMM-v6-Generator für klassische

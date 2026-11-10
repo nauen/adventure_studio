@@ -33,7 +33,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
                                dialogue_animation_lines, dialogue_animation_choices,
-                               dialogue_speaking_frame_selection, assign_dialogue_speaking_frame,
+                               dialogue_speaking_frame_selection, dialogue_speaking_frame_preview,
+                               assign_dialogue_speaking_frame,
                                edit_dialogue_animation)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
@@ -717,6 +718,10 @@ def make_app():
             with gr.Row():
                 native_dialogue_speaking_frame = gr.Dropdown(label="PNG-Sprechpose dieser Zeile (gespeicherte Pose vorausgewählt)", elem_id="native-dialogue-pose")
                 native_dialogue_speaking_apply = gr.Button("PNG-Sprechpose dieser Zeile zuweisen", elem_id="native-dialogue-pose-apply")
+            native_dialogue_speaking_preview = gr.Image(
+                label="PNG-Sprechpose · echte Costume-Pixel (Editor-Vorschau)",
+                interactive=False, type="pil", height=270,
+                elem_id="native-dialogue-pose-preview")
             native_dialogue_reset = gr.Checkbox(label="Nach der Sprechzeile zur Standpose zurückkehren",
                                                 value=True, elem_id="native-dialogue-reset")
             with gr.Row():
@@ -1112,11 +1117,12 @@ def make_app():
         def dialogue_animation_update(raw, line):
             if not raw:
                 return (gr.update(choices=[], value=None), True,
-                        gr.update(choices=[], value=None))
+                        gr.update(choices=[], value=None), None)
             choices, selected, reset = dialogue_animation_choices(raw, line)
             frames, selected_frame = dialogue_speaking_frame_selection(raw, line)
             return (gr.update(choices=choices, value=selected), reset,
-                    gr.update(choices=frames, value=selected_frame))
+                    gr.update(choices=frames, value=selected_frame),
+                    dialogue_speaking_frame_preview(raw, line, selected_frame))
 
         def dialogue_animation_refresh(raw, line):
             lines = dialogue_animation_lines(raw) if raw else ()
@@ -1130,10 +1136,16 @@ def make_app():
         native_state.change(
             dialogue_animation_refresh, [native_state, native_dialogue_animation_line],
             [native_dialogue_animation_line, native_dialogue_animation,
-             native_dialogue_reset, native_dialogue_speaking_frame])
+             native_dialogue_reset, native_dialogue_speaking_frame,
+             native_dialogue_speaking_preview])
         native_dialogue_animation_line.change(
             dialogue_animation_update, [native_state, native_dialogue_animation_line],
-            [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame])
+            [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
+             native_dialogue_speaking_preview])
+        native_dialogue_speaking_frame.change(
+            dialogue_speaking_frame_preview,
+            [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
+            [native_dialogue_speaking_preview])
         native_dialogue_speaking_apply.click(
             lambda *args: native_edit(assign_dialogue_speaking_frame, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame,
