@@ -3,17 +3,25 @@ import unittest
 from adventure_studio.scumm_dialogue_probe import (detect_answer_transition,
                                                    detect_gesture_return, initial_dialogue_ready)
 from adventure_studio.scumm_four_facing_probe import observe_facing_order
-from adventure_studio.scumm_speaking_sequence_probe import observed_speaking_change
+from adventure_studio.scumm_speaking_sequence_probe import (observed_speaking_change,
+                                                           observed_independent_line_pairs)
 
 
 class DialogueProbeTests(unittest.TestCase):
-    def test_speaking_sequence_requires_ordered_frames_within_one_line(self):
+    def test_speaking_sequence_detects_both_frames_without_assuming_cycle_phase(self):
         baseline = (0, 0, 0, 0)
         self.assertTrue(observed_speaking_change(
             baseline, [(0, 0, 0, 0), (64, 0, 0, 0), (0, 64, 0, 0)]))
-        self.assertFalse(observed_speaking_change(
+        self.assertTrue(observed_speaking_change(
             baseline, [(0, 64, 0, 0), (64, 0, 0, 0)]))
         self.assertFalse(observed_speaking_change(baseline, [(64, 0, 0, 0)]))
+        self.assertEqual(observed_independent_line_pairs(
+            baseline, [(0, 64, 0, 0), (64, 0, 0, 0),
+                       (0, 0, 0, 64), (0, 0, 64, 0)]),
+            ("red", "green", "blue", "yellow"))
+        self.assertEqual(observed_independent_line_pairs(
+            baseline, [(0, 64, 0, 0), (0, 0, 64, 0), (64, 0, 0, 0)]),
+            ("green",))
 
     def test_four_native_direction_colors_must_appear_in_order(self):
         baseline = (0, 0, 0, 0)
