@@ -1,25 +1,33 @@
+Warning: truncated output (original token count: 17582)
+Total output lines: 1118
+
 # Adventure Studio – Projektstatus und Chat-Übergabe
 
 Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Aktuelles Produktpaket (2026-11-10, native Abnahme in Arbeit):**
+**Aktuelles Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Ein durch den produktiven Story-/Studio-Pfad erstelltes Vier-Zeilen-Gespräch
 setzt den selben NPC vor jeder Zeile auf N/E/S/W. Dessen Costume enthält
 vier unterschiedlich gefärbte PNG-äquivalente Sprechframes, mit den
 vorhandenen Richtungs-Authoring-Operationen als `gesture` und `talk_start`
-gebunden. Ein neuer stock-ScummVM-Klicktest prüft die sichtbare Farbfolge
-und danach sechs stabile Standframes; das GitHub-Gate muss noch laufen.
+gebunden. Der neue stock-ScummVM-Klicktest hat die sichtbare Farbfolge
+**N/E/S/W mit jeweils 256 Farbpixeln** und danach **sechs stabile
+Standframes mit null Sprechfarben** nachgewiesen (GitHub-Dialog-Job
+`130066624232`, Run `42883775730`, Artefakt
+`native-v6-studio-dialogue-four-facing`, Code-Commit `6902dc7`).
 Die erste native Probe zeigte ausschließlich den Nord-Frame, obwohl alle
 vier Dialogtexte ausgegeben wurden. **Ursache identifiziert:** ScummC-
 Richtungskonstanten `NORTH/EAST/SOUTH/WEST` sind alte IDs 3/1/2/0,
 ScummVM-v6-`setActorDirection` erwartet dagegen Winkel 0/90/180/270.
 Die zentrale Exportabbildung für Actor-Initialisierung, Interaktionen und
-Dialoge wurde berichtigt; ein erneuter Interpreter-Nachweis läuft an.
-**Nicht als V behaupten, bevor der native Bildnachweis grün ist.**
-Nächstes Arbeitspaket nach Abnahme: zeitabhängige
-Sprechframe-Wechsel je Zeile authoren und sichtbar prüfen (D03).
+Dialoge wurde berichtigt. 325 lokale Tests grün. Die native Richtungs-
+Sprechpose ist damit für diesen vierteiligen Actor-Dialog auf Stufe V
+nachgewiesen; vollständiger Lippensync ist **nicht** erreicht.
+**Offen:** übrige Gesamt-CI-Gates, menschliche Gradio-Bedienabnahme.
+**Nächstes Produktpaket:** zeitabhängige Sprechframe-Wechsel je Zeile
+authoren und sichtbar in ScummVM prüfen (D03).
 
 **Neues Produktpaket (2026-11-10, Implementierung):** Im Costume-Editor kann
 der Autor ein importiertes PNG-Frame gezielt für Nord, Ost, Süd oder West
@@ -388,356 +396,7 @@ lokal grün. **Keine** neue native SCUMM-v6-Funktion ist damit belegt.
 **Unverändert als Produktentwicklung offen:** Allgemeine Action-/Condition-
 IR, dynamische Raumgeometrie und vollständige native SCUMM-v6-Fähigkeiten.
 Der Diagnosebericht beschreibt alle aktuell statisch erkannten Blocker;
-für noch nicht typisierte Compilerfälle wird die allgemeine Ablehnung
-zurückgegeben. Diese Fähigkeiten gehören zu den nächsten vertikalen
-SCUMM-Paketen, nicht zum abgeschlossenen A0-Stabilisierungsgate.
-
-## Verbindlicher SCUMM-v6-Referenzvertrag (2026-11-07)
-
-Die [Referenzbibliothek](scumm-v6-reference/README.md) verbindet den
-**einen** [64-ID-Funktionskatalog](SCUMM_V6_CAPABILITIES.md) mit
-[technischen ScummC-/ScummVM-Primitiven](scumm-v6-reference/NATIVE_PRIMITIVES.md),
-[konkreten Abnahmeszenarien](scumm-v6-reference/SCENARIOS.md) und einem
-[maschinenlesbaren Quellenindex](scumm-v6-reference/capability_sources.json).
-Das Produktziel ist damit für die Implementierung festgelegt. Vorhandene
-Source-Audits werden wiederverwendet; neue Quellcodeanalyse ist nur bei
-fehlendem v6-Encoder-/Decoder-/Sonderfallbeleg oder Versionswechsel nötig.
-Die Referenz beschreibt den Zielumfang, **nicht** 64 bereits fertige
-Funktionen. Ein kleines natives Test-Fixture pro Grundbaustein genügt;
-ein großes neues Konformitätsspiel ist kein Gate.
-
-**Nächster Implementierungsschritt bleibt P0.1** (nativer Binär-Roundtrip),
-dann P0.2/0.3. Neue Features werden anhand des Katalogs und der
-Szenarien abgenommen, nicht anhand zusätzlicher spontaner Demo-Limits.
-
-## Nächste drei priorisierte Pakete
-
-**Fortschritt 2026-11-07 nach den ursprünglichen P0.x-Planungen:**
-Der SCUMM-v6-Raumparser (P0.1), native Z-Masken (P0.2) sowie Walkboxen,
-BOXM und vertikale SCAL-Slots (P0.3) wurden in nachfolgenden vertikalen
-Paketen umgesetzt und im unveränderten ScummVM geprüft; für konkrete
-Nachweise siehe `scumm-v6-perspective-scal-contract.md` und die GitHub-
-Actions-Läufe von PR #26/#27. Ein weiterer Teilbaustein der cineastischen
-Funktionen ist das typisierte `camera_cues`-Raummodell mit nativem
-`setCameraAt`, `panCameraTo`, `waitForCamera` und `cameraFollowActor`.
-Die unabhängigen ScummVM-Bildkompositionen sind im Actions-Lauf
-`42405122040` verifiziert ([Kamera-Vertrag](scumm-v6-camera-cue-contract.md)).
-**Das nächste noch offene Schwerpunktpaket ist P0.4/P0.5:** native
-bewegte Objekte und Actor-/Costume-Animationen mit zeitlichen Phasen;
-vollständige Cutscene-Skip-Zustände bleiben P1.1 offen.
-
-**Nächster P0.5-Teilnachweis (2026-11-07):** Ein allgemeiner
-[`CostumeAsset`-Ressourcenvertrag](scumm-v6-native-costume-count-contract.md)
-liefert eigene Bildframes, vier Blickrichtungen, Stand-/Walk-/Init- und
-Aktionsanimationen sowie explizite `COUNT`-Kommandos in ScummCs v6-`COST`.
-Die erzeugte Figur wurde in stock ScummVM gerendert; eine Counter-Scriptprobe
-schaltet den Objektzustand nach zwei markierten Ereignissen, während eine
-Gegenprobe mit drei erwarteten Ereignissen den Ausgangszustand bewahrt.
-Die native CI-Evidenz liegt in Actions `42408510454` und deren Artefakten.
-**Offen und priorisiert:** freie Actor-Instanzen samt Costume-Bindung im
-Projektmodell, generischer Action-/Condition-/Ereignisablauf sowie echte
-Spielereingabe während laufender Animation. P0.5 insgesamt ist nicht fertig.
-
-**Weiterer P0.5-Modellschritt (2026-11-07):** `GameDocument` speichert nun
-beliebig viele validierte `CostumeAsset`-Ressourcen als versioniertes JSON
-(inklusive Frame-Pixeln, Blickrichtungen, nativen Animations-IDs und `COUNT`).
-`export_document` schreibt zu den Räumen auch die zugehörigen `.scost`-
-und Frame-BMP-Compiler-Eingaben. Bestehende JSON-v1-Projekte ohne Costumes
-bleiben bitgenau unverändert. Dieses Gate belegt **noch keine freie
-Actor-Instanz und keine Verknüpfung des COST im Spiel**; das nächste Paket
-ist die native Actor-Symbol-/Costume-Bindung über den ScummC-Bootstrap.
-
-**P0.5 Mehr-Actor-Integrationsschritt (2026-11-07):** Das Projektmodell hat
-nun referenzgeprüfte Actor-Instanzen mit Costume-ID, Anfangsraum, Position,
-Blickrichtung und optionalem Namen. JSON-v1-Roundtrip bleibt kompatibel,
-und der ScummC-Forschungsadapter erzeugt globale `actor`-Symbole,
-native Costume-Deklarationen, `initActor`/`setActorCostume` und Platzierung
-für mehrere Actors. Ein gemeinsames Costume wird nur einmal kompiliert.
-CI prüft einen SCUMM-v6-Spielstart mit zwei NPCs und gemeinsamem COST;
-der native Ergebnisstatus ist erst nach grünem Actions-Lauf zu setzen.
-**Noch offen:** freier Spieler-Actor jenseits des Road-Fixture-Symbols `hero`,
-echte Spielgrafik-Evidenz für jede Figur, Animations-Cues, Action/Condition-IR
-und Interaktion während laufender Animation. Der externe Bootstrap wird
-nicht zur Produktarchitektur erklärt.
-
-**P0.5-Teilbaustein (COUNT-Laufzeitgate erfolgreich, kein vollständiges Animations-Gate):**
-`ActorAsset.initial_animation` referenziert optional eine benannte,
-explizit numerierte native COST-Animation mit passender Startrichtung.
-GameDocument-v1-JSON bleibt rückwärtskompatibel; der Forschungsadapter
-erzeugt `animateActor(actor,index)` im Einstiegsscript des Startraums
-nach der Actor-Initialisierung (nicht vor `startRoom`).
-Der Mehr-Actor-CI-Probe startet eine solche Animation. Der eigenständige
-COUNT-Laufzeitnachweis ist inzwischen erfolgreich; vollständige
-Frame-Phasen, Spielerinteraktion und allgemeine Animations-Choreografie
-sind damit noch nicht belegt.
-
-**COUNT-Folgegate in ScummVM abgenommen (`42421713939`):** Eine isolierte
-positive und negative ScummVM-Probe beobachtet nun
-`getActorAnimCounter1(Companion)` des projektdefinierten Actors. Bei zwei
-COUNT-Ereignissen muss der native Schlüsselzustand wechseln; die
-Drei-Ereignis-Kontrolle darf ihn nicht wechseln. Die CI-Artefakte enthalten
-beide Raumskripte, Screenshots und den Pixelbericht. Die positive und
-negative Kontrolle sind im unveränderten ScummVM grün. Sichtbare
-Animationsphasen, Eingaben während der Animation und eine allgemeine
-Ereignis-IR bleiben gesonderte offene Gates.
-
-**Behobener Fixture-Fehler (zuvor rot `42420046842`):** Der Raumscript-Pfad funktionierte
-(bei COUNT-Schwelle 0 verschwindet der Schlüssel, 0 Pixel). Bei Schwellen
-1, 2 und 3 bleiben dagegen jeweils 112 Schlüsselpixel sichtbar. Damit
-ist noch **kein einziges COUNT-Ereignis** für den projektdefinierten
-Actor belegt, obwohl die separate Ego-COST-Probe weiterhin grün war.
-Raumzuordnung, Costume und aktiver Frame 24 wurden daraufhin separat
-nachgewiesen. Die Ursache lag in der nur für `S` vorhandenen COUNT-Geste
-des Mehr-Actor-Test-Costumes. Die vollständige N/E/S/W-Sequenz liefert
-nun die erwarteten nativen Ereignisse. Die fixierte Testfixture ist
-kein Beleg für beliebige Richtungswechsel während einer Animation.
-
-**P0.5-Vertikalschnitt (native CI-Abnahme erfolgreich `42461862069`):**
-`GameDocument.animation_rules` modelliert eine `ActorCountCondition`
-(Actor und COUNT-Schwelle) mit einem `ObjectStateEffect` (Raum-Hotspot und
-Zustand) als versioniertes, deklaratives JSON. Der ScummC-Adapter gibt
-lokale native COUNT-Wächter-Scripts nach dem Anfangsanimationsaufruf aus.
-Die Referenzen und die Erreichbarkeit des COUNT-Schwellwerts in einer
-nicht-loopenden Anfangsanimation werden geprüft. Bestehendes v1-JSON
-bleibt unverändert. Die neue CI-Probe kompiliert auch eine solche aus
-Projekt-JSON geladene Regel und prüft den resultierenden Objektzustand
-in stock ScummVM. Die positive JSON-Regel und die bisherige negative
-Fixture-Kontrolle sind grün. Allgemeine Action-/Condition-IR, parallele Interaktion und
-mehrstufige Animationsabläufe sind nicht abgeschlossen.
-
-**P0.5-Eingabefolge (stock ScummVM, CI `42467237997`):** Ein
-versioniertes `AnimationInputRule` erzeugt native `Push`-/`Pull`-/`Open`-/
-`Close`-Verbfälle, die vor beziehungsweise nach einer COUNT-Grenze
-unterschiedliche Objektzustände setzen. Der reproduzierbare native
-Gameplay-Test prüft 0, 1 und 2 Eingaben: Ohne Klick bleiben Schlüssel
-sichtbar und Tür nach COUNT 1 offen; ein früher Klick entfernt die Tür,
-ein später Klick den Schlüssel,
-und bei einem frühen und einem späteren Klick **im selben Spielprozess**
-werden beide zeitabhängigen Aktionen nacheinander ausgeführt. Das
-ist kein Nachweis für beliebige Wiederholung, mehrfach gestartete
-Animationen, Raumwechsel oder Save/Load. Der seither ergänzte
-Raumwechsel-Nachweis folgt unmittelbar darunter.
-
-**P0.5-Raumwechsel-Teilnachweis (native CI `42468551627`):** Nach einer
-verspäteten `Push`-Aktion verschwindet der Schlüssel; die offene Tür
-ermöglicht den regulären `WalkTo`-Wechsel `Harbor → Cellar`. Über den
-Treppe-Hotspot kehrt der Spieler nach `Harbor` zurück. Die native
-ScummVM-Probe bestätigt, dass der Schlüssel weiterhin unsichtbar
-und die Tür offen ist. Die bisherigen 0/1/2-Klick-Tests bleiben grün.
-Der seither verifizierte Initialanimations-Lifecycle folgt direkt
-darunter. Save/Load und das vollständige Fahrgeschäft bleiben offen.
-
-**P0.5-Initialanimations-Lifecycle (stock ScummVM `42471602488`):**
-`ActorAsset.initial_animation` startet nun durch ein pro Actor deklariertes
-globales SCUMM-Bit genau beim ersten Eintritt in seinen Anfangsraum.
-Beim Wiedereintritt wird weder die Anfangsanimation noch der daran
-gebundene COUNT-Wächter erneut ausgelöst. Ein zusätzlicher nativer
-Negativ-Wächter würde den zuvor entfernten Schlüssel nach einem
-Doppelstart wieder sichtbar machen; der unveränderte ScummVM-Lauf
-bestätigt, dass er verborgen bleibt. Der Guard umfasst alle an die
-Animation gebundenen COUNT-Wächter. Die alten JSON-v1-Projekte bleiben
-unverändert. Das nachfolgende Gate prüft nun auch Save/Load eines
-**abgeschlossenen** COUNT-/Objektzustands. Weiter offen bleiben explizite
-wiederholbare Animationen sowie Save/Load mitten in einer aktiven Animation.
-
-**P0.5-Save/Load-Gate in stock ScummVM bestanden (`42477804196`):** Die
-isolierte Actor-Fixture führt einen nativen Save/Load-Ablauf aus: späte
-`Push`-Aktion, Prüfung der Key-/Door-Bilder, Speichern über den ScummVM-
-Dialog, Neustart mit `--save-slot=1`, erneute Bildprüfung und regulärer
-`Harbor → Cellar → Harbor`-Rückweg. Der COUNT-Replay-Negativwächter deckt
-einen verlorenen Initialanimations-Guard auf. Der native CI-Schritt und
-die zugehörige Artefaktaufbewahrung sind erfolgreich. Save/Load **während**
-einer noch laufenden Animation ist davon nicht abgedeckt.
-Die vormals auf einzelne Testfälle hartcodierten Screenshot-Frame-Namen in
-den gemeinsamen Door-/Key-Pixelhelfern wurden durch eine gemeinsame sichere
-Frame-Namensvalidierung ersetzt. Neue native Szenarien erfordern damit keine
-Änderung an den allgemeinen Bildprüfhelfern mehr.
-
-**P0.5-Produktfunktion (nativer ScummC-/Spielstart belegt, CI `42481225873`):** `animation_triggers`
-ermöglichen wiederholbare Actor-Animationen über einen frei gewählten
-Hotspot-Verbfall im versionierten `GameDocument`. Der native Export startet
-die benannte, indizierte Costume-Animation bei jeder Aktion erneut, unabhängig
-vom einmaligen Erststart-Guard. Das Actor-Projekt enthält eine authored
-`Pull`-Aktion, die mit dem zweiten Actor ohne `initial_animation` kompiliert
-und gelinkt wurde. Die wiederholte Interaktion bleibt bis zum Gameplay-Nachweis
-als offen gekennzeichnet. **Nächstes Produktpaket:** kombinierbare
-Animations-Cues und Reaktionen über mehrere Actors und Objekte.
-
-**P0.5 – geordnete Interaktionsfolgen (Implementierung, native CI ausstehend):**
-`interaction_sequences` verbindet ein Hotspot-Verb mit einer expliziten
-Reihenfolge aus Actor-Animationen, `delaySeconds` und `setObjectState`.
-Mehrere Actors und Objekte können in einer Sequenz referenziert werden;
-Projekt-JSON, Referenzvalidierung und ScummC-Exporter sind angeschlossen.
-Das bestehende native Actor-Projekt enthält eine authored `Close`-Aktion
-mit zwei Cues und einer Objektreaktion. Noch kein visueller Gameplay-Nachweis
-für die gesamte Sequenz. **Nächster Produktfokus:** Authoring und Bearbeitung
-dieser Abläufe im Studio statt ausschließlich über Projekt-JSON.
-
-**P0.5 – native Interaktionen im Studio bearbeiten (Implementierung, UI-/Gameplay-Gate offen):**
-Der Gradio-Editor enthält einen separaten Bereich für validierte native
-`GameDocument`-Dateien. Hier lassen sich Hotspot-Verb-Abläufe anlegen, Actor-
-Animationen, Pausen und Objektzustände als Schritte anhängen, verschieben
-oder entfernen und das Ergebnis als Projekt-JSON oder über den echten
-ScummC-Pfad als Spiel-ZIP ausgeben. Bereits vorhandene Story-v4-Dateien
-werden nicht stillschweigend als native Projekte behandelt. Service-
-Roundtrip und Regressionstests sind lokal grün; Gradio-UI-Interaktion
-und ein interaktiver ScummVM-Klickpfad wurden noch nicht geprüft.
-**Nächstes Produktpaket:** Story-Authoring und native Actor-/Interaktions-
-Authoringdaten in einem durchgängigen Projektmodell verbinden.
-
-**P0.5 – Story/native Projekt-Integration (Implementierung, Gameplay offen):**
-Im Studio lässt sich die aktuelle Story ausdrücklich in das native
-`GameDocument` übersetzen. Vorhandene native Actor-/Costume-Daten und
-Interaktionsregeln werden auf die frisch aus der Story generierten Räume
-übertragen und dabei referenzvalidiert. Nach Storyänderungen wird beim
-Projekt-Download und Spiel-Build erneut komponiert; gelöschte oder
-umbenannte Objekte führen zu einem sichtbaren Fehler statt Datenverlust.
-Das SCUMM-ZIP enthält sowohl die aktuelle `story.json` als auch die
-kompilierte `project.json`. Die Gradio-UI startet im CI-Smoke (`42486144774`);
-der neue Kompositionspfad wird per Integrationstest bis zur ScummC-Quelle
-geprüft. Die aktuelle Umsetzung ist **noch kein gemeinsames persistentes
-Story-/Native-Schema**: zusätzliche manuelle native Raumänderungen werden
-beim bewussten Story-Abgleich nicht übernommen. Der echte ScummVM-Klickablauf
-und das vollständige UI-Interaktionsgate fehlen weiterhin.
-**Nächstes Produktpaket:** ein versioniertes gemeinsames Authoring-Dokument,
-das Story- und Actor-/Costume-/Interaktionsdaten dauerhaft und verlustfrei
-zusammen speichert und wieder lädt.
-
-**P0.5 – gemeinsames Studio-Authoring-Dokument (Implementierung, CI ausstehend):**
-Das Studio speichert und lädt nun `adventure.studio.json` mit einem
-versionierten Story-Dokument und einer nativen Actor-/Costume-/Action-Ebene.
-Die referenzgeprüfte Story-Übersetzung bleibt die einzige Quelle für Räume,
-Bitmaps und Hotspots; die native Ebene wird ohne redundante generierte
-Room-Ressourcen gespeichert. Der Studio-Editor stellt beide Ebenen nach
-Laden wieder her, erlaubt weitere Schritte und kann daraus das native
-SCUMM-Projekt bzw. Spiel-ZIP erzeugen. Bestehende Story-/native-JSON-Dateien
-werden nicht migriert oder ersetzt. Lokaler Roundtrip mit Bearbeitung und
-alle Regressionstests grün; vollständiger UI-Klicktest und nativer Gameplay-
-Nachweis bleiben offen.
-**Nächstes Produktpaket:** Actors und Costumes direkt im gemeinsamen Studio-
-Projekt anlegen und bearbeiten, ohne eine externe native JSON-Datei als
-Ausgangspunkt zu benötigen.
-
-**P0.5 – Actor-/Costume-Authoring im Studio (Implementierung, CI ausstehend):**
-Aus einem vom Autor geladenen PNG lässt sich jetzt im Studio eine echte
-palettierte native Costume erzeugen. Das Studio legt damit Actors in
-gewählten Story-Räumen an und erlaubt deren Position/Richtung zu ändern.
-Jedes neue Costume enthält zunächst eine Standpose und eine per
-Interaktionsfolge nutzbare `gesture`-Animation auf Index 24. Projekt-JSON,
-gemeinsames `adventure.studio.json` und ScummC-COST-Export bleiben derselbe
-Produktpfad. Ein Integrationstest belegt PNG → Costume/Actor → validiertes
-Modell → ScummC-Quellen (Fake-Compiler); noch **kein** echter nativer Build
-oder ScummVM-Nachweis der neu importierten Grafik.
-**Nächstes Produktpaket:** mehrteilige Costume-Animationen und individuelle
-Blickrichtungen aus mehreren importierten Frames im Editor definieren.
-
-**P0.5 – mehrteilige Costume-Animationen im Studio (Implementierung, CI ausstehend):**
-Bestehenden Costumes können jetzt mehrere echte PNG-Frames zugeordnet
-werden. Ein gemeinsamer 31-Farben-Palettenvertrag erhält bereits importierte
-Framefarben; zusätzliche unpassende Farben werden sichtbar abgewiesen.
-Im Studio werden benannte Animationen mit eigenen nativen Indizes und
-richtungsbezogenen Frame-/COUNT-Folgen definiert oder aktualisiert. Der
-bestehende Interaktionseditor kann diese Animationen über ihren Namen
-auslösen. Modell, versionierte Projektdatei und ScummC-COST-/Verbquellen
-sind verbunden. Ein gezielter Studio-Integrationstest mit zwei PNGs und
-einer `wave`-Animation ist grün; echter ScummC-Build und stock-ScummVM-
-Gameplay dieser neuen Mehrframe-Costume sind noch offen.
-**Nächstes Produktpaket:** visuelle Costume-Frame-/Animationsvorschau und
-direkte Frame-Reihenfolge im Editor statt kommaseparierter Kommandoliste.
-
-**P0.5 – visuelle Costume-Timeline (Implementierung, CI ausstehend):**
-Der Studio-Editor zeigt die echten Costume-Frame-Pixel und COST-Kommandos
-einer ausgewählten Richtung als geordnete Karten. Schritte können direkt
-angeklickt, umsortiert, angehängt und entfernt werden. Die Speicherung
-verändert ausschließlich die typisierten `CostumeDirection.commands`; das
-SCUMM-Projekt und der Compilerpfad bleiben unverändert. Der bestehende
-Studio-Integrationstest prüft Vorschaureihenfolge, Bearbeitung und die
-resultierende `.scost`-Quellfolge; keine zusätzliche Engine-Testmatrix.
-Eine animierte Echtzeitvorschau oder ein ScummVM-Nachweis der neuen
-Mehrframe-Sequenzen liegt noch nicht vor.
-**Nächstes Produktpaket:** eine abspielbare Editor-Vorschau über die
-vorhandenen Frames und Richtungsauswahl, mit einstellbaren Framezeiten,
-ohne eine zusätzliche Spiel-Runtime zu simulieren.
-
-**P0.5 – abspielbare Costume-Vorschau (Implementierung, CI ausstehend):**
-Die gewählte Richtung einer Costume-Animation lässt sich jetzt direkt
-im Studio als GIF abspielen. Die Frames stammen unverändert aus den
-importierten COST-Bilddaten; die relative native Frame-Position bleibt
-erhalten. Eine frei wählbare Millisekunden-Dauer steuert ausschließlich
-die Editor-Wiedergabe, **nicht** native SCUMM-Framezeiten oder Costume-
-COUNT-Kommandos. Der bestehende Studio-Integrationstest prüft Ausgabe,
-Frameanzahl und Wiedergabedauer. Keine eigene Spiel-Runtime.
-Stock-ScummVM-Bild- und Gameplay-Nachweise bleiben offen.
-**Nächstes Produktpaket:** native ScummC-Kompilierung und tatsächliche
-Wiedergabe einer aus Studio-PNGs erzeugten Mehrframe-Costume in stock
-ScummVM belegen, bevor weitere Komfortfunktionen priorisiert werden.
-
-**Studio-PNG-Nativpfad (2026-11-08, Nachweis ausstehend):** Der bestehende
-experimentelle ScummC-/ScummVM-Workflow baut nun zusätzlich aus zwei
-wirklichen PNGs über die produktiven Studio-Funktionen eine mehrteilige
-`wave`-COST-Animation mit vier Richtungen und Actor-Startanimation. Er
-exportiert das versionierte Projekt, kompiliert es und startet das Spiel in
-stock ScummVM; Compilerquellen, Projekt-JSON und Bilder werden als Artefakte
-aufbewahrt. Lokal ist die ScummC-Quellgenerierung geprüft; **CI-Ausführung,
-Kompilierung, Spielstart und sichtbarer Framewechsel sind noch nicht
-nachgewiesen**. Das nächste Gate bleibt die Auswertung dieses nativen
-Laufs und ein tatsächlicher Framewechsel-Nachweis, bevor die Fähigkeit als
-in ScummVM verifiziert eingestuft wird.
-
-**Actor-Startanimation im Studio (2026-11-08):** Die Gradio-Oberfläche kann
-für einen bestehenden Actor jetzt eine seiner nativen COST-Animationen als
-einmalige Startanimation auswählen oder die Startanimation deaktivieren.
-Auswahl und Änderung bleiben im gemeinsamen Projekt-JSON erhalten; der
-bestehende SCUMM-v6-Exporter gibt `animateActor` mit dem bereits validierten
-Animationsindex aus. Es ist keine neue Runtime-Funktion. Native Wiedergabe
-von importierten PNG-Mehrframe-Costumes bleibt bis zum echten
-ScummVM-Bildnachweis offen.
-
-**Actor zur Laufzeit versetzen (2026-11-08):** In einer geordneten
-Studio-Objektinteraktion lässt sich jetzt ein Actor an eine neue X-/Y-Position
-im selben Raum setzen. Der typisierte `move_actor`-Schritt wird im
-versionierten Projekt-JSON gespeichert und als natives
-`putActorAt(actor, x, y, room)` zusammen mit den bisherigen Animations-,
-Warte- und Objektzustandsschritten ausgegeben. Der Studio-Editor bietet
-die Aktion direkt an. Geprüft sind Modell-/Exportpfad und die bestehende
-Regression; **die interaktive Auslösung im stock ScummVM ist noch offen**.
-Nächstes Produktpaket: tatsächliches Mehrframe- und Actor-Bewegungs-
-Gameplay im nativen Compiler-/Interpreterpfad nachweisen.
-
-**Laufbewegung als Story-Interaktion (2026-11-08):** Zusätzlich zum
-sofortigen `move_actor`-Versetzen kann das Studio jetzt einen Actor per
-`walk_actor` im selben Raum zu einer Zielposition schicken. Das
-versionierte JSON und der SCUMM-v6-Exporter verwenden das bereits für
-den Demo-Spieler belegte native `walkActorTo`; nachfolgende Aktionen
-laufen bewusst ohne implizite Ankunftssperre weiter. Die visuelle
-Spielprobe und eine später explizite `waitForActor`-Choreografie bleiben
-offen. Das nächste Produktgate bleibt echter ScummVM-Nachweis für
-Actor-Laufbewegung und die importierten Mehrframe-Costumes.
-
-**Warten auf Actor-Ankunft (2026-11-08):** Der Studio-Interaktionseditor
-hat nun einen expliziten `wait_actor`-Schritt. Auf einen
-`walk_actor`-Laufauftrag kann so ein natives `waitForActor(actor)` folgen,
-bevor weitere Animations- oder Objektaktionen ausgeführt werden.
-Das Projekt-JSON bewahrt die Reihenfolge; nur im selben Raum vorhandene
-Actors sind gültig. Die ScummC-Signatur ist im unveränderten upstream
-`examples/road/road.scc` und `examples/openquest/officeroom.scc` belegt.
-Ein interaktiver ScummVM-Nachweis der neu authorbaren Actor-Choreografie
-bleibt offen. Nächstes Gate: diese Abfolge und importierte Mehrframe-
-Costumes im echten Spiel beobachten.
-
-**Actor-Blickrichtung zur Laufzeit (2026-11-08):** Der Studio-Ablauf
-enthält nun `face_actor` als eigenständige Aktion mit N/E/S/W-Auswahl.
-Projekt-JSON und Validator halten Actor- und Raumreferenz fest; ScummC
-verwendet das in upstream `examples/road/road.scc` belegte Paar
-`setCurrentActor`/`setActorDirection` und stellt danach `VAR_EGO` als
-aktiven Actor wieder her. Der Schritt ist mit Bewegung, Ankunfts-Wait,
-Animation und Objektzustand kombinierbar. Die interaktive ScummVM-
-Choreografie ist weiterhin nicht als V belegt.
-
-**Native Mehrframe-Animation – ausführbarer Bildnachweis (2026-11-08):**
-Die bestehende Studio-PNG-Actor-Probe sammelt jetzt während eines einzigen
-stock-ScummVM-Spielstarts mehrere Szenenbilder und verlangt sichtbare
-Pixel beider unterschiedlich gefärbten COST-Frames. Ein bloßer Spielstart
+für noch nicht typisierte Compilerfälle wird die allgemeine Abl…5582 tokens truncated…ST-Frames. Ein bloßer Spielstart
 oder identisches Standbild reicht nicht mehr aus. Der experimentelle
 ScummC-Workflow läuft für diese Probe nun auch bei passenden Pull Requests;
 die Einzelbilder werden als CI-Artefakte bereitgestellt. **Bis zu einem
