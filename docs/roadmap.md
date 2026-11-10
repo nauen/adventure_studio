@@ -9,6 +9,15 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Mehrere Sprechposen derselben Figur (2026-11-10, PR #81):**
+Importierte PNG-Frames lassen sich jetzt unabhängig an Dialogzeilen einer
+Figur binden. Weitere native Costume-Slots ab 28 bewahren vorhandene
+`talk_start`-/`gesture`-Posen. Die neue Zwei-Posen-Abnahme in stock
+ScummVM hat den sichtbaren rot/grün-Wechsel und die Rückkehr zur Standpose
+bestanden. **Offen:** Gesamt-CI-Abschluss und interaktiver Gradio-Klickweg.
+Danach: beim erneuten Öffnen einer Dialogzeile deren zugeordnete PNG-Pose
+sichtbar vorauswählen und diesen Bedienablauf manuell abnehmen.
+
 **PNG-Sprechpose direkt aus der Dialogzeile (2026-11-09):** Die native
 Sprecherzeile bietet die Frames ihrer eigenen Costume an; ein Klick
 übernimmt Frame, COST-Talk-Slots und Dialog-Geste. Geteilte Costumes
