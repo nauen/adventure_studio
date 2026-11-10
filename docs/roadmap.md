@@ -9,6 +9,15 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Ausgewählte PNG-Dateien vor dem nativen Dialog-Stapelimport umsortieren (2026-11-10, CI offen):**
+Die Autorin oder der Autor wählt ein Upload-Frame und verschiebt es per
+Schaltfläche nach oben/unten. Das Auswahlfeld und die Vorschau zeigen die
+Reihenfolge, die anschließend atomar als native Sprech- oder Abschlussfolge
+importiert wird. Frische Dateiauswahl setzt die alte Sortierung zurück;
+ein nicht zur Dateiauswahl passender Sortierzustand wird abgelehnt.
+334 lokale Python-Tests grün, Chromium- und CI-Nachweise offen.
+Anschließend: einzelne Upload-Dateien vor dem Import entfernen.
+
 **Mehrere PNG-Dateien als eine native Dialogfolge importieren (2026-11-10, native Abnahme bestanden):**
 Der Dialogeditor nimmt 1..N neue PNG-Dateien in Auswahlreihenfolge an,
 zeigt die native Frame-ID je Datei vor dem Speichern und importiert sie
