@@ -81,12 +81,18 @@ def run(game_directory: Path, output: Path) -> dict:
             _click(192 + 185 * 2 + 16, 184 + 110 * 2 + 16)  # Native talk hotspot
             measurements: list[tuple[int, ...]] = []
             seen: tuple[str, ...] = ()
-            for _ in range(200):
+            checkpoints = []
+            for sample in range(200):
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited during four-facing dialogue")
                 _capture(output, "current")
                 colors = scan_costume_colors(output / "scummvm-current.png")
                 measurements.append(colors)
+                if sample in (0, 15, 30, 60, 100, 150):
+                    label = f"checkpoint-{sample:03d}"
+                    _capture(output, label)
+                    checkpoints.append({"sample": sample, "pixels": list(colors),
+                                        "backdrop": list(scene_pixel(output, label))})
                 observed = observe_facing_order(baseline, measurements)
                 if len(observed) > len(seen):
                     seen = observed
@@ -95,6 +101,7 @@ def run(game_directory: Path, output: Path) -> dict:
                     break
                 time.sleep(0.20)
             report["visible_order"] = seen
+            report["checkpoints"] = checkpoints
             report["peak_pixels"] = dict(zip((name for name, _ in FACING_COLORS),
                                              (max(row[i] for row in measurements)
                                               for i in range(4))))
