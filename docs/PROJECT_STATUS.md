@@ -4,13 +4,24 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Produktpaket in Prüfung (2026-11-11):** Im NPC-Dialogeditor lässt sich
+**Folgepaket in Prüfung (2026-11-11):** Die vorbereitete PNG-Importfolge
+hat nun eine Einzelbildansicht mit Position, nativer Frame-ID und
+Vorheriges-/Nächstes-Bild-Navigation. Sie verwendet dieselbe ausgewählte
+Reihenfolge wie Galerie, GIF und Import. Die Auswahl bleibt editierbar,
+die Navigation ändert keine JSON-Daten und endet sichtbar am Rand statt
+unerwartet zum anderen Ende zu springen. 334 lokale Tests grün;
+Chromium-Abnahme und CI noch offen. **Nächstes Paket:** direkte
+Frame-Auswahl über die Miniaturgalerie zur Navigation vor dem Import.
+
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im NPC-Dialogeditor lässt sich
 die noch nicht gespeicherte PNG-Importauswahl in ihrer aktuellen Reihenfolge
 als animiertes GIF abspielen. Die frei wählbare Bilddauer (40–2000 ms)
 gilt nur für die Editor-Vorschau, nicht für native COST-Ticks; Änderung der
 Auswahl verwirft die alte Vorschau. Der Import und Projekt-JSON bleiben
-unverändert. Gezielte lokale Dialogtests grün; Browser- und CI-Abnahme
-der neuen Bedienfunktion sowie menschliche Abnahme stehen noch aus.
+unverändert. 334 lokale Tests und alle drei CI-Workflows grün,
+einschließlich Chromium-Bedienpfad und bestehender nativer Dialogprobe
+(PR #117, Merge `630a28d`, Actions `42925614655` / `42925614671` /
+`42925614660`). Menschliche Bedienabnahme bleibt offen.
 **Nächstes Paket nach Abnahme:** Vorabvorschau mit erkennbarem aktuellem
 Frame und direkter Navigation durch die geplante Importfolge.
 

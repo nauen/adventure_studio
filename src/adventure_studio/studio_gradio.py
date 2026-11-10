@@ -53,6 +53,7 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                remove_dialogue_png_batch_frame,
                                dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
                                dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview,
+                               dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -813,6 +814,15 @@ def make_app():
                     columns=6, object_fit="contain", height=180,
                     elem_id="native-dialogue-png-batch-gallery")
                 with gr.Row():
+                    native_dialogue_png_batch_previous = gr.Button(
+                        "← Vorheriges Bild", elem_id="native-dialogue-png-batch-previous")
+                    native_dialogue_png_batch_next = gr.Button(
+                        "Nächstes Bild →", elem_id="native-dialogue-png-batch-next")
+                native_dialogue_png_batch_frame_image = gr.Image(
+                    label="Gewähltes PNG vor dem Import", interactive=False, height=180,
+                    elem_id="native-dialogue-png-batch-frame-image")
+                native_dialogue_png_batch_frame_status = gr.Markdown()
+                with gr.Row():
                     native_dialogue_png_batch_duration = gr.Number(
                         label="Editor-Vorschau: Millisekunden pro Bild", value=180,
                         precision=0, elem_id="native-dialogue-png-batch-duration")
@@ -1499,6 +1509,24 @@ def make_app():
             [native_dialogue_png_batch_order, native_dialogue_png_batch_selected,
              native_dialogue_png_batch_excluded,
              native_dialogue_png_batch_plan, native_dialogue_png_batch_gallery])
+
+        for source in (native_dialogue_png_batch_files, native_dialogue_png_batch_order,
+                       native_dialogue_png_batch_selected):
+            source.change(
+                dialogue_png_batch_frame_preview,
+                [native_dialogue_png_batch_files, native_dialogue_png_batch_order,
+                 native_dialogue_png_batch_selected],
+                [native_dialogue_png_batch_frame_image,
+                 native_dialogue_png_batch_frame_status])
+
+        for button, step in ((native_dialogue_png_batch_previous, -1),
+                             (native_dialogue_png_batch_next, 1)):
+            button.click(
+                lambda paths, order, selected, step=step: gr.update(
+                    value=step_dialogue_png_batch_frame(paths, order, selected, step)),
+                [native_dialogue_png_batch_files, native_dialogue_png_batch_order,
+                 native_dialogue_png_batch_selected],
+                [native_dialogue_png_batch_selected])
 
         def png_batch_play(paths, order, duration):
             destination = (Path(tempfile.mkdtemp(prefix="adventure-studio-png-batch-preview-"))

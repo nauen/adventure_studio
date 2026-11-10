@@ -131,6 +131,23 @@ def await_batch_gallery_colors(page, colors: list[tuple[int, int, int]]) -> None
         }""", arg={"colors": [list(color) for color in colors]}, timeout=20000)
 
 
+def await_batch_frame_color(page, color: tuple[int, int, int]) -> None:
+    """Verify the navigated single-image preview contains the staged PNG pixels."""
+    page.wait_for_function(
+        """({color}) => {
+            const img = document.querySelector('#native-dialogue-png-batch-frame-image img');
+            if (!img || !img.complete || !img.naturalWidth) return false;
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 1;
+            const context = canvas.getContext('2d');
+            context.drawImage(img, Math.floor(img.naturalWidth / 2),
+                Math.floor(img.naturalHeight / 2), 1, 1, 0, 0, 1, 1);
+            const pixel = context.getImageData(0, 0, 1, 1).data;
+            return color.every((expected, channel) =>
+                Math.abs(pixel[channel] - expected) <= 18);
+        }""", arg={"color": list(color)}, timeout=20000)
+
+
 def main() -> None:
     fixture = Path(os.environ["ADVENTURE_STUDIO_BROWSER_PROJECT"]).resolve()
     evidence = Path(os.environ.get("ADVENTURE_STUDIO_BROWSER_EVIDENCE", "/tmp/studio-browser-evidence"))
@@ -490,6 +507,12 @@ def main() -> None:
                 re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-Excluded\.png → Batch_Excluded\s*$"),
                 timeout=20000)
             await_batch_gallery_colors(page, [(225, 110, 40), (65, 120, 215)])
+            page.locator("#native-dialogue-png-batch-previous").click()
+            expect(page.get_by_text("Bild 1 von 2 · Batch_B · noch nicht importiert")).to_be_visible(timeout=20000)
+            await_batch_frame_color(page, (225, 110, 40))
+            page.locator("#native-dialogue-png-batch-next").click()
+            expect(page.get_by_text("Bild 2 von 2 · Batch_Excluded · noch nicht importiert")).to_be_visible(timeout=20000)
+            await_batch_frame_color(page, (65, 120, 215))
             # Preview the actual staged sequence, without committing it.
             page.locator("#native-dialogue-png-batch-duration input").fill("240")
             page.locator("#native-dialogue-png-batch-play").click()
@@ -527,6 +550,7 @@ def main() -> None:
                 "restored_staged_png_without_reupload": True,
                 "staged_png_pixel_thumbnail_order": True,
                 "staged_png_animated_preview": True,
+                "staged_png_frame_navigation": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

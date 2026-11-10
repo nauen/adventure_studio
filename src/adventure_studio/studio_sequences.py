@@ -494,6 +494,36 @@ def dialogue_png_batch_thumbnails(paths: list[str] | tuple[str, ...] | None,
             for _source, frame_id in _dialogue_png_batch_entries((path,))]
 
 
+def dialogue_png_batch_frame_preview(
+        paths: list[str] | tuple[str, ...] | None,
+        order: list[int] | tuple[int, ...] | None,
+        selected: int | None) -> tuple[str | None, str]:
+    """Show the chosen staged frame and its position without importing it."""
+    if not paths:
+        return None, "Noch keine PNG-Dateien ausgewählt"
+    included = dialogue_png_batch_order(paths, order)
+    if not included:
+        return None, "Die Importauswahl enthält keine Bilder"
+    if type(selected) is not int or selected not in range(len(included)):
+        return None, "Bitte ein PNG in der Importauswahl auswählen"
+    _source, frame_id = _dialogue_png_batch_entries((included[selected],))[0]
+    return included[selected], (f"Bild {selected + 1} von {len(included)} · "
+                                f"{frame_id} · noch nicht importiert")
+
+
+def step_dialogue_png_batch_frame(
+        paths: list[str] | tuple[str, ...] | None,
+        order: list[int] | tuple[int, ...] | None,
+        selected: int | None, step: int) -> int:
+    """Navigate one position in the staged sequence, never wrap silently."""
+    included = dialogue_png_batch_order(paths, order)
+    if type(step) is not int or step not in (-1, 1):
+        raise ValueError("Ungültige Bildnavigation")
+    if type(selected) is not int or selected not in range(len(included)):
+        raise ValueError("Bitte zuerst ein PNG-Frame auswählen")
+    return max(0, min(len(included) - 1, selected + step))
+
+
 def dialogue_png_batch_animation_preview(
         paths: list[str] | tuple[str, ...] | None,
         order: list[int] | tuple[int, ...] | None,

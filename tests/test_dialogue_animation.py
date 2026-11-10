@@ -37,7 +37,8 @@ from adventure_studio.studio_sequences import (
     import_dialogue_png_batch, dialogue_png_batch_order,
     move_dialogue_png_batch_frame, remove_dialogue_png_batch_frame,
     dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
-    dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview)
+    dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview,
+    dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -65,6 +66,14 @@ class DialogueAnimationTests(unittest.TestCase):
                 (paths[0], "1. Frame_01_red"), (paths[1], "2. Frame_02_green"),
                 (paths[2], "3. Frame_03_magenta")])
             self.assertEqual(dialogue_png_batch_thumbnails(None), [])
+            self.assertEqual(dialogue_png_batch_frame_preview(paths, (2, 0), 0),
+                             (paths[2], "Bild 1 von 2 · Frame_03_magenta · noch nicht importiert"))
+            self.assertEqual(step_dialogue_png_batch_frame(paths, (2, 0), 0, 1), 1)
+            self.assertEqual(dialogue_png_batch_frame_preview(paths, (2, 0), 1)[0], paths[0])
+            self.assertEqual(step_dialogue_png_batch_frame(paths, (2, 0), 1, 1), 1)
+            self.assertEqual(dialogue_png_batch_frame_preview(paths, (), None)[0], None)
+            with self.assertRaisesRegex(ValueError, "zuerst ein PNG"):
+                step_dialogue_png_batch_frame(paths, (), None, 1)
             animation = root / "staged.gif"
             dialogue_png_batch_animation_preview(paths, (2, 0), 180, animation)
             with Image.open(animation) as preview_image:
