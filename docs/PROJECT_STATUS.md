@@ -4,7 +4,7 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Neues Produktpaket (2026-11-10, Implementierung; native Abnahme offen):**
+**Neues Produktpaket (2026-11-10, native Abnahme bestanden):**
 Im Costume-Editor kann ein Autor für eine gewählte Blickrichtung eine
 kommagetrennte Folge importierter PNG-Frame-IDs als wiederholte native
 Sprechsequenz speichern. Die Folge wird gemeinsam auf `gesture` und
@@ -12,9 +12,12 @@ Sprechsequenz speichern. Die Folge wird gemeinsam auf `gesture` und
 erhalten. Die übrigen Blickrichtungen und `stand`/`talk_stop` bleiben
 unverändert. Die native COST-Quelle enthält mehrere Frames pro Richtung;
 die zeitliche Abspielrate bestimmt der native Interpreter, nicht eine
-frei erfundene Millisekundenangabe im Studio. 325 lokale Tests grün;
-separater stock-ScummVM-Gate für zwei unterscheidbare Frames während
-**derselben** Dialogzeile und danach sechs Standframes ergänzt, CI offen.
+frei erfundene Millisekundenangabe im Studio. **326 lokale Tests grün;
+stock-ScummVM-Gate für zwei unterscheidbare Frames während derselben
+Dialogzeile mit anschließenden sechs Standframes bestanden** (Run
+`42886572422`, Job `130076341678`, Artefakt
+`native-v6-studio-speaking-sequence`; alle PR-#89-Checks grün,
+Merge-Commit `634afb6`). Menschliche Gradio-Bedienabnahme offen.
 **Nächstes Produktpaket nach dem nativen Gate:** individuelle Sprechfolgen
 je Dialogzeile (auch mehrere Zeilen derselben Figur), ohne die Costume-
 Richtungsfolgen global zu überschreiben.
