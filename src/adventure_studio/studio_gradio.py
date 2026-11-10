@@ -33,7 +33,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
                                dialogue_animation_lines, dialogue_animation_choices,
-                               dialogue_speaking_frames, assign_dialogue_speaking_frame,
+                               dialogue_speaking_frame_selection, assign_dialogue_speaking_frame,
                                edit_dialogue_animation)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
@@ -715,7 +715,7 @@ def make_app():
                 native_dialogue_animation_line = gr.Dropdown(label="Sprecher-Dialogzeile")
                 native_dialogue_animation = gr.Dropdown(label="Costume-Animation")
             with gr.Row():
-                native_dialogue_speaking_frame = gr.Dropdown(label="PNG-Frame der Sprecherfigur")
+                native_dialogue_speaking_frame = gr.Dropdown(label="PNG-Sprechpose dieser Zeile (gespeicherte Pose vorausgewählt)")
                 native_dialogue_speaking_apply = gr.Button("PNG-Sprechpose dieser Zeile zuweisen")
             native_dialogue_reset = gr.Checkbox(label="Nach der Sprechzeile zur Standpose zurückkehren",
                                                 value=True)
@@ -1109,21 +1109,31 @@ def make_app():
             lambda raw, line, language: native_edit(edit_dialogue_voice, raw, line, language, None, True),
             [native_state, native_dialogue_line, native_dialogue_language],
             [native_state, *native_outputs, native_report])
-        native_state.change(
-            lambda raw: gr.update(choices=dialogue_animation_lines(raw) if raw else (), value=None),
-            [native_state], [native_dialogue_animation_line])
         def dialogue_animation_update(raw, line):
             if not raw:
-                return gr.update(choices=[], value=None), True
+                return (gr.update(choices=[], value=None), True,
+                        gr.update(choices=[], value=None))
             choices, selected, reset = dialogue_animation_choices(raw, line)
-            return gr.update(choices=choices, value=selected), reset
+            frames, selected_frame = dialogue_speaking_frame_selection(raw, line)
+            return (gr.update(choices=choices, value=selected), reset,
+                    gr.update(choices=frames, value=selected_frame))
+
+        def dialogue_animation_refresh(raw, line):
+            lines = dialogue_animation_lines(raw) if raw else ()
+            current = line if line in {identity for _label, identity in lines} else None
+            return (gr.update(choices=lines, value=current),
+                    *dialogue_animation_update(raw, current))
+
+        # Retain the selected authored line across a save, and refresh both
+        # its animation and PNG pose from the persisted project. Old/stale
+        # lines are cleared instead of silently selecting another speaker.
+        native_state.change(
+            dialogue_animation_refresh, [native_state, native_dialogue_animation_line],
+            [native_dialogue_animation_line, native_dialogue_animation,
+             native_dialogue_reset, native_dialogue_speaking_frame])
         native_dialogue_animation_line.change(
             dialogue_animation_update, [native_state, native_dialogue_animation_line],
-            [native_dialogue_animation, native_dialogue_reset])
-        native_dialogue_animation_line.change(
-            lambda raw, line: gr.update(choices=dialogue_speaking_frames(raw, line) if raw else (),
-                                        value=None),
-            [native_state, native_dialogue_animation_line], [native_dialogue_speaking_frame])
+            [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame])
         native_dialogue_speaking_apply.click(
             lambda *args: native_edit(assign_dialogue_speaking_frame, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame,
