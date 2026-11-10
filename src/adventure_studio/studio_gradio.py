@@ -364,6 +364,7 @@ def make_app():
             chosen = (args[1] if action is create_costume else args[0]
                       if action in (add_costume_frame, set_costume_animation,
                                     set_costume_speaking_pose,
+                                    set_costume_direction_speaking_pose,
                                     edit_costume_timeline) else
                       args[1] if action is add_actor else None)
             selected_actor = args[0] if action is set_actor_initial_animation else (
