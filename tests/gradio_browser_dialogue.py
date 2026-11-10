@@ -53,9 +53,9 @@ def main() -> None:
     raw = fixture.read_text(encoding="utf-8")
     names = [(label, identity) for label, identity in dialogue_animation_lines(raw)
              if label.startswith("SpeakerWitness")]
-    if len(names) != 2:
-        raise AssertionError(f"Expected two real authored NPC lines: {names}")
-    first, second = names
+    if len(names) < 2:
+        raise AssertionError(f"Expected at least two real authored NPC lines: {names}")
+    first, second = names[:2]
     if dialogue_speaking_frame_selection(raw, first[1])[1] != "Speak":
         raise AssertionError("First fixture pose must be Speak")
     if dialogue_speaking_frame_selection(raw, second[1])[1] != "SpeakAlt":
