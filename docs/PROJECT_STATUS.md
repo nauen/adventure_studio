@@ -11,7 +11,9 @@ als Sprechpose setzen. Der bestehende native `gesture`-Slot 24 und
 Richtungen sowie `stand` 12 und `talk_stop` 20 bleiben erhalten. Beim
 Richtungswechsel erscheint der gespeicherte Frame wieder im Auswahlfeld.
 Ein Modell-/COST-Quelltest und 322 lokale Regressionstests sind grün.
-**Offen:** echter Gradio-Browserklicktest, native ScummVM-Dreh-/Sprechprobe
+Ein echter Gradio-Chromium-Test für N/O-Wechsel, Speichern und Reimport
+ist ergänzt; dessen CI-Ergebnis steht noch aus.
+**Offen:** grüner Browser-CI-Nachweis, native ScummVM-Dreh-/Sprechprobe
 mit vier unterschiedlichen PNG-Frames sowie menschliche UI-Abnahme.
 **Nächstes Produktpaket:** Vier-Richtungs-Sprechposen im generierten Spiel
 durch Drehen und Sprechen sichtbar nachweisen; erst danach D03 weiterführen.

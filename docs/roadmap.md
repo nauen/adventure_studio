@@ -14,7 +14,8 @@ Der Costume-Editor wählt je N/E/S/W einen importierten Frame für die native
 Sprechanimation. Änderungen betreffen nur die gewählte Richtung von `gesture`
 und `talk_start`; Standpose und andere Richtungen bleiben bestehen. Der
 persistierte Frame wird bei erneuter Auswahl der Richtung angezeigt.
-Modell-/COST-Regression und 322 lokale Tests grün. **Offen:** Browser-Abnahme
+Modell-/COST-Regression und 322 lokale Tests grün; ein Browser-Klicktest für
+die persistierte Richtungswahl ist ergänzt. **Offen:** grüner Browser-CI-Lauf
 und native Sichtprobe für alle vier Blickrichtungen. **Nächstes:** diese
 vier Posen im unveränderten ScummVM durch Actor-Drehung und Dialog prüfen.
 
