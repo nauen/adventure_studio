@@ -85,7 +85,8 @@ def _click(x: int, y: int) -> None:
 
 def run(game_directory: Path, output: Path, voice: bool = False,
         nested: bool = False, multispeaker: bool = False,
-        linear_multispeaker: bool = False, gesture: bool = False) -> dict:
+        linear_multispeaker: bool = False, gesture: bool = False,
+        two_poses: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Virtual X display required")
     if not all((game_directory / f"tentacle.{part}").is_file() for part in ("000", "001")):
@@ -93,7 +94,8 @@ def run(game_directory: Path, output: Path, voice: bool = False,
     output.mkdir(parents=True, exist_ok=True)
     report: dict = {"game": "dialogue-choices", "passed": False, "voice": voice,
                     "nested": nested, "multispeaker": multispeaker,
-                    "linear_multispeaker": linear_multispeaker, "gesture": gesture}
+                    "linear_multispeaker": linear_multispeaker, "gesture": gesture,
+                    "two_poses": two_poses}
     pcm_path = output / "dialogue-voice.raw"
     with (output / "scummvm.log").open("w", encoding="utf-8") as log:
         process = subprocess.Popen(["scummvm", f"--path={game_directory.resolve()}", "tentacle"],
@@ -127,6 +129,10 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     report["gesture_initial_pixels"] = sum(
                         close_rgb(rgb.getpixel((col, row)), (220, 80, 80), 25)
                         for row in range(330, 430) for col in range(680, 810))
+                    if two_poses:
+                        report["second_pose_initial_pixels"] = sum(
+                            close_rgb(rgb.getpixel((col, row)), (35, 225, 35), 25)
+                            for row in range(330, 430) for col in range(680, 810))
             if voice:
                 _run(["xdotool", "key", "1"])  # sorted languages: de, en
                 time.sleep(0.6)
@@ -144,16 +150,16 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 def line_ink() -> set[tuple[int, int]]:
                     with Image.open(output / "scummvm-linear.png") as frame:
                         rgb = frame.convert("RGB")
-                        return {(col, row) for row in range(184, 216)
+                        return {(col, row) for row in (range(184, 280) if two_poses else range(184, 216))
                                 for col in range(300, 800)
                                 if close_rgb(rgb.getpixel((col, row)), (0, 0, 0), 10)}
 
-                def gesture_ink() -> int:
+                def gesture_ink(color=(220, 80, 80)) -> int:
                     with Image.open(output / "scummvm-linear.png") as frame:
                         rgb = frame.convert("RGB")
                         # The native fixture intentionally separates the
                         # Witness actor from the clicked object and Ego.
-                        return sum(close_rgb(rgb.getpixel((col, row)), (220, 80, 80), 25)
+                        return sum(close_rgb(rgb.getpixel((col, row)), color, 25)
                                    for row in range(330, 430) for col in range(680, 810))
 
                 def speaker_ink() -> int:
@@ -167,6 +173,9 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 colored = 0
                 baseline_red = report.get("gesture_initial_pixels", 0)
                 speaker_visible = 0
+                first_pose_red = 0
+                second_pose_green = 0
+                baseline_green = report.get("second_pose_initial_pixels", 0)
                 for _ in range(85):
                     if process.poll() is not None:
                         raise RuntimeError("ScummVM exited during linear NPC dialogue")
@@ -175,6 +184,15 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     visible_red = gesture_ink() if gesture else 0
                     if gesture:
                         speaker_visible = max(speaker_visible, speaker_ink())
+                        if two_poses:
+                            # Text glyph changes are independent of the
+                            # COST pose interval; measure the color directly.
+                            first_pose_red = max(first_pose_red, visible_red)
+                            if first_pose_red >= baseline_red + 16:
+                                visible_green = gesture_ink((35, 225, 35))
+                                if visible_green > second_pose_green:
+                                    second_pose_green = visible_green
+                                    _capture(output, "second-pose-frame")
                         if visible_red > colored:
                             colored = visible_red
                             _capture(output, "gesture-frame")
@@ -185,8 +203,15 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                             first.symmetric_difference(ink)) > 150:
                         second = ink
                         _capture(output, "linear-second")
-                    if second is not None and (not gesture or
-                                               colored >= (baseline_red or 0) + 16):
+                    # For two lines of the SAME actor, the native text strip
+                    # may reuse glyph positions. The second COST color is the
+                    # independent signal; legacy multi-actor text detection
+                    # remains unchanged.
+                    if (two_poses and first_pose_red >= baseline_red + 16
+                            and second_pose_green >= baseline_green + 16):
+                        break
+                    if not two_poses and second is not None and (not gesture or
+                                                colored >= baseline_red + 16):
                         break
                     time.sleep(0.25)
                 report.update({"first_speaker_pixels": len(first or ()),
@@ -194,10 +219,15 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                                "gesture_frame_pixels": colored,
                                "gesture_baseline_pixels": baseline_red,
                                "speaker_costume_pixels": speaker_visible,
+                               "two_pose_first_red_pixels": first_pose_red,
+                               "two_pose_second_green_pixels": second_pose_green,
                                "answer_pixels_visible": 0,
-                               "passed": bool(first and second and (not gesture or
+                               "passed": bool((first or two_poses) and (second or two_poses) and (not gesture or
                                                (speaker_visible >= 16 and
-                                                colored >= (baseline_red or 0) + 16)))})
+                                                colored >= baseline_red + 16
+                                                and (not two_poses or
+                                                     (first_pose_red >= baseline_red + 16
+                                                      and second_pose_green >= baseline_green + 16)))))})
                 if not report["passed"]:
                     raise RuntimeError(f"Native two-speaker text or authored Costume gesture was not visible: {report}")
                 if gesture:
@@ -214,6 +244,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                             break
                         time.sleep(0.25)
                     after = []
+                    after_green = []
                     if finished:
                         time.sleep(0.4)
                         # Native actorSay can complete its final talk-stop
@@ -225,7 +256,11 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                             _capture(output, "linear")
                             current = gesture_ink()
                             after.append(current)
-                            stable = stable + 1 if current == baseline_red else 0
+                            green = gesture_ink((35, 225, 35)) if two_poses else 0
+                            if two_poses:
+                                after_green.append(green)
+                            stable = stable + 1 if (current == baseline_red
+                                and (not two_poses or green == baseline_green)) else 0
                             if stable >= 6:
                                 break
                             time.sleep(0.3)
@@ -238,8 +273,11 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     report.update({"gesture_message_finished": finished,
                                    "gesture_after_pixels": after,
                                    "gesture_peak_excess_pixels": excess,
+                                   "second_pose_after_pixels": after_green,
                                    "gesture_reset_verified": finished and len(after) >= 6
-                                   and detect_gesture_return(colored, after[-6:])})
+                                   and detect_gesture_return(colored, after[-6:])
+                                   and (not two_poses or (len(after_green) >= 6
+                                        and after_green[-6:] == [baseline_green] * 6))})
                     report["passed"] = report["passed"] and report["gesture_reset_verified"]
                     if not report["passed"]:
                         raise RuntimeError(f"Native Costume did not return to standing pose: {report}")
@@ -358,13 +396,15 @@ def main() -> int:
     multispeaker = len(sys.argv) == 4 and sys.argv[1] == "--multispeaker"
     linear_multispeaker = len(sys.argv) == 4 and sys.argv[1] == "--linear-multispeaker"
     gesture = len(sys.argv) == 4 and sys.argv[1] == "--gesture"
-    if (len(sys.argv) != 3 and not voice and not nested and not multispeaker and not linear_multispeaker and not gesture):
-        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested|--multispeaker|--linear-multispeaker|--gesture] GAME_DIR OUTPUT_DIR")
+    two_poses = len(sys.argv) == 4 and sys.argv[1] == "--two-poses"
+    if (len(sys.argv) != 3 and not voice and not nested and not multispeaker and not linear_multispeaker and not gesture and not two_poses):
+        print("Usage: python -m adventure_studio.scumm_dialogue_probe [--voice|--nested|--multispeaker|--linear-multispeaker|--gesture|--two-poses] GAME_DIR OUTPUT_DIR")
         return 2
-    report = run(Path(sys.argv[2] if voice or nested or multispeaker or linear_multispeaker or gesture else sys.argv[1]),
-                 Path(sys.argv[3] if voice or nested or multispeaker or linear_multispeaker or gesture else sys.argv[2]),
+    report = run(Path(sys.argv[2] if voice or nested or multispeaker or linear_multispeaker or gesture or two_poses else sys.argv[1]),
+                 Path(sys.argv[3] if voice or nested or multispeaker or linear_multispeaker or gesture or two_poses else sys.argv[2]),
                  voice=voice, nested=nested, multispeaker=multispeaker,
-                 linear_multispeaker=linear_multispeaker or gesture, gesture=gesture)
+                 linear_multispeaker=linear_multispeaker or gesture or two_poses,
+                 gesture=gesture or two_poses, two_poses=two_poses)
     print(json.dumps(report, sort_keys=True))
     return 0 if report["passed"] else 1
 

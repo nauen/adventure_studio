@@ -160,6 +160,30 @@ jobs:
           test -s /tmp/scummc-gesture-upstream/examples/road/DialogueFigure.cost && mv /tmp/scummc-gesture-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-gesture-staged.cost
           python -m adventure_studio.scumm_toolchain /tmp/dialogue-gesture-story /tmp/scummc-gesture-upstream /tmp/dialogue-gesture-game
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --gesture /tmp/dialogue-gesture-game /tmp/dialogue-gesture-evidence
+      - name: Play two different PNG speaking poses of the same NPC in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-two-poses-story --linear-multispeaker
+          python -m adventure_studio.dialogue_animation_fixture /tmp/dialogue-two-poses-story --two-poses
+          cp -a /tmp/scummc-upstream /tmp/scummc-two-poses-upstream
+          test -s /tmp/scummc-two-poses-upstream/examples/road/DialogueFigure.cost && mv /tmp/scummc-two-poses-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-two-poses-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-two-poses-story /tmp/scummc-two-poses-upstream /tmp/dialogue-two-poses-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dialogue_probe --two-poses /tmp/dialogue-two-poses-game /tmp/dialogue-two-poses-evidence
+      - name: Retain two-pose native dialogue evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-dialogue-two-poses
+          path: |
+            /tmp/dialogue-two-poses-evidence/dialogue-report.json
+            /tmp/dialogue-two-poses-evidence/scummvm-gesture-frame.png
+            /tmp/dialogue-two-poses-evidence/scummvm-second-pose-frame.png
+            /tmp/dialogue-two-poses-evidence/scummvm-gesture-stand.png
+            /tmp/dialogue-two-poses-evidence/scummvm.log
+            /tmp/dialogue-two-poses-story/project.json
+            /tmp/dialogue-two-poses-story/resources/Harbor.scc
+          if-no-files-found: ignore
       - name: Retain native dialogue animation evidence
         if: always()
         uses: actions/upload-artifact@v4

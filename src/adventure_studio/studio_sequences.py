@@ -15,6 +15,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
 from .studio_actors import set_costume_speaking_pose
+from .scumm_costume import CostumeAnimation, CostumeDirection
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
@@ -147,8 +148,46 @@ def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,
     if sharing:
         raise ValueError("Die Costume wird auch von anderen Figuren verwendet: "
                          + ", ".join(sharing) + ". Bitte zuerst eine eigene Costume zuweisen")
-    updated = set_costume_speaking_pose(raw, actor.costume, frame_id)
-    return edit_dialogue_animation(updated, line_id, "gesture", reset_to_stand)
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    if frame_id not in {frame.id for frame in costume.frames}:
+        raise ValueError("Bitte ein vorhandenes Costume-Frame als Sprechpose wählen")
+
+    gesture = next((item for item in costume.animations if item.name == "gesture"), None)
+    gesture_users = {
+        cue.line_id for cue in document.dialogue_animation_cues
+        if cue.animation == "gesture"
+        and (speaker := _dialogue_animation_targets(document).get(cue.line_id)) is not None
+        and next(item for item in document.actors if item.id == speaker[1]).costume == costume.name
+    }
+    if gesture is None or not gesture_users or gesture_users == {line_id}:
+        # The first assignment may replace an unused legacy gesture, while
+        # another line's active gesture must never be overwritten.
+        updated = set_costume_speaking_pose(raw, actor.costume, frame_id)
+        return edit_dialogue_animation(updated, line_id, "gesture", reset_to_stand)
+
+    if all(direction.commands == (frame_id,) for direction in gesture.directions):
+        return edit_dialogue_animation(raw, line_id, "gesture", reset_to_stand)
+
+    # A second line must not replace the first line's global talk_start/gesture.
+    # Keep a stable animation per imported frame, reusing it on later lines.
+    name = "pose_" + frame_id
+    previous = next((item for item in costume.animations if item.name == name), None)
+    if previous is not None:
+        if any(direction.commands != (frame_id,) for direction in previous.directions):
+            raise ValueError("Die vorhandene Sprechpose hat einen anderen Frame-Inhalt")
+        return edit_dialogue_animation(raw, line_id, name, reset_to_stand)
+
+    occupied = {animation.index for animation in costume.animations if animation.index is not None}
+    index = next((slot for slot in range(28, 253, 4) if slot not in occupied), None)
+    if index is None:
+        raise ValueError("Keine freien nativen Costume-Animationsslots für weitere Sprechposen")
+    animation = CostumeAnimation(name, tuple(
+        CostumeDirection(direction, (frame_id,), True)
+        for direction in ("N", "E", "S", "W")), index)
+    updated_costume = replace(costume, animations=(*costume.animations, animation))
+    updated = canonical_json(replace(document, costumes=tuple(
+        updated_costume if item.name == costume.name else item for item in document.costumes)))
+    return edit_dialogue_animation(updated, line_id, name, reset_to_stand)
 
 
 def edit_dialogue_animation(raw: str, line_id: str, animation: str | None,
