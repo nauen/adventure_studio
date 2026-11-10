@@ -1271,16 +1271,18 @@ def make_app():
             [native_state, native_dialogue_animation_line, native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_reset],
             [native_state, *native_outputs, native_report])
-        def dialogue_timeline_view(raw, line, direction):
+        def dialogue_timeline_view(raw, line, direction, selected_frame):
             if not raw or not line:
                 return [], gr.update(choices=[], value=None), gr.update(choices=[], value=None)
             images, steps, frames = dialogue_speaking_timeline(raw, line, direction)
             return (images, gr.update(choices=steps, value=0 if steps else None),
-                    gr.update(choices=frames, value=frames[0] if frames else None))
+                    gr.update(choices=frames, value=(selected_frame if selected_frame in frames
+                                                    else frames[0] if frames else None)))
 
         for source in (native_state, native_dialogue_animation_line, native_dialogue_direction):
             source.change(dialogue_timeline_view,
-                          [native_state, native_dialogue_animation_line, native_dialogue_direction],
+                          [native_state, native_dialogue_animation_line, native_dialogue_direction,
+                           native_dialogue_timeline_add_frame],
                           [native_dialogue_timeline_gallery, native_dialogue_timeline_step,
                            native_dialogue_timeline_add_frame])
         native_dialogue_timeline_gallery.select(select_timeline_step,

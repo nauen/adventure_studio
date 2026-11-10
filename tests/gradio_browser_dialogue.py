@@ -224,6 +224,8 @@ def main() -> None:
             expect(sequence_input).to_have_value("Speak", timeout=20000)
             sequence_input.fill("Speak, SpeakAlt")
             page.locator("#native-dialogue-sequence-apply").click()
+            expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
+                "Interaktionsablauf geändert und validiert", timeout=20000)
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("pending line selection")
             select_option(page, "native-dialogue-line", second[0])
