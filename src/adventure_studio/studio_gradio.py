@@ -39,6 +39,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                assign_dialogue_speaking_sequence,
                                assign_dialogue_direction_speaking_sequence,
                                dialogue_speaking_sequence_selection,
+                               dialogue_speaking_timeline, edit_dialogue_speaking_timeline,
+                               dialogue_speaking_timeline_preview,
                                edit_dialogue_animation)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
@@ -751,6 +753,30 @@ def make_app():
             native_dialogue_direction_sequence_apply = gr.Button(
                 "Nur Sprechfolge dieser Blickrichtung speichern",
                 elem_id="native-dialogue-direction-sequence-apply")
+            with gr.Accordion("Grafische Sprechfolge dieser Zeile und Blickrichtung", open=True):
+                gr.Markdown("Wähle ein Frame in der Timeline. Füge importierte PNG-Frames an, ändere ihre Reihenfolge oder entferne sie. Jede Änderung wird sofort für **diese Zeile und Richtung** gespeichert. Die GIF-Geschwindigkeit dient ausschließlich der Editor-Vorschau; das native Timing bestimmt ScummVM.")
+                native_dialogue_timeline_gallery = gr.Gallery(
+                    label="PNG-Framefolge · native COST-Reihenfolge", columns=6,
+                    object_fit="contain", height=180, elem_id="native-dialogue-timeline-gallery")
+                with gr.Row():
+                    native_dialogue_timeline_step = gr.Dropdown(
+                        label="Gewähltes Frame", elem_id="native-dialogue-timeline-step")
+                    native_dialogue_timeline_add_frame = gr.Dropdown(
+                        label="PNG-Frame anhängen", elem_id="native-dialogue-timeline-add-frame")
+                with gr.Row():
+                    native_dialogue_timeline_append = gr.Button("Frame anhängen", elem_id="native-dialogue-timeline-append")
+                    native_dialogue_timeline_left = gr.Button("Nach links", elem_id="native-dialogue-timeline-left")
+                    native_dialogue_timeline_right = gr.Button("Nach rechts", elem_id="native-dialogue-timeline-right")
+                    native_dialogue_timeline_remove = gr.Button("Entfernen", elem_id="native-dialogue-timeline-remove")
+                with gr.Row():
+                    native_dialogue_timeline_duration = gr.Number(
+                        label="Editor-Vorschau: Millisekunden pro Bild", value=180, precision=0,
+                        elem_id="native-dialogue-timeline-duration")
+                    native_dialogue_timeline_play = gr.Button("Sprechfolge abspielen", elem_id="native-dialogue-timeline-play")
+                native_dialogue_timeline_preview_image = gr.Image(
+                    label="Animierte Sprechfolge · nur Editor-GIF", interactive=False,
+                    format="gif", elem_id="native-dialogue-timeline-preview")
+                native_dialogue_timeline_preview_status = gr.Markdown()
             native_dialogue_direction_preview = gr.Image(
                 label="Native Sprechanimation · gewählte Blickrichtung (Einzelbild-Vorschau)",
                 interactive=False, type="pil", height=270,
@@ -1245,6 +1271,48 @@ def make_app():
             [native_state, native_dialogue_animation_line, native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_reset],
             [native_state, *native_outputs, native_report])
+        def dialogue_timeline_view(raw, line, direction):
+            if not raw or not line:
+                return [], gr.update(choices=[], value=None), gr.update(choices=[], value=None)
+            images, steps, frames = dialogue_speaking_timeline(raw, line, direction)
+            return (images, gr.update(choices=steps, value=0 if steps else None),
+                    gr.update(choices=frames, value=frames[0] if frames else None))
+
+        for source in (native_state, native_dialogue_animation_line, native_dialogue_direction):
+            source.change(dialogue_timeline_view,
+                          [native_state, native_dialogue_animation_line, native_dialogue_direction],
+                          [native_dialogue_timeline_gallery, native_dialogue_timeline_step,
+                           native_dialogue_timeline_add_frame])
+        native_dialogue_timeline_gallery.select(select_timeline_step,
+                                                outputs=[native_dialogue_timeline_step])
+
+        for button, operation in ((native_dialogue_timeline_append, "Anhängen"),
+                                  (native_dialogue_timeline_left, "Nach links"),
+                                  (native_dialogue_timeline_right, "Nach rechts"),
+                                  (native_dialogue_timeline_remove, "Entfernen")):
+            button.click(lambda raw, line, direction, step, frame, reset, op=operation:
+                         native_edit(edit_dialogue_speaking_timeline, raw, line, direction,
+                                     step, op, frame, reset),
+                         [native_state, native_dialogue_animation_line, native_dialogue_direction,
+                          native_dialogue_timeline_step, native_dialogue_timeline_add_frame,
+                          native_dialogue_reset], [native_state, *native_outputs, native_report])
+
+        def dialogue_timeline_play(raw, line, direction, duration):
+            if not raw:
+                raise gr.Error("Bitte zuerst ein natives Projekt laden")
+            path = Path(tempfile.mkdtemp(prefix="adventure-studio-dialogue-preview-")) / "speaking.gif"
+            try:
+                rendered = dialogue_speaking_timeline_preview(raw, line, direction, duration, path)
+                return str(rendered), (f"{int(duration)} ms pro Bild nur im Editor; "
+                                       "ScummVM bestimmt die tatsächliche COST-Abspielrate.")
+            except (ValueError, OSError) as error:
+                raise gr.Error(f"Sprechvorschau nicht möglich: {error}") from error
+
+        native_dialogue_timeline_play.click(
+            dialogue_timeline_play,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_timeline_duration],
+            [native_dialogue_timeline_preview_image, native_dialogue_timeline_preview_status])
         native_dialogue_animation_save.click(
             lambda *args: native_edit(edit_dialogue_animation, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_animation,

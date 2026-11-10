@@ -264,6 +264,25 @@ def main() -> None:
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-direction", "Nord")
             expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
+            # Edit the saved line/facing by clicking the graphical timeline,
+            # then play its actual indexed PNG frames as an editor GIF.
+            timeline_gallery = page.locator("#native-dialogue-timeline-gallery")
+            expect(timeline_gallery.locator("img")).to_have_count(2, timeout=20000)
+            select_option(page, "native-dialogue-timeline-add-frame", "SpeakAlt")
+            page.locator("#native-dialogue-timeline-append").click()
+            expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
+            expect(timeline_gallery.locator("img")).to_have_count(3, timeout=20000)
+            select_option(page, "native-dialogue-timeline-step", "3. SpeakAlt")
+            page.locator("#native-dialogue-timeline-left").click()
+            expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt, Speak", timeout=20000)
+            select_option(page, "native-dialogue-timeline-step", "2. SpeakAlt")
+            page.locator("#native-dialogue-timeline-remove").click()
+            expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
+            page.locator("#native-dialogue-timeline-play").click()
+            gif_preview = page.locator("#native-dialogue-timeline-preview img")
+            expect(gif_preview.first).to_be_visible(timeout=20000)
+            page.locator("#native-dialogue-timeline-append").click()
+            expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
             page.screenshot(path=str(evidence / "line-direction-sequence.png"), full_page=True)
             page.locator("#native-project-export-button").click()
             expect(sequence_link.first).to_be_visible(timeout=20000)
@@ -272,13 +291,14 @@ def main() -> None:
             directional_file = evidence / "line-direction-project.json"
             directional_info.value.save_as(str(directional_file))
             directional_data = directional_file.read_text(encoding="utf-8")
-            assert dialogue_speaking_sequence_selection(directional_data, first[1], "N") == "SpeakAlt, Speak"
+            assert dialogue_speaking_sequence_selection(directional_data, first[1], "N") == "SpeakAlt, Speak, SpeakAlt"
             assert dialogue_speaking_sequence_selection(directional_data, first[1], "S") == "Speak, SpeakAlt"
             assert dialogue_speaking_sequence_selection(directional_data, second[1], "N") == "SpeakAlt, Speak, SpeakAlt"
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
                 "independent_direction_sequences": True,
+                "graphical_line_timeline": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

@@ -22,13 +22,79 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 assign_dialogue_speaking_frame,
                                                 assign_dialogue_speaking_sequence,
                                                 assign_dialogue_direction_speaking_sequence,
-                                                dialogue_speaking_sequence_selection)
+                                                dialogue_speaking_sequence_selection,
+                                                dialogue_speaking_timeline,
+                                                edit_dialogue_speaking_timeline,
+                                                dialogue_speaking_timeline_preview)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "Timeline benötigt Pillow")
+    def test_dialogue_frame_timeline_edits_one_direction_and_previews_gif(self):
+        _story, raw = self.fixture()
+        document = parse_document(raw)
+        costume = replace(document.costumes[0], name="WitnessCostume", frames=(
+            *document.costumes[0].frames,
+            replace(document.costumes[0].frames[0], id="Smile"),
+            replace(document.costumes[0].frames[0], id="OpenMouth",
+                    pixels=bytes(len(document.costumes[0].frames[0].pixels)))))
+        actors = tuple(replace(actor, costume="WitnessCostume")
+                       if actor.id == "SpeakerWitness" else actor
+                       for actor in document.actors)
+        room = document.rooms[0]
+        rules = tuple(replace(rule, actor_lines=tuple(
+            (key, "SpeakerWitness") for key, _actor in rule.actor_lines))
+            for rule in room.talk_rules)
+        hotspots = tuple(replace(hotspot, talk_actor_lines=tuple(
+            "SpeakerWitness" for _actor in hotspot.talk_actor_lines))
+            if hotspot.talk_actor_lines else hotspot for hotspot in room.hotspots)
+        raw = canonical_json(replace(document, actors=actors,
+            costumes=(*document.costumes, costume),
+            rooms=(replace(room, talk_rules=rules, hotspots=hotspots), *document.rooms[1:])))
+        first, second = (key for _label, key in dialogue_animation_lines(raw))
+        fresh = edit_dialogue_speaking_timeline(raw, first, "W", None,
+                                                 "Anhängen", "Smile")
+        self.assertEqual(dialogue_speaking_sequence_selection(fresh, first, "W"), "Smile")
+        self.assertEqual(dialogue_speaking_sequence_selection(fresh, first, "S"), "Pose")
+        raw = assign_dialogue_speaking_sequence(raw, first, "Pose, Smile")
+        raw = assign_dialogue_speaking_sequence(raw, second, "OpenMouth, Pose")
+        images, steps, frames = dialogue_speaking_timeline(raw, first, "N")
+        self.assertEqual(len(images), 2)
+        self.assertEqual(steps, (("1. Pose", 0), ("2. Smile", 1)))
+        self.assertEqual(frames, ("Pose", "Smile", "OpenMouth"))
+        raw = edit_dialogue_speaking_timeline(raw, first, "N", None,
+                                               "Anhängen", "OpenMouth")
+        raw = edit_dialogue_speaking_timeline(raw, first, "N", 2, "Nach links")
+        self.assertEqual(dialogue_speaking_sequence_selection(raw, first, "N"),
+                         "Pose, OpenMouth, Smile")
+        raw = edit_dialogue_speaking_timeline(raw, first, "N", 0, "Nach rechts")
+        raw = edit_dialogue_speaking_timeline(raw, first, "N", 2, "Entfernen")
+        self.assertEqual(dialogue_speaking_sequence_selection(raw, first, "N"),
+                         "OpenMouth, Pose")
+        self.assertEqual(dialogue_speaking_sequence_selection(raw, first, "E"), "Pose, Smile")
+        self.assertEqual(dialogue_speaking_sequence_selection(raw, second, "N"),
+                         "OpenMouth, Pose")
+        with tempfile.TemporaryDirectory() as directory:
+            gif = dialogue_speaking_timeline_preview(
+                raw, first, "N", 180, Path(directory) / "speaking.gif")
+            from PIL import Image
+            with Image.open(gif) as picture:
+                self.assertEqual(picture.format, "GIF")
+                self.assertEqual(picture.n_frames, 2)
+            with self.assertRaisesRegex(ValueError, "Millisekunden"):
+                dialogue_speaking_timeline_preview(
+                    raw, first, "N", 10, Path(directory) / "bad.gif")
+        with self.assertRaisesRegex(ValueError, "mindestens ein"):
+            single = assign_dialogue_direction_speaking_sequence(raw, first, "N", "Pose")
+            edit_dialogue_speaking_timeline(single, first, "N", 0, "Entfernen")
+        with self.assertRaisesRegex(ValueError, "am Rand"):
+            edit_dialogue_speaking_timeline(raw, first, "N", 0, "Nach links")
+        with self.assertRaisesRegex(ValueError, "vorhandenes PNG"):
+            edit_dialogue_speaking_timeline(raw, first, "N", None, "Anhängen", "missing")
+
     def test_two_lines_of_one_npc_have_independent_looping_png_sequences(self):
         _story, raw = self.fixture()
         source = parse_document(raw)
