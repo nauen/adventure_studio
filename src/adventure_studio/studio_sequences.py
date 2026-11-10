@@ -437,6 +437,32 @@ def remove_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
     return tuple(indexes), min(selected, len(indexes) - 1) if indexes else None
 
 
+def dialogue_png_batch_excluded(paths: list[str] | tuple[str, ...] | None,
+                                order: list[int] | tuple[int, ...] | None
+                                ) -> tuple[tuple[str, int], ...]:
+    """Offer only staged files not already present in the import sequence."""
+    if not paths:
+        return ()
+    dialogue_png_batch_order(paths, order)
+    included = set(range(len(paths))) if order is None else set(order)
+    return tuple((f"{index + 1}. {Path(path).name}", index)
+                 for index, path in enumerate(paths) if index not in included)
+
+
+def restore_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
+                                     order: list[int] | tuple[int, ...] | None,
+                                     excluded_index: int | None
+                                     ) -> tuple[tuple[int, ...], int]:
+    """Reinclude a staged PNG at the end without changing other uploads."""
+    included = dialogue_png_batch_order(paths, order)
+    excluded = {index for _name, index in dialogue_png_batch_excluded(paths, order)}
+    if type(excluded_index) is not int or excluded_index not in excluded:
+        raise ValueError("Bitte zuerst ein ausgeschlossenes PNG-Frame auswählen")
+    indexes = list(range(len(paths))) if order is None else list(order)
+    indexes.append(excluded_index)
+    return tuple(indexes), len(included)
+
+
 def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
                                paths: list[str] | tuple[str, ...] | None,
                                order: list[int] | tuple[int, ...] | None = None) -> str:

@@ -9,6 +9,14 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Ausgeschlossene Upload-PNGs ohne Neu-Upload reaktivieren (2026-11-11, CI offen):**
+Das Dropdown listet die noch hochgeladenen, aber ausgeschlossenen Bilder.
+Ein Klick hängt das gewählte Bild ans Ende der aktuellen Importauswahl.
+Es kann anschließend sortiert oder wieder entfernt werden; auch 0 → 1
+funktioniert. Validierte Reihenfolge und native COST-Ausgabe behalten
+ihre bestehenden Grenzen. 334 lokale Tests grün, Browser-/Gameplay-CI offen.
+Anschließend: Miniaturvorschau für die vorbereitete PNG-Folge.
+
 **Einzelne Upload-PNGs vor dem nativen Dialog-Stapelimport ausschließen (2026-11-10, native Abnahme bestanden):**
 Ein PNG wird in der Importauswahl gewählt und mit einem Klick ausgeschlossen.
 Die übrigen hochgeladenen Bilder bleiben in der bisherigen Sortierung
