@@ -759,7 +759,7 @@ def make_app():
                 label="Blickrichtung der gespeicherten Sprechanimation",
                 choices=[("Nord", "N"), ("Ost", "E"), ("Süd", "S"), ("West", "W")],
                 value="S", elem_id="native-dialogue-direction")
-            with gr.Accordion("PNG-Datei direkt für diese Dialogzeile importieren", open=True):
+            with gr.Accordion("PNG-Datei direkt für diese Dialogzeile importieren", open=False):
                 gr.Markdown("Importiere eine **neue PNG-Datei** in die eigene Costume der gewählten Sprecherfigur. Der Frame wird sofort an die Sprech- oder Abschlussfolge **dieser Zeile und Blickrichtung** angehängt. Bestehende Frames und die anderen Richtungen bleiben erhalten. Falls mehrere Figuren dieselbe Costume nutzen, **erst unten eine private Kopie für den gewählten Sprecher erstellen**. Andere Figuren behalten die bisherige Costume. Bei ungültigen Pixeln oder voller nativer Palette wird nichts gespeichert.")
                 native_dialogue_costume_isolation = gr.Textbox(
                     label="Vorschau: Costume dieser Sprecherfigur trennen",

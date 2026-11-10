@@ -361,6 +361,7 @@ def main() -> None:
             ending_png = evidence / "fresh-ending.png"
             Image.new("RGBA", (8, 8), (180, 50, 130, 255)).save(speaking_png)
             Image.new("RGBA", (8, 8), (40, 180, 180, 255)).save(ending_png)
+            page.get_by_text("PNG-Datei direkt für diese Dialogzeile importieren", exact=True).click()
             png_id = page.locator("#native-dialogue-png-id textarea, #native-dialogue-png-id input")
             page.locator("#native-dialogue-png-file input[type=file]").set_input_files(str(speaking_png))
             png_id.fill("FreshSpeaking")
