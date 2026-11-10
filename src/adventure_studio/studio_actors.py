@@ -195,14 +195,24 @@ def set_costume_speaking_pose(raw: str, costume_name: str, frame_id: str) -> str
 def set_costume_direction_speaking_pose(raw: str, costume_name: str,
                                         direction: str, frame_id: str) -> str:
     """Replace one native speaking direction without changing the other three."""
+    return set_costume_direction_speaking_sequence(raw, costume_name, direction, frame_id)
+
+
+def set_costume_direction_speaking_sequence(raw: str, costume_name: str,
+                                            direction: str, frame_ids: str) -> str:
+    """Author an ordered, looping native speaking sequence for one direction."""
     document = parse_document(raw)
     costume = next((item for item in document.costumes if item.name == costume_name), None)
     if costume is None:
         raise ValueError("Bitte eine vorhandene Costume auswählen")
     if direction not in ("N", "E", "S", "W"):
         raise ValueError("Bitte eine gültige Blickrichtung N/E/S/W auswählen")
-    if frame_id not in {frame.id for frame in costume.frames}:
-        raise ValueError("Bitte ein vorhandenes Costume-Frame als Sprechpose wählen")
+    if not isinstance(frame_ids, str) or not frame_ids.strip():
+        raise ValueError("Bitte mindestens ein PNG-Frame für die Sprechfolge wählen")
+    sequence = tuple(item.strip() for item in frame_ids.split(","))
+    available = {frame.id for frame in costume.frames}
+    if any(not item or item not in available for item in sequence):
+        raise ValueError("Bitte ein vorhandenes Costume-Frame für jeden Schritt der Sprechfolge wählen")
     by_name = {animation.name: animation for animation in costume.animations}
     for name, index in (("stand", 12), ("talk_start", 16),
                         ("talk_stop", 20), ("gesture", 24)):
@@ -211,7 +221,7 @@ def set_costume_direction_speaking_pose(raw: str, costume_name: str,
             raise ValueError(f"Die Sprechpose benötigt {name} mit nativem Index {index}")
         if {item.direction for item in animation.directions} != {"N", "E", "S", "W"}:
             raise ValueError(f"Die Animation {name} benötigt alle vier Blickrichtungen")
-    replacement = CostumeDirection(direction, (frame_id,), True)
+    replacement = CostumeDirection(direction, sequence, True)
     animations = tuple(replace(animation, directions=tuple(
         replacement if item.direction == direction else item
         for item in animation.directions))

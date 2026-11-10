@@ -28,6 +28,7 @@ from adventure_studio.studio_actors import (add_actor, create_costume, move_acto
                                            add_costume_frame, set_costume_animation,
                                            costume_frame_names, set_costume_speaking_pose,
                                            set_costume_direction_speaking_pose,
+                                           set_costume_direction_speaking_sequence,
                                            costume_direction_speaking_frame,
                                            costume_timeline_images, edit_costume_timeline,
                                            render_costume_preview, set_actor_initial_animation)
@@ -65,6 +66,25 @@ class NativeSequenceEditorTests(unittest.TestCase):
             self.assertEqual(parse_document(canonical_json(parse_document(raw))).costumes[0], costume)
             with self.assertRaisesRegex(ValueError, "vorhandenes Costume-Frame"):
                 set_costume_direction_speaking_pose(raw, "Speaker", "W", "Missing")
+
+            animated = set_costume_direction_speaking_sequence(
+                raw, "Speaker", "N", "NorthPose, Pose0, NorthPose")
+            asset = parse_document(animated).costumes[0]
+            for animation_name in ("gesture", "talk_start"):
+                animation = next(item for item in asset.animations if item.name == animation_name)
+                directions = {item.direction: item for item in animation.directions}
+                self.assertEqual(directions["N"].commands, ("NorthPose", "Pose0", "NorthPose"))
+                self.assertTrue(directions["N"].loop)
+                self.assertEqual(directions["E"].commands, ("Pose0",))
+            self.assertIsNone(costume_direction_speaking_frame(animated, "Speaker", "N"))
+            for animation_name in ("stand", "talk_stop"):
+                self.assertEqual(next(item for item in asset.animations if item.name == animation_name),
+                                 next(item for item in costume.animations if item.name == animation_name))
+            self.assertIn("N = { body(NorthPose, Pose0, NorthPose) }", costume_source(asset))
+            self.assertEqual(parse_document(canonical_json(parse_document(animated))).costumes[0], asset)
+            for invalid in ("", "NorthPose, Missing", "NorthPose, "):
+                with self.assertRaises(ValueError):
+                    set_costume_direction_speaking_sequence(raw, "Speaker", "N", invalid)
 
     def test_spoken_line_language_variants_and_escape_stop_all_sounds(self):
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences

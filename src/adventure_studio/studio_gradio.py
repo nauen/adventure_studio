@@ -42,7 +42,8 @@ from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
                             create_costume, add_costume_frame, set_costume_animation,
                             costume_frame_names, set_costume_speaking_pose,
-                            set_costume_direction_speaking_pose, costume_direction_speaking_frame,
+                            set_costume_direction_speaking_pose, set_costume_direction_speaking_sequence,
+                            costume_direction_speaking_frame,
                             move_actor, costume_animation_names, costume_animation_steps,
                             costume_timeline_images, edit_costume_timeline,
                             render_costume_preview, set_actor_initial_animation,
@@ -616,6 +617,10 @@ def make_app():
                                                                      ("Süd", "S"), ("West", "W")], value="S")
                     native_direction_frame = gr.Dropdown(label="PNG-Frame dieser Richtung", elem_id="native-direction-frame")
                     native_direction_save = gr.Button("Sprechpose dieser Richtung speichern", elem_id="native-direction-save")
+                gr.Markdown("**Animierte Sprechfolge:** Mehrere importierte PNG-Frame-IDs durch Komma trennen. Die native COST-Animation wiederholt die Bilder während der Dialogzeile; ihre Abspielgeschwindigkeit steuert ScummVM. Nur die gewählte Blickrichtung wird geändert, die Standpose bleibt erhalten.")
+                with gr.Row():
+                    native_speaking_sequence = gr.Textbox(label="Sprechframes in Reihenfolge", elem_id="native-speaking-sequence")
+                    native_sequence_save = gr.Button("Animierte Sprechfolge speichern", elem_id="native-speaking-sequence-save")
                 gr.Markdown("**Animation gestalten:** Frame-IDs in der gewünschten Reihenfolge durch Komma trennen. `COUNT`, `SHOW`, `HIDE` und `NOP` sind native Costume-Kommandos. Der Index muss durch vier teilbar sein; `gesture` verwendet zunächst 24.")
                 with gr.Row():
                     native_anim_name = gr.Textbox(label="Animationsname", value="gesture")
@@ -897,6 +902,10 @@ def make_app():
                                     [native_state, native_costume_select, native_speaking_direction,
                                      native_direction_frame],
                                     [native_state, *native_outputs, native_report])
+        native_sequence_save.click(lambda *args: native_asset_edit(set_costume_direction_speaking_sequence, *args),
+                                   [native_state, native_costume_select, native_speaking_direction,
+                                    native_speaking_sequence],
+                                   [native_state, *native_outputs, native_report])
         def direction_frame_choices(raw, name, direction):
             if not raw:
                 return gr.update(choices=[], value=None)
@@ -907,6 +916,14 @@ def make_app():
             source.change(direction_frame_choices,
                           [native_state, native_costume_select, native_speaking_direction],
                           [native_direction_frame])
+        def direction_sequence(raw, name, direction):
+            if not raw or not name:
+                return ""
+            return ", ".join(costume_animation_steps(raw, name, "gesture", direction))
+        for source in (native_state, native_costume_select, native_speaking_direction):
+            source.change(direction_sequence,
+                          [native_state, native_costume_select, native_speaking_direction],
+                          [native_speaking_sequence])
         def speaking_frame_choices(raw, name):
             frames = costume_frame_names(raw, name) if raw and name else ()
             return gr.update(choices=frames, value=frames[-1] if frames else None)

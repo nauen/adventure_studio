@@ -212,6 +212,31 @@ jobs:
             /tmp/dialogue-four-facing-story/project.json
             /tmp/dialogue-four-facing-story/resources/Harbor.scc
           if-no-files-found: ignore
+      - name: Play two timed speaking frames inside one NPC line in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-animated-story --linear-multispeaker
+          python -m adventure_studio.dialogue_animation_fixture /tmp/dialogue-animated-story --animated
+          cp -a /tmp/scummc-upstream /tmp/scummc-animated-upstream
+          test -s /tmp/scummc-animated-upstream/examples/road/DialogueFigure.cost
+          mv /tmp/scummc-animated-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-animated-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-animated-story /tmp/scummc-animated-upstream /tmp/dialogue-animated-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_speaking_sequence_probe /tmp/dialogue-animated-game /tmp/dialogue-animated-evidence
+      - name: Retain native speaking sequence evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-speaking-sequence
+          path: |
+            /tmp/dialogue-animated-evidence/speaking-sequence-report.json
+            /tmp/dialogue-animated-evidence/scummvm-frame-*.png
+            /tmp/dialogue-animated-evidence/scummvm-stand.png
+            /tmp/dialogue-animated-evidence/scummvm-checkpoint-*.png
+            /tmp/dialogue-animated-evidence/scummvm.log
+            /tmp/dialogue-animated-story/project.json
+            /tmp/dialogue-animated-story/resources/Harbor.scc
+          if-no-files-found: ignore
       - name: Retain native dialogue animation evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -8,16 +8,18 @@ from .scumm_costume import CostumeAnimation, CostumeDirection, CostumeFrame
 from .scumm_project import canonical_json, export_document, parse_document
 from .studio_sequences import (dialogue_animation_lines, edit_dialogue_animation,
                                assign_dialogue_speaking_frame)
-from .studio_actors import set_costume_direction_speaking_pose
+from .studio_actors import (set_costume_direction_speaking_pose,
+                            set_costume_direction_speaking_sequence)
 
 
-def build(directory: Path, two_poses: bool = False, four_facing: bool = False) -> None:
+def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
+          animated: bool = False) -> None:
     project = directory / "project.json"
     document = parse_document(project.read_text(encoding="utf-8"))
     costume = next(item for item in document.costumes if item.name == "DialogueFigure")
     palette = list(costume.palette)
     palette[18] = (220, 80, 80)
-    if two_poses or four_facing:
+    if two_poses or four_facing or animated:
         palette[19] = (35, 225, 35)
     if four_facing:
         palette[20] = (70, 70, 230)
@@ -32,7 +34,7 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False) -
         CostumeDirection(direction, ("Pose",), True)
         for direction in ("N", "E", "S", "W")), 20)
     additional = ((CostumeFrame("SpeakAlt", 8, 8, bytes([3] * 64), -4, -8),)
-                  if two_poses or four_facing else ())
+                  if two_poses or four_facing or animated else ())
     if four_facing:
         additional += (CostumeFrame("SpeakBlue", 8, 8, bytes([4] * 64), -4, -8),
                        CostumeFrame("SpeakYellow", 8, 8, bytes([5] * 64), -4, -8))
@@ -53,7 +55,7 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False) -
                                             y=100)
                                     if actor.costume == costume.name else actor
                                     for actor in document.actors))
-    if two_poses or four_facing:
+    if two_poses or four_facing or animated:
         # The editor forbids mutating an asset shared by distinct actors.
         # Give the Witness its own real Costume before authoring two poses.
         document = replace(document,
@@ -82,6 +84,16 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False) -
             raise ValueError("Four-facing fixture requires four native lines for one actor")
         for line in lines:
             raw = edit_dialogue_animation(raw, line, "gesture", True)
+    elif animated:
+        for direction in ("N", "E", "S", "W"):
+            raw = set_costume_direction_speaking_sequence(
+                raw, "WitnessCostume", direction, "Speak, SpeakAlt")
+        lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
+                      if label.startswith("SpeakerWitness"))
+        if len(lines) < 2:
+            raise ValueError("Animated speaking fixture requires native lines")
+        for line in lines:
+            raw = edit_dialogue_animation(raw, line, "gesture", True)
     elif two_poses:
         lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
                       if label.startswith("SpeakerWitness"))
@@ -98,11 +110,12 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False) -
 
 
 def main() -> int:
-    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("--two-poses", "--four-facing")):
-        print("Usage: python -m adventure_studio.dialogue_animation_fixture BUILD_DIRECTORY [--two-poses|--four-facing]")
+    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("--two-poses", "--four-facing", "--animated")):
+        print("Usage: python -m adventure_studio.dialogue_animation_fixture BUILD_DIRECTORY [--two-poses|--four-facing|--animated]")
         return 2
     build(Path(sys.argv[1]), two_poses=len(sys.argv) == 3 and sys.argv[2] == "--two-poses",
-          four_facing=len(sys.argv) == 3 and sys.argv[2] == "--four-facing")
+          four_facing=len(sys.argv) == 3 and sys.argv[2] == "--four-facing",
+          animated=len(sys.argv) == 3 and sys.argv[2] == "--animated")
     return 0
 
 

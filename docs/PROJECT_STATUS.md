@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Neues Produktpaket (2026-11-10, Implementierung; native Abnahme offen):**
+Im Costume-Editor kann ein Autor für eine gewählte Blickrichtung eine
+kommagetrennte Folge importierter PNG-Frame-IDs als wiederholte native
+Sprechsequenz speichern. Die Folge wird gemeinsam auf `gesture` und
+`talk_start` gesetzt und bleibt beim Richtungswechsel sowie JSON-Roundtrip
+erhalten. Die übrigen Blickrichtungen und `stand`/`talk_stop` bleiben
+unverändert. Die native COST-Quelle enthält mehrere Frames pro Richtung;
+die zeitliche Abspielrate bestimmt der native Interpreter, nicht eine
+frei erfundene Millisekundenangabe im Studio. 325 lokale Tests grün;
+separater stock-ScummVM-Gate für zwei unterscheidbare Frames während
+**derselben** Dialogzeile und danach sechs Standframes ergänzt, CI offen.
+**Nächstes Produktpaket nach dem nativen Gate:** individuelle Sprechfolgen
+je Dialogzeile (auch mehrere Zeilen derselben Figur), ohne die Costume-
+Richtungsfolgen global zu überschreiben.
+
 **Aktuelles Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Ein durch den produktiven Story-/Studio-Pfad erstelltes Vier-Zeilen-Gespräch
 setzt den selben NPC vor jeder Zeile auf N/E/S/W. Dessen Costume enthält
