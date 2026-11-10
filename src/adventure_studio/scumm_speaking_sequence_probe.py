@@ -72,7 +72,7 @@ def run(game_directory: Path, output: Path, two_lines: bool = False) -> dict:
             samples: list[tuple[int, ...]] = []
             red_captured = False
             observed: tuple[str, ...] = ()
-            for sample in range(160 if two_lines else 120):
+            for sample in range(240 if two_lines else 120):
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited during animated NPC line")
                 _capture(output, "current")
@@ -94,7 +94,9 @@ def run(game_directory: Path, output: Path, two_lines: bool = False) -> dict:
                 elif observed_speaking_change(baseline, samples):
                     _capture(output, "frame-green")
                     break
-                time.sleep(0.10)
+                # Avoid phase-locking screenshot samples to short alternating
+                # COST frames: a fixed interval can repeatedly miss one pose.
+                time.sleep((0.04, 0.07, 0.11)[sample % 3] if two_lines else 0.10)
             report["two_frames_visible"] = observed_speaking_change(baseline, samples)
             report["peak_pixels"] = {
                 name: max(row[index] for row in samples)
