@@ -9,6 +9,20 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprechposen nach vier Blickrichtungen im Dialogeditor (2026-11-10):**
+Nord/Ost/Süd/West lassen sich für die gewählte native Actor-Animation
+einzeln ansehen. Das Bild stammt aus dem tatsächlichen Richtungskanal
+der Costume (nicht aus einer automatisch gespiegelten Kopie).
+Native Mehrframe- und Kommandoanimationen werden im Einzelbildmodus
+klar als nicht darstellbar gekennzeichnet. Getestet: Unterschiedliche
+Frames pro Richtung im PNG-/COST-Modell sowie
+Gradio-Chromium-Richtungswahl mit Pixel- und Beschriftungsprüfung.
+Die Stand-/Sprech-Bytecodes bleiben unverändert.
+**Offen:** native Spielprüfung mit vier bewusst unterschiedlichen
+Richtungs-Frames, menschliche UI-Abnahme und vollständiger Lippensync.
+**Nächstes:** Editor-Zuweisung einer eigenen PNG-Pose je Actor-Richtung
+mit realem Interpreter-Nachweis nach Blickrichtungswechsel.
+
 **Native NPC-Sprechpose direkt im Dialogeditor anzeigen (2026-11-10):**
 Das ausgewählte PNG wird jetzt aus den originalen Costume-Frame-Indizes
 und der nativen Palette als statisches Bild gerendert. Die Bildvorschau
