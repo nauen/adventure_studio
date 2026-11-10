@@ -18,6 +18,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 dialogue_speaking_frames,
                                                 dialogue_speaking_frame_selection,
                                                 dialogue_speaking_frame_preview,
+                                                dialogue_direction_animation_preview,
                                                 assign_dialogue_speaking_frame)
 
 
@@ -332,6 +333,45 @@ class DialogueAnimationTests(unittest.TestCase):
             tentative = dialogue_speaking_frame_preview(raw, lines[0], "SpeakB")
             self.assertEqual(tentative.getpixel((128, 128)), native_color("SpeakB"))
             self.assertEqual(dialogue_speaking_frame_selection(raw, lines[0])[1], "SpeakA")
+            # Direction-specific native COST frames can differ even though
+            # the single-PNG dropdown rightly has no unified selection.
+            split = replace(by_name["pose_SpeakB"], name="pose_directions", index=32,
+                directions=tuple(replace(direction, commands=(
+                    ("SpeakA",) if direction.direction in ("N", "W") else ("SpeakB",)))
+                    for direction in by_name["pose_SpeakB"].directions))
+            varied = replace(native, animations=(*native.animations, split))
+            varied_document = replace(document, costumes=tuple(
+                varied if entry.name == native.name else entry
+                for entry in document.costumes))
+            varied_raw = canonical_json(varied_document)
+            for direction, frame in (("N", "SpeakA"), ("E", "SpeakB"),
+                                     ("S", "SpeakB"), ("W", "SpeakA")):
+                rendered, label = dialogue_direction_animation_preview(
+                    varied_raw, lines[1], "pose_directions", direction)
+                self.assertEqual(rendered.getpixel((128, 128)), native_color(frame))
+                self.assertIn(frame, label)
+                self.assertIn("statische Editor-Vorschau", label)
+            none, reason = dialogue_direction_animation_preview(
+                varied_raw, lines[1], None, "N")
+            self.assertIsNone(none)
+            self.assertIn("Keine Costume", reason)
+            none, reason = dialogue_direction_animation_preview(
+                varied_raw, lines[1], "pose_directions", "S")
+            self.assertIsNotNone(none)
+            with self.assertRaisesRegex(ValueError, "Blickrichtung"):
+                dialogue_direction_animation_preview(varied_raw, lines[1],
+                                                     "pose_directions", "NW")
+            multiline = replace(split, name="pose_multiframe", index=36,
+                directions=tuple(replace(direction, commands=("SpeakA", "SpeakB"))
+                                 for direction in split.directions))
+            with_multiline = replace(varied, animations=(*varied.animations, multiline))
+            multi_raw = canonical_json(replace(document, costumes=tuple(
+                with_multiline if entry.name == native.name else entry
+                for entry in document.costumes)))
+            no_image, message = dialogue_direction_animation_preview(
+                multi_raw, lines[1], "pose_multiframe", "N")
+            self.assertIsNone(no_image)
+            self.assertIn("mehrere Frames", message)
             self.assertEqual(by_name["pose_SpeakB"].index, 28)
             self.assertEqual(len([a for a in native.animations
                                   if a.name == "pose_SpeakB"]), 1)
