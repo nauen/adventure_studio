@@ -4,16 +4,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Neues Produktpaket (2026-11-10, Implementierung; CI offen):**
+**Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Eine einzelne NPC-Dialogzeile kann jetzt nach `waitForMessage()` eine
 **eigene optionale Abschlussgeste** aus einer vorhandenen indizierten
 Costume-Animation der Sprecherfigur abspielen. Ihre positive Mindestdauer
 ist in nativen Skript-Ticks definiert; danach erfolgt die bisherige
 optionale Rückkehr zur Standpose. Ohne Abschlussgeste bleiben Skript und
 alte JSON-Projekte unverändert. Andere Zeilen, Richtungskanäle und
-Sprechphasen werden nicht verändert. Modell-/Source-/Roundtrip-Test und
-der native Magenta-Abschlussframe zwischen West- und Ost-Sprechfolgen
-sind für die neue Abnahme vorgesehen. **330 lokale Tests grün; CI offen.**
+Sprechphasen werden nicht verändert. **330 lokale Tests und alle 13
+CI-Checks grün.** Der echte Gradio-Chromium-Pfad mit Export/Reimport
+ist bestanden; der native magentafarbene Abschlussframe erschien nach
+West-rot/grün und vor Ost-blau/gelb mit anschließender Standpose im
+unveränderten ScummVM (Run `42904734152`, Job `130139641706`,
+PR #99, Merge `ead868b`). Menschliche Bedienabnahme offen.
 Kein wortgenauer Lippensync. **Nächstes Paket:** Eine direkt im Dialog-
 Editor anlegbare eigene Abschluss-PNG-Folge pro Zeile und Blickrichtung,
 ohne zuerst manuell eine Costume-Animation erstellen zu müssen.

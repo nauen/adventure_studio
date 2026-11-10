@@ -9,15 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Optionale native Abschlussgeste pro NPC-Zeile (2026-11-10, CI offen):**
+**Optionale native Abschlussgeste pro NPC-Zeile (2026-11-10, native Abnahme bestanden):**
 Nach `waitForMessage()` kann ein eigener vorhandener indizierter
 Costume-Kanal für positive native Ticks abgespielt werden. Erst danach
 kehrt der Actor gegebenenfalls zur Standpose zurück. Der Dialogeditor
 speichert, entfernt und lädt die Abschlusszuweisung; ältere Dokumente
-bleiben ohne Abschlussgeste unverändert. Modell-/JSON-/Skript-Test grün.
-Chromium-Authoring mit Export/Reimport sowie ein stock-ScummVM-Nachweis
-des magentafarbenen Abschlussframes zwischen zwei NPC-Zeilen stehen im
-CI aus. Danach folgt die direkte PNG-Authoring-Funktion für eine eigene
+bleiben ohne Abschlussgeste unverändert. Modell-/JSON-/Skript-Test,
+Chromium-Authoring samt Export/Reimport und der stock-ScummVM-Nachweis
+des magentafarbenen Abschlussframes zwischen West- und Ost-Sprechzeile
+mit Standpose sind bestanden (Run `42904734152`, Job `130139641706`,
+PR #99, Merge `ead868b`). Menschliche UI-Abnahme offen.
+Danach folgt die direkte PNG-Authoring-Funktion für eine eigene
 Abschlussfolge pro Dialogzeile und Richtung.
 
 **Native Sprechphasen pro NPC-Zeile (2026-11-10, native Abnahme bestanden):**
