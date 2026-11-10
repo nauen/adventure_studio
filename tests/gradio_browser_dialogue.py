@@ -218,11 +218,16 @@ def main() -> None:
             # Two different multi-frame animations through the real dialogue
             # editor, preserving the actor's shared Costume and old cues.
             sequence_input = page.locator("#native-dialogue-speaking-sequence textarea, #native-dialogue-speaking-sequence input")
+            select_option(page, "native-dialogue-line", second[0])
+            sequence_input.fill("pending line selection")
             select_option(page, "native-dialogue-line", first[0])
+            expect(sequence_input).to_have_value("Speak", timeout=20000)
             sequence_input.fill("Speak, SpeakAlt")
             page.locator("#native-dialogue-sequence-apply").click()
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            sequence_input.fill("pending line selection")
             select_option(page, "native-dialogue-line", second[0])
+            expect(sequence_input).to_have_value("Speak", timeout=20000)
             sequence_input.fill("SpeakAlt, Speak, SpeakAlt")
             page.locator("#native-dialogue-sequence-apply").click()
             expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
