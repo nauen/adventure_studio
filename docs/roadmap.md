@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Gespeicherte PNG-Sprechpose im Dialogeditor vorauswählen (2026-11-10):**
+Die Zeilenauswahl bleibt bei Projektänderungen erhalten. Nach einem
+Speichern bzw. erneutem Öffnen werden Animations-Cue, Rücksetzoption
+und eindeutig zugeordneter PNG-Frame aus dem Modell angezeigt.
+Mehrframe- oder blickrichtungsabhängige Animationen bleiben im PNG-Feld
+bewusst ohne Vorauswahl; der native Animationseditor zeigt den Cue weiter.
+Roundtrip- und Editiertests implementiert, Gradio-HTTP-Smoke ausstehend.
+**Nächster UI-Abnahmeschritt:** Im echten Browser zwei PNG-Posen zwischen
+Dialogzeilen wechseln, speichern, neu laden und die vorausgewählten
+Frames kontrollieren.
+
 **Mehrere Sprechposen derselben Figur (2026-11-10, PR #81):**
 Importierte PNG-Frames lassen sich jetzt unabhängig an Dialogzeilen einer
 Figur binden. Weitere native Costume-Slots ab 28 bewahren vorhandene
