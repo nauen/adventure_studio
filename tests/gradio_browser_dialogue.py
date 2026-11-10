@@ -29,7 +29,7 @@ def select_option(page, elem_id: str, label: str) -> None:
         options = page.locator('[id="' + options_id + '"]')
         print("Dropdown", elem_id, "expanded", entry.get_attribute("aria-expanded"),
               "options", options.inner_text()[:1200] if options.count() else "none")
-    page.get_by_text(label, exact=True).last.click(timeout=12000)
+    page.get_by_role("option", name=label, exact=True).click(timeout=12000)
 
 
 def displayed_value(page, elem_id: str) -> str:
