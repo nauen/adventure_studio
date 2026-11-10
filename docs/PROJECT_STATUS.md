@@ -4,6 +4,23 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Neues Produktpaket (2026-11-10, Implementierung):** Im Costume-Editor kann
+der Autor ein importiertes PNG-Frame gezielt für Nord, Ost, Süd oder West
+als Sprechpose setzen. Der bestehende native `gesture`-Slot 24 und
+`talk_start` 16 werden nur in dieser Richtung geändert; die anderen
+Richtungen sowie `stand` 12 und `talk_stop` 20 bleiben erhalten. Beim
+Richtungswechsel erscheint der gespeicherte Frame wieder im Auswahlfeld.
+Ein Modell-/COST-Quelltest und 322 lokale Regressionstests sind grün.
+Ein echter Gradio-Chromium-Test für N/O-Wechsel, Speichern und Reimport
+ist auf Commit `bf35cc2` grün (beide Gradio-Smoke-Jobs, beide Core-Testjobs).
+Die bewusst leere Einzel-PNG-Vorauswahl bei richtungsabhängigen Frames
+wird im Browservertrag berücksichtigt; die Costume-Auswahl bleibt nach
+dem Speichern erhalten.
+**Offen:** native ScummVM-Dreh-/Sprechprobe
+mit vier unterschiedlichen PNG-Frames sowie menschliche UI-Abnahme.
+**Nächstes Produktpaket:** Vier-Richtungs-Sprechposen im generierten Spiel
+durch Drehen und Sprechen sichtbar nachweisen; erst danach D03 weiterführen.
+
 **Aktuelles Browser-Abnahmepaket (2026-11-10, PR in Prüfung):**
 Der native Dialogeditor hat einen realen Chromium-Klicktest erhalten, nicht
 nur einen Gradio-HTTP-Startcheck. Der Browser lädt eine native Projektdatei

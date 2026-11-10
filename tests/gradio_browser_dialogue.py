@@ -16,6 +16,7 @@ from adventure_studio.scumm_project import parse_document
 from adventure_studio.studio_sequences import (
     dialogue_animation_lines, dialogue_speaking_frame_selection,
 )
+from adventure_studio.studio_actors import costume_direction_speaking_frame
 
 
 def select_option(page, elem_id: str, label: str) -> None:
@@ -164,6 +165,20 @@ def main() -> None:
             await_selection(page, "native-dialogue-animation", "gesture")
             await_preview_color(page, (220, 80, 80))
 
+            # Author a different native frame for one facing direction using
+            # the actual Costume editor, not a direct model-only edit.
+            select_option(page, "native-costume-select", "WitnessCostume")
+            select_option(page, "native-speaking-direction", "Nord")
+            await_selection(page, "native-direction-frame", "Speak")
+            select_option(page, "native-direction-frame", "SpeakAlt")
+            page.locator("#native-direction-save").click()
+            await_selection(page, "native-direction-frame", "SpeakAlt")
+            select_option(page, "native-speaking-direction", "Ost")
+            await_selection(page, "native-direction-frame", "Speak")
+            select_option(page, "native-speaking-direction", "Nord")
+            await_selection(page, "native-direction-frame", "SpeakAlt")
+            page.screenshot(path=str(evidence / "direction-authored.png"), full_page=True)
+
             page.locator("#native-project-export-button").click()
             download_link = page.locator("#native-project-export-file a[download]")
             expect(download_link.first).to_be_visible(timeout=20000)
@@ -175,8 +190,14 @@ def main() -> None:
             updated = parse_document(saved.read_text(encoding="utf-8"))
             data = saved.read_text(encoding="utf-8")
             assert updated.dialogue_animation_cues
-            assert dialogue_speaking_frame_selection(data, first[1])[1] == "Speak"
-            assert dialogue_speaking_frame_selection(data, second[1])[1] == "Speak"
+            # A direction-dependent gesture is deliberately not presented
+            # as one unambiguous PNG in the line-level shortcut selector.
+            assert dialogue_speaking_frame_selection(data, first[1])[1] is None
+            assert dialogue_speaking_frame_selection(data, second[1])[1] is None
+            assert costume_direction_speaking_frame(data, "WitnessCostume", "N") == "SpeakAlt"
+            assert costume_direction_speaking_frame(data, "WitnessCostume", "E") == "Speak"
+            assert costume_direction_speaking_frame(data, "WitnessCostume", "S") == "Speak"
+            assert costume_direction_speaking_frame(data, "WitnessCostume", "W") == "Speak"
 
             # A Gradio File changes to a preview after loading. Authors
             # clear the selected file before choosing a replacement.
@@ -186,11 +207,13 @@ def main() -> None:
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
             select_option(page, "native-dialogue-line", second[0])
-            await_selection(page, "native-dialogue-pose", "Speak")
-            await_preview_color(page, (220, 80, 80))
+            await_selection(page, "native-dialogue-animation", "gesture")
             select_option(page, "native-dialogue-line", first[0])
-            await_selection(page, "native-dialogue-pose", "Speak")
+            await_selection(page, "native-dialogue-animation", "gesture")
             page.screenshot(path=str(evidence / "reimported.png"), full_page=True)
+            select_option(page, "native-costume-select", "WitnessCostume")
+            select_option(page, "native-speaking-direction", "Nord")
+            await_selection(page, "native-direction-frame", "SpeakAlt")
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak",
