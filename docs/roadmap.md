@@ -9,6 +9,15 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**PNG-Miniaturvorschau der vorbereiteten nativen Dialog-Importfolge (2026-11-11, CI offen):**
+Die noch nicht importierten hochgeladenen Bilder erscheinen unter dem
+Textplan als echte farbige Miniaturkarten mit nativen Frame-IDs.
+Dateiauswahl, Umordnen, Entfernen und Wiederaufnehmen zeigen stets
+dieselbe Auswahl/Reihenfolge, die beim Klick als native COST-Folge
+gespeichert wird. Auch 0 Bilder ergibt eine leere Galerie. 334 lokale
+Tests grün; Chromium-Pixelprüfung und native CI-Abnahme offen.
+Anschließend: abspielbare Vorabvorschau der ausgewählten PNG-Sequenz.
+
 **Ausgeschlossene Upload-PNGs ohne Neu-Upload reaktivieren (2026-11-11, native Abnahme bestanden):**
 Das Dropdown listet die noch hochgeladenen, aber ausgeschlossenen Bilder.
 Ein Klick hängt das gewählte Bild ans Ende der aktuellen Importauswahl.

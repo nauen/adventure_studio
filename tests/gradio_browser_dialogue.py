@@ -109,6 +109,28 @@ def await_direction_preview_color(page, rgb: tuple[int, int, int]) -> None:
     )
 
 
+def await_batch_gallery_colors(page, colors: list[tuple[int, int, int]]) -> None:
+    """Read rendered thumbnail pixels in the exact import order in Chromium."""
+    gallery = page.locator("#native-dialogue-png-batch-gallery")
+    gallery.scroll_into_view_if_needed()
+    page.wait_for_function(
+        """({colors}) => {
+            const images = [...document.querySelectorAll('#native-dialogue-png-batch-gallery img')];
+            if (images.length !== colors.length) return false;
+            return images.every((img, i) => {
+                if (!img.complete || !img.naturalWidth || !img.naturalHeight) return false;
+                const canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 1;
+                const context = canvas.getContext('2d');
+                context.drawImage(img, Math.floor(img.naturalWidth / 2),
+                    Math.floor(img.naturalHeight / 2), 1, 1, 0, 0, 1, 1);
+                const pixel = context.getImageData(0, 0, 1, 1).data;
+                return colors[i].every((expected, channel) =>
+                    Math.abs(pixel[channel] - expected) <= 18);
+            });
+        }""", arg={"colors": [list(color) for color in colors]}, timeout=20000)
+
+
 def main() -> None:
     fixture = Path(os.environ["ADVENTURE_STUDIO_BROWSER_PROJECT"]).resolve()
     evidence = Path(os.environ.get("ADVENTURE_STUDIO_BROWSER_EVIDENCE", "/tmp/studio-browser-evidence"))
@@ -443,26 +465,31 @@ def main() -> None:
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-A\.png → Batch_A.*2\. Batch-B\.png → Batch_B.*3\. Batch-Excluded\.png → Batch_Excluded", re.S),
                 timeout=20000)
+            await_batch_gallery_colors(page, [(125, 185, 55), (225, 110, 40), (65, 120, 215)])
             select_option(page, "native-dialogue-png-batch-selected", "2. Batch-B.png")
             page.locator("#native-dialogue-png-batch-up").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B.*2\. Batch-A\.png → Batch_A.*3\. Batch-Excluded\.png → Batch_Excluded", re.S),
                 timeout=20000)
+            await_batch_gallery_colors(page, [(225, 110, 40), (125, 185, 55), (65, 120, 215)])
             select_option(page, "native-dialogue-png-batch-selected", "3. Batch-Excluded.png")
             page.locator("#native-dialogue-png-batch-remove").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-A\.png → Batch_A\s*$"),
                 timeout=20000)
+            await_batch_gallery_colors(page, [(225, 110, 40), (125, 185, 55)])
             select_option(page, "native-dialogue-png-batch-excluded", "3. Batch-Excluded.png")
             page.locator("#native-dialogue-png-batch-restore").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-A\.png → Batch_A\s*3\. Batch-Excluded\.png → Batch_Excluded\s*$"),
                 timeout=20000)
+            await_batch_gallery_colors(page, [(225, 110, 40), (125, 185, 55), (65, 120, 215)])
             select_option(page, "native-dialogue-png-batch-selected", "2. Batch-A.png")
             page.locator("#native-dialogue-png-batch-remove").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-Excluded\.png → Batch_Excluded\s*$"),
                 timeout=20000)
+            await_batch_gallery_colors(page, [(225, 110, 40), (65, 120, 215)])
             page.locator("#native-dialogue-png-batch-import").click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
             page.locator("#native-project-export-button").click()
@@ -492,6 +519,7 @@ def main() -> None:
                 "reordered_png_batch": True,
                 "removed_staged_png_without_reupload": True,
                 "restored_staged_png_without_reupload": True,
+                "staged_png_pixel_thumbnail_order": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
