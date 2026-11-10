@@ -4,7 +4,7 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Aktuelles Produktpaket (2026-11-10, CI-Abnahme offen):**
+**Neues Produktpaket (2026-11-10, native Abnahme bestanden):**
 Im NPC-Dialogeditor lassen sich mehrere hochgeladene PNGs **vor dem
 Stapelimport grafisch nach oben oder unten verschieben**. Ein gewähltes
 Bild bleibt beim Verschieben markiert; Vorschau, automatisch erzeugte
@@ -12,8 +12,13 @@ Frame-IDs und nativer Import verwenden dieselbe neue Reihenfolge. Ein
 Wechsel der Dateiauswahl setzt die Sortierung zurück; ungültige/stale
 Reihenfolgen werden abgelehnt, ohne das Projekt zu verändern. Der
 SCUMM-v6-COST-Exporter und die atomare Importsemantik bleiben gleich.
-334 lokale Tests grün; Chromium-Bedienpfad, CI und native Gameplay-Abnahme
-stehen noch aus. **Nächstes Paket:** Einzelne PNG-Dateien aus der
+334 lokale Tests und sechs CI-Checks grün. Zwei Chromium-Läufe beweisen
+Auswahl, Umsortierung, sichtbare Reihenfolge und JSON-Export/Reimport;
+zwei stock-ScummVM-Läufe bestätigen den bestehenden nativen
+Mehrframe-Abschlussdialog mit Standrückkehr (PR #109, Merge `e974946`,
+Chromium Jobs `130181832614` / `130181718511`, native Jobs
+`130181832477` / `130181719158`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Einzelne PNG-Dateien aus der
 Upload-Auswahl entfernen, ohne die übrige Auswahl neu hochzuladen.
 
 **Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
