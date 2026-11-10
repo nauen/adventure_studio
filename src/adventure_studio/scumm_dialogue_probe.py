@@ -150,7 +150,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                 def line_ink() -> set[tuple[int, int]]:
                     with Image.open(output / "scummvm-linear.png") as frame:
                         rgb = frame.convert("RGB")
-                        return {(col, row) for row in range(184, 216)
+                        return {(col, row) for row in (range(184, 280) if two_poses else range(184, 216))
                                 for col in range(300, 800)
                                 if close_rgb(rgb.getpixel((col, row)), (0, 0, 0), 10)}
 
@@ -187,7 +187,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                         if two_poses:
                             if second is None:
                                 first_pose_red = max(first_pose_red, visible_red)
-                            if first is not None:
+                            if first_pose_red >= baseline_red + 16:
                                 visible_green = gesture_ink((35, 225, 35))
                                 if visible_green > second_pose_green:
                                     second_pose_green = visible_green
@@ -206,8 +206,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                     # may reuse glyph positions. The second COST color is the
                     # independent signal; legacy multi-actor text detection
                     # remains unchanged.
-                    if (two_poses and first is not None
-                            and first_pose_red >= baseline_red + 16
+                    if (two_poses and first_pose_red >= baseline_red + 16
                             and second_pose_green >= baseline_green + 16):
                         break
                     if not two_poses and second is not None and (not gesture or
@@ -222,7 +221,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                                "two_pose_first_red_pixels": first_pose_red,
                                "two_pose_second_green_pixels": second_pose_green,
                                "answer_pixels_visible": 0,
-                               "passed": bool(first and (second or two_poses) and (not gesture or
+                               "passed": bool((first or two_poses) and (second or two_poses) and (not gesture or
                                                (speaker_visible >= 16 and
                                                 colored >= baseline_red + 16
                                                 and (not two_poses or
