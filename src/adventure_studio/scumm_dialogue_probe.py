@@ -221,7 +221,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                                                 colored >= baseline_red + 16
                                                 and (not two_poses or
                                                      (first_pose_red >= baseline_red + 16
-                                                      and second_pose_green >= baseline_green + 16))))})
+                                                      and second_pose_green >= baseline_green + 16)))))})
                 if not report["passed"]:
                     raise RuntimeError(f"Native two-speaker text or authored Costume gesture was not visible: {report}")
                 if gesture:
