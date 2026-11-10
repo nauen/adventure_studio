@@ -167,6 +167,8 @@ class DialogueAnimationCue:
     source_text: str
     animation: str
     reset_to_stand: bool = False
+    start_delay_ticks: int = 1
+    minimum_animation_ticks: int = 60
 
 
 @dataclass(frozen=True)
@@ -338,7 +340,11 @@ def document_dict(document: GameDocument) -> dict:
         **({"dialogue_animation_cues": [{"line_id": cue.line_id,
                                          "source_text": cue.source_text,
                                          "animation": cue.animation,
-                                         **({"reset_to_stand": True} if cue.reset_to_stand else {})}
+                                         **({"reset_to_stand": True} if cue.reset_to_stand else {}),
+                                         **({"start_delay_ticks": cue.start_delay_ticks}
+                                            if cue.start_delay_ticks != 1 else {}),
+                                         **({"minimum_animation_ticks": cue.minimum_animation_ticks}
+                                            if cue.minimum_animation_ticks != 60 else {})}
                                         for cue in document.dialogue_animation_cues]}
            if document.dialogue_animation_cues else {}),
         "rooms": [{
@@ -575,6 +581,9 @@ def _validate_document(document: GameDocument) -> None:
         if (not isinstance(cue, DialogueAnimationCue) or not isinstance(cue.line_id, str)
                 or not isinstance(cue.source_text, str) or not isinstance(cue.animation, str)
                 or type(cue.reset_to_stand) is not bool
+                or type(cue.start_delay_ticks) is not int or cue.start_delay_ticks < 0
+                or type(cue.minimum_animation_ticks) is not int
+                or cue.minimum_animation_ticks < 0
                 or cue.line_id in seen_animations):
             raise ValueError("Invalid or duplicate dialogue animation cue")
         seen_animations.add(cue.line_id)
@@ -1211,7 +1220,8 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Invalid dialogue animation collection")
     animation_cues = []
     for raw_cue in raw_animations:
-        item = _only(raw_cue, {"line_id", "source_text", "animation", "reset_to_stand"},
+        item = _only(raw_cue, {"line_id", "source_text", "animation", "reset_to_stand",
+                               "start_delay_ticks", "minimum_animation_ticks"},
                      {"line_id", "source_text", "animation"})
         animation_cues.append(DialogueAnimationCue(**item))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),

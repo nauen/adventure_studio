@@ -126,6 +126,36 @@ def dialogue_animation_choices(raw: str, line_id: str | None):
     return options, selected, reset
 
 
+def dialogue_animation_phase_selection(raw: str, line_id: str | None) -> tuple[int, int]:
+    """Native script ticks before and after the selected line's gesture start."""
+    if not raw:
+        return 1, 60
+    cue = next((item for item in parse_document(raw).dialogue_animation_cues
+                if item.line_id == line_id), None)
+    return ((cue.start_delay_ticks, cue.minimum_animation_ticks)
+            if cue is not None else (1, 60))
+
+
+def edit_dialogue_animation_phases(raw: str, line_id: str,
+                                  start_delay_ticks: int | float,
+                                  minimum_animation_ticks: int | float) -> str:
+    """Keep the authored gesture active for native script ticks, not UI ms."""
+    document = parse_document(raw)
+    cue = next((item for item in document.dialogue_animation_cues
+                if item.line_id == line_id), None)
+    if cue is None:
+        raise ValueError("Bitte zuerst eine Sprechfolge für diese Dialogzeile zuweisen")
+    for label, ticks in (("Vorlauf", start_delay_ticks),
+                         ("Mindestlaufzeit", minimum_animation_ticks)):
+        if (type(ticks) not in (int, float) or int(ticks) != ticks or ticks < 0):
+            raise ValueError(f"{label} benötigt eine nichtnegative ganze Zahl nativer Ticks")
+    updated = replace(cue, start_delay_ticks=int(start_delay_ticks),
+                      minimum_animation_ticks=int(minimum_animation_ticks))
+    return _checked(replace(document, dialogue_animation_cues=tuple(
+        updated if item.line_id == line_id else item
+        for item in document.dialogue_animation_cues)))
+
+
 def dialogue_speaking_frame_selection(raw: str, line_id: str | None
                                       ) -> tuple[tuple[str, ...], str | None]:
     """Resolve the saved line-specific pose to its PNG frame for the editor.
@@ -470,7 +500,11 @@ def edit_dialogue_animation(raw: str, line_id: str, animation: str | None,
     if animation is None:
         cues.pop(line_id, None)
     else:
-        cues[line_id] = DialogueAnimationCue(line_id, target[0], animation, reset_to_stand)
+        previous = cues.get(line_id)
+        cues[line_id] = (replace(previous, animation=animation,
+                                reset_to_stand=reset_to_stand)
+                         if previous is not None else
+                         DialogueAnimationCue(line_id, target[0], animation, reset_to_stand))
     return _checked(replace(document, dialogue_animation_cues=tuple(
         cues[key] for key in sorted(cues))))
 

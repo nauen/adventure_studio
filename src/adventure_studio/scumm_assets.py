@@ -435,8 +435,18 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         validate_catalog(catalog)
         translations = {line.id: dict(line.translations) for line in catalog.lines}
     cues = {cue.line_id: cue for cue in dialogue_voice_cues}
-    animation_cues = {line_id: (actor_id, index, stand_index)
-                      for line_id, actor_id, index, stand_index in dialogue_animation_cues}
+    # Legacy source callers pass four fields; persisted cues additionally
+    # provide the authored native pre-gesture and minimum gesture delays.
+    animation_cues = {}
+    for binding in dialogue_animation_cues:
+        if len(binding) == 4:
+            line_id, actor_id, index, stand_index = binding
+            start_ticks, minimum_ticks = 1, 60
+        elif len(binding) == 6:
+            line_id, actor_id, index, stand_index, start_ticks, minimum_ticks = binding
+        else:
+            raise ValueError("Invalid native dialogue animation binding")
+        animation_cues[line_id] = (actor_id, index, stand_index, start_ticks, minimum_ticks)
     line_actors = {key: actor for rule in room.talk_rules for key, actor in rule.actor_lines}
     line_directions = {key: direction for rule in room.talk_rules
                        for key, direction in rule.actor_directions}
@@ -467,9 +477,9 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         # The native talk-start (16) and talk-stop (20) COST slots are
         # selected by the engine during actorSay. Overriding the actor's
         # talk frames here prevents that automatic speaking pose.
-        animate = (" " * indent + "delay(1);\n"
+        animate = ((" " * indent + f"delay({animation[3]});\n" if animation[3] else "")
                    + " " * indent + f"animateActor({animation[0]},{animation[1]});\n"
-                   + " " * indent + "delay(60);\n"
+                   + (" " * indent + f"delay({animation[4]});\n" if animation[4] else "")
                    if animation is not None else "")
         standing = (" " * indent + f"setCurrentActor({animation[0]});\n"
                     + " " * indent + "setActorStanding();\n"
