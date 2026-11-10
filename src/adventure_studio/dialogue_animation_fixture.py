@@ -10,9 +10,11 @@ from .studio_sequences import (dialogue_animation_lines, edit_dialogue_animation
                                assign_dialogue_speaking_frame,
                                assign_dialogue_speaking_sequence,
                                assign_dialogue_direction_speaking_sequence,
-                               edit_dialogue_animation_phases)
+                               edit_dialogue_animation_phases,
+                               edit_dialogue_ending_animation)
 from .studio_actors import (set_costume_direction_speaking_pose,
-                            set_costume_direction_speaking_sequence)
+                            set_costume_direction_speaking_sequence,
+                            set_costume_animation)
 
 
 def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
@@ -28,6 +30,8 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
     if four_facing or line_sequences or line_directions:
         palette[20] = (70, 70, 230)
         palette[21] = (240, 220, 30)
+    if line_directions:
+        palette[22] = (200, 45, 205)
     gesture = CostumeAnimation("gesture", tuple(
         CostumeDirection(direction, ("Speak",), True)
         for direction in ("N", "E", "S", "W")), 24)
@@ -42,6 +46,8 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
     if four_facing or line_sequences or line_directions:
         additional += (CostumeFrame("SpeakBlue", 8, 8, bytes([4] * 64), -4, -8),
                        CostumeFrame("SpeakYellow", 8, 8, bytes([5] * 64), -4, -8))
+    if line_directions:
+        additional += (CostumeFrame("SpeakMagenta", 8, 8, bytes([6] * 64), -4, -8),)
     updated = replace(costume, palette=tuple(palette),
                       frames=(*costume.frames, CostumeFrame("Speak", 8, 8, bytes([2] * 64), -4, -8),
                               *additional),
@@ -93,6 +99,10 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
         # the first line waits 12 ticks before its W gesture and at least 90
         # ticks after starting it; the second retains legacy 1/60 ticks.
         raw = edit_dialogue_animation_phases(raw, lines[0], 12, 90)
+        for face in ("N", "E", "S", "W"):
+            raw = set_costume_animation(raw, "WitnessCostume", "closing_line", 36,
+                                        face, "SpeakMagenta", False)
+        raw = edit_dialogue_ending_animation(raw, lines[0], "closing_line", 45)
     elif line_sequences:
         lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
                       if label.startswith("SpeakerWitness"))

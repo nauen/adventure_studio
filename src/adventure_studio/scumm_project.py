@@ -169,6 +169,8 @@ class DialogueAnimationCue:
     reset_to_stand: bool = False
     start_delay_ticks: int = 1
     minimum_animation_ticks: int = 60
+    ending_animation: str | None = None
+    ending_animation_ticks: int = 0
 
 
 @dataclass(frozen=True)
@@ -344,7 +346,10 @@ def document_dict(document: GameDocument) -> dict:
                                          **({"start_delay_ticks": cue.start_delay_ticks}
                                             if cue.start_delay_ticks != 1 else {}),
                                          **({"minimum_animation_ticks": cue.minimum_animation_ticks}
-                                            if cue.minimum_animation_ticks != 60 else {})}
+                                            if cue.minimum_animation_ticks != 60 else {}),
+                                         **({"ending_animation": cue.ending_animation,
+                                             "ending_animation_ticks": cue.ending_animation_ticks}
+                                            if cue.ending_animation is not None else {})}
                                         for cue in document.dialogue_animation_cues]}
            if document.dialogue_animation_cues else {}),
         "rooms": [{
@@ -584,6 +589,11 @@ def _validate_document(document: GameDocument) -> None:
                 or type(cue.start_delay_ticks) is not int or cue.start_delay_ticks < 0
                 or type(cue.minimum_animation_ticks) is not int
                 or cue.minimum_animation_ticks < 0
+                or (cue.ending_animation is not None and
+                    (not isinstance(cue.ending_animation, str) or not cue.ending_animation))
+                or type(cue.ending_animation_ticks) is not int
+                or ((cue.ending_animation is None and cue.ending_animation_ticks != 0)
+                    or (cue.ending_animation is not None and cue.ending_animation_ticks <= 0))
                 or cue.line_id in seen_animations):
             raise ValueError("Invalid or duplicate dialogue animation cue")
         seen_animations.add(cue.line_id)
@@ -597,6 +607,12 @@ def _validate_document(document: GameDocument) -> None:
         if (animation is None or animation.index is None or animation.index < 24
                 or direction not in {item.direction for item in animation.directions}):
             raise ValueError(f"Dialogue animation requires an indexed COST direction: {cue.line_id}")
+        if cue.ending_animation is not None:
+            ending = next((item for item in costumes_by_name[actor.costume].animations
+                           if item.name == cue.ending_animation), None)
+            if (ending is None or ending.index is None or ending.index < 24
+                    or direction not in {item.direction for item in ending.directions}):
+                raise ValueError(f"Dialogue ending requires an indexed COST direction: {cue.line_id}")
         if cue.reset_to_stand:
             costume_animations = costumes_by_name[actor.costume].animations
             stand = next((item for item in costume_animations
@@ -1221,7 +1237,8 @@ def parse_document(source: str) -> GameDocument:
     animation_cues = []
     for raw_cue in raw_animations:
         item = _only(raw_cue, {"line_id", "source_text", "animation", "reset_to_stand",
-                               "start_delay_ticks", "minimum_animation_ticks"},
+                               "start_delay_ticks", "minimum_animation_ticks",
+                               "ending_animation", "ending_animation_ticks"},
                      {"line_id", "source_text", "animation"})
         animation_cues.append(DialogueAnimationCue(**item))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),

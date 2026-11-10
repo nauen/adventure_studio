@@ -4,6 +4,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Neues Produktpaket (2026-11-10, Implementierung; CI offen):**
+Eine einzelne NPC-Dialogzeile kann jetzt nach `waitForMessage()` eine
+**eigene optionale Abschlussgeste** aus einer vorhandenen indizierten
+Costume-Animation der Sprecherfigur abspielen. Ihre positive Mindestdauer
+ist in nativen Skript-Ticks definiert; danach erfolgt die bisherige
+optionale Rückkehr zur Standpose. Ohne Abschlussgeste bleiben Skript und
+alte JSON-Projekte unverändert. Andere Zeilen, Richtungskanäle und
+Sprechphasen werden nicht verändert. Modell-/Source-/Roundtrip-Test und
+der native Magenta-Abschlussframe zwischen West- und Ost-Sprechfolgen
+sind für die neue Abnahme vorgesehen. **330 lokale Tests grün; CI offen.**
+Kein wortgenauer Lippensync. **Nächstes Paket:** Eine direkt im Dialog-
+Editor anlegbare eigene Abschluss-PNG-Folge pro Zeile und Blickrichtung,
+ohne zuerst manuell eine Costume-Animation erstellen zu müssen.
+
 **Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Der Autor kann für **jede NPC-Dialogzeile** die zwei nativen Sprechphasen
 einstellen: den Vorlauf bis zum Start ihrer COST-Sprechgeste und ihre
