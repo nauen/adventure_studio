@@ -113,6 +113,9 @@ def main() -> None:
             assert dialogue_speaking_frame_selection(data, first[1])[1] == "Speak"
             assert dialogue_speaking_frame_selection(data, second[1])[1] == "Speak"
 
+            # A Gradio File changes to a preview after loading. Authors
+            # clear the selected file before choosing a replacement.
+            page.locator('#native-project-file button[aria-label="Clear"]').click()
             page.locator("#native-project-file input[type=file]").set_input_files(
                 str(saved))
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
