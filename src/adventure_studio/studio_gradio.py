@@ -43,6 +43,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_speaking_timeline_preview,
                                dialogue_animation_phase_selection,
                                edit_dialogue_animation_phases, edit_dialogue_animation)
+from .studio_sequences import (dialogue_ending_animation_selection,
+                               edit_dialogue_ending_animation)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -799,6 +801,19 @@ def make_app():
                     native_dialogue_phase_save = gr.Button(
                         "Sprechphasen dieser Zeile speichern",
                         elem_id="native-dialogue-phase-save")
+            with gr.Accordion("Optionale Abschlussgeste dieser Dialogzeile", open=True):
+                gr.Markdown("Nach dem tatsächlichen Ende des Dialogtexts (`waitForMessage`) kann eine **vorhandene indizierte Costume-Animation** der Sprecherfigur starten. Sie läuft für die gewählten nativen Skript-Ticks; anschließend folgt die Standpose, falls aktiviert. Ohne Abschlussgeste bleibt das bisherige Verhalten erhalten. Erstelle eine eigene Animation bei Bedarf im Costume-Editor.")
+                with gr.Row():
+                    native_dialogue_ending_animation = gr.Dropdown(
+                        label="Costume-Abschlussanimation", elem_id="native-dialogue-ending-animation")
+                    native_dialogue_ending_ticks = gr.Number(
+                        label="Abschlussgeste zeigen (native Ticks)", value=12, precision=0,
+                        elem_id="native-dialogue-ending-ticks")
+                with gr.Row():
+                    native_dialogue_ending_save = gr.Button(
+                        "Abschlussgeste dieser Zeile speichern", elem_id="native-dialogue-ending-save")
+                    native_dialogue_ending_remove = gr.Button(
+                        "Abschlussgeste entfernen", elem_id="native-dialogue-ending-remove")
             with gr.Row():
                 native_dialogue_animation_save = gr.Button("Sprechanimation zuweisen")
                 native_dialogue_animation_remove = gr.Button("Sprechanimation entfernen")
@@ -1336,6 +1351,23 @@ def make_app():
             lambda *args: native_edit(edit_dialogue_animation_phases, *args),
             [native_state, native_dialogue_animation_line,
              native_dialogue_phase_start, native_dialogue_phase_minimum],
+            [native_state, *native_outputs, native_report])
+        def dialogue_ending_view(raw, line):
+            options, selected, ticks = dialogue_ending_animation_selection(raw, line)
+            return gr.update(choices=options, value=selected), ticks
+
+        for source in (native_state, native_dialogue_animation_line):
+            source.change(dialogue_ending_view,
+                          [native_state, native_dialogue_animation_line],
+                          [native_dialogue_ending_animation, native_dialogue_ending_ticks])
+        native_dialogue_ending_save.click(
+            lambda *args: native_edit(edit_dialogue_ending_animation, *args),
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_ending_animation, native_dialogue_ending_ticks],
+            [native_state, *native_outputs, native_report])
+        native_dialogue_ending_remove.click(
+            lambda raw, line: native_edit(edit_dialogue_ending_animation, raw, line, None, 0),
+            [native_state, native_dialogue_animation_line],
             [native_state, *native_outputs, native_report])
         native_dialogue_animation_save.click(
             lambda *args: native_edit(edit_dialogue_animation, *args),

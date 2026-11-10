@@ -136,6 +136,37 @@ def dialogue_animation_phase_selection(raw: str, line_id: str | None) -> tuple[i
             if cue is not None else (1, 60))
 
 
+def dialogue_ending_animation_selection(raw: str, line_id: str | None):
+    """Costume animations available as the selected line's native ending cue."""
+    if not raw:
+        return (), None, 12
+    options, _selected, _reset = dialogue_animation_choices(raw, line_id)
+    cue = next((item for item in parse_document(raw).dialogue_animation_cues
+                if item.line_id == line_id), None)
+    return (options, cue.ending_animation if cue else None,
+            cue.ending_animation_ticks if cue and cue.ending_animation else 12)
+
+
+def edit_dialogue_ending_animation(raw: str, line_id: str,
+                                   animation: str | None, ticks: int | float) -> str:
+    """Author an optional ending gesture after native waitForMessage."""
+    document = parse_document(raw)
+    cue = next((item for item in document.dialogue_animation_cues
+                if item.line_id == line_id), None)
+    if cue is None:
+        raise ValueError("Bitte zuerst eine Sprechanimation für diese Dialogzeile zuweisen")
+    if animation is None:
+        updated = replace(cue, ending_animation=None, ending_animation_ticks=0)
+    else:
+        if (type(ticks) not in (int, float) or int(ticks) != ticks or ticks <= 0):
+            raise ValueError("Die Abschlussgeste benötigt mindestens einen ganzen nativen Tick")
+        updated = replace(cue, ending_animation=animation,
+                          ending_animation_ticks=int(ticks))
+    return _checked(replace(document, dialogue_animation_cues=tuple(
+        updated if item.line_id == line_id else item
+        for item in document.dialogue_animation_cues)))
+
+
 def edit_dialogue_animation_phases(raw: str, line_id: str,
                                   start_delay_ticks: int | float,
                                   minimum_animation_ticks: int | float) -> str:

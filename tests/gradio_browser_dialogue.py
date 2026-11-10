@@ -297,6 +297,15 @@ def main() -> None:
             select_option(page, "native-dialogue-line", first[0])
             expect(phase_start).to_have_value("12", timeout=20000)
             expect(phase_minimum).to_have_value("90", timeout=20000)
+            select_option(page, "native-dialogue-ending-animation", "gesture")
+            ending_ticks = page.locator("#native-dialogue-ending-ticks input")
+            ending_ticks.fill("18")
+            page.locator("#native-dialogue-ending-save").click()
+            select_option(page, "native-dialogue-line", second[0])
+            expect(ending_ticks).to_have_value("12", timeout=20000)
+            select_option(page, "native-dialogue-line", first[0])
+            expect(ending_ticks).to_have_value("18", timeout=20000)
+            await_selection(page, "native-dialogue-ending-animation", "gesture")
             page.screenshot(path=str(evidence / "line-direction-sequence.png"), full_page=True)
             page.locator("#native-project-export-button").click()
             expect(sequence_link.first).to_be_visible(timeout=20000)
@@ -311,12 +320,15 @@ def main() -> None:
             phases = {cue.line_id: cue for cue in parse_document(directional_data).dialogue_animation_cues}
             assert (phases[first[1]].start_delay_ticks, phases[first[1]].minimum_animation_ticks) == (12, 90)
             assert (phases[second[1]].start_delay_ticks, phases[second[1]].minimum_animation_ticks) == (1, 60)
+            assert (phases[first[1]].ending_animation, phases[first[1]].ending_animation_ticks) == ("gesture", 18)
+            assert phases[second[1]].ending_animation is None
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
                 "independent_direction_sequences": True,
                 "graphical_line_timeline": True,
                 "native_dialogue_phases": True,
+                "native_ending_gesture": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

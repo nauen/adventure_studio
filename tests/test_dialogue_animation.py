@@ -11,7 +11,8 @@ from adventure_studio.scumm_assets import scummc_room_source
 from adventure_studio.scumm_costume import CostumeAnimation, CostumeDirection
 from adventure_studio.scumm_project import canonical_json, export_document, parse_document
 from adventure_studio.scumm_toolchain import dialogue_animation_bindings
-from adventure_studio.studio_actors import add_costume_frame, set_costume_speaking_pose
+from adventure_studio.studio_actors import (add_costume_frame, set_costume_speaking_pose,
+                                           set_costume_animation)
 from adventure_studio.studio_project import canonical_studio_project, parse_studio_project
 from adventure_studio.studio_sequences import (compose_story_project, dialogue_animation_lines,
                                                 dialogue_animation_choices, edit_dialogue_animation,
@@ -27,13 +28,55 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 edit_dialogue_speaking_timeline,
                                                 dialogue_speaking_timeline_preview)
 from adventure_studio.studio_sequences import (
-    dialogue_animation_phase_selection, edit_dialogue_animation_phases)
+    dialogue_animation_phase_selection, edit_dialogue_animation_phases,
+    dialogue_ending_animation_selection, edit_dialogue_ending_animation)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    def test_optional_native_ending_animation_is_per_line_after_message(self):
+        _story, raw = self.fixture()
+        first, second = (key for _label, key in dialogue_animation_lines(raw))
+        raw = edit_dialogue_animation(raw, first, "gesture", True)
+        raw = edit_dialogue_animation(raw, second, "gesture", True)
+        for face in ("N", "E", "S", "W"):
+            raw = set_costume_animation(raw, "DialogueFigure", "ending_pose", 28,
+                                        face, "Pose", False)
+        choices, selected, ticks = dialogue_ending_animation_selection(raw, first)
+        self.assertIn("ending_pose", choices)
+        self.assertIsNone(selected)
+        self.assertEqual(ticks, 12)
+        updated = edit_dialogue_ending_animation(raw, first, "ending_pose", 18)
+        self.assertEqual(dialogue_ending_animation_selection(updated, first)[1:],
+                         ("ending_pose", 18))
+        self.assertEqual(dialogue_ending_animation_selection(updated, second)[1:], (None, 12))
+        self.assertIn('"ending_animation":"ending_pose"', updated)
+        self.assertIn('"ending_animation_ticks":18', updated)
+        self.assertEqual(canonical_json(parse_document(updated)), updated)
+        document = parse_document(updated)
+        room = document.rooms[0]
+        script = scummc_room_source(room, dialogue_animation_cues=dialogue_animation_bindings(
+            document, room))
+        self.assertIn("waitForMessage();\n            animateActor(", script)
+        self.assertIn("animateActor(SpeakerHarborKeeper,28);\n            delay(18);", script)
+        self.assertLess(script.index("animateActor(SpeakerHarborKeeper,28);"),
+                        script.index("setActorStanding();", script.index("animateActor(SpeakerHarborKeeper,28);")))
+        again = edit_dialogue_animation(updated, first, "gesture", False)
+        self.assertEqual(dialogue_ending_animation_selection(again, first)[1:],
+                         ("ending_pose", 18))
+        removed = edit_dialogue_ending_animation(updated, first, None, 0)
+        self.assertNotIn('"ending_animation"', removed)
+        self.assertEqual(dialogue_ending_animation_selection(removed, first)[1:], (None, 12))
+        for duration in (0, -1, 2.5, True):
+            with self.subTest(duration=duration), self.assertRaises(ValueError):
+                edit_dialogue_ending_animation(raw, first, "ending_pose", duration)
+        with self.assertRaisesRegex(ValueError, "indexed COST"):
+            edit_dialogue_ending_animation(raw, first, "missing", 12)
+        with self.assertRaisesRegex(ValueError, "zuerst"):
+            edit_dialogue_ending_animation(raw, "missing", "ending_pose", 12)
+
     def test_native_speaking_phase_ticks_are_per_line_and_backwards_compatible(self):
         _story, raw = self.fixture()
         first, second = (key for _label, key in dialogue_animation_lines(raw))
