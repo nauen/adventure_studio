@@ -9,12 +9,22 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Einzelbild-Navigation in der noch nicht importierten PNG-Folge (in Prüfung):**
+Autorinnen und Autoren können jedes gewählte Frame mit Dateipixeln,
+Position und nativer Frame-ID ansehen und schrittweise vor/zurück wechseln.
+Die Auswahl bleibt dieselbe wie für den atomaren Import; bei leerer
+Auswahl erscheint kein Bild. 334 lokale Tests grün; Browser-/CI-Gates
+noch ausstehend. Danach: Klick auf eine Miniatur als direkte Navigation.
+
 **Abspielbare Vorabvorschau für PNG-Stapelimport (in Prüfung):**
 Die sichtbare, noch ungespeicherte Auswahl wird als Editor-GIF mit
 einstellbarer Bilddauer abgespielt. Die Reihenfolge stammt aus derselben
 validierten Auswahl wie der atomare native Import. Ändert sich die Auswahl,
-verschwindet die bisherige Animation. Gezielter lokaler Test grün;
-Browser-/CI-Abnahme noch offen. Die GIF-Zeit ist keine native COST-Zeit.
+verschwindet die bisherige Animation. 334 lokale Tests und drei
+CI-Workflows bestanden: Chromium-Bedienpfad sowie bestehende native
+ScummVM-Dialogregression (PR #117, Merge `630a28d`, Runs
+`42925614655` / `42925614671` / `42925614660`). Menschliche UI-Abnahme
+offen. Die GIF-Zeit ist keine native COST-Zeit.
 Danach: Frame-Navigation in der vorbereiteten Vorschau.
 
 **PNG-Miniaturvorschau der vorbereiteten nativen Dialog-Importfolge (2026-11-11, native Abnahme bestanden):**
