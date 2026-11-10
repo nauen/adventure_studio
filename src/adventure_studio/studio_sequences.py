@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import replace
 from hashlib import sha1
 from pathlib import Path
+import re
+import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, GameDocument,
@@ -368,6 +370,62 @@ def import_dialogue_png_frame(raw: str, line_id: str, direction: str,
             imported, line_id, direction, None, "Anhängen", frame_id, reset_to_stand)
     return edit_dialogue_ending_timeline(
         imported, line_id, direction, None, "Anhängen", frame_id, ending_ticks)
+
+
+def _dialogue_png_batch_entries(paths: list[str] | tuple[str, ...] | None
+                                ) -> tuple[tuple[str, str], ...]:
+    if not isinstance(paths, (list, tuple)) or not paths:
+        raise ValueError("Bitte mindestens eine PNG-Datei auswählen")
+    entries = []
+    for path in paths:
+        if not isinstance(path, str) or not path or Path(path).suffix.lower() != ".png":
+            raise ValueError("Die Folge darf nur PNG-Dateien enthalten")
+        stem = unicodedata.normalize("NFKD", Path(path).stem).encode("ascii", "ignore").decode("ascii")
+        frame_id = re.sub(r"[^A-Za-z0-9_]", "_", stem).strip("_")
+        if not frame_id or not frame_id[0].isalpha():
+            frame_id = "Frame_" + (frame_id or "PNG")
+        entries.append((path, frame_id))
+    names = [frame_id for _path, frame_id in entries]
+    if len(set(names)) != len(names):
+        raise ValueError("Mehrere PNG-Dateinamen ergeben dieselbe Frame-ID; bitte Dateien umbenennen")
+    return tuple(entries)
+
+
+def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
+                               paths: list[str] | tuple[str, ...] | None) -> str:
+    """Show the exact ordered native frame IDs before one batch import click."""
+    if not paths:
+        return "Noch keine PNG-Dateien ausgewählt"
+    try:
+        entries = _dialogue_png_batch_entries(paths)
+    except ValueError as error:
+        return str(error)
+    existing = set(dialogue_speaking_frames(raw, line_id)) if raw and line_id else set()
+    return "\n".join(f"{i}. {Path(path).name} → {frame_id}"
+                     + (" (existiert bereits!)" if frame_id in existing else "")
+                     for i, (path, frame_id) in enumerate(entries, 1))
+
+
+def import_dialogue_png_batch(raw: str, line_id: str, direction: str,
+                              paths: list[str] | tuple[str, ...] | None, target: str,
+                              ending_ticks: int | float = 12,
+                              reset_to_stand: bool = True) -> str:
+    """Import all PNGs in selection order, committing only the final valid JSON."""
+    entries = _dialogue_png_batch_entries(paths)
+    document = parse_document(raw)
+    selected = _dialogue_animation_targets(document).get(line_id)
+    if selected is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == selected[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    known = {frame.id for frame in costume.frames}
+    if any(frame_id in known for _path, frame_id in entries):
+        raise ValueError("Mindestens eine PNG-Frame-ID existiert bereits in dieser Costume")
+    updated = raw
+    for path, frame_id in entries:
+        updated = import_dialogue_png_frame(updated, line_id, direction, path,
+                                            frame_id, target, ending_ticks, reset_to_stand)
+    return updated
 
 
 def dialogue_ending_timeline_preview(raw: str, line_id: str, direction: str,

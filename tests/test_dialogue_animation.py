@@ -33,13 +33,65 @@ from adventure_studio.studio_sequences import (
     dialogue_ending_timeline, assign_dialogue_ending_sequence,
     edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
     import_dialogue_png_frame, dialogue_costume_isolation_preview,
-    isolate_dialogue_speaker_costume)
+    isolate_dialogue_speaker_costume, dialogue_png_batch_preview,
+    import_dialogue_png_batch)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Import benötigt Pillow")
+    def test_ordered_png_batch_import_is_atomic_and_native(self):
+        from PIL import Image
+
+        _story, raw = self.fixture()
+        first, second = (key for _label, key in dialogue_animation_lines(raw))
+        raw = isolate_dialogue_speaker_costume(raw, first)
+        raw = edit_dialogue_animation(raw, first, "gesture")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            files = [root / "01-red.png", root / "02-green.png", root / "03-magenta.png"]
+            for path, color in zip(files, ((220, 80, 80), (35, 225, 35), (200, 45, 205))):
+                Image.new("RGBA", (8, 8), (*color, 255)).save(path)
+            paths = [str(path) for path in files]
+            plan = dialogue_png_batch_preview(raw, first, paths)
+            self.assertIn("1. 01-red.png → Frame_01_red", plan)
+            self.assertIn("3. 03-magenta.png → Frame_03_magenta", plan)
+            with self.assertRaisesRegex(ValueError, "mindestens eine"):
+                import_dialogue_png_batch(raw, first, "W", [], "Sprechfolge")
+            first_import = import_dialogue_png_batch(
+                raw, first, "W", paths[:2], "Sprechfolge")
+            self.assertEqual(dialogue_speaking_sequence_selection(first_import, first, "W"),
+                             "Pose, Frame_01_red, Frame_02_green")
+            ending = import_dialogue_png_batch(
+                first_import, first, "W", paths[2:], "Abschlussfolge", 24)
+            self.assertEqual(dialogue_ending_timeline(ending, first, "W")[1][-1][0],
+                             "1. Frame_03_magenta")
+            self.assertEqual(dialogue_speaking_sequence_selection(ending, second, "W"), "")
+            self.assertEqual(canonical_json(parse_document(ending)), ending)
+            export_document(parse_document(ending), root / "native")
+            costume_name = next(actor.costume for actor in parse_document(ending).actors
+                                if actor.id == "SpeakerHarborKeeper")
+            scost = (root / "native" / f"{costume_name}.scost").read_text()
+            self.assertIn("body(Pose, Frame_01_red, Frame_02_green)", scost)
+            self.assertIn("body(Frame_03_magenta)", scost)
+
+            # A late invalid source must never leave the earlier PNG committed.
+            bad = root / "04-bad.png"
+            bad.write_bytes(b"not a PNG")
+            with self.assertRaises((ValueError, OSError)):
+                import_dialogue_png_batch(raw, first, "W", [*paths[:2], str(bad)],
+                                          "Sprechfolge")
+            self.assertNotIn("Frame_01_red", raw)
+            duplicate = root / "01_red.png"
+            Image.new("RGBA", (8, 8), (5, 10, 15, 255)).save(duplicate)
+            with self.assertRaisesRegex(ValueError, "dieselbe Frame-ID"):
+                import_dialogue_png_batch(raw, first, "W", [paths[0], str(duplicate)],
+                                          "Sprechfolge")
+            with self.assertRaisesRegex(ValueError, "existiert bereits"):
+                import_dialogue_png_batch(ending, first, "W", paths[:2], "Sprechfolge")
+
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Import benötigt Pillow")
     def test_isolate_shared_speaker_costume_before_dialogue_png_import(self):
         from PIL import Image

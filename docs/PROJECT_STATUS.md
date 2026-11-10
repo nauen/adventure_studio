@@ -4,6 +4,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Neues Produktpaket (2026-11-10, Implementierung; CI-Abnahme offen):**
+Der NPC-Dialogeditor importiert jetzt **mehrere PNG-Dateien auf einmal**
+als geordnete native Sprech- oder Abschlussfolge für die ausgewählte
+Dialogzeile und Blickrichtung. Vor dem Klick werden die Reihenfolge und
+die aus Dateinamen erzeugten Frame-IDs angezeigt. Doppelte IDs,
+ungültige PNG-Dateien und native Palettenfehler verhindern den gesamten
+Import ohne Teiländerungen. Bestehende Actor-/Costume-Zuweisungen und
+andere Richtungen bleiben erhalten. **334 lokale Tests grün**; echter
+Chromium-Multiupload/Export und die stock-ScummVM-Abnahme einer
+zweiframigen per Stapel importierten Abschlussgeste im CI-Gate offen.
+Menschliche Bedienabnahme offen. **Nächstes Paket:** PNG-Reihenfolge
+bereits ausgewählter Dateien vor dem Stapelimport grafisch umsortieren.
+
 **Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Eine gemeinsam genutzte native Figuren-Costume lässt sich jetzt direkt
 im NPC-Dialogeditor **für die gewählte Sprecherfigur vereinzeln**. Der

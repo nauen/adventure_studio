@@ -48,6 +48,7 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                dialogue_ending_timeline,
                                edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
                                import_dialogue_png_frame,
+                               dialogue_png_batch_preview, import_dialogue_png_batch,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -778,6 +779,16 @@ def make_app():
                         elem_id="native-dialogue-png-target")
                 native_dialogue_png_import = gr.Button(
                     "PNG importieren und Frame anhängen", elem_id="native-dialogue-png-import")
+                gr.Markdown("**Mehrere PNGs in einem Schritt:** Dateien in der gewünschten Frame-Reihenfolge auswählen. Der Import übernimmt ihre Reihenfolge und erzeugt native Frame-IDs aus den Dateinamen. Die folgende Vorschau zeigt jede ID vor dem Speichern. Eine ungültige Datei, doppelte ID oder volle Palette bricht die **gesamte** Folge ohne Teiländerungen ab. Ziel ist die oben gewählte Sprech- oder Abschlussfolge.")
+                native_dialogue_png_batch_files = gr.File(
+                    label="Mehrere PNG-Dateien in Abspielreihenfolge", file_types=[".png"],
+                    file_count="multiple", type="filepath", elem_id="native-dialogue-png-batch-files")
+                native_dialogue_png_batch_plan = gr.Textbox(
+                    label="Reihenfolge und neue native Frame-IDs", interactive=False,
+                    lines=4, elem_id="native-dialogue-png-batch-plan")
+                native_dialogue_png_batch_import = gr.Button(
+                    "Alle PNGs als geordnete Folge importieren",
+                    elem_id="native-dialogue-png-batch-import")
             native_dialogue_direction_sequence_apply = gr.Button(
                 "Nur Sprechfolge dieser Blickrichtung speichern",
                 elem_id="native-dialogue-direction-sequence-apply")
@@ -1424,6 +1435,18 @@ def make_app():
             lambda *args: native_edit(import_dialogue_png_frame, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_direction,
              native_dialogue_png_file, native_dialogue_png_id, native_dialogue_png_target,
+             native_dialogue_ending_ticks, native_dialogue_reset],
+            [native_state, *native_outputs, native_report])
+        for source in (native_dialogue_png_batch_files, native_state,
+                       native_dialogue_animation_line):
+            source.change(dialogue_png_batch_preview,
+                          [native_state, native_dialogue_animation_line,
+                           native_dialogue_png_batch_files],
+                          [native_dialogue_png_batch_plan])
+        native_dialogue_png_batch_import.click(
+            lambda *args: native_edit(import_dialogue_png_batch, *args),
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_png_batch_files, native_dialogue_png_target,
              native_dialogue_ending_ticks, native_dialogue_reset],
             [native_state, *native_outputs, native_report])
         for source in (native_state, native_dialogue_animation_line):

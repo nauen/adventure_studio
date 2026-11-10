@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Mehrere PNG-Dateien als eine native Dialogfolge importieren (2026-11-10, CI offen):**
+Der Dialogeditor nimmt 1..N neue PNG-Dateien in Auswahlreihenfolge an,
+zeigt die native Frame-ID je Datei vor dem Speichern und importiert sie
+in einer einzigen validierten Modelloperation an eine Sprech- oder
+Abschlussfolge derselben Zeile/Richtung. Ungültiger Dateityp, doppelte
+oder bereits belegte ID, Palette und Native-Exporter-Grenzen führen
+zu einem vollständigen Abbruch ohne neue gespeicherte Frames. 334
+lokale Tests grün. Chromium-Mehrfachupload samt Export/Reimport und
+stock-ScummVM-Nachweis einer importierten zweiframigen Abschlussfolge
+im CI-Gate offen. Danach: grafisches Umordnen der Upload-Auswahl.
+
 **Geteilte Sprecher-Costume im NPC-Dialogeditor vereinzeln (2026-11-10, native Abnahme bestanden):**
 Ist eine Costume an mehrere Actors gebunden, legt der Autor im
 Dialogeditor eine private vollständige Kopie für die gewählte

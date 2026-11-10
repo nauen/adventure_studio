@@ -11,7 +11,7 @@ from .studio_sequences import (dialogue_animation_lines, edit_dialogue_animation
                                assign_dialogue_speaking_sequence,
                                assign_dialogue_direction_speaking_sequence,
                                edit_dialogue_animation_phases,
-                               import_dialogue_png_frame,
+                               import_dialogue_png_batch,
                                isolate_dialogue_speaker_costume)
 from .studio_actors import (set_costume_direction_speaking_pose,
                             set_costume_direction_speaking_sequence)
@@ -107,10 +107,13 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
             for actor in shared.actors)))
         raw = isolate_dialogue_speaker_costume(raw, lines[0])
         from PIL import Image
-        png = directory / "ending-import.png"
-        Image.new("RGBA", (8, 8), (200, 45, 205, 255)).save(png)
-        raw = import_dialogue_png_frame(
-            raw, lines[0], "W", str(png), "SpeakMagenta", "Abschlussfolge", 45)
+        prelude_png = directory / "ClosingPrelude.png"
+        magenta_png = directory / "SpeakMagenta.png"
+        Image.new("RGBA", (8, 8), (135, 55, 125, 255)).save(prelude_png)
+        Image.new("RGBA", (8, 8), (200, 45, 205, 255)).save(magenta_png)
+        raw = import_dialogue_png_batch(
+            raw, lines[0], "W", [str(prelude_png), str(magenta_png)],
+            "Abschlussfolge", 45)
     elif line_sequences:
         lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
                       if label.startswith("SpeakerWitness"))
