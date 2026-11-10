@@ -4,7 +4,7 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Neues Produktpaket (2026-11-10, Implementierung; CI-Abnahme offen):**
+**Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Für eine einzelne native NPC-Dialogzeile kann der Autor nun eine eigene
 Mehrframe-Sprechfolge **nur für Nord, Ost, Süd oder West** speichern.
 Erneutes Auswählen der Richtung zeigt deren tatsächliche Framefolge;
@@ -13,9 +13,11 @@ globalen `gesture`-/`talk_start`-Frames bleiben unverändert. Wird die
 Zeile erstmals richtungsbezogen bearbeitet, werden ihre bisherigen
 Richtungskanäle übernommen, nicht durch einen Default ersetzt.
 Der vorhandene zeilenspezifische native Animationsslot wird wiederverwendet;
-keine JSON-Schemamigration. Lokal: Modell-/Roundtrip-/COST-Prüfung grün.
-Ein realer Gradio-Chromium-Pfad und der neue ScummVM-W/E-Sprechfolgen-
-Test mit rot/grün und blau/gelb sind im CI vorgesehen und noch offen.
+keine JSON-Schemamigration. **327 lokale Tests und alle vier CI-Checks grün.**
+Der reale Gradio-Chromium-Pfad inklusive Export/Reimport und der
+Stock-ScummVM-W/E-Sprechfolgen-Test mit rot/grün und blau/gelb sind
+bestanden (Run `42895287701`, Job `130106686621`, PR #93,
+Merge `270be816`). Menschliche Bedienabnahme bleibt offen.
 **Nächstes Paket:** Autorentaugliche grafische Mehrframe-Timeline und
 Abspielvorschau direkt je NPC-Zeile und Blickrichtung, ohne native
 Abspielgeschwindigkeit vorzutäuschen.
