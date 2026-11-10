@@ -17,6 +17,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 dialogue_animation_choices, edit_dialogue_animation,
                                                 dialogue_speaking_frames,
                                                 dialogue_speaking_frame_selection,
+                                                dialogue_speaking_frame_preview,
                                                 assign_dialogue_speaking_frame)
 
 
@@ -309,6 +310,28 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual(by_name["gesture"].directions[0].commands, ("SpeakA",))
             self.assertEqual(by_name["talk_start"].directions[0].commands, ("SpeakA",))
             self.assertEqual(by_name["pose_SpeakB"].directions[0].commands, ("SpeakB",))
+            # Render native indexed COST pixels, not source PNG color guesses.
+            first_preview = dialogue_speaking_frame_preview(raw, lines[0], "SpeakA")
+            second_preview = dialogue_speaking_frame_preview(raw, lines[1], "SpeakB")
+            self.assertEqual(first_preview.size, (256, 256))
+            self.assertEqual(second_preview.size, (256, 256))
+            native_frames = {frame.id: frame for frame in native.frames}
+            def native_color(frame_id):
+                frame = native_frames[frame_id]
+                value = next(value for value in frame.pixels if value != 0)
+                return native.palette[native.palette_first + value]
+            self.assertEqual(first_preview.getpixel((128, 128)), native_color("SpeakA"))
+            self.assertEqual(second_preview.getpixel((128, 128)), native_color("SpeakB"))
+            self.assertNotEqual(first_preview.getpixel((128, 128)),
+                                second_preview.getpixel((128, 128)))
+            self.assertIsNone(dialogue_speaking_frame_preview(raw, None, "SpeakA"))
+            self.assertIsNone(dialogue_speaking_frame_preview(raw, lines[0], None))
+            with self.assertRaisesRegex(ValueError, "Sprecher-Costume"):
+                dialogue_speaking_frame_preview(raw, lines[0], "missing")
+            # Tentative frame changes display before a cue is saved.
+            tentative = dialogue_speaking_frame_preview(raw, lines[0], "SpeakB")
+            self.assertEqual(tentative.getpixel((128, 128)), native_color("SpeakB"))
+            self.assertEqual(dialogue_speaking_frame_selection(raw, lines[0])[1], "SpeakA")
             self.assertEqual(by_name["pose_SpeakB"].index, 28)
             self.assertEqual(len([a for a in native.animations
                                   if a.name == "pose_SpeakB"]), 1)
