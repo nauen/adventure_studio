@@ -34,6 +34,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_voice_lines, edit_dialogue_voice,
                                dialogue_animation_lines, dialogue_animation_choices,
                                dialogue_speaking_frame_selection, dialogue_speaking_frame_preview,
+                                dialogue_direction_animation_preview,
                                assign_dialogue_speaking_frame,
                                edit_dialogue_animation)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -722,6 +723,17 @@ def make_app():
                 label="PNG-Sprechpose · echte Costume-Pixel (Editor-Vorschau)",
                 interactive=False, type="pil", height=270,
                 elem_id="native-dialogue-pose-preview")
+            native_dialogue_direction = gr.Dropdown(
+                label="Blickrichtung der gespeicherten Sprechanimation",
+                choices=[("Nord", "N"), ("Ost", "E"), ("Süd", "S"), ("West", "W")],
+                value="S", elem_id="native-dialogue-direction")
+            native_dialogue_direction_preview = gr.Image(
+                label="Native Sprechanimation · gewählte Blickrichtung (Einzelbild-Vorschau)",
+                interactive=False, type="pil", height=270,
+                elem_id="native-dialogue-direction-preview")
+            native_dialogue_direction_status = gr.Textbox(
+                label="Richtungsvorschau-Status", interactive=False,
+                elem_id="native-dialogue-direction-status")
             native_dialogue_reset = gr.Checkbox(label="Nach der Sprechzeile zur Standpose zurückkehren",
                                                 value=True, elem_id="native-dialogue-reset")
             with gr.Row():
@@ -1114,34 +1126,48 @@ def make_app():
             lambda raw, line, language: native_edit(edit_dialogue_voice, raw, line, language, None, True),
             [native_state, native_dialogue_line, native_dialogue_language],
             [native_state, *native_outputs, native_report])
-        def dialogue_animation_update(raw, line):
+        def dialogue_animation_update(raw, line, direction):
             if not raw:
                 return (gr.update(choices=[], value=None), True,
-                        gr.update(choices=[], value=None), None)
+                        gr.update(choices=[], value=None), None, None,
+                        "Bitte zuerst eine Sprecher-Dialogzeile wählen")
             choices, selected, reset = dialogue_animation_choices(raw, line)
             frames, selected_frame = dialogue_speaking_frame_selection(raw, line)
+            direction_image, direction_status = dialogue_direction_animation_preview(
+                raw, line, selected, direction)
             return (gr.update(choices=choices, value=selected), reset,
                     gr.update(choices=frames, value=selected_frame),
-                    dialogue_speaking_frame_preview(raw, line, selected_frame))
+                    dialogue_speaking_frame_preview(raw, line, selected_frame),
+                    direction_image, direction_status)
 
-        def dialogue_animation_refresh(raw, line):
+        def dialogue_animation_refresh(raw, line, direction):
             lines = dialogue_animation_lines(raw) if raw else ()
             current = line if line in {identity for _label, identity in lines} else None
             return (gr.update(choices=lines, value=current),
-                    *dialogue_animation_update(raw, current))
+                    *dialogue_animation_update(raw, current, direction))
 
         # Retain the selected authored line across a save, and refresh both
         # its animation and PNG pose from the persisted project. Old/stale
         # lines are cleared instead of silently selecting another speaker.
         native_state.change(
-            dialogue_animation_refresh, [native_state, native_dialogue_animation_line],
+            dialogue_animation_refresh,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction],
             [native_dialogue_animation_line, native_dialogue_animation,
              native_dialogue_reset, native_dialogue_speaking_frame,
-             native_dialogue_speaking_preview])
+             native_dialogue_speaking_preview, native_dialogue_direction_preview,
+             native_dialogue_direction_status])
         native_dialogue_animation_line.change(
-            dialogue_animation_update, [native_state, native_dialogue_animation_line],
+            dialogue_animation_update,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction],
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
-             native_dialogue_speaking_preview])
+             native_dialogue_speaking_preview, native_dialogue_direction_preview,
+             native_dialogue_direction_status])
+        for direction_control in (native_dialogue_animation, native_dialogue_direction):
+            direction_control.change(
+                dialogue_direction_animation_preview,
+                [native_state, native_dialogue_animation_line,
+                 native_dialogue_animation, native_dialogue_direction],
+                [native_dialogue_direction_preview, native_dialogue_direction_status])
         native_dialogue_speaking_frame.change(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
