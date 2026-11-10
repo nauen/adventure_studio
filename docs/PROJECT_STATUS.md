@@ -4,17 +4,22 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Neues Produktpaket (2026-11-10, Implementierung; CI-Abnahme offen):**
+**Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Der NPC-Dialogeditor importiert jetzt **mehrere PNG-Dateien auf einmal**
 als geordnete native Sprech- oder Abschlussfolge für die ausgewählte
 Dialogzeile und Blickrichtung. Vor dem Klick werden die Reihenfolge und
 die aus Dateinamen erzeugten Frame-IDs angezeigt. Doppelte IDs,
 ungültige PNG-Dateien und native Palettenfehler verhindern den gesamten
 Import ohne Teiländerungen. Bestehende Actor-/Costume-Zuweisungen und
-andere Richtungen bleiben erhalten. **334 lokale Tests grün**; echter
-Chromium-Multiupload/Export und die stock-ScummVM-Abnahme einer
-zweiframigen per Stapel importierten Abschlussgeste im CI-Gate offen.
-Menschliche Bedienabnahme offen. **Nächstes Paket:** PNG-Reihenfolge
+andere Richtungen bleiben erhalten. **334 lokale Tests und alle fünf
+CI-Checks der aktuellen Commit-Spitze grün.** Chromium-Multiupload,
+Reihenfolge, Export/Reimport und stock-ScummVM-Abnahme einer zweiframigen
+per Stapel importierten Abschlussgeste zwischen West-/Ost-Sprechen
+mit Standrückkehr bestanden (PR #107, Merge `a685897`, native Job
+`130175052358`, Chromium Jobs `130175056189` / `130175014763`).
+Der erweiterte Importbereich ist für die stabile primäre Vorschau
+zunächst zugeklappt. Menschliche Bedienabnahme offen.
+**Nächstes Paket:** PNG-Reihenfolge
 bereits ausgewählter Dateien vor dem Stapelimport grafisch umsortieren.
 
 **Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
