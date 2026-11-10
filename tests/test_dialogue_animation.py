@@ -349,7 +349,7 @@ class DialogueAnimationTests(unittest.TestCase):
                 rendered, label = dialogue_direction_animation_preview(
                     varied_raw, lines[1], "pose_directions", direction)
                 self.assertEqual(rendered.size, (304, 320))
-                self.assertEqual(rendered.getpixel((128, 128)), native_color(frame))
+                self.assertEqual(rendered.getpixel((152, 168)), native_color(frame))
                 self.assertIn(frame, label)
                 self.assertIn("statische Editor-Vorschau", label)
             none, reason = dialogue_direction_animation_preview(
