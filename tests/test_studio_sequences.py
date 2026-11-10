@@ -27,12 +27,43 @@ from adventure_studio.studio_project import canonical_studio_project, parse_stud
 from adventure_studio.studio_actors import (add_actor, create_costume, move_actor,
                                            add_costume_frame, set_costume_animation,
                                            costume_frame_names, set_costume_speaking_pose,
+                                           set_costume_direction_speaking_pose,
+                                           costume_direction_speaking_frame,
                                            costume_timeline_images, edit_costume_timeline,
                                            render_costume_preview, set_actor_initial_animation)
 from test_scumm_toolchain import fake_upstream
 
 
 class NativeSequenceEditorTests(unittest.TestCase):
+    def test_directional_png_speaking_pose_preserves_other_directions_and_native_slots(self):
+        from PIL import Image
+        from adventure_studio.scumm_costume import costume_source
+        with tempfile.TemporaryDirectory() as directory:
+            first = Path(directory) / "stand.png"
+            second = Path(directory) / "north.png"
+            Image.new("RGBA", (8, 8), (20, 70, 160, 255)).save(first)
+            Image.new("RGBA", (8, 8), (220, 40, 30, 255)).save(second)
+            raw = canonical_json(GameDocument("Facing", (scrolling_fixture(), destination_fixture())))
+            raw = create_costume(raw, str(first), "Speaker")
+            raw = add_costume_frame(raw, "Speaker", str(second), "NorthPose")
+            raw = set_costume_speaking_pose(raw, "Speaker", "Pose0")
+            raw = set_costume_direction_speaking_pose(raw, "Speaker", "N", "NorthPose")
+            costume = parse_document(raw).costumes[0]
+            for name, index in (("stand", 12), ("talk_start", 16),
+                                ("talk_stop", 20), ("gesture", 24)):
+                animation = next(item for item in costume.animations if item.name == name)
+                self.assertEqual(animation.index, index)
+                frames = {item.direction: item.commands for item in animation.directions}
+                self.assertEqual(frames["N"], ("NorthPose",) if name in ("gesture", "talk_start")
+                                 else ("Pose0",))
+                self.assertEqual(frames["S"], ("Pose0",))
+            self.assertEqual(costume_direction_speaking_frame(raw, "Speaker", "N"), "NorthPose")
+            self.assertEqual(costume_direction_speaking_frame(raw, "Speaker", "E"), "Pose0")
+            self.assertIn("NorthPose", costume_source(costume))
+            self.assertEqual(parse_document(canonical_json(parse_document(raw))).costumes[0], costume)
+            with self.assertRaisesRegex(ValueError, "vorhandenes Costume-Frame"):
+                set_costume_direction_speaking_pose(raw, "Speaker", "W", "Missing")
+
     def test_spoken_line_language_variants_and_escape_stop_all_sounds(self):
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
         from adventure_studio.scumm_project import SoundAsset, VoiceVariant

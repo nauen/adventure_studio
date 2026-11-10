@@ -192,6 +192,47 @@ def set_costume_speaking_pose(raw: str, costume_name: str, frame_id: str) -> str
     return canonical_json(replace(document, costumes=costumes))
 
 
+def set_costume_direction_speaking_pose(raw: str, costume_name: str,
+                                        direction: str, frame_id: str) -> str:
+    """Replace one native speaking direction without changing the other three."""
+    document = parse_document(raw)
+    costume = next((item for item in document.costumes if item.name == costume_name), None)
+    if costume is None:
+        raise ValueError("Bitte eine vorhandene Costume auswählen")
+    if direction not in ("N", "E", "S", "W"):
+        raise ValueError("Bitte eine gültige Blickrichtung N/E/S/W auswählen")
+    if frame_id not in {frame.id for frame in costume.frames}:
+        raise ValueError("Bitte ein vorhandenes Costume-Frame als Sprechpose wählen")
+    by_name = {animation.name: animation for animation in costume.animations}
+    for name, index in (("stand", 12), ("talk_start", 16),
+                        ("talk_stop", 20), ("gesture", 24)):
+        animation = by_name.get(name)
+        if animation is None or animation.index != index:
+            raise ValueError(f"Die Sprechpose benötigt {name} mit nativem Index {index}")
+        if {item.direction for item in animation.directions} != {"N", "E", "S", "W"}:
+            raise ValueError(f"Die Animation {name} benötigt alle vier Blickrichtungen")
+    replacement = CostumeDirection(direction, (frame_id,), True)
+    animations = tuple(replace(animation, directions=tuple(
+        replacement if item.direction == direction else item
+        for item in animation.directions))
+        if animation.name in ("gesture", "talk_start") else animation
+        for animation in costume.animations)
+    costumes = tuple(replace(costume, animations=animations) if item.name == costume_name
+                     else item for item in document.costumes)
+    return canonical_json(replace(document, costumes=costumes))
+
+
+def costume_direction_speaking_frame(raw: str, costume_name: str | None,
+                                     direction: str) -> str | None:
+    costume = next((item for item in parse_document(raw).costumes
+                    if item.name == costume_name), None)
+    gesture = next((item for item in costume.animations if item.name == "gesture"), None) if costume else None
+    selected = next((item for item in gesture.directions if item.direction == direction), None) if gesture else None
+    if selected and len(selected.commands) == 1 and selected.commands[0] in {f.id for f in costume.frames}:
+        return selected.commands[0]
+    return None
+
+
 def costume_animation_names(raw: str, costume_name: str | None) -> tuple[str, ...]:
     costume = next((item for item in parse_document(raw).costumes if item.name == costume_name), None)
     return tuple(item.name for item in costume.animations) if costume else ()
