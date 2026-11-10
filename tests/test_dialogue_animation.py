@@ -185,16 +185,16 @@ class DialogueAnimationTests(unittest.TestCase):
         # to any single PNG frame and must not be displayed as one.
         native = parse_document(removed)
         figure = next(item for item in native.costumes if item.name == "WitnessCostume")
-        complex_gesture = next(item for item in figure.animations if item.name == "gesture")
-        complex_gesture = replace(complex_gesture, directions=tuple(
+        gesture = next(item for item in figure.animations if item.name == "gesture")
+        complex_animation = replace(gesture, name="pose_complex", index=32,
+                                    directions=tuple(
             replace(direction, commands=("Pose", "SecondPose"))
-            for direction in complex_gesture.directions))
-        revised = replace(figure, animations=tuple(
-            complex_gesture if anim.name == "gesture" else anim for anim in figure.animations))
+            for direction in gesture.directions))
+        revised = replace(figure, animations=(*figure.animations, complex_animation))
         document_with_timeline = replace(native, costumes=tuple(
             revised if item.name == figure.name else item for item in native.costumes))
         complex_raw = edit_dialogue_animation(canonical_json(document_with_timeline),
-                                              lines[1], "gesture", False)
+                                              lines[1], "pose_complex", True)
         self.assertEqual(dialogue_speaking_frame_selection(complex_raw, lines[1]),
                          (("Pose", "SecondPose"), None))
 
