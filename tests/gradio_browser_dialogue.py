@@ -218,9 +218,10 @@ def main() -> None:
             # Two different multi-frame animations through the real dialogue
             # editor, preserving the actor's shared Costume and old cues.
             sequence_input = page.locator("#native-dialogue-speaking-sequence textarea, #native-dialogue-speaking-sequence input")
-            select_option(page, "native-dialogue-line", second[0])
-            sequence_input.fill("pending line selection")
-            select_option(page, "native-dialogue-line", first[0])
+            # The first line is already selected and its animation refreshed
+            # above. Re-selecting it starts a redundant asynchronous Gradio
+            # callback that can race with the immediately following save.
+            await_selection(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
             sequence_input.fill("Speak, SpeakAlt")
             page.locator("#native-dialogue-sequence-apply").click()
