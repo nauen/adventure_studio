@@ -13,8 +13,11 @@
 Autorinnen und Autoren können jedes gewählte Frame mit Dateipixeln,
 Position und nativer Frame-ID ansehen und schrittweise vor/zurück wechseln.
 Die Auswahl bleibt dieselbe wie für den atomaren Import; bei leerer
-Auswahl erscheint kein Bild. 334 lokale Tests grün; Browser-/CI-Gates
-noch ausstehend. Danach: Klick auf eine Miniatur als direkte Navigation.
+Auswahl erscheint kein Bild. 334 lokale Tests und alle drei CI-Workflows
+grün; der Chromium-Test prüft echte Einzelbildpixel, die native
+ScummVM-Regression blieb grün (PR #118, Merge `cff209c`, Runs
+`42926566873` / `42926566651` / `42926566581`). Menschliche
+UI-Abnahme offen. Danach: Klick auf eine Miniatur als direkte Navigation.
 
 **Abspielbare Vorabvorschau für PNG-Stapelimport (in Prüfung):**
 Die sichtbare, noch ungespeicherte Auswahl wird als Editor-GIF mit

@@ -4,13 +4,16 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Folgepaket in Prüfung (2026-11-11):** Die vorbereitete PNG-Importfolge
+**Folgepaket (2026-11-11, CI-Abnahme bestanden):** Die vorbereitete PNG-Importfolge
 hat nun eine Einzelbildansicht mit Position, nativer Frame-ID und
 Vorheriges-/Nächstes-Bild-Navigation. Sie verwendet dieselbe ausgewählte
 Reihenfolge wie Galerie, GIF und Import. Die Auswahl bleibt editierbar,
 die Navigation ändert keine JSON-Daten und endet sichtbar am Rand statt
-unerwartet zum anderen Ende zu springen. 334 lokale Tests grün;
-Chromium-Abnahme und CI noch offen. **Nächstes Paket:** direkte
+unerwartet zum anderen Ende zu springen. 334 lokale Tests sowie alle
+drei CI-Workflows bestanden; Chromium-Navigation mit echter Pixelprobe
+und bestehende native ScummVM-Dialogregression grün (PR #118,
+Merge `cff209c`, Runs `42926566873` / `42926566651` / `42926566581`).
+Menschliche UI-Abnahme offen. **Nächstes Paket:** direkte
 Frame-Auswahl über die Miniaturgalerie zur Navigation vor dem Import.
 
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im NPC-Dialogeditor lässt sich
