@@ -50,6 +50,27 @@ neben dem Actor bzw. der jeweiligen Dialogzeile darstellen, mit
 gezielter Ausrichtung für unterschiedliche Blickrichtungen; weiterhin
 ohne vollständigen Lippensync zu behaupten.
 
+**Aktuelles Produktpaket (2026-11-10, PR in Prüfung):**
+Der NPC-Dialogeditor bietet eine zusätzliche Richtungsvorschau für die
+tatsächlich ausgewählte indizierte Costume-Sprechanimation mit den
+Richtungen **Nord, Ost, Süd, West**. Anders als die vereinfachte
+Ein-PNG-Zuweisung zeigt sie pro Richtung deren eigenen nativen Frame –
+auch wenn die vier Richtungen verschiedene Frames haben. Ein
+unbekannter Richtungszweig, eine native Kommando-Folge oder mehrere
+Frames wird ausdrücklich ohne erfundenes Einzelbild gemeldet.
+Die echte Palettenauflösung bleibt erhalten; die unabhängige
+Vorschaukarte enthält ihre Richtung als Überschrift.
+**Tests:** Eine PNG-Fixture belegt pro Richtung die korrekte Farbe und
+schützt Mehrframe-Fälle vor falscher Anzeige. Ein Gradio-Chromium-Test
+klickt Nord, West und Ost und prüft Status und echte Pixel; Core und
+Browser-Gate auf Code-Commit `981ab80` grün.
+**Offen:** native ScummVM-Spielansicht für *unterschiedliche Richtungsframes*
+(nicht durch den Editor-Screenshot ersetzt), menschliche UI-Abnahme,
+vollständiger Lippensync.
+**Nächstes Produktpaket:** Richtungsabhängige Frames direkt im
+Costume-Editor anlegen und über einen native ScummVM-Dreh-/Sprechtest
+mit allen vier Blickrichtungen verifizieren.
+
 ## Nordstern
 
 Ein vollständiger, originaler SCUMM-v6-Generator für klassische
