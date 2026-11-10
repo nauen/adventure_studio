@@ -9,6 +9,16 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Echter Gradio-Browser-Klickweg für NPC-PNG-Sprechposen (2026-11-10):**
+Der automatisierte Chromium-Test lädt eine bestehende Zwei-Posen-Projektdatei,
+wählt zwei Dialogzeilen, ändert die PNG-Zuweisung, exportiert die validierte
+Projektdatei und importiert sie erneut. Screenshots, Ergebnisbericht und
+Projekt-JSON sind CI-Artefakte; der reale Browserlauf ist grün. Zusätzlich
+zu den bisherigen Gradio-HTTP- und Unit-Gates. Das ist eine automatisierte
+Browserabnahme, keine protokollierte menschliche Abnahme.
+**Als nächstes:** direkte Bildvorschau der ausgewählten Sprecher-PNG-Pose
+neben der Dialogzeile mit konsistenter Aktualisierung beim Zeilenwechsel.
+
 **Gespeicherte PNG-Sprechpose im Dialogeditor vorauswählen (2026-11-10):**
 Die Zeilenauswahl bleibt bei Projektänderungen erhalten. Nach einem
 Speichern bzw. erneutem Öffnen werden Animations-Cue, Rücksetzoption
