@@ -54,6 +54,7 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
                                dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview,
                                dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame,
+                               choose_dialogue_png_batch_frame,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -1518,6 +1519,17 @@ def make_app():
                  native_dialogue_png_batch_selected],
                 [native_dialogue_png_batch_frame_image,
                  native_dialogue_png_batch_frame_status])
+
+        def png_batch_choose_tile(paths, order, evt: gr.SelectData):
+            try:
+                return choose_dialogue_png_batch_frame(paths, order, evt.index)
+            except ValueError as error:
+                raise gr.Error(str(error)) from error
+
+        native_dialogue_png_batch_gallery.select(
+            png_batch_choose_tile,
+            [native_dialogue_png_batch_files, native_dialogue_png_batch_order],
+            [native_dialogue_png_batch_selected])
 
         for button, step in ((native_dialogue_png_batch_previous, -1),
                              (native_dialogue_png_batch_next, 1)):

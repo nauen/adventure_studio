@@ -524,6 +524,17 @@ def step_dialogue_png_batch_frame(
     return max(0, min(len(included) - 1, selected + step))
 
 
+def choose_dialogue_png_batch_frame(
+        paths: list[str] | tuple[str, ...] | None,
+        order: list[int] | tuple[int, ...] | None,
+        position: int) -> int:
+    """Select a gallery tile against the current staged import sequence."""
+    included = dialogue_png_batch_order(paths, order)
+    if type(position) is not int or position not in range(len(included)):
+        raise ValueError("Das gewählte PNG gehört nicht zur aktuellen Importauswahl")
+    return position
+
+
 def dialogue_png_batch_animation_preview(
         paths: list[str] | tuple[str, ...] | None,
         order: list[int] | tuple[int, ...] | None,

@@ -483,6 +483,9 @@ def main() -> None:
                 re.compile(r"1\. Batch-A\.png → Batch_A.*2\. Batch-B\.png → Batch_B.*3\. Batch-Excluded\.png → Batch_Excluded", re.S),
                 timeout=20000)
             await_batch_gallery_colors(page, [(125, 185, 55), (225, 110, 40), (65, 120, 215)])
+            page.locator("#native-dialogue-png-batch-gallery img").nth(2).click()
+            expect(page.get_by_text("Bild 3 von 3 · Batch_Excluded · noch nicht importiert")).to_be_visible(timeout=20000)
+            await_batch_frame_color(page, (65, 120, 215))
             select_option(page, "native-dialogue-png-batch-selected", "2. Batch-B.png")
             page.locator("#native-dialogue-png-batch-up").click()
             expect(batch_preview).to_have_value(
@@ -551,6 +554,7 @@ def main() -> None:
                 "staged_png_pixel_thumbnail_order": True,
                 "staged_png_animated_preview": True,
                 "staged_png_frame_navigation": True,
+                "staged_png_gallery_direct_selection": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
