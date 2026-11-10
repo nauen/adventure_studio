@@ -208,5 +208,58 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertIn("animateActor(SpeakerWitness,24);", source)
 
 
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Test benötigt Pillow")
+    def test_two_lines_same_speaker_keep_independent_png_poses(self):
+        from PIL import Image
+
+        _story, raw = self.fixture()
+        original = parse_document(raw)
+        costume = replace(original.costumes[0], name="WitnessCostume")
+        actors = tuple(replace(actor, costume="WitnessCostume")
+                       if actor.id == "SpeakerWitness" else actor
+                       for actor in original.actors)
+        room = original.rooms[0]
+        rules = tuple(replace(rule, actor_lines=tuple(
+            (key, "SpeakerWitness") for key, _actor in rule.actor_lines))
+            for rule in room.talk_rules)
+        raw = canonical_json(replace(original, actors=actors,
+            costumes=(*original.costumes, costume),
+            rooms=(replace(room, talk_rules=rules), *original.rooms[1:])))
+        lines = tuple(key for _label, key in dialogue_animation_lines(raw))
+        self.assertGreaterEqual(len(lines), 2)
+        with tempfile.TemporaryDirectory() as directory:
+            for name, color in (("SpeakA", (225, 35, 35, 255)),
+                                ("SpeakB", (35, 225, 35, 255))):
+                path = Path(directory) / (name + ".png")
+                Image.new("RGBA", (8, 8), color).save(path)
+                raw = add_costume_frame(raw, "WitnessCostume", str(path), name)
+            raw = assign_dialogue_speaking_frame(raw, lines[0], "SpeakA")
+            raw = assign_dialogue_speaking_frame(raw, lines[1], "SpeakB")
+            again = assign_dialogue_speaking_frame(raw, lines[1], "SpeakB")
+            self.assertEqual(raw, again)
+            document = parse_document(raw)
+            native = next(item for item in document.costumes
+                          if item.name == "WitnessCostume")
+            by_name = {animation.name: animation for animation in native.animations}
+            self.assertEqual(by_name["gesture"].directions[0].commands, ("SpeakA",))
+            self.assertEqual(by_name["talk_start"].directions[0].commands, ("SpeakA",))
+            self.assertEqual(by_name["pose_SpeakB"].directions[0].commands, ("SpeakB",))
+            self.assertEqual(by_name["pose_SpeakB"].index, 28)
+            self.assertEqual(len([a for a in native.animations
+                                  if a.name == "pose_SpeakB"]), 1)
+            self.assertEqual({cue.line_id: cue.animation for cue in
+                              document.dialogue_animation_cues},
+                             {lines[0]: "gesture", lines[1]: "pose_SpeakB"})
+            source = scummc_room_source(document.rooms[0],
+                dialogue_animation_cues=dialogue_animation_bindings(
+                    document, document.rooms[0]))
+            self.assertIn("animateActor(SpeakerWitness,24);", source)
+            self.assertIn("animateActor(SpeakerWitness,28);", source)
+            export_document(document, Path(directory) / "resources")
+            scost = (Path(directory) / "resources" / "WitnessCostume.scost").read_text()
+            self.assertIn("anim pose_SpeakB @ 28", scost)
+            self.assertEqual(scost.count("body(SpeakB)"), 4)
+
+
 if __name__ == "__main__":
     unittest.main()
