@@ -391,13 +391,45 @@ def _dialogue_png_batch_entries(paths: list[str] | tuple[str, ...] | None
     return tuple(entries)
 
 
+def dialogue_png_batch_order(paths: list[str] | tuple[str, ...] | None,
+                             order: list[int] | tuple[int, ...] | None = None
+                             ) -> tuple[str, ...]:
+    """Resolve the visible upload order without changing uploaded files."""
+    entries = _dialogue_png_batch_entries(paths)
+    indexes = tuple(range(len(entries))) if order is None else tuple(order)
+    if (len(indexes) != len(entries) or
+            any(type(index) is not int for index in indexes) or
+            set(indexes) != set(range(len(entries)))):
+        raise ValueError("Die PNG-Reihenfolge passt nicht mehr zur Dateiauswahl; bitte neu auswählen")
+    return tuple(entries[index][0] for index in indexes)
+
+
+def move_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
+                                  order: list[int] | tuple[int, ...] | None,
+                                  selected: int | None, step: int
+                                  ) -> tuple[tuple[int, ...], int]:
+    """Move one selected upload while preserving a validated permutation."""
+    ordered = dialogue_png_batch_order(paths, order)
+    indexes = list(range(len(ordered))) if order is None else list(order)
+    if type(selected) is not int or selected not in range(len(indexes)):
+        raise ValueError("Bitte zuerst ein PNG-Frame auswählen")
+    if step not in (-1, 1):
+        raise ValueError("Ungültige Verschieberichtung")
+    destination = selected + step
+    if destination in range(len(indexes)):
+        indexes[selected], indexes[destination] = indexes[destination], indexes[selected]
+        return tuple(indexes), destination
+    return tuple(indexes), selected
+
+
 def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
-                               paths: list[str] | tuple[str, ...] | None) -> str:
+                               paths: list[str] | tuple[str, ...] | None,
+                               order: list[int] | tuple[int, ...] | None = None) -> str:
     """Show the exact ordered native frame IDs before one batch import click."""
     if not paths:
         return "Noch keine PNG-Dateien ausgewählt"
     try:
-        entries = _dialogue_png_batch_entries(paths)
+        entries = _dialogue_png_batch_entries(dialogue_png_batch_order(paths, order))
     except ValueError as error:
         return str(error)
     existing = set(dialogue_speaking_frames(raw, line_id)) if raw and line_id else set()
@@ -409,9 +441,10 @@ def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
 def import_dialogue_png_batch(raw: str, line_id: str, direction: str,
                               paths: list[str] | tuple[str, ...] | None, target: str,
                               ending_ticks: int | float = 12,
-                              reset_to_stand: bool = True) -> str:
+                              reset_to_stand: bool = True,
+                              order: list[int] | tuple[int, ...] | None = None) -> str:
     """Import all PNGs in selection order, committing only the final valid JSON."""
-    entries = _dialogue_png_batch_entries(paths)
+    entries = _dialogue_png_batch_entries(dialogue_png_batch_order(paths, order))
     document = parse_document(raw)
     selected = _dialogue_animation_targets(document).get(line_id)
     if selected is None:

@@ -34,7 +34,8 @@ from adventure_studio.studio_sequences import (
     edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
     import_dialogue_png_frame, dialogue_costume_isolation_preview,
     isolate_dialogue_speaker_costume, dialogue_png_batch_preview,
-    import_dialogue_png_batch)
+    import_dialogue_png_batch, dialogue_png_batch_order,
+    move_dialogue_png_batch_frame)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -58,6 +59,28 @@ class DialogueAnimationTests(unittest.TestCase):
             plan = dialogue_png_batch_preview(raw, first, paths)
             self.assertIn("1. 01-red.png → Frame_01_red", plan)
             self.assertIn("3. 03-magenta.png → Frame_03_magenta", plan)
+            order, selected = move_dialogue_png_batch_frame(paths, None, 2, -1)
+            self.assertEqual((order, selected), ((0, 2, 1), 1))
+            order, selected = move_dialogue_png_batch_frame(paths, order, selected, -1)
+            self.assertEqual((order, selected), ((2, 0, 1), 0))
+            self.assertEqual(dialogue_png_batch_order(paths, order),
+                             (paths[2], paths[0], paths[1]))
+            self.assertIn("1. 03-magenta.png → Frame_03_magenta",
+                          dialogue_png_batch_preview(raw, first, paths, order))
+            with self.assertRaisesRegex(ValueError, "Reihenfolge passt nicht"):
+                dialogue_png_batch_order(paths, (0, 0, 1))
+            with self.assertRaisesRegex(ValueError, "Reihenfolge passt nicht"):
+                import_dialogue_png_batch(raw, first, "W", paths, "Sprechfolge",
+                                          order=(0, 2))
+            moved_import = import_dialogue_png_batch(raw, first, "W", paths,
+                                                      "Sprechfolge", order=order)
+            self.assertEqual(dialogue_speaking_sequence_selection(moved_import, first, "W"),
+                             "Pose, Frame_03_magenta, Frame_01_red, Frame_02_green")
+            export_document(parse_document(moved_import), root / "reordered-native")
+            moved_costume = next(actor.costume for actor in parse_document(moved_import).actors
+                                if actor.id == "SpeakerHarborKeeper")
+            self.assertIn("body(Pose, Frame_03_magenta, Frame_01_red, Frame_02_green)",
+                          (root / "reordered-native" / f"{moved_costume}.scost").read_text())
             with self.assertRaisesRegex(ValueError, "mindestens eine"):
                 import_dialogue_png_batch(raw, first, "W", [], "Sprechfolge")
             first_import = import_dialogue_png_batch(

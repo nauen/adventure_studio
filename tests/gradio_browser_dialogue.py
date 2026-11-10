@@ -441,6 +441,11 @@ def main() -> None:
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-A\.png → Batch_A.*2\. Batch-B\.png → Batch_B", re.S),
                 timeout=20000)
+            select_option(page, "native-dialogue-png-batch-selected", "2. Batch-B.png")
+            page.locator("#native-dialogue-png-batch-up").click()
+            expect(batch_preview).to_have_value(
+                re.compile(r"1\. Batch-B\.png → Batch_B.*2\. Batch-A\.png → Batch_A", re.S),
+                timeout=20000)
             page.locator("#native-dialogue-png-batch-import").click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
             page.locator("#native-project-export-button").click()
@@ -452,7 +457,7 @@ def main() -> None:
             batch_document = parse_document(batch_file.read_text(encoding="utf-8"))
             batch_raw = batch_file.read_text(encoding="utf-8")
             last_two = dialogue_ending_timeline(batch_raw, first[1], "N")[1][-2:]
-            assert last_two == (("5. Batch_A", 4), ("6. Batch_B", 5))
+            assert last_two == (("5. Batch_B", 4), ("6. Batch_A", 5))
             assert next(actor for actor in batch_document.actors
                         if actor.id == "SpeakerHarborKeeper").costume == "WitnessCostume"
             (evidence / "result.json").write_text(json.dumps({
@@ -466,6 +471,7 @@ def main() -> None:
                 "direct_png_file_import": True,
                 "isolated_shared_speaker_costume": True,
                 "ordered_atomic_png_batch": True,
+                "reordered_png_batch": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
