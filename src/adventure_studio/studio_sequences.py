@@ -167,6 +167,47 @@ def dialogue_speaking_frame_preview(raw: str | None, line_id: str | None,
     return render_costume_frame(raw, actor.costume, frame_id)
 
 
+def dialogue_direction_animation_preview(raw: str | None, line_id: str | None,
+                                         animation_name: str | None, direction: str):
+    """Show one authored COST animation frame for the selected actor direction.
+
+    This does not approximate a multi-frame native timeline or override the
+    line's saved cue. A direction can have its own distinct frame.
+    """
+    names = {"N": "Nord", "E": "Ost", "S": "Süd", "W": "West"}
+    if direction not in names:
+        raise ValueError("Bitte eine gültige Blickrichtung (N, E, S, W) wählen")
+    if not raw or not line_id:
+        return None, "Bitte zuerst eine Sprecher-Dialogzeile wählen"
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        return None, "Die gewählte Dialogzeile hat keinen nativen Sprecher"
+    if not animation_name:
+        return None, "Keine Costume-Sprechanimation dieser Dialogzeile ausgewählt"
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    animation = next((item for item in costume.animations
+                      if item.name == animation_name and item.index is not None
+                      and item.index >= 24), None)
+    if animation is None:
+        return None, "Keine indizierte Sprecheranimation dieser Figur ausgewählt"
+    selected = next((item for item in animation.directions
+                     if item.direction == direction), None)
+    if selected is None:
+        return None, f"{animation_name}: keine Animation für {names[direction]}"
+    if len(selected.commands) != 1:
+        return None, (f"{animation_name} · {names[direction]}: "
+                      "mehrere Frames/Kommandos – keine statische Einzelbildvorschau")
+    frame_id = selected.commands[0]
+    if frame_id not in {frame.id for frame in costume.frames}:
+        return None, (f"{animation_name} · {names[direction]}: "
+                      "COST-Kommando statt PNG-Frame – keine Einzelbildvorschau")
+    return (render_costume_frame(raw, costume.name, frame_id),
+            f"{animation_name} · {names[direction]} · Frame {frame_id} "
+            "(native Costume-Palette, statische Editor-Vorschau)")
+
+
 def dialogue_speaking_frames(raw: str, line_id: str | None) -> tuple[str, ...]:
     """Offer only imported frames belonging to the selected native speaker."""
     return dialogue_speaking_frame_selection(raw, line_id)[0]
