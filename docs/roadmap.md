@@ -9,16 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Unabhängige Mehrframe-Folgen pro NPC-Zeile (2026-11-10, Implementierung):**
+**Unabhängige Mehrframe-Folgen pro NPC-Zeile (2026-11-10, native Abnahme bestanden):**
 Der Dialogeditor speichert 1..N importierte Frame-IDs als eigene native
 COST-Animation pro Zeile, mit einem stabilen Animationsnamen/-slot und
 vorhandenen `animateActor`-/`actorSay`-Bindungen. Mehrere Zeilen eines
 Actors können unterschiedliche Folgen haben, ohne die globale
 `gesture`-/`talk_start`-Animation oder andere Zeilen zu verändern.
-Re-Edit/JSON-Roundtrip und Exportquellen werden geprüft; echter Gradio-
-Browserpfad und stock-ScummVM-Klicktest müssen die eigenständigen
-animierten Folgen noch abnehmen. Danach: Richtungsspezifische Sequenzen
-pro Zeile.
+Re-Edit/JSON-Roundtrip und Exportquellen sind geprüft; echter Gradio-
+Chromium-Klickweg und stock-ScummVM-Klicktest sind bestanden. Zwei
+unterschiedliche Framepaare derselben Figur erscheinen in zwei
+aufeinanderfolgenden Zeilen mit Rückkehr zur Standpose (CI
+`42890566896`, Job `130090292878`, Artefakt
+`native-v6-studio-independent-speaking-lines`; Merge `482375e`).
+Danach: Richtungsspezifische Sequenzen pro Zeile.
 
 **Native animierte Sprechsequenz (2026-11-10, native Abnahme bestanden):** Der Autor
 legt im Costume-Editor je N/E/S/W eine Folge vorhandener PNG-Frames fest.
