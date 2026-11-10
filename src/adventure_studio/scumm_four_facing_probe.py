@@ -99,6 +99,7 @@ def run(game_directory: Path, output: Path) -> dict:
                                              (max(row[i] for row in measurements)
                                               for i in range(4))))
             if len(seen) != 4:
+                _capture(output, "last-observed")
                 raise RuntimeError(f"Not all four native directional frames appeared: {report}")
 
             stable = 0
