@@ -202,10 +202,16 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                             first.symmetric_difference(ink)) > 150:
                         second = ink
                         _capture(output, "linear-second")
-                    if second is not None and (not gesture or
-                                               (colored >= baseline_red + 16 and
-                                                (not two_poses or
-                                                 second_pose_green >= baseline_green + 16))):
+                    # For two lines of the SAME actor, the native text strip
+                    # may reuse glyph positions. The second COST color is the
+                    # independent signal; legacy multi-actor text detection
+                    # remains unchanged.
+                    if (two_poses and first is not None
+                            and first_pose_red >= baseline_red + 16
+                            and second_pose_green >= baseline_green + 16):
+                        break
+                    if not two_poses and second is not None and (not gesture or
+                                                colored >= baseline_red + 16):
                         break
                     time.sleep(0.25)
                 report.update({"first_speaker_pixels": len(first or ()),
@@ -216,7 +222,7 @@ def run(game_directory: Path, output: Path, voice: bool = False,
                                "two_pose_first_red_pixels": first_pose_red,
                                "two_pose_second_green_pixels": second_pose_green,
                                "answer_pixels_visible": 0,
-                               "passed": bool(first and second and (not gesture or
+                               "passed": bool(first and (second or two_poses) and (not gesture or
                                                (speaker_visible >= 16 and
                                                 colored >= baseline_red + 16
                                                 and (not two_poses or
