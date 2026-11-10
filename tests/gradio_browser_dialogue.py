@@ -15,7 +15,7 @@ from playwright.sync_api import expect, sync_playwright
 from adventure_studio.scumm_project import parse_document
 from adventure_studio.studio_sequences import (
     dialogue_animation_lines, dialogue_speaking_frame_selection,
-    dialogue_speaking_sequence_selection,
+    dialogue_speaking_sequence_selection, dialogue_ending_timeline,
 )
 from adventure_studio.studio_actors import costume_direction_speaking_frame
 
@@ -322,6 +322,35 @@ def main() -> None:
             assert (phases[second[1]].start_delay_ticks, phases[second[1]].minimum_animation_ticks) == (1, 60)
             assert (phases[first[1]].ending_animation, phases[first[1]].ending_animation_ticks) == ("gesture", 18)
             assert phases[second[1]].ending_animation is None
+            # Direct PNG authoring for the ending cue: no Costume-editor roundtrip.
+            # The native ending slot remains private to this line and direction.
+            select_option(page, "native-dialogue-ending-frame", "Speak")
+            page.locator("#native-dialogue-ending-append").click()
+            ending_gallery = page.locator("#native-dialogue-ending-gallery")
+            expect(ending_gallery.locator("img")).to_have_count(2, timeout=20000)
+            select_option(page, "native-dialogue-ending-frame", "SpeakAlt")
+            page.locator("#native-dialogue-ending-append").click()
+            expect(ending_gallery.locator("img")).to_have_count(3, timeout=20000)
+            select_option(page, "native-dialogue-ending-step", "3. SpeakAlt")
+            page.locator("#native-dialogue-ending-left").click()
+            select_option(page, "native-dialogue-ending-step", "2. SpeakAlt")
+            page.locator("#native-dialogue-ending-delete-frame").click()
+            expect(ending_gallery.locator("img")).to_have_count(2, timeout=20000)
+            page.locator("#native-dialogue-ending-play").click()
+            expect(page.locator("#native-dialogue-ending-preview img").first).to_be_visible(timeout=20000)
+            page.locator("#native-project-export-button").click()
+            expect(sequence_link.first).to_be_visible(timeout=20000)
+            with page.expect_download() as ending_info:
+                sequence_link.first.click()
+            ending_file = evidence / "ending-png-project.json"
+            ending_info.value.save_as(str(ending_file))
+            ending_raw = ending_file.read_text(encoding="utf-8")
+            ending_cues = {cue.line_id: cue for cue in parse_document(ending_raw).dialogue_animation_cues}
+            assert ending_cues[first[1]].ending_animation.startswith("ending_line_")
+            assert ending_cues[first[1]].ending_animation_ticks == 18
+            assert ending_cues[second[1]].ending_animation is None
+            assert len(dialogue_ending_timeline(ending_raw, first[1], "N")[1]) == 2
+            assert dialogue_speaking_sequence_selection(ending_raw, first[1], "N") == "SpeakAlt, Speak, SpeakAlt"
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
@@ -329,6 +358,7 @@ def main() -> None:
                 "graphical_line_timeline": True,
                 "native_dialogue_phases": True,
                 "native_ending_gesture": True,
+                "direct_png_ending_timeline": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
