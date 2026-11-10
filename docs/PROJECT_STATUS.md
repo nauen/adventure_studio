@@ -4,16 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Neues Produktpaket (2026-11-10, Implementierung; CI-Abnahme offen):**
+**Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Der NPC-Dialogeditor kann jetzt **neue PNG-Bilddateien direkt importieren**
 und sie mit einem Klick an die native Sprech- oder Abschluss-PNG-Folge
 der gewählten Zeile und Blickrichtung anhängen. Der existierende
 Costume-Palettenimport wird wiederverwendet; eine bereits geteilte Costume,
 volle Palette, doppelte Frame-ID oder unzulässiger Dialog-Cue verhindern
 den Vorgang vollständig und sichtbar. Andere Zeilen, Richtungen, Stand- und
-Talk-Frames bleiben erhalten. **332 lokale Tests grün**; Chromium-Datei-
-Upload, Export/Reimport und die neue aus PNG-Datei generierte Magenta-
-Schlussgeste im stock ScummVM stehen im CI-Gate aus. Menschliche Abnahme
+Talk-Frames bleiben erhalten. **332 lokale Tests und alle fünf Checks der
+aktuellen CI-Commit-Spitze grün.** Chromium-Datei-Upload, Export/Reimport
+und die aus der PNG-Datei generierte Magenta-Schlussgeste zwischen W- und
+E-Sprechen samt Standrückkehr im stock ScummVM bestanden (PR #103,
+Merge `1cc99f7`, native Jobs `130161049750` / `130161082960`, Chromium
+Job `130161083496`). Ein vorheriger bildabtastungsbedingter Fehlversuch
+führte zur vollständigen Wiederholungsoption der ScummVM-Probe; beide
+erneut ausgeführten nativen Gameplay-Jobs bestanden. Menschliche Abnahme
 offen. **Nächstes Paket:** Die sichere Trennung einer gemeinsam genutzten
 Figuren-Costume direkt im Dialogeditor, um auch dort PNGs zu importieren.
 
