@@ -203,7 +203,18 @@ def dialogue_direction_animation_preview(raw: str | None, line_id: str | None,
     if frame_id not in {frame.id for frame in costume.frames}:
         return None, (f"{animation_name} · {names[direction]}: "
                       "COST-Kommando statt PNG-Frame – keine Einzelbildvorschau")
-    return (render_costume_frame(raw, costume.name, frame_id),
+    # Give the directional view a separate native-pixel card with a direction
+    # label. Its image bytes deliberately differ from the uniform PNG picker
+    # preview: Gradio may otherwise concurrently rewrite the same cached
+    # image file while both independent output components are streaming.
+    from PIL import Image, ImageDraw
+
+    frame_preview = render_costume_frame(raw, costume.name, frame_id)
+    card = Image.new("RGB", (304, 320), (36, 40, 48))
+    card.paste(frame_preview, (24, 40))
+    ImageDraw.Draw(card).text((24, 14), f"{names[direction]} · {animation.name}",
+                              fill=(240, 240, 240))
+    return (card,
             f"{animation_name} · {names[direction]} · Frame {frame_id} "
             "(native Costume-Palette, statische Editor-Vorschau)")
 
