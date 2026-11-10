@@ -4,6 +4,22 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Aktuelles Browser-Abnahmepaket (2026-11-10, PR in Prüfung):**
+Der native Dialogeditor hat einen realen Chromium-Klicktest erhalten, nicht
+nur einen Gradio-HTTP-Startcheck. Der Browser lädt eine native Projektdatei
+mit zwei unterschiedlichen Sprechposen derselben NPC-Figur, wählt die
+betreffenden Dialogzeilen, sieht die gespeicherten PNG-Frames, ändert die
+Pose über den tatsächlichen Button, exportiert JSON, leert das File-Feld
+und importiert das gespeicherte Projekt erneut. Dabei bleiben die
+zugeordneten Dialog-Cues konsistent. **Nachweis:** GitHub-Gradio-Smoke
+`Click through native NPC dialogue pose editing in real Chrome` grün;
+Screenshots und exportierte JSON als Artefakte. Core-Tests ebenfalls grün.
+**Offen:** menschliche Bedienabnahme und etwaige unabhängige
+Responsive-Layout-Probleme; der Chromium-Workflow ersetzt diese nicht.
+**Nächstes Produktpaket:** direkte visuelle PNG-Pose-Vorschau im
+Dialogeditor, damit Autoren das gewählte Bild ohne Wechsel zum
+Costume-Bereich prüfen können.
+
 **Produktpaket (2026-11-10, PR in Prüfung):** Nach Auswahl einer nativen
 Sprecher-Dialogzeile zeigt der Gradio-Editor die bereits zugewiesene
 PNG-Sprechpose wieder an. Er liest dazu die persistierte Dialog-Cue-Animation
