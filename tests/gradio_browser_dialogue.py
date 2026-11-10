@@ -72,7 +72,7 @@ def main() -> None:
             page.get_by_role("tab", name="Native Interaktionsabläufe").click()
             page.locator("#native-project-file input[type=file]").set_input_files(
                 str(fixture))
-            expect(page.locator("#native-project-report")).to_contain_text(
+            expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
 
             select_option(page, "native-dialogue-line", first[0])
@@ -108,7 +108,7 @@ def main() -> None:
 
             page.locator("#native-project-file input[type=file]").set_input_files(
                 str(saved))
-            expect(page.locator("#native-project-report")).to_contain_text(
+            expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
             select_option(page, "native-dialogue-line", second[0])
             await_selection(page, "native-dialogue-pose", "Speak")
