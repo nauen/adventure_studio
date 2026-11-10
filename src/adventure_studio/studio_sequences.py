@@ -15,7 +15,8 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
-from .studio_actors import set_costume_speaking_pose, render_costume_frame
+from .studio_actors import (set_costume_speaking_pose, render_costume_frame,
+                            costume_timeline_images, render_costume_preview)
 from .scumm_costume import CostumeAnimation, CostumeDirection
 
 
@@ -250,6 +251,85 @@ def dialogue_speaking_sequence_selection(raw: str, line_id: str | None,
         return ""
     sequence = next(iter(commands))
     return ", ".join(sequence) if all(command in frames for command in sequence) else ""
+
+
+def dialogue_speaking_timeline(raw: str, line_id: str | None, direction: str):
+    """Show the selected line's actual native COST direction, in frame order."""
+    if direction not in ("N", "E", "S", "W"):
+        raise ValueError("Bitte eine gültige Blickrichtung N/E/S/W auswählen")
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        return [], (), ()
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    cue = next((item for item in document.dialogue_animation_cues
+                if item.line_id == line_id), None)
+    steps = ()
+    images = []
+    if cue is not None:
+        animation = next((item for item in costume.animations
+                          if item.name == cue.animation), None)
+        selected = next((item for item in animation.directions
+                         if item.direction == direction), None) if animation else None
+        if selected is not None:
+            steps = selected.commands
+            images = costume_timeline_images(raw, costume.name, cue.animation, direction)
+    return images, tuple((f"{index + 1}. {step}", index)
+                         for index, step in enumerate(steps)), tuple(frame.id for frame in costume.frames)
+
+
+def edit_dialogue_speaking_timeline(raw: str, line_id: str, direction: str,
+                                   step_number: int | float | None, operation: str,
+                                   frame_id: str | None = None,
+                                   reset_to_stand: bool = True) -> str:
+    """Edit one line/facing's PNG frame order using its existing COST slot."""
+    _, steps, available = dialogue_speaking_timeline(raw, line_id, direction)
+    if not available:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile mit PNG-Costume auswählen")
+    saved = dialogue_speaking_sequence_selection(raw, line_id, direction)
+    if steps and not saved:
+        raise ValueError("Diese Animation enthält native Kommandos; bitte die Costume-Timeline verwenden")
+    sequence = [part.strip() for part in saved.split(",")] if saved else []
+    if operation == "Anhängen":
+        if frame_id not in available:
+            raise ValueError("Bitte ein vorhandenes PNG-Frame zum Anhängen auswählen")
+        sequence.append(frame_id)
+    else:
+        if (type(step_number) not in (int, float) or int(step_number) != step_number
+                or not 0 <= int(step_number) < len(sequence)):
+            raise ValueError("Bitte einen gültigen Sprechframe-Schritt auswählen")
+        index = int(step_number)
+        if operation == "Entfernen":
+            if len(sequence) == 1:
+                raise ValueError("Eine native Sprechfolge benötigt mindestens ein PNG-Frame")
+            sequence.pop(index)
+        elif operation in ("Nach links", "Nach rechts"):
+            other = index + (-1 if operation == "Nach links" else 1)
+            if not 0 <= other < len(sequence):
+                raise ValueError("Sprechframe ist bereits am Rand der Folge")
+            sequence[index], sequence[other] = sequence[other], sequence[index]
+        else:
+            raise ValueError("Unbekannte Sprech-Timeline-Aktion")
+    return assign_dialogue_direction_speaking_sequence(
+        raw, line_id, direction, ", ".join(sequence), reset_to_stand)
+
+
+def dialogue_speaking_timeline_preview(raw: str, line_id: str,
+                                       direction: str, duration_ms: int | float,
+                                       destination: Path) -> Path:
+    """Render the saved NPC line as an editor GIF; ScummVM owns native timing."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    cue = next((item for item in document.dialogue_animation_cues
+                if item.line_id == line_id), None)
+    if cue is None:
+        raise ValueError("Bitte zuerst eine Sprechfolge für diese Dialogzeile speichern")
+    actor = next(item for item in document.actors if item.id == target[1])
+    return render_costume_preview(raw, actor.costume, cue.animation,
+                                  direction, duration_ms, destination)
 
 
 def assign_dialogue_speaking_sequence(raw: str, line_id: str, frame_ids: str,
