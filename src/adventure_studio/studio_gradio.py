@@ -47,7 +47,9 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                edit_dialogue_ending_animation,
                                dialogue_ending_timeline,
                                edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
-                               import_dialogue_png_frame)
+                               import_dialogue_png_frame,
+                               dialogue_costume_isolation_preview,
+                               isolate_dialogue_speaker_costume)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
@@ -757,7 +759,13 @@ def make_app():
                 choices=[("Nord", "N"), ("Ost", "E"), ("Süd", "S"), ("West", "W")],
                 value="S", elem_id="native-dialogue-direction")
             with gr.Accordion("PNG-Datei direkt für diese Dialogzeile importieren", open=True):
-                gr.Markdown("Importiere eine **neue PNG-Datei** in die eigene Costume der gewählten Sprecherfigur. Der Frame wird sofort an die Sprech- oder Abschlussfolge **dieser Zeile und Blickrichtung** angehängt. Bestehende Frames und die anderen Richtungen bleiben erhalten. Bei ungültigen Pixeln, voller nativer Palette oder geteilter Costume wird nichts gespeichert. Für Abschlussfolgen muss bereits eine Sprechanimation der Zeile zugewiesen sein; ihre Dauer steht unten bei den Abschluss-Ticks.")
+                gr.Markdown("Importiere eine **neue PNG-Datei** in die eigene Costume der gewählten Sprecherfigur. Der Frame wird sofort an die Sprech- oder Abschlussfolge **dieser Zeile und Blickrichtung** angehängt. Bestehende Frames und die anderen Richtungen bleiben erhalten. Falls mehrere Figuren dieselbe Costume nutzen, **erst unten eine private Kopie für den gewählten Sprecher erstellen**. Andere Figuren behalten die bisherige Costume. Bei ungültigen Pixeln oder voller nativer Palette wird nichts gespeichert.")
+                native_dialogue_costume_isolation = gr.Textbox(
+                    label="Vorschau: Costume dieser Sprecherfigur trennen",
+                    interactive=False, elem_id="native-dialogue-costume-isolation")
+                native_dialogue_costume_isolate = gr.Button(
+                    "Eigene Costume für diese Sprecherfigur erstellen",
+                    elem_id="native-dialogue-costume-isolate")
                 with gr.Row():
                     native_dialogue_png_file = gr.File(
                         label="Neues PNG-Bild", file_types=[".png"], type="filepath",
@@ -1417,6 +1425,14 @@ def make_app():
             [native_state, native_dialogue_animation_line, native_dialogue_direction,
              native_dialogue_png_file, native_dialogue_png_id, native_dialogue_png_target,
              native_dialogue_ending_ticks, native_dialogue_reset],
+            [native_state, *native_outputs, native_report])
+        for source in (native_state, native_dialogue_animation_line):
+            source.change(dialogue_costume_isolation_preview,
+                          [native_state, native_dialogue_animation_line],
+                          [native_dialogue_costume_isolation])
+        native_dialogue_costume_isolate.click(
+            lambda raw, line: native_edit(isolate_dialogue_speaker_costume, raw, line),
+            [native_state, native_dialogue_animation_line],
             [native_state, *native_outputs, native_report])
         def dialogue_ending_timeline_view(raw, line, direction, selected_frame):
             images, steps, frames = dialogue_ending_timeline(raw, line, direction)

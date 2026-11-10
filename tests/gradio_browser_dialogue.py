@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
+from dataclasses import replace
 from pathlib import Path
 
 from PIL import Image
 from playwright.sync_api import expect, sync_playwright
 
-from adventure_studio.scumm_project import parse_document
+from adventure_studio.scumm_project import canonical_json, parse_document
 from adventure_studio.studio_sequences import (
     dialogue_animation_lines, dialogue_speaking_frame_selection,
     dialogue_speaking_sequence_selection, dialogue_ending_timeline,
@@ -382,6 +384,49 @@ def main() -> None:
                 "FreshSpeaking")
             assert dialogue_ending_timeline(imported_raw, first[1], "N")[1][-1][0] == "3. FreshEnding"
             assert dialogue_ending_animation_selection(imported_raw, second[1])[1] is None
+            # A second actor intentionally shares the exact native Costume;
+            # split it in the real dialogue editor, then import one new PNG.
+            shared_project = parse_document(imported_raw)
+            original_witness = next(actor for actor in shared_project.actors
+                                    if actor.id == "SpeakerWitness")
+            shared_project = replace(shared_project, actors=tuple(
+                replace(actor, costume=original_witness.costume)
+                if actor.id == "SpeakerHarborKeeper" else actor
+                for actor in shared_project.actors))
+            shared_path = evidence / "shared-costume-project.json"
+            shared_path.write_text(canonical_json(shared_project), encoding="utf-8")
+            page.locator('#native-project-file button[aria-label="Clear"]').click()
+            page.locator("#native-project-file input[type=file]").set_input_files(str(shared_path))
+            expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
+                "Natives Projekt geladen und validiert", timeout=30000)
+            select_option(page, "native-dialogue-line", first[0])
+            isolation_preview = page.locator(
+                "#native-dialogue-costume-isolation textarea, #native-dialogue-costume-isolation input")
+            expect(isolation_preview).to_have_value(
+                re.compile(r"WitnessCostume → WitnessCostume_SpeakerWitness"), timeout=20000)
+            page.locator("#native-dialogue-costume-isolate").click()
+            expect(isolation_preview).to_have_value(
+                re.compile("gehört bereits nur dieser Figur"), timeout=20000)
+            isolated_png = evidence / "isolated-ending.png"
+            Image.new("RGBA", (8, 8), (185, 100, 210, 255)).save(isolated_png)
+            page.locator('#native-dialogue-png-file button[aria-label="Clear"]').click()
+            page.locator("#native-dialogue-png-file input[type=file]").set_input_files(str(isolated_png))
+            png_id.fill("PrivateEnding")
+            page.locator("#native-dialogue-png-import").click()
+            expect(ending_gallery.locator("img")).to_have_count(4, timeout=20000)
+            page.locator("#native-project-export-button").click()
+            expect(sequence_link.first).to_be_visible(timeout=20000)
+            with page.expect_download() as split_info:
+                sequence_link.first.click()
+            isolated_file = evidence / "isolated-costume-project.json"
+            split_info.value.save_as(str(isolated_file))
+            isolated_document = parse_document(isolated_file.read_text(encoding="utf-8"))
+            actors = {actor.id: actor for actor in isolated_document.actors}
+            assert actors["SpeakerWitness"].costume == "WitnessCostume_SpeakerWitness"
+            assert actors["SpeakerHarborKeeper"].costume == "WitnessCostume"
+            costumes = {item.name: item for item in isolated_document.costumes}
+            assert "PrivateEnding" in {frame.id for frame in costumes[actors["SpeakerWitness"].costume].frames}
+            assert "PrivateEnding" not in {frame.id for frame in costumes[actors["SpeakerHarborKeeper"].costume].frames}
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
@@ -391,6 +436,7 @@ def main() -> None:
                 "native_ending_gesture": True,
                 "direct_png_ending_timeline": True,
                 "direct_png_file_import": True,
+                "isolated_shared_speaker_costume": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

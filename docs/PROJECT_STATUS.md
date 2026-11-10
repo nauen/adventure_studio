@@ -4,6 +4,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Neues Produktpaket (2026-11-10, Implementierung; CI-Abnahme offen):**
+Eine gemeinsam genutzte native Figuren-Costume lässt sich jetzt direkt
+im NPC-Dialogeditor **für die gewählte Sprecherfigur vereinzeln**. Der
+Editor zeigt die betroffene Figur, den neuen eindeutigen Costume-Namen
+und alle weiterhin unveränderten Mitnutzer vor dem Klick. Die gesamte
+Costume einschließlich PNG-Frames, Palette und COST-Animationen wird
+kopiert, nur die Actor-Referenz des gewählten Sprechers wird umgestellt.
+Alle seine Dialogzeilen behalten gültige Gesten; danach sind private
+Sprech-/Abschluss-PNG-Imports möglich. **333 lokale Tests grün**;
+Chromium-Trennen/Import/Export und die native ScummVM-Abnahme der
+über die private Costume exportierten Schlussgeste im CI-Gate offen.
+**Nächstes Paket:** Mehrere neue PNG-Bilder in einem Schritt als
+geordnete Sprech- oder Abschlussfolge im Dialogeditor importieren.
+
 **Neues Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Der NPC-Dialogeditor kann jetzt **neue PNG-Bilddateien direkt importieren**
 und sie mit einem Klick an die native Sprech- oder Abschluss-PNG-Folge
