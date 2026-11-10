@@ -602,8 +602,12 @@ def _validate_document(document: GameDocument) -> None:
             def commands_for(item):
                 return next((entry.commands for entry in item.directions
                              if entry.direction == direction), None) if item else None
-            if (commands_for(start) != commands_for(animation)
-                    or commands_for(stop) != commands_for(stand)):
+            # Extra indexed gestures (>= 28) are played explicitly before
+            # actorSay and must not change the stock talk_start slot (16).
+            # The original gesture slot (24) still mirrors talk_start.
+            if (start is None or commands_for(stop) != commands_for(stand)
+                    or (animation.index == 24
+                        and commands_for(start) != commands_for(animation))):
                 raise ValueError(f"Dialogue animation reset requires matching native talk frames: {cue.line_id}")
     for rule in document.animation_rules:
         if not isinstance(rule, AnimationRule) or not isinstance(rule.condition, ActorCountCondition) or not isinstance(rule.effect, ObjectStateEffect):
