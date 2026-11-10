@@ -9,13 +9,20 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**PNG-Miniaturvorschau der vorbereiteten nativen Dialog-Importfolge (2026-11-11, CI offen):**
+**PNG-Miniaturvorschau der vorbereiteten nativen Dialog-Importfolge (2026-11-11, native Abnahme bestanden):**
 Die noch nicht importierten hochgeladenen Bilder erscheinen unter dem
 Textplan als echte farbige Miniaturkarten mit nativen Frame-IDs.
 Dateiauswahl, Umordnen, Entfernen und Wiederaufnehmen zeigen stets
 dieselbe Auswahl/Reihenfolge, die beim Klick als native COST-Folge
 gespeichert wird. Auch 0 Bilder ergibt eine leere Galerie. 334 lokale
-Tests grün; Chromium-Pixelprüfung und native CI-Abnahme offen.
+Tests und sechs finale CI-Checks grün. Echte Chromium-Pixelprüfungen
+der Farben und Reihenfolge nach Umordnen/Ausschließen/Wiederaufnehmen
+und JSON-Export/Reimport zweimal bestanden; bestehende zweiframige
+native Abschlussanimation mit Standzustand in zwei stock-ScummVM-Läufen
+bestanden (PR #115, Merge `6e495d5`, Chromium Jobs `130201926707` /
+`130201843676`, native Jobs `130201843845` / `130203561023`).
+Ein früher fehlgeschlagener unveränderter Startbild-Sichttest bestand im
+unveränderten Replay. Menschliche UI-Abnahme offen.
 Anschließend: abspielbare Vorabvorschau der ausgewählten PNG-Sequenz.
 
 **Ausgeschlossene Upload-PNGs ohne Neu-Upload reaktivieren (2026-11-11, native Abnahme bestanden):**

@@ -4,15 +4,23 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Aktuelles Produktpaket (2026-11-11, CI-Abnahme offen):**
+**Neues Produktpaket (2026-11-11, native Abnahme bestanden):**
 Der NPC-Dialogeditor zeigt die **tatsächlichen PNG-Bildpixel vor dem
 Import als beschriftete Miniatur-Galerie** in genau der Reihenfolge der
 zukünftigen nativen COST-Frames. Umsortieren, Ausschließen,
 Wiederaufnehmen und eine neue Dateiauswahl aktualisieren die Galerie
 zusammen mit dem bestehenden Textplan. Keine neuen Modellfelder,
 Interpreter-Befehle oder Änderungen am atomaren Import erforderlich.
-334 lokale Tests grün, automatisierte Chromium-Pixelprobe und native
-CI-Abnahme stehen noch aus. **Nächstes Paket:** Abspielbare Vorschau
+334 lokale Tests und alle sechs finalen CI-Checks grün. Zwei Chromium-
+Läufe prüfen die echten Pixel-Farben und Reihenfolge der 3/2/3/2
+Miniaturen nach Upload, Umordnen, Ausschließen und Wiederaufnehmen
+einschließlich Export/Reimport. Zwei stock-ScummVM-Läufe bestätigen
+weiterhin die bestehende zweiframige Abschlussgeste und Standrückkehr
+(PR #115, Merge `6e495d5`, Chromium Jobs `130201926707` /
+`130201843676`, native Jobs `130201843845` / `130203561023`).
+Eine anfängliche unveränderte Startbild-Sichtprobe schlug einmal fehl
+und bestand im unveränderten Job-Replay. Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Abspielbare Vorschau
 der geplanten PNG-Importfolge vor dem Speichern.
 
 **Neues Produktpaket (2026-11-11, native Abnahme bestanden):**
