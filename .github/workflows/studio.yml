@@ -28,6 +28,7 @@ on:
       - 'tests/test_studio_export.py'
       - 'tests/test_studio_position.py'
       - 'tests/test_dialogue_animation.py'
+      - 'tests/gradio_browser_dialogue.py'
   pull_request:
     paths:
       - '.github/workflows/studio.yml'
@@ -54,11 +55,12 @@ on:
       - 'tests/test_studio_export.py'
       - 'tests/test_studio_position.py'
       - 'tests/test_dialogue_animation.py'
+      - 'tests/gradio_browser_dialogue.py'
 
 jobs:
   smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -103,3 +105,23 @@ jobs:
           done
           sed -n '1,120p' /tmp/adventure-studio/gradio.log
           exit 1
+      - name: Click through native NPC dialogue pose editing in real Chrome
+        env:
+          ADVENTURE_STUDIO_BROWSER_PROJECT: /tmp/studio-browser-story/project.json
+          ADVENTURE_STUDIO_BROWSER_EVIDENCE: /tmp/studio-browser-evidence
+        run: |
+          python -m pip install 'playwright>=1.55,<2'
+          command -v google-chrome || command -v google-chrome-stable
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/studio-browser-story --linear-multispeaker
+          python -m adventure_studio.dialogue_animation_fixture /tmp/studio-browser-story --two-poses
+          python tests/gradio_browser_dialogue.py
+      - name: Retain browser screenshot and authored project evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-gradio-png-dialogue-browser
+          path: |
+            /tmp/studio-browser-evidence/*.png
+            /tmp/studio-browser-evidence/*.json
+            /tmp/adventure-studio/gradio.log
+          if-no-files-found: ignore
