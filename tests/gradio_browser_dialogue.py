@@ -15,6 +15,7 @@ from playwright.sync_api import expect, sync_playwright
 from adventure_studio.scumm_project import parse_document
 from adventure_studio.studio_sequences import (
     dialogue_animation_lines, dialogue_speaking_frame_selection,
+    dialogue_speaking_sequence_selection,
 )
 from adventure_studio.studio_actors import costume_direction_speaking_frame
 
@@ -214,9 +215,41 @@ def main() -> None:
             select_option(page, "native-costume-select", "WitnessCostume")
             select_option(page, "native-speaking-direction", "Nord")
             await_selection(page, "native-direction-frame", "SpeakAlt")
+            # Two different multi-frame animations through the real dialogue
+            # editor, preserving the actor's shared Costume and old cues.
+            sequence_input = page.locator("#native-dialogue-speaking-sequence textarea, #native-dialogue-speaking-sequence input")
+            select_option(page, "native-dialogue-line", first[0])
+            sequence_input.fill("Speak, SpeakAlt")
+            page.locator("#native-dialogue-sequence-apply").click()
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-line", second[0])
+            sequence_input.fill("SpeakAlt, Speak, SpeakAlt")
+            page.locator("#native-dialogue-sequence-apply").click()
+            expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-line", first[0])
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            page.screenshot(path=str(evidence / "line-sequences-authored.png"), full_page=True)
+            page.locator("#native-project-export-button").click()
+            sequence_link = page.locator("#native-project-export-file a[download]")
+            expect(sequence_link.first).to_be_visible(timeout=20000)
+            with page.expect_download() as sequence_info:
+                sequence_link.first.click()
+            sequence_file = evidence / "line-sequences-project.json"
+            sequence_info.value.save_as(str(sequence_file))
+            sequence_data = sequence_file.read_text(encoding="utf-8")
+            assert dialogue_speaking_sequence_selection(sequence_data, first[1]) == "Speak, SpeakAlt"
+            assert dialogue_speaking_sequence_selection(sequence_data, second[1]) == "SpeakAlt, Speak, SpeakAlt"
+            page.locator('#native-project-file button[aria-label="Clear"]').click()
+            page.locator("#native-project-file input[type=file]").set_input_files(str(sequence_file))
+            expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
+                "Natives Projekt geladen und validiert", timeout=30000)
+            select_option(page, "native-dialogue-line", second[0])
+            expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-line", first[0])
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
-                "reimported_second_pose": "Speak",
+                "reimported_second_pose": "Speak", "independent_line_sequences": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

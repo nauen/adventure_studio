@@ -11,7 +11,7 @@ import time
 
 from .scumm_dialogue_probe import (_capture, _click, _color_count,
                                    ACTOR_RGB, ANSWER_RGB, initial_dialogue_ready)
-from .scumm_four_facing_probe import scan_costume_colors
+from .scumm_four_facing_probe import scan_costume_colors, observe_facing_order
 from .scumm_launch import close_rgb, scene_pixel
 
 
@@ -27,13 +27,14 @@ def observed_speaking_change(baseline: tuple[int, ...], samples: list[tuple[int,
     return False
 
 
-def run(game_directory: Path, output: Path) -> dict:
+def run(game_directory: Path, output: Path, two_lines: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Virtual X display required")
     if not all((game_directory / f"tentacle.{part}").is_file() for part in ("000", "001")):
         raise ValueError("Linked native dialogue game is missing")
     output.mkdir(parents=True, exist_ok=True)
-    report = {"game": "animated-speaking-native-dialogue", "passed": False}
+    report = {"game": "independent-line-sequences" if two_lines else
+              "animated-speaking-native-dialogue", "passed": False}
     with (output / "scummvm.log").open("w", encoding="utf-8") as log:
         process = subprocess.Popen(["scummvm", f"--path={game_directory.resolve()}", "tentacle"],
                                    stdout=log, stderr=subprocess.STDOUT,
@@ -56,7 +57,8 @@ def run(game_directory: Path, output: Path) -> dict:
             _click(192 + 185 * 2 + 16, 184 + 110 * 2 + 16)
             samples: list[tuple[int, ...]] = []
             red_captured = False
-            for sample in range(120):
+            observed = ()
+            for sample in range(160 if two_lines else 120):
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited during animated NPC line")
                 _capture(output, "current")
@@ -67,16 +69,30 @@ def run(game_directory: Path, output: Path) -> dict:
                 if not red_captured and row[0] >= baseline[0] + 16:
                     _capture(output, "frame-red")
                     red_captured = True
-                if observed_speaking_change(baseline, samples):
+                if two_lines:
+                    seen = observe_facing_order(baseline, samples)
+                    if len(seen) > len(observed):
+                        observed = seen
+                        _capture(output, f"frame-{('red', 'green', 'blue', 'yellow')[len(seen)-1]}")
+                    if len(seen) == 4:
+                        break
+                elif observed_speaking_change(baseline, samples):
                     _capture(output, "frame-green")
                     break
                 time.sleep(0.10)
             report["red_then_green"] = observed_speaking_change(baseline, samples)
             report["peak_pixels"] = {
                 name: max(row[index] for row in samples)
-                for index, name in enumerate(("red", "green"))
+                for index, name in enumerate(("red", "green", "blue", "yellow")
+                                             if two_lines else ("red", "green"))
             }
-            if not report["red_then_green"]:
+            if two_lines:
+                report["visible_order"] = tuple(
+                    {"N": "red", "E": "green", "S": "blue", "W": "yellow"}[name]
+                    for name in observed)
+                if len(observed) != 4:
+                    raise RuntimeError(f"Both native NPC lines did not show independent frames: {report}")
+            elif not report["red_then_green"]:
                 raise RuntimeError(f"Two speaking frames did not appear in sequence: {report}")
             consecutive_stand = 0
             for _ in range(90):
@@ -104,6 +120,7 @@ def run(game_directory: Path, output: Path) -> dict:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit("Usage: python -m adventure_studio.scumm_speaking_sequence_probe GAME_DIR OUTPUT_DIR")
-    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2])), indent=2))
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] != "--two-lines"):
+        raise SystemExit("Usage: python -m adventure_studio.scumm_speaking_sequence_probe GAME_DIR OUTPUT_DIR [--two-lines]")
+    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]),
+                         two_lines=len(sys.argv) == 4), indent=2))

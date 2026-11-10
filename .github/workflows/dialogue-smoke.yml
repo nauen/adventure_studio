@@ -237,6 +237,31 @@ jobs:
             /tmp/dialogue-animated-story/project.json
             /tmp/dialogue-animated-story/resources/Harbor.scc
           if-no-files-found: ignore
+      - name: Play two independent animated speaking sequences of one NPC in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-line-sequences-story --linear-multispeaker
+          python -m adventure_studio.dialogue_animation_fixture /tmp/dialogue-line-sequences-story --line-sequences
+          cp -a /tmp/scummc-upstream /tmp/scummc-line-sequences-upstream
+          test -s /tmp/scummc-line-sequences-upstream/examples/road/DialogueFigure.cost
+          mv /tmp/scummc-line-sequences-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-line-sequences-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-line-sequences-story /tmp/scummc-line-sequences-upstream /tmp/dialogue-line-sequences-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_speaking_sequence_probe /tmp/dialogue-line-sequences-game /tmp/dialogue-line-sequences-evidence --two-lines
+      - name: Retain independent native speaking line evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-independent-speaking-lines
+          path: |
+            /tmp/dialogue-line-sequences-evidence/speaking-sequence-report.json
+            /tmp/dialogue-line-sequences-evidence/scummvm-frame-*.png
+            /tmp/dialogue-line-sequences-evidence/scummvm-stand.png
+            /tmp/dialogue-line-sequences-evidence/scummvm-checkpoint-*.png
+            /tmp/dialogue-line-sequences-evidence/scummvm.log
+            /tmp/dialogue-line-sequences-story/project.json
+            /tmp/dialogue-line-sequences-story/resources/Harbor.scc
+          if-no-files-found: ignore
       - name: Retain native dialogue animation evidence
         if: always()
         uses: actions/upload-artifact@v4

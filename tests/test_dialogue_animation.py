@@ -19,13 +19,74 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 dialogue_speaking_frame_selection,
                                                 dialogue_speaking_frame_preview,
                                                 dialogue_direction_animation_preview,
-                                                assign_dialogue_speaking_frame)
+                                                assign_dialogue_speaking_frame,
+                                                assign_dialogue_speaking_sequence,
+                                                dialogue_speaking_sequence_selection)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    def test_two_lines_of_one_npc_have_independent_looping_png_sequences(self):
+        _story, raw = self.fixture()
+        source = parse_document(raw)
+        costume = replace(source.costumes[0], name="WitnessCostume",
+                          frames=(*source.costumes[0].frames,
+                                  replace(source.costumes[0].frames[0], id="OpenMouth"),
+                                  replace(source.costumes[0].frames[0], id="Smile")))
+        actors = tuple(replace(actor, costume="WitnessCostume")
+                       if actor.id == "SpeakerWitness" else actor
+                       for actor in source.actors)
+        room = source.rooms[0]
+        rules = tuple(replace(rule, actor_lines=tuple(
+            (key, "SpeakerWitness") for key, _actor in rule.actor_lines))
+            for rule in room.talk_rules)
+        hotspots = tuple(replace(hotspot, talk_actor_lines=tuple(
+            "SpeakerWitness" for _actor in hotspot.talk_actor_lines))
+            if hotspot.talk_actor_lines else hotspot for hotspot in room.hotspots)
+        raw = canonical_json(replace(source, actors=actors,
+            costumes=(*source.costumes, costume),
+            rooms=(replace(room, talk_rules=rules, hotspots=hotspots), *source.rooms[1:])))
+        lines = tuple(key for _label, key in dialogue_animation_lines(raw))
+        self.assertGreaterEqual(len(lines), 2)
+        raw = assign_dialogue_speaking_sequence(raw, lines[0], "Pose, OpenMouth")
+        raw = assign_dialogue_speaking_sequence(raw, lines[1], "Smile, Pose, OpenMouth")
+        first = parse_document(raw)
+        cue_by_line = {cue.line_id: cue.animation for cue in first.dialogue_animation_cues}
+        self.assertNotEqual(cue_by_line[lines[0]], cue_by_line[lines[1]])
+        saved = {animation.name: animation for animation in first.costumes[-1].animations}
+        self.assertEqual(saved["gesture"].directions[0].commands, ("Pose",))
+        self.assertEqual(saved["talk_start"].directions[0].commands, ("Pose",))
+        self.assertEqual(saved[cue_by_line[lines[0]]].index, 28)
+        self.assertEqual(saved[cue_by_line[lines[1]]].index, 32)
+        self.assertTrue(all(direction.loop for direction in saved[cue_by_line[lines[1]]].directions))
+        self.assertEqual(dialogue_speaking_sequence_selection(raw, lines[0]), "Pose, OpenMouth")
+        self.assertEqual(dialogue_speaking_sequence_selection(raw, lines[1]), "Smile, Pose, OpenMouth")
+        revised = assign_dialogue_speaking_sequence(raw, lines[0], "Smile, OpenMouth, Smile")
+        updated = parse_document(revised)
+        new_saved = {animation.name: animation for animation in updated.costumes[-1].animations}
+        self.assertEqual(new_saved[cue_by_line[lines[0]]].index, 28)
+        self.assertEqual(new_saved[cue_by_line[lines[1]]], saved[cue_by_line[lines[1]]])
+        self.assertEqual(dialogue_speaking_sequence_selection(canonical_json(updated), lines[0]),
+                         "Smile, OpenMouth, Smile")
+        self.assertEqual(assign_dialogue_speaking_sequence(revised, lines[0],
+                         "Smile, OpenMouth, Smile"), revised)
+        for invalid in ("", "Smile, Unknown", "Pose, "):
+            with self.assertRaises(ValueError):
+                assign_dialogue_speaking_sequence(revised, lines[0], invalid)
+        with self.assertRaisesRegex(ValueError, "Sprecher-Dialogzeile"):
+            assign_dialogue_speaking_sequence(revised, "missing", "Pose")
+        bindings = dialogue_animation_bindings(updated, updated.rooms[0])
+        script = scummc_room_source(updated.rooms[0], dialogue_animation_cues=bindings)
+        self.assertIn("animateActor(SpeakerWitness,28);", script)
+        self.assertIn("animateActor(SpeakerWitness,32);", script)
+        with tempfile.TemporaryDirectory() as directory:
+            export_document(updated, Path(directory))
+            source_text = (Path(directory) / "WitnessCostume.scost").read_text()
+            self.assertIn("body(Smile, OpenMouth, Smile)", source_text)
+            self.assertIn("body(Smile, Pose, OpenMouth)", source_text)
+
     def fixture(self, branching=False):
         story = dialogue_fixture(EXAMPLE.read_text(encoding="utf-8"),
                                  choices=branching, multispeaker=True)

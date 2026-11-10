@@ -36,6 +36,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_speaking_frame_selection, dialogue_speaking_frame_preview,
                                 dialogue_direction_animation_preview,
                                assign_dialogue_speaking_frame,
+                               assign_dialogue_speaking_sequence, dialogue_speaking_sequence_selection,
                                edit_dialogue_animation)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
 from .studio_project import canonical_studio_project, parse_studio_project
@@ -733,6 +734,10 @@ def make_app():
             with gr.Row():
                 native_dialogue_speaking_frame = gr.Dropdown(label="PNG-Sprechpose dieser Zeile (gespeicherte Pose vorausgewählt)", elem_id="native-dialogue-pose")
                 native_dialogue_speaking_apply = gr.Button("PNG-Sprechpose dieser Zeile zuweisen", elem_id="native-dialogue-pose-apply")
+            gr.Markdown("**Eigene animierte Sprechfolge für diese Zeile:** Importierte PNG-Frame-IDs in Abspielreihenfolge durch Komma trennen. Jede Zeile erhält einen eigenen nativen COST-Slot; andere Dialogzeilen und die globalen Sprechframes bleiben erhalten. Die Geschwindigkeit bestimmt ScummVM.")
+            with gr.Row():
+                native_dialogue_speaking_sequence = gr.Textbox(label="Sprechframes dieser Dialogzeile", elem_id="native-dialogue-speaking-sequence")
+                native_dialogue_sequence_apply = gr.Button("Sprechfolge dieser Zeile speichern", elem_id="native-dialogue-sequence-apply")
             native_dialogue_speaking_preview = gr.Image(
                 label="PNG-Sprechpose · echte Costume-Pixel (Editor-Vorschau)",
                 interactive=False, type="pil", height=270,
@@ -1170,6 +1175,7 @@ def make_app():
             if not raw:
                 return (gr.update(choices=[], value=None), True,
                         gr.update(choices=[], value=None), None, None,
+                        "",
                         "Bitte zuerst eine Sprecher-Dialogzeile wählen")
             choices, selected, reset = dialogue_animation_choices(raw, line)
             frames, selected_frame = dialogue_speaking_frame_selection(raw, line)
@@ -1178,7 +1184,7 @@ def make_app():
             return (gr.update(choices=choices, value=selected), reset,
                     gr.update(choices=frames, value=selected_frame),
                     dialogue_speaking_frame_preview(raw, line, selected_frame),
-                    direction_image, direction_status)
+                    direction_image, dialogue_speaking_sequence_selection(raw, line), direction_status)
 
         def dialogue_animation_refresh(raw, line, direction):
             lines = dialogue_animation_lines(raw) if raw else ()
@@ -1195,12 +1201,14 @@ def make_app():
             [native_dialogue_animation_line, native_dialogue_animation,
              native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
+             native_dialogue_speaking_sequence,
              native_dialogue_direction_status])
         native_dialogue_animation_line.change(
             dialogue_animation_update,
             [native_state, native_dialogue_animation_line, native_dialogue_direction],
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
+             native_dialogue_speaking_sequence,
              native_dialogue_direction_status])
         for direction_control in (native_dialogue_animation, native_dialogue_direction):
             direction_control.change(
@@ -1215,6 +1223,10 @@ def make_app():
         native_dialogue_speaking_apply.click(
             lambda *args: native_edit(assign_dialogue_speaking_frame, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame,
+             native_dialogue_reset], [native_state, *native_outputs, native_report])
+        native_dialogue_sequence_apply.click(
+            lambda *args: native_edit(assign_dialogue_speaking_sequence, *args),
+            [native_state, native_dialogue_animation_line, native_dialogue_speaking_sequence,
              native_dialogue_reset], [native_state, *native_outputs, native_report])
         native_dialogue_animation_save.click(
             lambda *args: native_edit(edit_dialogue_animation, *args),

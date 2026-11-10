@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from hashlib import sha1
 from pathlib import Path
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep,
@@ -222,6 +223,74 @@ def dialogue_direction_animation_preview(raw: str | None, line_id: str | None,
 def dialogue_speaking_frames(raw: str, line_id: str | None) -> tuple[str, ...]:
     """Offer only imported frames belonging to the selected native speaker."""
     return dialogue_speaking_frame_selection(raw, line_id)[0]
+
+
+def dialogue_speaking_sequence_selection(raw: str, line_id: str | None) -> str:
+    """Show a saved, uniform native frame sequence without inventing frames."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        return ""
+    cue = next((item for item in document.dialogue_animation_cues
+                if item.line_id == line_id), None)
+    if cue is None:
+        return ""
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    animation = next((item for item in costume.animations if item.name == cue.animation), None)
+    if animation is None or {entry.direction for entry in animation.directions} != {"N", "E", "S", "W"}:
+        return ""
+    commands = {entry.commands for entry in animation.directions}
+    frames = {frame.id for frame in costume.frames}
+    if len(commands) != 1:
+        return ""
+    sequence = next(iter(commands))
+    return ", ".join(sequence) if all(command in frames for command in sequence) else ""
+
+
+def assign_dialogue_speaking_sequence(raw: str, line_id: str, frame_ids: str,
+                                      reset_to_stand: bool = True) -> str:
+    """Save one NPC line's own native looping COST frames, without global edits."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    sharing = [item.id for item in document.actors
+               if item.id != actor.id and item.costume == actor.costume]
+    if sharing:
+        raise ValueError("Die Costume wird auch von anderen Figuren verwendet: "
+                         + ", ".join(sharing) + ". Bitte zuerst eine eigene Costume zuweisen")
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    if not isinstance(frame_ids, str) or not frame_ids.strip():
+        raise ValueError("Bitte eine Folge importierter PNG-Frames eingeben")
+    sequence = tuple(item.strip() for item in frame_ids.split(","))
+    available = {frame.id for frame in costume.frames}
+    if any(not item or item not in available for item in sequence):
+        raise ValueError("Die Sprechfolge darf nur vorhandene PNG-Frames enthalten")
+    # Stable per-line identity allows re-editing, independent of the selected frames.
+    name = "line_" + sha1(line_id.encode("utf-8")).hexdigest()[:12]
+    previous = next((item for item in costume.animations if item.name == name), None)
+    if any(cue.line_id != line_id and cue.animation == name
+           for cue in document.dialogue_animation_cues):
+        raise ValueError("Der native Animationsslot gehört bereits zu einer anderen Dialogzeile")
+    if previous is None:
+        occupied = {item.index for item in costume.animations if item.index is not None}
+        index = next((slot for slot in range(28, 253, 4) if slot not in occupied), None)
+        if index is None:
+            raise ValueError("Keine freien nativen Costume-Animationsslots für Sprechfolgen")
+    else:
+        if previous.index is None or previous.index < 28:
+            raise ValueError("Vorhandene Dialoganimation verwendet einen reservierten Animationsslot")
+        index = previous.index
+    animation = CostumeAnimation(name, tuple(
+        CostumeDirection(direction, sequence, True)
+        for direction in ("N", "E", "S", "W")), index)
+    updated_costume = replace(costume, animations=tuple(
+        item for item in costume.animations if item.name != name) + (animation,))
+    updated = canonical_json(replace(document, costumes=tuple(
+        updated_costume if item.name == costume.name else item for item in document.costumes)))
+    return edit_dialogue_animation(updated, line_id, name, reset_to_stand)
 
 
 def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,
