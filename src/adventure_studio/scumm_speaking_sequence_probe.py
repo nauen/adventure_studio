@@ -11,20 +11,34 @@ import time
 
 from .scumm_dialogue_probe import (_capture, _click, _color_count,
                                    ACTOR_RGB, ANSWER_RGB, initial_dialogue_ready)
-from .scumm_four_facing_probe import scan_costume_colors, observe_facing_order
+from .scumm_four_facing_probe import scan_costume_colors
 from .scumm_launch import close_rgb, scene_pixel
 
 
 def observed_speaking_change(baseline: tuple[int, ...], samples: list[tuple[int, ...]],
                              threshold: int = 16) -> bool:
-    """Require red then green in one uninterrupted native dialogue playback."""
-    red_seen = False
+    """Both looping frames must render; sampling can start mid-COST cycle."""
+    return all(any(row[index] >= baseline[index] + threshold for row in samples)
+               for index in (0, 1))
+
+
+def observed_independent_line_pairs(baseline: tuple[int, ...],
+                                    samples: list[tuple[int, ...]],
+                                    threshold: int = 16) -> tuple[str, ...]:
+    """Both colors of line one precede both colors of line two, cycle phase free."""
+    first = set()
+    second = set()
     for row in samples:
-        if row[0] >= baseline[0] + threshold:
-            red_seen = True
-        if red_seen and row[1] >= baseline[1] + threshold:
-            return True
-    return False
+        active = {index for index in range(4)
+                  if row[index] >= baseline[index] + threshold}
+        if active & {2, 3}:
+            if first != {0, 1}:
+                return tuple(("red", "green")[index] for index in sorted(first))
+            second.update(active & {2, 3})
+        elif not second:
+            first.update(active & {0, 1})
+    return tuple(("red", "green")[index] for index in sorted(first)) + tuple(
+        ("blue", "yellow")[index - 2] for index in sorted(second))
 
 
 def run(game_directory: Path, output: Path, two_lines: bool = False) -> dict:
@@ -57,7 +71,7 @@ def run(game_directory: Path, output: Path, two_lines: bool = False) -> dict:
             _click(192 + 185 * 2 + 16, 184 + 110 * 2 + 16)
             samples: list[tuple[int, ...]] = []
             red_captured = False
-            observed = ()
+            observed: tuple[str, ...] = ()
             for sample in range(160 if two_lines else 120):
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited during animated NPC line")
@@ -70,29 +84,28 @@ def run(game_directory: Path, output: Path, two_lines: bool = False) -> dict:
                     _capture(output, "frame-red")
                     red_captured = True
                 if two_lines:
-                    seen = observe_facing_order(baseline, samples)
+                    seen = observed_independent_line_pairs(baseline, samples)
                     if len(seen) > len(observed):
+                        for color in seen[len(observed):]:
+                            _capture(output, f"frame-{color}")
                         observed = seen
-                        _capture(output, f"frame-{('red', 'green', 'blue', 'yellow')[len(seen)-1]}")
                     if len(seen) == 4:
                         break
                 elif observed_speaking_change(baseline, samples):
                     _capture(output, "frame-green")
                     break
                 time.sleep(0.10)
-            report["red_then_green"] = observed_speaking_change(baseline, samples)
+            report["two_frames_visible"] = observed_speaking_change(baseline, samples)
             report["peak_pixels"] = {
                 name: max(row[index] for row in samples)
                 for index, name in enumerate(("red", "green", "blue", "yellow")
                                              if two_lines else ("red", "green"))
             }
             if two_lines:
-                report["visible_order"] = tuple(
-                    {"N": "red", "E": "green", "S": "blue", "W": "yellow"}[name]
-                    for name in observed)
+                report["visible_order"] = observed
                 if len(observed) != 4:
                     raise RuntimeError(f"Both native NPC lines did not show independent frames: {report}")
-            elif not report["red_then_green"]:
+            elif not report["two_frames_visible"]:
                 raise RuntimeError(f"Two speaking frames did not appear in sequence: {report}")
             consecutive_stand = 0
             for _ in range(90):
