@@ -361,6 +361,7 @@ def main() -> None:
             ending_png = evidence / "fresh-ending.png"
             Image.new("RGBA", (8, 8), (180, 50, 130, 255)).save(speaking_png)
             Image.new("RGBA", (8, 8), (40, 180, 180, 255)).save(ending_png)
+            page.get_by_text("PNG-Datei direkt für diese Dialogzeile importieren", exact=True).click()
             png_id = page.locator("#native-dialogue-png-id textarea, #native-dialogue-png-id input")
             page.locator("#native-dialogue-png-file input[type=file]").set_input_files(str(speaking_png))
             png_id.fill("FreshSpeaking")
@@ -427,6 +428,33 @@ def main() -> None:
             costumes = {item.name: item for item in isolated_document.costumes}
             assert "PrivateEnding" in {frame.id for frame in costumes[actors["SpeakerWitness"].costume].frames}
             assert "PrivateEnding" not in {frame.id for frame in costumes[actors["SpeakerHarborKeeper"].costume].frames}
+            # Multi-file import: preview names/order, append the whole native
+            # sequence in one browser action and verify persisted frame order.
+            batch_a = evidence / "Batch-A.png"
+            batch_b = evidence / "Batch-B.png"
+            Image.new("RGBA", (8, 8), (125, 185, 55, 255)).save(batch_a)
+            Image.new("RGBA", (8, 8), (225, 110, 40, 255)).save(batch_b)
+            page.locator("#native-dialogue-png-batch-files input[type=file]").set_input_files(
+                [str(batch_a), str(batch_b)])
+            batch_preview = page.locator(
+                "#native-dialogue-png-batch-plan textarea, #native-dialogue-png-batch-plan input")
+            expect(batch_preview).to_have_value(
+                re.compile(r"1\. Batch-A\.png → Batch_A.*2\. Batch-B\.png → Batch_B", re.S),
+                timeout=20000)
+            page.locator("#native-dialogue-png-batch-import").click()
+            expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
+            page.locator("#native-project-export-button").click()
+            expect(sequence_link.first).to_be_visible(timeout=20000)
+            with page.expect_download() as batch_info:
+                sequence_link.first.click()
+            batch_file = evidence / "batch-import-project.json"
+            batch_info.value.save_as(str(batch_file))
+            batch_document = parse_document(batch_file.read_text(encoding="utf-8"))
+            batch_raw = batch_file.read_text(encoding="utf-8")
+            last_two = dialogue_ending_timeline(batch_raw, first[1], "N")[1][-2:]
+            assert last_two == (("5. Batch_A", 4), ("6. Batch_B", 5))
+            assert next(actor for actor in batch_document.actors
+                        if actor.id == "SpeakerHarborKeeper").costume == "WitnessCostume"
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
@@ -437,6 +465,7 @@ def main() -> None:
                 "direct_png_ending_timeline": True,
                 "direct_png_file_import": True,
                 "isolated_shared_speaker_costume": True,
+                "ordered_atomic_png_batch": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
