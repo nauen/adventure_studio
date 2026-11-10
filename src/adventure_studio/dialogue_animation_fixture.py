@@ -46,6 +46,13 @@ def build(directory: Path, two_poses: bool = False) -> None:
                                     if actor.costume == costume.name else actor
                                     for actor in document.actors))
     if two_poses:
+        # The editor forbids mutating an asset shared by distinct actors.
+        # Give the Witness its own real Costume before authoring two poses.
+        document = replace(document,
+            costumes=(*document.costumes, replace(updated, name="WitnessCostume")),
+            actors=tuple(replace(actor, costume="WitnessCostume")
+                         if actor.id == "SpeakerWitness" else actor
+                         for actor in document.actors))
         # Two consecutive lines are spoken by the same native actor.
         rooms = tuple(replace(room,
             talk_rules=tuple(replace(rule, actor_lines=tuple(
