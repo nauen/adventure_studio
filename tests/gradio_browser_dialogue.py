@@ -78,6 +78,31 @@ def await_preview_color(page, rgb: tuple[int, int, int]) -> None:
     )
 
 
+def await_direction_preview_color(page, rgb: tuple[int, int, int]) -> None:
+    """Inspect native direction-specific frame pixels, not only the dropdown."""
+    image = page.locator("#native-dialogue-direction-preview img")
+    expect(image.first).to_be_visible(timeout=20000)
+    page.wait_for_function(
+        """({color}) => {
+            const img = document.querySelector('#native-dialogue-direction-preview img');
+            if (!img || !img.complete || img.naturalWidth === 0) return false;
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(img, 0, 0);
+            const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data;
+            let count = 0;
+            for (let i = 0; i < rgba.length; i += 4) {
+                if (Math.abs(rgba[i] - color[0]) <= 25 &&
+                    Math.abs(rgba[i+1] - color[1]) <= 25 &&
+                    Math.abs(rgba[i+2] - color[2]) <= 25) count++;
+            }
+            return count >= 24;
+        }""", arg={"color": list(rgb)}, timeout=20000,
+    )
+
+
 def main() -> None:
     fixture = Path(os.environ["ADVENTURE_STUDIO_BROWSER_PROJECT"]).resolve()
     evidence = Path(os.environ.get("ADVENTURE_STUDIO_BROWSER_EVIDENCE", "/tmp/studio-browser-evidence"))
@@ -111,12 +136,23 @@ def main() -> None:
             await_selection(page, "native-dialogue-pose", "Speak")
             await_selection(page, "native-dialogue-animation", "gesture")
             await_preview_color(page, (220, 80, 80))
+            select_option(page, "native-dialogue-direction", "Nord")
+            expect(page.locator("#native-dialogue-direction-status input, #native-dialogue-direction-status textarea")).to_have_value(
+                "gesture · Nord · Frame Speak (native Costume-Palette, statische Editor-Vorschau)")
+            await_direction_preview_color(page, (220, 80, 80))
+            select_option(page, "native-dialogue-direction", "West")
+            expect(page.locator("#native-dialogue-direction-status input, #native-dialogue-direction-status textarea")).to_have_value(
+                "gesture · West · Frame Speak (native Costume-Palette, statische Editor-Vorschau)")
             page.screenshot(path=str(evidence / "first-line.png"), full_page=True)
 
             select_option(page, "native-dialogue-line", second[0])
             await_selection(page, "native-dialogue-pose", "SpeakAlt")
             await_selection(page, "native-dialogue-animation", "pose_SpeakAlt")
             await_preview_color(page, (35, 225, 35))
+            select_option(page, "native-dialogue-direction", "Ost")
+            expect(page.locator("#native-dialogue-direction-status input, #native-dialogue-direction-status textarea")).to_have_value(
+                "pose_SpeakAlt · Ost · Frame SpeakAlt (native Costume-Palette, statische Editor-Vorschau)")
+            await_direction_preview_color(page, (35, 225, 35))
             page.screenshot(path=str(evidence / "second-line.png"), full_page=True)
 
             # Edit the second line using the actual PNG selector and button,
