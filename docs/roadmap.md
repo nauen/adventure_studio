@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Vorbereitete native Dialog-PNG-Folge vorab als GIF abspielen (2026-11-11, CI offen):**
+Ein Klick erzeugt für die aktuell gültige 1..N-PNG-Importauswahl eine
+endlos wiederholte GIF-Vorschau mit einstellbarer Editor-Bilddauer.
+0 Frames und ungültige Bilddauer werden sichtbar abgelehnt. Die
+Original-PNG-Reihenfolge, Größenunterschiede und Transparenz werden
+in einer gemeinsamen Editor-Leinwand dargestellt; die Spiel-Tick-/COST-
+Semantik bleibt unverändert. Ein geändertes Upload-/Sortier-/Ausschluss-
+Ergebnis verwirft die alte GIF-Vorschau. 334 lokale Tests grün;
+Chromium-/stock-ScummVM-CI offen. Danach: Bild direkt in der
+Miniaturgalerie statt im Dropdown zum Bearbeiten auswählen.
+
 **PNG-Miniaturvorschau der vorbereiteten nativen Dialog-Importfolge (2026-11-11, native Abnahme bestanden):**
 Die noch nicht importierten hochgeladenen Bilder erscheinen unter dem
 Textplan als echte farbige Miniaturkarten mit nativen Frame-IDs.

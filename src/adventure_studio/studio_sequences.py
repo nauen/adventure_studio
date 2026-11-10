@@ -494,6 +494,45 @@ def dialogue_png_batch_thumbnails(paths: list[str] | tuple[str, ...] | None,
             for _source, frame_id in _dialogue_png_batch_entries((path,))]
 
 
+def dialogue_png_batch_animation_preview(
+        paths: list[str] | tuple[str, ...] | None,
+        order: list[int] | tuple[int, ...] | None,
+        duration_ms: int | float, destination: Path) -> Path:
+    """Make a looping editor GIF of the exact staged order, without model writes."""
+    from PIL import Image
+
+    if (type(duration_ms) not in (int, float) or int(duration_ms) != duration_ms
+            or not 1 <= duration_ms <= 5000):
+        raise ValueError("Vorschau-Dauer muss zwischen 1 und 5000 Millisekunden liegen")
+    entries = _dialogue_png_batch_entries(dialogue_png_batch_order(paths, order))
+    originals = []
+    for path, _frame_id in entries:
+        with Image.open(path) as source:
+            if source.format != "PNG":
+                raise ValueError(f"Keine gültige PNG-Datei: {Path(path).name}")
+            originals.append(source.convert("RGBA"))
+    width = max(image.width for image in originals)
+    height = max(image.height for image in originals)
+    if not width or not height:
+        raise ValueError("PNG-Frames benötigen eine positive Bildgröße")
+    scale = min(8, 224 / max(width, height))
+    frame_width, frame_height = max(1, round(width * scale)), max(1, round(height * scale))
+    frames = []
+    for original in originals:
+        scaled = original.resize((max(1, round(original.width * scale)),
+                                  max(1, round(original.height * scale))),
+                                 Image.Resampling.NEAREST)
+        canvas = Image.new("RGB", (frame_width, frame_height), (36, 40, 48))
+        canvas.paste(scaled, ((frame_width - scaled.width) // 2,
+                              (frame_height - scaled.height) // 2), scaled)
+        frames.append(canvas)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    frames[0].save(destination, format="GIF", save_all=True,
+                   append_images=frames[1:], duration=int(duration_ms),
+                   loop=0, disposal=2, optimize=False)
+    return destination
+
+
 def import_dialogue_png_batch(raw: str, line_id: str, direction: str,
                               paths: list[str] | tuple[str, ...] | None, target: str,
                               ending_ticks: int | float = 12,

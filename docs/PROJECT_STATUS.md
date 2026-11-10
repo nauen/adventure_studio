@@ -4,6 +4,18 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Aktuelles Produktpaket (2026-11-11, CI-Abnahme offen):**
+Im NPC-Dialogeditor lässt sich die **vorbereitete PNG-Importfolge als
+animiertes, wiederholtes Editor-GIF abspielen**, bevor native COST-Frames
+geschrieben werden. Die Millisekunden pro Bild sind einstellbar, aber
+ausdrücklich nur Editor-Timing; die unveränderte SCUMM-v6-Ausgabe nutzt
+den bestehenden nativen Ablauf. Die Vorschau zeigt dieselbe Reihenfolge
+wie Importauswahl und Miniaturgalerie; jede Änderung an Uploads,
+Sortierung, Ausschlüssen oder Wiederaufnahme setzt eine bereits
+abgespielte Vorschau zurück. 334 lokale Tests grün, Chromium-/native
+CI-Abnahme offen. **Nächstes Paket:** Ein Bild direkt in der
+Miniaturgalerie auswählen und damit Umsortieren/Entfernen steuern.
+
 **Neues Produktpaket (2026-11-11, native Abnahme bestanden):**
 Der NPC-Dialogeditor zeigt die **tatsächlichen PNG-Bildpixel vor dem
 Import als beschriftete Miniatur-Galerie** in genau der Reihenfolge der

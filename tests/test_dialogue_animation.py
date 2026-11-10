@@ -37,7 +37,7 @@ from adventure_studio.studio_sequences import (
     import_dialogue_png_batch, dialogue_png_batch_order,
     move_dialogue_png_batch_frame, remove_dialogue_png_batch_frame,
     dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
-    dialogue_png_batch_thumbnails)
+    dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -73,6 +73,18 @@ class DialogueAnimationTests(unittest.TestCase):
                              (paths[2], paths[0], paths[1]))
             self.assertEqual(dialogue_png_batch_thumbnails(paths, order)[0],
                              (paths[2], "1. Frame_03_magenta"))
+            preview_gif = dialogue_png_batch_animation_preview(
+                paths, order, 180, root / "staged-preview.gif")
+            with Image.open(preview_gif) as animation:
+                self.assertEqual((animation.format, animation.n_frames), ("GIF", 3))
+                self.assertEqual(animation.info["duration"], 180)
+                for index, color in enumerate(((200, 45, 205), (220, 80, 80),
+                                               (35, 225, 35))):
+                    animation.seek(index)
+                    self.assertEqual(animation.convert("RGB").getpixel((32, 32)), color)
+            with self.assertRaisesRegex(ValueError, "Dauer"):
+                dialogue_png_batch_animation_preview(paths, order, 0,
+                                                     root / "bad-preview.gif")
             self.assertIn("1. 03-magenta.png → Frame_03_magenta",
                           dialogue_png_batch_preview(raw, first, paths, order))
             with self.assertRaisesRegex(ValueError, "Reihenfolge passt nicht"):
@@ -87,6 +99,10 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual([path for path, _caption in
                               dialogue_png_batch_thumbnails(paths, remaining)],
                              [paths[2], paths[1]])
+            with Image.open(dialogue_png_batch_animation_preview(
+                    paths, remaining, 120, root / "filtered-preview.gif")) as animation:
+                self.assertEqual(animation.n_frames, 2)
+                self.assertEqual(animation.info["duration"], 120)
             restored, restored_selected = restore_dialogue_png_batch_frame(
                 paths, remaining, 0)
             self.assertEqual((restored, restored_selected), ((2, 1, 0), 2))
@@ -118,11 +134,17 @@ class DialogueAnimationTests(unittest.TestCase):
             remaining, next_selected = remove_dialogue_png_batch_frame(paths, remaining, 0)
             self.assertEqual((remaining, next_selected), ((), None))
             self.assertEqual(dialogue_png_batch_thumbnails(paths, remaining), [])
+            with self.assertRaisesRegex(ValueError, "mindestens eine"):
+                dialogue_png_batch_animation_preview(paths, remaining, 180,
+                                                     root / "empty-preview.gif")
             self.assertEqual(len(dialogue_png_batch_excluded(paths, remaining)), 3)
             restored_empty, restored_position = restore_dialogue_png_batch_frame(
                 paths, remaining, 1)
             self.assertEqual((restored_empty, restored_position), ((1,), 0))
             self.assertEqual(dialogue_png_batch_order(paths, restored_empty), (paths[1],))
+            with Image.open(dialogue_png_batch_animation_preview(
+                    paths, restored_empty, 180, root / "single-preview.gif")) as animation:
+                self.assertEqual(animation.n_frames, 1)
             self.assertIn("Alle PNG-Dateien", dialogue_png_batch_preview(raw, first, paths, remaining))
             with self.assertRaisesRegex(ValueError, "mindestens eine"):
                 import_dialogue_png_batch(raw, first, "W", paths, "Sprechfolge",

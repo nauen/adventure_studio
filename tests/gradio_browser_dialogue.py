@@ -9,8 +9,10 @@ from __future__ import annotations
 import json
 import os
 import re
+from io import BytesIO
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import urljoin
 
 from PIL import Image
 from playwright.sync_api import expect, sync_playwright
@@ -484,12 +486,28 @@ def main() -> None:
                 re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-A\.png → Batch_A\s*3\. Batch-Excluded\.png → Batch_Excluded\s*$"),
                 timeout=20000)
             await_batch_gallery_colors(page, [(225, 110, 40), (125, 185, 55), (65, 120, 215)])
+            page.locator("#native-dialogue-png-batch-play").click()
+            batch_animation = page.locator("#native-dialogue-png-batch-animation img")
+            expect(batch_animation.first).to_be_visible(timeout=20000)
             select_option(page, "native-dialogue-png-batch-selected", "2. Batch-A.png")
             page.locator("#native-dialogue-png-batch-remove").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-Excluded\.png → Batch_Excluded\s*$"),
                 timeout=20000)
             await_batch_gallery_colors(page, [(225, 110, 40), (65, 120, 215)])
+            expect(batch_animation).to_have_count(0, timeout=20000)
+            page.locator("#native-dialogue-png-batch-play").click()
+            expect(batch_animation.first).to_be_visible(timeout=20000)
+            gif_url = urljoin(page.url, batch_animation.first.get_attribute("src"))
+            gif_response = page.request.get(gif_url)
+            assert gif_response.ok, f"Editor-GIF nicht abrufbar: {gif_response.status}"
+            with Image.open(BytesIO(gif_response.body())) as staged_gif:
+                assert staged_gif.format == "GIF" and staged_gif.n_frames == 2
+                for index, expected_color in enumerate(((225, 110, 40), (65, 120, 215))):
+                    staged_gif.seek(index)
+                    pixel = staged_gif.convert("RGB").getpixel(
+                        (staged_gif.width // 2, staged_gif.height // 2))
+                    assert all(abs(a - b) <= 18 for a, b in zip(pixel, expected_color)), pixel
             page.locator("#native-dialogue-png-batch-import").click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
             page.locator("#native-project-export-button").click()
@@ -520,6 +538,7 @@ def main() -> None:
                 "removed_staged_png_without_reupload": True,
                 "restored_staged_png_without_reupload": True,
                 "staged_png_pixel_thumbnail_order": True,
+                "playable_staged_png_gif": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
