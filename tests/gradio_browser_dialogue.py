@@ -190,8 +190,10 @@ def main() -> None:
             updated = parse_document(saved.read_text(encoding="utf-8"))
             data = saved.read_text(encoding="utf-8")
             assert updated.dialogue_animation_cues
-            assert dialogue_speaking_frame_selection(data, first[1])[1] == "Speak"
-            assert dialogue_speaking_frame_selection(data, second[1])[1] == "Speak"
+            # A direction-dependent gesture is deliberately not presented
+            # as one unambiguous PNG in the line-level shortcut selector.
+            assert dialogue_speaking_frame_selection(data, first[1])[1] is None
+            assert dialogue_speaking_frame_selection(data, second[1])[1] is None
             assert costume_direction_speaking_frame(data, "WitnessCostume", "N") == "SpeakAlt"
             assert costume_direction_speaking_frame(data, "WitnessCostume", "E") == "Speak"
             assert costume_direction_speaking_frame(data, "WitnessCostume", "S") == "Speak"
@@ -205,10 +207,9 @@ def main() -> None:
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
             select_option(page, "native-dialogue-line", second[0])
-            await_selection(page, "native-dialogue-pose", "Speak")
-            await_preview_color(page, (220, 80, 80))
+            await_selection(page, "native-dialogue-animation", "gesture")
             select_option(page, "native-dialogue-line", first[0])
-            await_selection(page, "native-dialogue-pose", "Speak")
+            await_selection(page, "native-dialogue-animation", "gesture")
             page.screenshot(path=str(evidence / "reimported.png"), full_page=True)
             select_option(page, "native-costume-select", "WitnessCostume")
             select_option(page, "native-speaking-direction", "Nord")
