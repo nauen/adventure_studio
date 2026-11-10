@@ -31,13 +31,71 @@ from adventure_studio.studio_sequences import (
     dialogue_animation_phase_selection, edit_dialogue_animation_phases,
     dialogue_ending_animation_selection, edit_dialogue_ending_animation,
     dialogue_ending_timeline, assign_dialogue_ending_sequence,
-    edit_dialogue_ending_timeline, dialogue_ending_timeline_preview)
+    edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
+    import_dialogue_png_frame)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Import benötigt Pillow")
+    def test_import_real_png_directly_into_speaking_and_ending_line(self):
+        from PIL import Image
+
+        _story, shared = self.fixture()
+        document = parse_document(shared)
+        raw = canonical_json(replace(document,
+            costumes=(*document.costumes, replace(document.costumes[0], name="WitnessCostume")),
+            actors=tuple(replace(actor, costume="WitnessCostume")
+                         if actor.id == "SpeakerWitness" else actor
+                         for actor in document.actors)))
+        first, second = (key for _label, key in dialogue_animation_lines(raw))
+        raw = edit_dialogue_animation(raw, first, "gesture")
+        raw = edit_dialogue_animation(raw, second, "gesture")
+        with tempfile.TemporaryDirectory() as directory:
+            red = Path(directory) / "red.png"
+            green = Path(directory) / "green.png"
+            Image.new("RGBA", (8, 8), (220, 80, 80, 255)).save(red)
+            Image.new("RGBA", (8, 8), (35, 225, 35, 255)).save(green)
+            with self.assertRaisesRegex(ValueError, "anderen Figuren"):
+                import_dialogue_png_frame(shared, first, "W", str(red),
+                                          "ImportedRed", "Sprechfolge")
+            updated = import_dialogue_png_frame(raw, first, "W", str(red),
+                                                "ImportedRed", "Sprechfolge")
+            updated = import_dialogue_png_frame(updated, first, "W", str(green),
+                                                "ImportedGreen", "Abschlussfolge", 22)
+            self.assertIn("ImportedRed", dialogue_speaking_sequence_selection(updated, first, "W"))
+            self.assertIn("ImportedGreen", tuple(frame.id for frame in
+                          parse_document(updated).costumes[0].frames))
+            ending_cue = next(cue for cue in parse_document(updated).dialogue_animation_cues
+                              if cue.line_id == first)
+            self.assertEqual(ending_cue.ending_animation_ticks, 22)
+            self.assertEqual(dialogue_ending_timeline(updated, first, "W")[1][-1][0],
+                             "1. ImportedGreen")
+            self.assertIsNone(dialogue_ending_animation_selection(updated, second)[1])
+            with self.assertRaisesRegex(ValueError, "existiert bereits"):
+                import_dialogue_png_frame(updated, first, "W", str(red),
+                                          "ImportedRed", "Sprechfolge")
+            with self.assertRaisesRegex(ValueError, "gültige Blickrichtung"):
+                import_dialogue_png_frame(updated, first, "NW", str(red),
+                                          "Bad", "Abschlussfolge")
+            with self.assertRaisesRegex(ValueError, "Sprechfolge oder Abschlussfolge"):
+                import_dialogue_png_frame(updated, first, "W", str(red),
+                                          "Bad", "SomethingElse")
+            with self.assertRaisesRegex(ValueError, "mindestens einen"):
+                import_dialogue_png_frame(updated, first, "W", str(red),
+                                          "Bad", "Abschlussfolge", 0)
+            self.assertEqual(canonical_json(parse_document(updated)), updated)
+            compiled = parse_document(updated)
+            export_document(compiled, Path(directory) / "export")
+            scost = (Path(directory) / "export" / "DialogueFigure.scost").read_text()
+            self.assertIn("body(ImportedGreen)", scost)
+            self.assertIn("body(Pose, ImportedRed)", scost)
+            script = scummc_room_source(compiled.rooms[0], dialogue_animation_cues=
+                                        dialogue_animation_bindings(compiled, compiled.rooms[0]))
+            self.assertIn("delay(22);", script)
+
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Timeline benötigt Pillow")
     def test_png_ending_timeline_owns_native_slot_and_preserves_line_directions(self):
         _story, raw = self.fixture()

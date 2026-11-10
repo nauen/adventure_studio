@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**PNG-Bilddatei direkt für Dialog-PNG-Folgen importieren (2026-11-10, CI offen):**
+Ein Autor wählt im Dialogeditor eine neue PNG-Datei, eine native Frame-ID
+und den Zielkanal Sprech- oder Abschlussfolge. Die Datei wird auf die
+bereits zugewiesene Costume importiert und in einem gültigen Schritt
+an die gewählte Zeile/Richtung angehängt. Bestehende Farbpalette und
+andere Animationen bleiben geschützt; geteilte Costumes und native
+Frame-/Palettefehler werden sichtbar abgelehnt, ohne den Projektstand
+zu verändern. 332 lokale Tests grün. Echte Chromium-Dateiupload-
+Abnahme und stock-ScummVM-Farbframe auf dem neuen Pfad im CI-Gate offen.
+Anschließend: Geteilte Actor-Costumes im Dialogeditor sicher vereinzeln.
+
 **Direkte Abschluss-PNG-Folge im NPC-Dialogeditor (2026-11-10, native Abnahme bestanden):**
 Ein Autor kann aus bereits importierten PNG-Costume-Frames eine eigene
 zeilenspezifische native Abschlussanimation für eine Blickrichtung

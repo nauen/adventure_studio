@@ -11,7 +11,7 @@ from .studio_sequences import (dialogue_animation_lines, edit_dialogue_animation
                                assign_dialogue_speaking_sequence,
                                assign_dialogue_direction_speaking_sequence,
                                edit_dialogue_animation_phases,
-                               assign_dialogue_ending_sequence)
+                               import_dialogue_png_frame)
 from .studio_actors import (set_costume_direction_speaking_pose,
                             set_costume_direction_speaking_sequence)
 
@@ -45,8 +45,6 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
     if four_facing or line_sequences or line_directions:
         additional += (CostumeFrame("SpeakBlue", 8, 8, bytes([4] * 64), -4, -8),
                        CostumeFrame("SpeakYellow", 8, 8, bytes([5] * 64), -4, -8))
-    if line_directions:
-        additional += (CostumeFrame("SpeakMagenta", 8, 8, bytes([6] * 64), -4, -8),)
     updated = replace(costume, palette=tuple(palette),
                       frames=(*costume.frames, CostumeFrame("Speak", 8, 8, bytes([2] * 64), -4, -8),
                               *additional),
@@ -98,9 +96,13 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
         # the first line waits 12 ticks before its W gesture and at least 90
         # ticks after starting it; the second retains legacy 1/60 ticks.
         raw = edit_dialogue_animation_phases(raw, lines[0], 12, 90)
-        # The very same direct PNG ending-authoring function as the Studio UI
-        # must produce the magenta native gameplay frame, not a hand-built slot.
-        raw = assign_dialogue_ending_sequence(raw, lines[0], "W", "SpeakMagenta", 45)
+        # Import the final magenta PNG through the real dialogue-editor path,
+        # not a prebuilt Costume frame or manually created animation slot.
+        from PIL import Image
+        png = directory / "ending-import.png"
+        Image.new("RGBA", (8, 8), (200, 45, 205, 255)).save(png)
+        raw = import_dialogue_png_frame(
+            raw, lines[0], "W", str(png), "SpeakMagenta", "Abschlussfolge", 45)
     elif line_sequences:
         lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
                       if label.startswith("SpeakerWitness"))
