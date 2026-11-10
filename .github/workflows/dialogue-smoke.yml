@@ -272,7 +272,13 @@ jobs:
           test -s /tmp/scummc-directional-lines-upstream/examples/road/DialogueFigure.cost
           mv /tmp/scummc-directional-lines-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-directional-lines-staged.cost
           python -m adventure_studio.scumm_toolchain /tmp/dialogue-directional-lines-story /tmp/scummc-directional-lines-upstream /tmp/dialogue-directional-lines-game
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_speaking_sequence_probe /tmp/dialogue-directional-lines-game /tmp/dialogue-directional-lines-evidence --two-lines --ending
+          # Real-time xwd/convert polling can miss both frames of an early
+          # looping COST animation on a busy runner. A retry must replay the
+          # entire native game; no partial screenshot can count as success.
+          if ! xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_speaking_sequence_probe /tmp/dialogue-directional-lines-game /tmp/dialogue-directional-lines-evidence --two-lines --ending; then
+            echo 'Native frame sampling inconclusive; replaying the complete ScummVM scenario once'
+            xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_speaking_sequence_probe /tmp/dialogue-directional-lines-game /tmp/dialogue-directional-lines-evidence --two-lines --ending
+          fi
       - name: Retain direction-specific native line evidence
         if: always()
         uses: actions/upload-artifact@v4
