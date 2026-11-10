@@ -205,6 +205,7 @@ jobs:
           path: |
             /tmp/dialogue-four-facing-evidence/four-facing-report.json
             /tmp/dialogue-four-facing-evidence/scummvm-facing-*.png
+            /tmp/dialogue-four-facing-evidence/scummvm-last-observed.png
             /tmp/dialogue-four-facing-evidence/scummvm-stand.png
             /tmp/dialogue-four-facing-evidence/scummvm.log
             /tmp/dialogue-four-facing-story/project.json
