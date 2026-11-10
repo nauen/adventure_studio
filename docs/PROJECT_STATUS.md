@@ -4,7 +4,7 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Aktuelles Produktpaket (2026-11-10, Implementierung; Abnahme offen):**
+**Aktuelles Produktpaket (2026-11-10, native Gameplay-Abnahme bestanden):**
 Im nativen Dialogeditor kann der Autor **je Dialogzeile** eine eigene Folge
 aus 1..N importierten PNG-Frames speichern. Jede Zeile derselben Figur
 bekommt einen stabilen eigenen indizierten COST-Animationsslot ab 28;
@@ -13,11 +13,14 @@ erneutes Bearbeiten verwendet diesen Slot wieder, ohne `gesture`/
 gespeicherte Folge wird bei Zeilenwechsel und nach JSON-Reimport angezeigt.
 Bestehende Sprechposen und abweichende Costume-Richtungen bleiben nutzbar;
 die neuen Folgen werden zunächst einheitlich für alle vier Richtungen
-dieser **einen** Dialogzeile angelegt. Modell-, Export- und Roundtrip-Test
-lokal grün; Browser-Klickweg und nativer ScummVM-Test für zwei
-unterschiedliche Zwei-/Mehrframe-Folgen derselben Figur in Vorbereitung.
-**Offen:** Gesamt-CI, realer zweizeiliger Runtime-Nachweis, menschliche
-Bedienabnahme; vollständiger Lippensync weiterhin nicht erreicht.
+dieser **einen** Dialogzeile angelegt. **327 lokale Tests und alle fünf
+PR-Checks grün.** Der Gradio-Chromium-Klickweg speichert zwei verschiedene
+Sprechfolgen und importiert sie korrekt wieder. Stock ScummVM zeigt für
+dieselbe Figur erst rote/grüne, danach blaue/gelbe Sprechframes und kehrt
+zur Standpose zurück (Run `42890566896`, Job `130090292878`, Artefakt
+`native-v6-studio-independent-speaking-lines`, Merge `482375e`).
+**Offen:** menschliche Bedienabnahme; vollständiger Lippensync weiterhin
+nicht erreicht.
 **Nächstes Produktpaket:** individuell gerichtete Mehrframe-Folgen je
 Dialogzeile, ohne Verlust der anderen Richtungskanäle.
 
