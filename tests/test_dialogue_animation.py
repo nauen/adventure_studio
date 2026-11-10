@@ -32,13 +32,62 @@ from adventure_studio.studio_sequences import (
     dialogue_ending_animation_selection, edit_dialogue_ending_animation,
     dialogue_ending_timeline, assign_dialogue_ending_sequence,
     edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
-    import_dialogue_png_frame)
+    import_dialogue_png_frame, dialogue_costume_isolation_preview,
+    isolate_dialogue_speaker_costume)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Import benötigt Pillow")
+    def test_isolate_shared_speaker_costume_before_dialogue_png_import(self):
+        from PIL import Image
+
+        _story, raw = self.fixture()
+        first, second = (key for _label, key in dialogue_animation_lines(raw))
+        before = parse_document(raw)
+        speaker = next(actor for actor in before.actors if actor.id == "SpeakerHarborKeeper")
+        witness = next(actor for actor in before.actors if actor.id == "SpeakerWitness")
+        self.assertEqual(speaker.costume, witness.costume)
+        self.assertIn("SpeakerWitness", dialogue_costume_isolation_preview(raw, first))
+        self.assertIn("DialogueFigure_SpeakerHarborKeeper",
+                      dialogue_costume_isolation_preview(raw, first))
+        isolated = isolate_dialogue_speaker_costume(raw, first)
+        document = parse_document(isolated)
+        owned = next(actor for actor in document.actors if actor.id == speaker.id)
+        untouched = next(actor for actor in document.actors if actor.id == witness.id)
+        self.assertEqual(untouched.costume, witness.costume)
+        self.assertEqual(owned.costume, "DialogueFigure_SpeakerHarborKeeper")
+        assets = {asset.name: asset for asset in document.costumes}
+        self.assertEqual(assets[untouched.costume], before.costumes[0])
+        self.assertEqual(replace(assets[owned.costume], name=untouched.costume),
+                         assets[untouched.costume])
+        self.assertIn("bereits nur dieser Figur",
+                      dialogue_costume_isolation_preview(isolated, first))
+        with self.assertRaisesRegex(ValueError, "bereits exklusiv"):
+            isolate_dialogue_speaker_costume(isolated, first)
+        with self.assertRaisesRegex(ValueError, "Sprecher-Dialogzeile"):
+            isolate_dialogue_speaker_costume(isolated, "missing")
+        with tempfile.TemporaryDirectory() as directory:
+            png = Path(directory) / "isolated.png"
+            Image.new("RGBA", (8, 8), (200, 45, 205, 255)).save(png)
+            changed = import_dialogue_png_frame(
+                edit_dialogue_animation(isolated, first, "gesture"), first, "W",
+                str(png), "OnlyHarbor", "Abschlussfolge", 16)
+            result = parse_document(changed)
+            original = next(asset for asset in result.costumes
+                            if asset.name == untouched.costume)
+            private = next(asset for asset in result.costumes
+                           if asset.name == owned.costume)
+            self.assertEqual(original, before.costumes[0])
+            self.assertIn("OnlyHarbor", {frame.id for frame in private.frames})
+            self.assertNotIn("OnlyHarbor", {frame.id for frame in original.frames})
+            export_document(result, Path(directory) / "native")
+            self.assertTrue((Path(directory) / "native" / f"{owned.costume}.scost").is_file())
+            self.assertTrue((Path(directory) / "native" / f"{untouched.costume}.scost").is_file())
+            self.assertEqual(canonical_json(result), changed)
+
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Import benötigt Pillow")
     def test_import_real_png_directly_into_speaking_and_ending_line(self):
         from PIL import Image

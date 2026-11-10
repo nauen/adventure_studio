@@ -110,6 +110,54 @@ def dialogue_animation_lines(raw: str) -> tuple[tuple[str, str], ...]:
     return tuple((f"{actor} / {line}", key) for key, (line, actor) in targets.items())
 
 
+def dialogue_costume_isolation_preview(raw: str | None, line_id: str | None) -> str:
+    """Describe the exact Actor/Costume effects before creating a private copy."""
+    if not raw or not line_id:
+        return "Bitte eine native Sprecher-Dialogzeile wählen"
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        return "Diese Zeile hat keinen nativen Sprecher-Actor"
+    actor = next(item for item in document.actors if item.id == target[1])
+    sharing = sorted(item.id for item in document.actors
+                     if item.id != actor.id and item.costume == actor.costume)
+    if not sharing:
+        return f"{actor.id}: Costume {actor.costume} gehört bereits nur dieser Figur"
+    name = _isolated_costume_name(document, actor.costume, actor.id)
+    return (f"{actor.id}: {actor.costume} → {name}. Die vollständige Costume samt "
+            "Frames und Animationen wird kopiert. Nur diese Figur erhält die neue "
+            "Costume; unverändert bleiben: " + ", ".join(sharing))
+
+
+def _isolated_costume_name(document: GameDocument, costume: str, actor: str) -> str:
+    existing = {item.name for item in document.costumes}
+    base = f"{costume}_{actor}"
+    name = base
+    suffix = 2
+    while name in existing:
+        name = f"{base}_{suffix}"
+        suffix += 1
+    return name
+
+
+def isolate_dialogue_speaker_costume(raw: str, line_id: str) -> str:
+    """Copy-on-write a shared native Costume for all lines of one speaker Actor."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    if not any(item.id != actor.id and item.costume == actor.costume
+               for item in document.actors):
+        raise ValueError("Die Costume dieser Figur ist bereits exklusiv")
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    name = _isolated_costume_name(document, costume.name, actor.id)
+    actors = tuple(replace(item, costume=name) if item.id == actor.id else item
+                   for item in document.actors)
+    return _checked(replace(document, actors=actors,
+                            costumes=(*document.costumes, replace(costume, name=name))))
+
+
 def dialogue_animation_choices(raw: str, line_id: str | None):
     document = parse_document(raw)
     target = _dialogue_animation_targets(document).get(line_id)

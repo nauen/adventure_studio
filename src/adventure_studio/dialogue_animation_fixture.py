@@ -11,7 +11,8 @@ from .studio_sequences import (dialogue_animation_lines, edit_dialogue_animation
                                assign_dialogue_speaking_sequence,
                                assign_dialogue_direction_speaking_sequence,
                                edit_dialogue_animation_phases,
-                               import_dialogue_png_frame)
+                               import_dialogue_png_frame,
+                               isolate_dialogue_speaker_costume)
 from .studio_actors import (set_costume_direction_speaking_pose,
                             set_costume_direction_speaking_sequence)
 
@@ -97,7 +98,14 @@ def build(directory: Path, two_poses: bool = False, four_facing: bool = False,
         # ticks after starting it; the second retains legacy 1/60 ticks.
         raw = edit_dialogue_animation_phases(raw, lines[0], 12, 90)
         # Import the final magenta PNG through the real dialogue-editor path,
-        # not a prebuilt Costume frame or manually created animation slot.
+        # including the explicit copy-on-write step for a shared Costume.
+        # The other Actor must keep its original visual resource.
+        shared = parse_document(raw)
+        raw = canonical_json(replace(shared, actors=tuple(
+            replace(actor, costume="WitnessCostume")
+            if actor.id == "SpeakerHarborKeeper" else actor
+            for actor in shared.actors)))
+        raw = isolate_dialogue_speaker_costume(raw, lines[0])
         from PIL import Image
         png = directory / "ending-import.png"
         Image.new("RGBA", (8, 8), (200, 45, 205, 255)).save(png)
