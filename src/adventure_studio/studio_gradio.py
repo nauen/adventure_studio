@@ -587,7 +587,7 @@ def make_app():
             gr.Markdown("Objekt-Verben mit Actor-Animationen, Pausen und Objektzuständen verknüpfen. **Story synchronisieren** erzeugt Räume aus deiner aktuellen Story und überträgt ausdrücklich nur Actors, Costumes und native Aktionsregeln aus dem geladenen Projekt. Andere native Raumänderungen werden dabei nicht übernommen. Bei inkompatiblen Referenzen wird abgebrochen.")
             native_state = gr.State(None)
             native_linked = gr.State(False)
-            native_file = gr.File(label="Native Projekt-JSON öffnen", file_types=[".json"], type="filepath")
+            native_file = gr.File(label="Native Projekt-JSON öffnen", file_types=[".json"], type="filepath", elem_id="native-project-file")
             native_sync_button = gr.Button("Aktuelle Story als natives Projekt übernehmen / aktualisieren")
             with gr.Accordion("Actors und Costumes erstellen", open=True):
                 gr.Markdown("Ein PNG wird in eine native 32-Farben-Costume mit Transparenzfarbe umgewandelt. Bilder mit mehr als 31 sichtbaren Farben werden auf 31 Farben reduziert. Weitere Frames behalten die vorhandenen Farben; ist die Palette voll, wird der Import mit einer klaren Meldung abgelehnt.")
@@ -712,13 +712,13 @@ def make_app():
                 native_dialogue_voice_remove = gr.Button("Dialogaufnahme entfernen")
             gr.Markdown("**Sprecher-Animation:** Wähle eine Dialogzeile mit nativem Actor und eine seiner indizierten Costume-Animationen. Der Actor startet die Geste während der Sprechzeile. Für die Rückkehr zur Standpose muss zusätzlich die Costume-Animation `stand` den nativen Stand-Index 12 besitzen (bei neuen PNG-Costumes automatisch). Beide Animationen müssen die gewünschte Blickrichtung unterstützen.")
             with gr.Row():
-                native_dialogue_animation_line = gr.Dropdown(label="Sprecher-Dialogzeile")
-                native_dialogue_animation = gr.Dropdown(label="Costume-Animation")
+                native_dialogue_animation_line = gr.Dropdown(label="Sprecher-Dialogzeile", elem_id="native-dialogue-line")
+                native_dialogue_animation = gr.Dropdown(label="Costume-Animation", elem_id="native-dialogue-animation")
             with gr.Row():
-                native_dialogue_speaking_frame = gr.Dropdown(label="PNG-Sprechpose dieser Zeile (gespeicherte Pose vorausgewählt)")
-                native_dialogue_speaking_apply = gr.Button("PNG-Sprechpose dieser Zeile zuweisen")
+                native_dialogue_speaking_frame = gr.Dropdown(label="PNG-Sprechpose dieser Zeile (gespeicherte Pose vorausgewählt)", elem_id="native-dialogue-pose")
+                native_dialogue_speaking_apply = gr.Button("PNG-Sprechpose dieser Zeile zuweisen", elem_id="native-dialogue-pose-apply")
             native_dialogue_reset = gr.Checkbox(label="Nach der Sprechzeile zur Standpose zurückkehren",
-                                                value=True)
+                                                value=True, elem_id="native-dialogue-reset")
             with gr.Row():
                 native_dialogue_animation_save = gr.Button("Sprechanimation zuweisen")
                 native_dialogue_animation_remove = gr.Button("Sprechanimation entfernen")
@@ -727,10 +727,10 @@ def make_app():
                 native_up = gr.Button("Schritt nach oben")
                 native_down = gr.Button("Schritt nach unten")
                 native_remove = gr.Button("Schritt entfernen")
-            native_report = gr.Textbox(label="Projektstatus", interactive=False)
+            native_report = gr.Textbox(label="Projektstatus", interactive=False, elem_id="native-project-report")
             with gr.Row():
-                native_json_button = gr.Button("Validiertes Projekt herunterladen")
-                native_json_download = gr.File(label="Native Projekt-JSON")
+                native_json_button = gr.Button("Validiertes Projekt herunterladen", elem_id="native-project-export-button")
+                native_json_download = gr.File(label="Native Projekt-JSON", elem_id="native-project-export-file")
             native_translation_file = gr.File(
                 label="Optional: vollständiger Story-Sprachkatalog (language-catalog.json)",
                 file_types=[".json"], type="filepath")
