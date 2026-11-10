@@ -52,7 +52,7 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                dialogue_png_batch_order, move_dialogue_png_batch_frame,
                                remove_dialogue_png_batch_frame,
                                dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
-                               dialogue_png_batch_thumbnails,
+                               dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -812,6 +812,16 @@ def make_app():
                     label="PNG-Miniaturen in nativer Abspielreihenfolge (vor dem Import)",
                     columns=6, object_fit="contain", height=180,
                     elem_id="native-dialogue-png-batch-gallery")
+                with gr.Row():
+                    native_dialogue_png_batch_duration = gr.Number(
+                        label="Editor-Vorschau: Millisekunden pro Bild", value=180,
+                        precision=0, elem_id="native-dialogue-png-batch-duration")
+                    native_dialogue_png_batch_play = gr.Button(
+                        "Importfolge vorab abspielen", elem_id="native-dialogue-png-batch-play")
+                native_dialogue_png_batch_animation = gr.Image(
+                    label="Noch nicht importierte PNG-Folge · nur Editor-GIF",
+                    interactive=False, format="gif", elem_id="native-dialogue-png-batch-animation")
+                native_dialogue_png_batch_animation_status = gr.Markdown()
                 native_dialogue_png_batch_import = gr.Button(
                     "Alle PNGs als geordnete Folge importieren",
                     elem_id="native-dialogue-png-batch-import")
@@ -1489,6 +1499,28 @@ def make_app():
             [native_dialogue_png_batch_order, native_dialogue_png_batch_selected,
              native_dialogue_png_batch_excluded,
              native_dialogue_png_batch_plan, native_dialogue_png_batch_gallery])
+
+        def png_batch_play(paths, order, duration):
+            destination = (Path(tempfile.mkdtemp(prefix="adventure-studio-png-batch-preview-"))
+                           / "staged.gif")
+            try:
+                rendered = dialogue_png_batch_animation_preview(
+                    paths, order, duration, destination)
+                return str(rendered), (f"{int(duration)} ms pro Bild nur in der Editor-Vorschau; "
+                                       "die native COST-Abspielrate bestimmt ScummVM.")
+            except (ValueError, OSError) as error:
+                raise gr.Error(f"PNG-Importvorschau nicht möglich: {error}") from error
+
+        native_dialogue_png_batch_play.click(
+            png_batch_play,
+            [native_dialogue_png_batch_files, native_dialogue_png_batch_order,
+             native_dialogue_png_batch_duration],
+            [native_dialogue_png_batch_animation, native_dialogue_png_batch_animation_status])
+        # A previously rendered GIF must never masquerade as the current staged order.
+        for source in (native_dialogue_png_batch_files, native_dialogue_png_batch_order):
+            source.change(lambda: (None, ""),
+                          outputs=[native_dialogue_png_batch_animation,
+                                   native_dialogue_png_batch_animation_status])
 
         def png_batch_move(raw, line, paths, order, selected, step):
             moved, new_selected = move_dialogue_png_batch_frame(paths, order, selected, step)

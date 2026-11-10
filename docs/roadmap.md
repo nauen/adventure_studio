@@ -9,6 +9,14 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Abspielbare Vorabvorschau für PNG-Stapelimport (in Prüfung):**
+Die sichtbare, noch ungespeicherte Auswahl wird als Editor-GIF mit
+einstellbarer Bilddauer abgespielt. Die Reihenfolge stammt aus derselben
+validierten Auswahl wie der atomare native Import. Ändert sich die Auswahl,
+verschwindet die bisherige Animation. Gezielter lokaler Test grün;
+Browser-/CI-Abnahme noch offen. Die GIF-Zeit ist keine native COST-Zeit.
+Danach: Frame-Navigation in der vorbereiteten Vorschau.
+
 **PNG-Miniaturvorschau der vorbereiteten nativen Dialog-Importfolge (2026-11-11, native Abnahme bestanden):**
 Die noch nicht importierten hochgeladenen Bilder erscheinen unter dem
 Textplan als echte farbige Miniaturkarten mit nativen Frame-IDs.

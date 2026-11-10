@@ -494,6 +494,40 @@ def dialogue_png_batch_thumbnails(paths: list[str] | tuple[str, ...] | None,
             for _source, frame_id in _dialogue_png_batch_entries((path,))]
 
 
+def dialogue_png_batch_animation_preview(
+        paths: list[str] | tuple[str, ...] | None,
+        order: list[int] | tuple[int, ...] | None,
+        duration_ms: int | float, destination: Path) -> Path:
+    """Animate the staged, unsaved PNG order; never mutate the native project."""
+    from PIL import Image
+
+    if (type(duration_ms) not in (int, float) or int(duration_ms) != duration_ms
+            or not 40 <= duration_ms <= 2000):
+        raise ValueError("Vorschau-Framezeit muss zwischen 40 und 2000 Millisekunden liegen")
+    included = dialogue_png_batch_order(paths, order)
+    # Use the same filenames/IDs validation as the actual atomic import.
+    _dialogue_png_batch_entries(included)
+    frames = []
+    for path in included:
+        with Image.open(path) as source:
+            if source.format != "PNG":
+                raise ValueError(f"Keine PNG-Datei: {Path(path).name}")
+            frames.append(source.convert("RGBA"))
+    width = max(frame.width for frame in frames)
+    height = max(frame.height for frame in frames)
+    rendered = []
+    for frame in frames:
+        canvas = Image.new("RGB", (width, height), (36, 40, 48))
+        canvas.paste(frame, ((width - frame.width) // 2,
+                             (height - frame.height) // 2), frame)
+        rendered.append(canvas)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    rendered[0].save(destination, format="GIF", save_all=True,
+                     append_images=rendered[1:], duration=int(duration_ms),
+                     loop=0, optimize=False, disposal=2)
+    return destination
+
+
 def import_dialogue_png_batch(raw: str, line_id: str, direction: str,
                               paths: list[str] | tuple[str, ...] | None, target: str,
                               ending_ticks: int | float = 12,
