@@ -12,6 +12,14 @@ Bytecode, lauffähig in ScummVM ohne eigene Adventure-Studio-Engine.
 Die kreative Oberfläche soll später auch komplexe, cineastische
 Sequenzen authoren können.
 
+**Neues Produktpaket (2026-11-10, PR in Prüfung):** Dialogzeilen derselben
+Figur können verschiedene importierte PNG-Sprechframes verwenden. Die erste
+Pose bleibt auf dem nativen `gesture`-/`talk_start`-Pfad, weitere Posen
+bekommen eigene stabile COST-Animationsslots ab 28, ohne die bisherige
+Talk-Start-Costume zu überschreiben. Ein Regressionstest prüft zwei Posen
+derselben Figur, Wiederverwendung des Slots und den COST-/SCUMM-Quellpfad.
+**Offen:** vollständige CI, native Sichtprobe und manuelle Gradio-Abnahme.
+
 ## Aktuelles Produktpaket (2026-11-09)
 
 **Neues Paket – PNG-Sprechpose direkt an der Dialogzeile (PR in Arbeit):**
