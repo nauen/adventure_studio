@@ -9,14 +9,15 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Grafische NPC-Sprech-Timeline pro Zeile/Richtung (2026-11-10, CI offen):**
+**Grafische NPC-Sprech-Timeline pro Zeile/Richtung (2026-11-10, Abnahme bestanden):**
 Der Dialogeditor zeigt die tatsächlich zugeordnete native PNG-Framefolge
 als klickbare Karten. Ein Frame lässt sich anhängen, verschieben und
 entfernen, ohne den stabilen COST-Slot, andere Richtungen, andere Zeilen
 oder globale Costume-Animationen zu verändern. Eine GIF-Vorschau nutzt
 einen frei gewählten Editor-Takt; diese Zeit ist keine SCUMM-v6-Semantik.
-Gezielter Modell-/GIF-Test lokal bestanden. Gradio-Chromium-Akzeptanz und
-die unveränderten nativen Regressionen bleiben bis CI-Abschluss offen.
+Modell-/GIF-Test, Chromium-Authoring samt Export/Reimport und die
+unveränderten nativen ScummVM-Regressionen sind bestanden (CI
+`42898953018`, PR #95, Merge `3410035`). Menschliche UI-Abnahme offen.
 Danach: fachlich steuerbare Sprechphasen im nativen Dialogablauf.
 
 **Richtungsspezifische animierte NPC-Zeilen (2026-11-10, native Abnahme bestanden):**

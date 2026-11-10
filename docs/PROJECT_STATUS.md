@@ -4,15 +4,18 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Neues Produktpaket (2026-11-10, Implementierung; CI-Abnahme offen):**
+**Neues Produktpaket (2026-11-10, Abnahme bestanden):**
 Die eigene Sprechfolge einer NPC-Dialogzeile und Blickrichtung lässt sich
 im Studio jetzt **grafisch als Frame-Timeline** bearbeiten: aus importierten
 PNG-Frames anhängen, selektieren, nach links/rechts verschieben, entfernen
 und als animiertes GIF abspielen. Jede Editieraktion speichert denselben
 stabilen COST-Slot; die anderen Richtungen und Dialogzeilen bleiben erhalten.
 Die GIF-Bilddauer ist nur eine Editor-Vorschau, keine behauptete native
-ScummVM-Abspielgeschwindigkeit. Modell-/GIF-Test lokal grün; realer
-Chromium-Bedienweg und CI stehen zur Abnahme an. **Nächstes Paket:**
+ScummVM-Abspielgeschwindigkeit. **328 lokale Tests und fünf CI-Checks grün.**
+Die echte Chromium-Bedienfolge (Anhängen/Verschieben/Entfernen, GIF,
+Export/Reimport) ist bestanden; native ScummVM-Regression ebenfalls
+grün (Run `42898953018`, Job `130119459630`, PR #95,
+Merge `3410035`). Menschliche UI-Abnahme bleibt offen. **Nächstes Paket:**
 Visuelles Authoring von zeilenspezifischen Sprechphasen mit steuerbarer
 nativer Anbindung an den Dialogablauf, ohne erfundene Millisekunden-Opcodes.
 
