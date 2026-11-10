@@ -432,19 +432,26 @@ def main() -> None:
             # sequence in one browser action and verify persisted frame order.
             batch_a = evidence / "Batch-A.png"
             batch_b = evidence / "Batch-B.png"
+            batch_c = evidence / "Batch-Excluded.png"
             Image.new("RGBA", (8, 8), (125, 185, 55, 255)).save(batch_a)
             Image.new("RGBA", (8, 8), (225, 110, 40, 255)).save(batch_b)
+            Image.new("RGBA", (8, 8), (65, 120, 215, 255)).save(batch_c)
             page.locator("#native-dialogue-png-batch-files input[type=file]").set_input_files(
-                [str(batch_a), str(batch_b)])
+                [str(batch_a), str(batch_b), str(batch_c)])
             batch_preview = page.locator(
                 "#native-dialogue-png-batch-plan textarea, #native-dialogue-png-batch-plan input")
             expect(batch_preview).to_have_value(
-                re.compile(r"1\. Batch-A\.png → Batch_A.*2\. Batch-B\.png → Batch_B", re.S),
+                re.compile(r"1\. Batch-A\.png → Batch_A.*2\. Batch-B\.png → Batch_B.*3\. Batch-Excluded\.png → Batch_Excluded", re.S),
                 timeout=20000)
             select_option(page, "native-dialogue-png-batch-selected", "2. Batch-B.png")
             page.locator("#native-dialogue-png-batch-up").click()
             expect(batch_preview).to_have_value(
-                re.compile(r"1\. Batch-B\.png → Batch_B.*2\. Batch-A\.png → Batch_A", re.S),
+                re.compile(r"1\. Batch-B\.png → Batch_B.*2\. Batch-A\.png → Batch_A.*3\. Batch-Excluded\.png → Batch_Excluded", re.S),
+                timeout=20000)
+            select_option(page, "native-dialogue-png-batch-selected", "3. Batch-Excluded.png")
+            page.locator("#native-dialogue-png-batch-remove").click()
+            expect(batch_preview).to_have_value(
+                re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-A\.png → Batch_A\s*$"),
                 timeout=20000)
             page.locator("#native-dialogue-png-batch-import").click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
@@ -458,6 +465,7 @@ def main() -> None:
             batch_raw = batch_file.read_text(encoding="utf-8")
             last_two = dialogue_ending_timeline(batch_raw, first[1], "N")[1][-2:]
             assert last_two == (("5. Batch_B", 4), ("6. Batch_A", 5))
+            assert "Batch_Excluded" not in batch_raw
             assert next(actor for actor in batch_document.actors
                         if actor.id == "SpeakerHarborKeeper").costume == "WitnessCostume"
             (evidence / "result.json").write_text(json.dumps({
@@ -472,6 +480,7 @@ def main() -> None:
                 "isolated_shared_speaker_costume": True,
                 "ordered_atomic_png_batch": True,
                 "reordered_png_batch": True,
+                "removed_staged_png_without_reupload": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
