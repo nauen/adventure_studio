@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Native NPC-Sprechpose direkt im Dialogeditor anzeigen (2026-11-10):**
+Das ausgewählte PNG wird jetzt aus den originalen Costume-Frame-Indizes
+und der nativen Palette als statisches Bild gerendert. Die Bildvorschau
+reagiert auf gespeicherte Dialog-Cues, Zeilenwechsel, frei gewählte Frames
+vor dem Speichern und nach dem Reimport. Ein Echtbrowser-Test verlangt
+rot/grün unterscheidbare Costume-Pixel und kontrolliert die bestehende
+JSON-Export-/Reimport-Folge. **Abgenommen:** automatisierter Gradio-
+Chromium-Klicktest und Pillow-Modelltest auf Code-Commit `f940d93`;
+menschliche UI-Abnahme weiterhin offen. **Nächstes:** präzisere
+richtungsabhängige Auswahl/Ansicht, ohne native Engine-Semantik zu erfinden.
+
 **Echter Gradio-Browser-Klickweg für NPC-PNG-Sprechposen (2026-11-10):**
 Der automatisierte Chromium-Test lädt eine bestehende Zwei-Posen-Projektdatei,
 wählt zwei Dialogzeilen, ändert die PNG-Zuweisung, exportiert die validierte
