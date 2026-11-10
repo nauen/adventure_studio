@@ -12,8 +12,11 @@ Richtungen sowie `stand` 12 und `talk_stop` 20 bleiben erhalten. Beim
 Richtungswechsel erscheint der gespeicherte Frame wieder im Auswahlfeld.
 Ein Modell-/COST-Quelltest und 322 lokale Regressionstests sind grün.
 Ein echter Gradio-Chromium-Test für N/O-Wechsel, Speichern und Reimport
-ist ergänzt; dessen CI-Ergebnis steht noch aus.
-**Offen:** grüner Browser-CI-Nachweis, native ScummVM-Dreh-/Sprechprobe
+ist auf Commit `bf35cc2` grün (beide Gradio-Smoke-Jobs, beide Core-Testjobs).
+Die bewusst leere Einzel-PNG-Vorauswahl bei richtungsabhängigen Frames
+wird im Browservertrag berücksichtigt; die Costume-Auswahl bleibt nach
+dem Speichern erhalten.
+**Offen:** native ScummVM-Dreh-/Sprechprobe
 mit vier unterschiedlichen PNG-Frames sowie menschliche UI-Abnahme.
 **Nächstes Produktpaket:** Vier-Richtungs-Sprechposen im generierten Spiel
 durch Drehen und Sprechen sichtbar nachweisen; erst danach D03 weiterführen.
