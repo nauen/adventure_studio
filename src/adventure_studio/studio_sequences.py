@@ -225,8 +225,9 @@ def dialogue_speaking_frames(raw: str, line_id: str | None) -> tuple[str, ...]:
     return dialogue_speaking_frame_selection(raw, line_id)[0]
 
 
-def dialogue_speaking_sequence_selection(raw: str, line_id: str | None) -> str:
-    """Show a saved, uniform native frame sequence without inventing frames."""
+def dialogue_speaking_sequence_selection(raw: str, line_id: str | None,
+                                         direction: str | None = None) -> str:
+    """Show saved native frames, either uniformly or for one direction."""
     document = parse_document(raw)
     target = _dialogue_animation_targets(document).get(line_id)
     if target is None:
@@ -240,7 +241,10 @@ def dialogue_speaking_sequence_selection(raw: str, line_id: str | None) -> str:
     animation = next((item for item in costume.animations if item.name == cue.animation), None)
     if animation is None or {entry.direction for entry in animation.directions} != {"N", "E", "S", "W"}:
         return ""
-    commands = {entry.commands for entry in animation.directions}
+    if direction is not None and direction not in ("N", "E", "S", "W"):
+        raise ValueError("Bitte eine gültige Blickrichtung N/E/S/W auswählen")
+    commands = {entry.commands for entry in animation.directions
+                if direction is None or entry.direction == direction}
     frames = {frame.id for frame in costume.frames}
     if len(commands) != 1:
         return ""
@@ -249,12 +253,15 @@ def dialogue_speaking_sequence_selection(raw: str, line_id: str | None) -> str:
 
 
 def assign_dialogue_speaking_sequence(raw: str, line_id: str, frame_ids: str,
-                                      reset_to_stand: bool = True) -> str:
+                                      reset_to_stand: bool = True,
+                                      direction: str | None = None) -> str:
     """Save one NPC line's own native looping COST frames, without global edits."""
     document = parse_document(raw)
     target = _dialogue_animation_targets(document).get(line_id)
     if target is None:
         raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    if direction is not None and direction not in ("N", "E", "S", "W"):
+        raise ValueError("Bitte eine gültige Blickrichtung N/E/S/W auswählen")
     actor = next(item for item in document.actors if item.id == target[1])
     sharing = [item.id for item in document.actors
                if item.id != actor.id and item.costume == actor.costume]
@@ -283,14 +290,37 @@ def assign_dialogue_speaking_sequence(raw: str, line_id: str, frame_ids: str,
         if previous.index is None or previous.index < 28:
             raise ValueError("Vorhandene Dialoganimation verwendet einen reservierten Animationsslot")
         index = previous.index
-    animation = CostumeAnimation(name, tuple(
-        CostumeDirection(direction, sequence, True)
-        for direction in ("N", "E", "S", "W")), index)
+    if direction is None:
+        directions = tuple(CostumeDirection(facing, sequence, True)
+                           for facing in ("N", "E", "S", "W"))
+    else:
+        if previous is not None:
+            base = previous
+        else:
+            cue = next((item for item in document.dialogue_animation_cues
+                        if item.line_id == line_id), None)
+            base_name = cue.animation if cue else "gesture"
+            base = next((item for item in costume.animations
+                         if item.name == base_name), None)
+        if base is None or {item.direction for item in base.directions} != {"N", "E", "S", "W"}:
+            raise ValueError("Die Sprechfolge benötigt eine bestehende Animation mit vier Blickrichtungen")
+        directions = tuple(CostumeDirection(item.direction, sequence, True)
+                           if item.direction == direction else item
+                           for item in base.directions)
+    animation = CostumeAnimation(name, directions, index)
     updated_costume = replace(costume, animations=tuple(
         item for item in costume.animations if item.name != name) + (animation,))
     updated = canonical_json(replace(document, costumes=tuple(
         updated_costume if item.name == costume.name else item for item in document.costumes)))
     return edit_dialogue_animation(updated, line_id, name, reset_to_stand)
+
+
+def assign_dialogue_direction_speaking_sequence(raw: str, line_id: str,
+                                                direction: str, frame_ids: str,
+                                                reset_to_stand: bool = True) -> str:
+    """Author one facing of one NPC line without changing the other channels."""
+    return assign_dialogue_speaking_sequence(raw, line_id, frame_ids,
+                                             reset_to_stand, direction)
 
 
 def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,

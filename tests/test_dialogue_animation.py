@@ -21,6 +21,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 dialogue_direction_animation_preview,
                                                 assign_dialogue_speaking_frame,
                                                 assign_dialogue_speaking_sequence,
+                                                assign_dialogue_direction_speaking_sequence,
                                                 dialogue_speaking_sequence_selection)
 
 
@@ -50,6 +51,7 @@ class DialogueAnimationTests(unittest.TestCase):
             rooms=(replace(room, talk_rules=rules, hotspots=hotspots), *source.rooms[1:])))
         lines = tuple(key for _label, key in dialogue_animation_lines(raw))
         self.assertGreaterEqual(len(lines), 2)
+        before_assignments = raw
         raw = assign_dialogue_speaking_sequence(raw, lines[0], "Pose, OpenMouth")
         raw = assign_dialogue_speaking_sequence(raw, lines[1], "Smile, Pose, OpenMouth")
         first = parse_document(raw)
@@ -86,6 +88,37 @@ class DialogueAnimationTests(unittest.TestCase):
             source_text = (Path(directory) / "WitnessCostume.scost").read_text()
             self.assertIn("body(Smile, OpenMouth, Smile)", source_text)
             self.assertIn("body(Smile, Pose, OpenMouth)", source_text)
+
+        north = assign_dialogue_direction_speaking_sequence(
+            revised, lines[0], "N", "Pose, Smile")
+        west = assign_dialogue_direction_speaking_sequence(
+            north, lines[0], "W", "OpenMouth, Pose, Smile")
+        reloaded = canonical_json(parse_document(west))
+        self.assertEqual(dialogue_speaking_sequence_selection(reloaded, lines[0], "N"), "Pose, Smile")
+        self.assertEqual(dialogue_speaking_sequence_selection(reloaded, lines[0], "W"),
+                         "OpenMouth, Pose, Smile")
+        self.assertEqual(dialogue_speaking_sequence_selection(reloaded, lines[0], "E"),
+                         "Smile, OpenMouth, Smile")
+        self.assertEqual(dialogue_speaking_sequence_selection(reloaded, lines[0], "S"),
+                         "Smile, OpenMouth, Smile")
+        self.assertEqual(dialogue_speaking_sequence_selection(reloaded, lines[0]), "")
+        self.assertEqual(dialogue_speaking_sequence_selection(reloaded, lines[1], "N"),
+                         "Smile, Pose, OpenMouth")
+        edited = parse_document(reloaded)
+        face_animation = next(item for item in edited.costumes[-1].animations
+                              if item.name == cue_by_line[lines[0]])
+        self.assertEqual(face_animation.index, 28)
+        self.assertEqual(next(item for item in edited.costumes[-1].animations
+                              if item.name == cue_by_line[lines[1]]), saved[cue_by_line[lines[1]]])
+        with self.assertRaisesRegex(ValueError, "Blickrichtung"):
+            assign_dialogue_direction_speaking_sequence(reloaded, lines[0], "NW", "Pose")
+
+        # First directional edit of a line copies its already authored
+        # channels instead of replacing them with the chosen frame.
+        fresh = assign_dialogue_direction_speaking_sequence(
+            before_assignments, lines[0], "N", "Smile, Pose")
+        self.assertEqual(dialogue_speaking_sequence_selection(fresh, lines[0], "N"), "Smile, Pose")
+        self.assertEqual(dialogue_speaking_sequence_selection(fresh, lines[0], "S"), "Pose")
 
     def fixture(self, branching=False):
         story = dialogue_fixture(EXAMPLE.read_text(encoding="utf-8"),

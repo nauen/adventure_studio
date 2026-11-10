@@ -247,9 +247,29 @@ def main() -> None:
             expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-direction", "Nord")
+            sequence_input.fill("SpeakAlt, Speak")
+            page.locator("#native-dialogue-direction-sequence-apply").click()
+            expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
+            select_option(page, "native-dialogue-direction", "Süd")
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-direction", "Nord")
+            expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
+            page.screenshot(path=str(evidence / "line-direction-sequence.png"), full_page=True)
+            page.locator("#native-project-export-button").click()
+            expect(sequence_link.first).to_be_visible(timeout=20000)
+            with page.expect_download() as directional_info:
+                sequence_link.first.click()
+            directional_file = evidence / "line-direction-project.json"
+            directional_info.value.save_as(str(directional_file))
+            directional_data = directional_file.read_text(encoding="utf-8")
+            assert dialogue_speaking_sequence_selection(directional_data, first[1], "N") == "SpeakAlt, Speak"
+            assert dialogue_speaking_sequence_selection(directional_data, first[1], "S") == "Speak, SpeakAlt"
+            assert dialogue_speaking_sequence_selection(directional_data, second[1], "N") == "SpeakAlt, Speak, SpeakAlt"
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
+                "independent_direction_sequences": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
