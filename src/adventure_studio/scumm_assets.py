@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .palette_animation import PaletteCycle, validate_cycles
+from .scumm_direction import actor_facing_angle
 from .targets import RoomGeometry, validate_geometry
 
 _IDENTIFIER = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
@@ -480,7 +481,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         face = ""
         if direction is not None:
             actor = line_actors[key]
-            native = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}[direction]
+            native = actor_facing_angle(direction)
             pad = " " * indent
             face = (f"{pad}setCurrentActor({actor});\n"
                     f"{pad}setActorDirection({native});\n"

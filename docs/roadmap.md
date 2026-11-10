@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 13082)
+Total output lines: 807
+
 # Adventure Studio – Produkt- und Entwicklungsroadmap
 
 > **Aktive Steuerung, Stand 2026-11-07:**
@@ -8,6 +11,19 @@
 > fertig ist. Für die aktuelle Abdeckung gilt die Funktionsmatrix.
 
 ## Aktuelle Produktphasen und Abnahme
+
+**Vier native Richtungs-Sprechposen (2026-11-10, native Abnahme bestanden):**
+Eine regulär exportierte vierteilige Actor-Sprechkette dreht den Actor vor
+jeder Zeile auf N/E/S/W und verwendet pro Costume-Richtung einen anderen
+Frame. Die native ScummVM-Bildprobe verlangt die Farbfolge in Reihenfolge
+und sechs aufeinanderfolgende Standframes. Lokaler Source-/Modellnachweis
+und lokale Regressionstests grün. Die erste native Sichtprobe deckte eine
+falsche alte ScummC-Richtungs-ID bei `setActorDirection` auf; der Export
+verwendet jetzt die von ScummVM erwarteten Winkel. Die native Wiederholung
+zeigt **N/E/S/W in Reihenfolge mit je 256 Pose-Pixeln**, anschließend sechs
+stabile Standframes ohne Pose-Pixel (CI-Job `130066624232`, Artefakt
+`native-v6-studio-dialogue-four-facing`). **Noch offen:** Gesamt-CI,
+menschliche UI-Abnahme und zeitgesteuerter Lippensync.
 
 **Richtungsspezifische PNG-Sprechposen authoren (2026-11-10, Implementierung):**
 Der Costume-Editor wählt je N/E/S/W einen importierten Frame für die native
@@ -360,69 +376,7 @@ durch ein großes vorgeschaltetes Konformitätsspiel.
         erzeugen die nativen ScummC-Befehle und beim Escape den letzten
         Musik-Endzustand. Native SOUN-Kompilierung ist in den regulären ZIP-
         Export integriert. Modell, UI, JSON und Quell-/Fake-Exporter lokal
-        getestet. Die ScummVM-Klickprobe (`42517210707`) bestätigt die native
-        SOUN-Kompilierung und gemessene PCM-Aktivität vor Stopp, nach Stopp und
-        nach Neustart; dieses Ergebnis ist ein Pflichtgate. Der vollständige
-        native CI-Lauf `42517572328` hat es erneut erfolgreich ausgeführt.
-  - [x] Produkt-Implementierung/lokale Tests: Raumspezifische VOC-Dateien
-        lassen sich im Studio importieren, als `Sound starten`/`Sound stoppen`
-        in Sequenzen verwenden und im regulären Export durch ScummC `soun -voc`
-        in native SOUN-Ressourcen übersetzen. Escape übernimmt pro Sound-ID
-        den letzten Zustand. JSON-Roundtrip, UI-Services und Fake-Exporter
-        getestet (289 lokale Tests). Das native Hotspot-Klick-/Escape-Gate
-        bestätigt echtes VOC-Audio und dessen Stopp in stock ScummVM
-        (PCM `0,0000` vor / `0,8558` während / `0,0000` nach Escape,
-        CI `42522610786`).
-  - [x] Produkt-Implementierung/lokale Tests: VOC-Sprachzeile als echte
-        Studio-Sequenzaktion mit editierbarem Untertitel und optionalem
-        Sprecher, JSON-v1-Roundtrip und nativen Start-/Text-/Wait-/Stop-
-        Befehlen. Escape beendet die Sprachressource. Aktuell sichere
-        ASCII-Untertitel. In stock ScummVM sind Text und VOC-Ton gleichzeitig
-        sichtbar/hörbar und nach Escape stumm (CI `42524819678`,
-        PCM `0,0000`/`0,8557`/`0,0000`).
-  - [x] Produkt-Implementierung/lokaler Test: Unicode-Untertitel einschließlich
-        deutscher Umlaute in der regulären VOC-Sprachzeile, mit automatisch
-        geplanter und durch ScummC erzeugter CHAR-Ressource. Fehlende Fonts
-        und Byte-/Glyph-Grenzen werden sichtbar abgelehnt; die bestehende
-        ASCII-Ausgabe bleibt ohne Zusatzabhängigkeit. 291 Tests grün;
-        natives Untertitel-/PCM-Gate für `Ich höre die Glocke.` bestanden,
-        inklusive korrektem Umlaut-Screenshot und VOC-Stopp nach Escape
-        (CI `42526681259`).
-  - [x] Produkt-Implementierung/lokale Tests: Eine gesprochene VOC-Zeile
-        besitzt weitere Sprachvarianten mit eigenem Sound und Untertitel;
-        Sprachkürzel können in der Studio-UI bearbeitet und die Standardsprache
-        festgelegt werden. Die native v6-Sprachleiste steuert Text und Ton
-        gemeinsam; nicht vorhandene Übersetzungen verwenden die Standardsprache,
-        Escape stoppt alle möglichen Aufnahmen. 292 Tests grün;
-        native Sprachwechsel-/PCM-Probe noch in CI zu bestätigen.
-  - [x] Produkt-Implementierung: Story-Räume im Gradio-Studio mit vorhandenen
-        nativen Actors/Costumes und Interaktionsregeln kombinieren; bei
-        Storyänderungen neu validieren, Story und Projekt gemeinsam in das
-        Spiel-ZIP legen. Kein dauerhafter gemeinsamer Authoring-Datentyp;
-        Gameplay-Nachweis offen.
-  - [x] Produkt-Implementierung: gemeinsames `adventure.studio.json` für
-        Story und native Actor-/Costume-/Interaktionsdaten speichern, laden,
-        erneut bearbeiten und ohne doppelte Room-Bitmaps exportieren.
-        Validierter Service-Roundtrip; UI- und Gameplay-Gates offen.
-  - [x] Produkt-Implementierung: neue Costumes aus echten PNGs im Gradio-Studio
-        anlegen, Actors in Story-Räumen erstellen und ihre Position/Richtung
-        bearbeiten. Eine Standpose und native `gesture`-Aktion pro Costume;
-        mehrteilige Animationen, echte PNG-COST-Kompilierung und Gameplay-
-        Nachweis noch offen.
-  - [x] Produkt-Implementierung: weitere PNG-Frames in Costume aufnehmen und
-        native Animationsfolgen pro Blickrichtung mit Frame-IDs und `COUNT`
-        als Daten authoren; ScummC-Quellgenerierung und Verb-Aufruf im
-        Studio-Integrationstest, native Kompilierung/Gameplay noch offen.
-  - [x] Produkt-Implementierung: visuelle Timeline aus importierten Costume-
-        Frames und nativen Kommandos, mit Auswahl, Umordnung, Hinzufügen und
-        Entfernen. Derselbe native COST-Exporter bleibt zuständig; animierte
-        Vorschau und ScummVM-Gate offen.
-  - [x] Produkt-Implementierung: animierte GIF-Editor-Vorschau aus wirklichen
-        Costume-Frames und ihren Ursprungspositionen, mit frei gewählter
-        Vorschaugeschwindigkeit. Keine behauptete SCUMM-Tick-Semantik;
-        nativer Gameplay-Nachweis weiter offen.
-  - [ ] Native Verifikation: Der experimentelle Actor-Workflow erzeugt jetzt
-        zusätzlich über die echten Studio-PNG-Aktionen eine zweiframeige
+        getestet. Die ScummVM-Klickprobe (`42517210707`) bestätigt…1082 tokens truncated…ber die echten Studio-PNG-Aktionen eine zweiframeige
         `wave`-COST samt Actor-Startanimation und archiviert Compiler-/
         ScummVM-Artefakte. Ein grüner Workflowlauf und ein beobachteter
         Framewechsel fehlen noch; reiner Spielstart genügt nicht für V.

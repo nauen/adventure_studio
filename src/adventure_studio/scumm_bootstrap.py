@@ -10,6 +10,8 @@ import re
 import sys
 from pathlib import Path
 
+from .scumm_direction import actor_facing_angle
+
 
 def retarget_upstream_bootstrap(source: str, room_name: str) -> str:
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", room_name):
@@ -310,7 +312,6 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
     definitions = ''.join(
         f'    cost {name}Cost = "{name}.cost";\n' for name in sorted(needed))
     source = source.replace(cost_marker, cost_marker + definitions, 1)
-    directions = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}
     # The external Road hero setup explicitly initializes its animation
     # speed to 2. Apply the same fixture default to newly authored Actors;
     # this is not a claimed native speed limit or a domain-level constant.
@@ -324,7 +325,7 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
         if actor.display_name is not None:
             setup.append(f'        setActorName("{actor.display_name}");\n')
         setup.extend((f"        putActorAt({actor.id}, {actor.x}, {actor.y}, {actor.room});\n",
-                      f"        setActorDirection({directions[actor.direction]});\n",
+                      f"        setActorDirection({actor_facing_angle(actor.direction)});\n",
                       "        setActorStanding();\n"))
     source = source.replace(setup_marker, ''.join(setup) + setup_marker, 1)
     return source, header
@@ -564,7 +565,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, WaitActorStep):
                 instructions.append(f"            waitForActor({step.actor_id});\n")
             elif isinstance(step, FaceActorStep):
-                direction = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}[step.direction]
+                direction = actor_facing_angle(step.direction)
                 instructions.extend((f"            setCurrentActor({step.actor_id});\n",
                                      f"            setActorDirection({direction});\n",
                                      "            setCurrentActor(VAR_EGO);\n"))
@@ -647,7 +648,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         for actor, (x, y) in end_positions.items():
             commit += f"                putActorAt({actor}, {x}, {y}, {room_name});\n"
         for actor, direction in end_directions.items():
-            native_direction = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}[direction]
+            native_direction = actor_facing_angle(direction)
             commit += (f"                setCurrentActor({actor});\n"
                        f"                setActorDirection({native_direction});\n"
                        "                setCurrentActor(VAR_EGO);\n")

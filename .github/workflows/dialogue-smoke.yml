@@ -9,6 +9,7 @@ on:
       - '.github/workflows/dialogue-smoke.yml'
       - 'src/adventure_studio/dialogue_demo.py'
       - 'src/adventure_studio/scumm_dialogue_probe.py'
+      - 'src/adventure_studio/scumm_four_facing_probe.py'
       - 'src/adventure_studio/scumm_dialogue_voice_fixture.py'
       - 'src/adventure_studio/dialogue_animation_fixture.py'
       - 'src/adventure_studio/studio_sequences.py'
@@ -27,6 +28,7 @@ on:
       - '.github/workflows/dialogue-smoke.yml'
       - 'src/adventure_studio/dialogue_demo.py'
       - 'src/adventure_studio/scumm_dialogue_probe.py'
+      - 'src/adventure_studio/scumm_four_facing_probe.py'
       - 'src/adventure_studio/scumm_dialogue_voice_fixture.py'
       - 'src/adventure_studio/dialogue_animation_fixture.py'
       - 'src/adventure_studio/studio_sequences.py'
@@ -183,6 +185,32 @@ jobs:
             /tmp/dialogue-two-poses-evidence/scummvm.log
             /tmp/dialogue-two-poses-story/project.json
             /tmp/dialogue-two-poses-story/resources/Harbor.scc
+          if-no-files-found: ignore
+      - name: Play four direction-specific speaking PNG frames in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m adventure_studio.dialogue_demo examples/mini_story.json /tmp/dialogue-four-facing-story --four-facing
+          python -m adventure_studio.dialogue_animation_fixture /tmp/dialogue-four-facing-story --four-facing
+          cp -a /tmp/scummc-upstream /tmp/scummc-four-facing-upstream
+          test -s /tmp/scummc-four-facing-upstream/examples/road/DialogueFigure.cost
+          mv /tmp/scummc-four-facing-upstream/examples/road/DialogueFigure.cost /tmp/dialogue-four-facing-staged.cost
+          python -m adventure_studio.scumm_toolchain /tmp/dialogue-four-facing-story /tmp/scummc-four-facing-upstream /tmp/dialogue-four-facing-game
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_four_facing_probe /tmp/dialogue-four-facing-game /tmp/dialogue-four-facing-evidence
+      - name: Retain four-facing native dialogue evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-v6-studio-dialogue-four-facing
+          path: |
+            /tmp/dialogue-four-facing-evidence/four-facing-report.json
+            /tmp/dialogue-four-facing-evidence/scummvm-facing-*.png
+            /tmp/dialogue-four-facing-evidence/scummvm-last-observed.png
+            /tmp/dialogue-four-facing-evidence/scummvm-checkpoint-*.png
+            /tmp/dialogue-four-facing-evidence/scummvm-stand.png
+            /tmp/dialogue-four-facing-evidence/scummvm.log
+            /tmp/dialogue-four-facing-story/project.json
+            /tmp/dialogue-four-facing-story/resources/Harbor.scc
           if-no-files-found: ignore
       - name: Retain native dialogue animation evidence
         if: always()

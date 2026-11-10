@@ -8,16 +8,20 @@ from .scumm_costume import CostumeAnimation, CostumeDirection, CostumeFrame
 from .scumm_project import canonical_json, export_document, parse_document
 from .studio_sequences import (dialogue_animation_lines, edit_dialogue_animation,
                                assign_dialogue_speaking_frame)
+from .studio_actors import set_costume_direction_speaking_pose
 
 
-def build(directory: Path, two_poses: bool = False) -> None:
+def build(directory: Path, two_poses: bool = False, four_facing: bool = False) -> None:
     project = directory / "project.json"
     document = parse_document(project.read_text(encoding="utf-8"))
     costume = next(item for item in document.costumes if item.name == "DialogueFigure")
     palette = list(costume.palette)
     palette[18] = (220, 80, 80)
-    if two_poses:
+    if two_poses or four_facing:
         palette[19] = (35, 225, 35)
+    if four_facing:
+        palette[20] = (70, 70, 230)
+        palette[21] = (240, 220, 30)
     gesture = CostumeAnimation("gesture", tuple(
         CostumeDirection(direction, ("Speak",), True)
         for direction in ("N", "E", "S", "W")), 24)
@@ -27,7 +31,11 @@ def build(directory: Path, two_poses: bool = False) -> None:
     talk_stop = CostumeAnimation("talk_stop", tuple(
         CostumeDirection(direction, ("Pose",), True)
         for direction in ("N", "E", "S", "W")), 20)
-    additional = (CostumeFrame("SpeakAlt", 8, 8, bytes([3] * 64), -4, -8),) if two_poses else ()
+    additional = ((CostumeFrame("SpeakAlt", 8, 8, bytes([3] * 64), -4, -8),)
+                  if two_poses or four_facing else ())
+    if four_facing:
+        additional += (CostumeFrame("SpeakBlue", 8, 8, bytes([4] * 64), -4, -8),
+                       CostumeFrame("SpeakYellow", 8, 8, bytes([5] * 64), -4, -8))
     updated = replace(costume, palette=tuple(palette),
                       frames=(*costume.frames, CostumeFrame("Speak", 8, 8, bytes([2] * 64), -4, -8),
                               *additional),
@@ -45,7 +53,7 @@ def build(directory: Path, two_poses: bool = False) -> None:
                                             y=100)
                                     if actor.costume == costume.name else actor
                                     for actor in document.actors))
-    if two_poses:
+    if two_poses or four_facing:
         # The editor forbids mutating an asset shared by distinct actors.
         # Give the Witness its own real Costume before authoring two poses.
         document = replace(document,
@@ -64,7 +72,17 @@ def build(directory: Path, two_poses: bool = False) -> None:
             for room in document.rooms)
         document = replace(document, rooms=rooms)
     raw = canonical_json(document)
-    if two_poses:
+    if four_facing:
+        for direction, frame in (("N", "Speak"), ("E", "SpeakAlt"),
+                                 ("S", "SpeakBlue"), ("W", "SpeakYellow")):
+            raw = set_costume_direction_speaking_pose(raw, "WitnessCostume", direction, frame)
+        lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
+                      if label.startswith("SpeakerWitness"))
+        if len(lines) != 4:
+            raise ValueError("Four-facing fixture requires four native lines for one actor")
+        for line in lines:
+            raw = edit_dialogue_animation(raw, line, "gesture", True)
+    elif two_poses:
         lines = tuple(identity for label, identity in dialogue_animation_lines(raw)
                       if label.startswith("SpeakerWitness"))
         if len(lines) < 2:
@@ -80,10 +98,11 @@ def build(directory: Path, two_poses: bool = False) -> None:
 
 
 def main() -> int:
-    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != "--two-poses"):
-        print("Usage: python -m adventure_studio.dialogue_animation_fixture BUILD_DIRECTORY [--two-poses]")
+    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("--two-poses", "--four-facing")):
+        print("Usage: python -m adventure_studio.dialogue_animation_fixture BUILD_DIRECTORY [--two-poses|--four-facing]")
         return 2
-    build(Path(sys.argv[1]), two_poses=len(sys.argv) == 3)
+    build(Path(sys.argv[1]), two_poses=len(sys.argv) == 3 and sys.argv[2] == "--two-poses",
+          four_facing=len(sys.argv) == 3 and sys.argv[2] == "--four-facing")
     return 0
 
 
