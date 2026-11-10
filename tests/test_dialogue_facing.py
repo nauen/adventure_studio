@@ -9,12 +9,17 @@ from adventure_studio.scumm_project import canonical_json, parse_document
 from adventure_studio.story_document import canonical_story_json, parse_story_document
 from adventure_studio.story_to_scumm import compile_story_to_scumm
 from adventure_studio.studio_service import change_dialogue_facing
+from adventure_studio.scumm_direction import actor_facing_angle
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueFacingTests(unittest.TestCase):
+    def test_scummv6_actor_face_uses_angles_not_scummc_direction_ids(self):
+        self.assertEqual({name: actor_facing_angle(name) for name in "NESW"},
+                         {"N": 0, "E": 90, "S": 180, "W": 270})
+
     def setUp(self):
         self.raw = dialogue_fixture(EXAMPLE.read_text(encoding="utf-8"), multispeaker=True)
 
@@ -27,8 +32,8 @@ class DialogueFacingTests(unittest.TestCase):
         source = scummc_room_source(game.rooms[0])
         self.assertLess(source.index("setCurrentActor(SpeakerHarborKeeper);"),
                         source.index('actorSay(SpeakerHarborKeeper,"Was suchst du hier?")'))
-        self.assertIn("setActorDirection(WEST);", source)
-        self.assertIn("setActorDirection(EAST);", source)
+        self.assertIn("setActorDirection(270);", source)
+        self.assertIn("setActorDirection(90);", source)
         self.assertLess(source.index("setCurrentActor(SpeakerWitness);"),
                         source.index('actorSay(SpeakerWitness,"Der Schluessel liegt am Boden.")'))
         self.assertEqual(canonical_json(parse_document(canonical_json(game))), canonical_json(game))
@@ -41,16 +46,17 @@ class DialogueFacingTests(unittest.TestCase):
         self.assertEqual(len(rule.actor_directions), 1)
         source = scummc_room_source(game.rooms[0])
         self.assertIn("setCurrentActor(SpeakerWitness);", source)
-        self.assertIn("setActorDirection(NORTH);", source)
+        self.assertIn("setActorDirection(0);", source)
 
-    def test_animated_speaker_reapplies_facing_after_actor_say(self):
+    def test_animated_speaker_uses_degree_angle_before_actor_say(self):
         edit = change_dialogue_facing(self.raw, "HarborHello", "N")
         room = compile_story_to_scumm(parse_story_document(edit.story_json)).rooms[0]
         source = scummc_room_source(room, dialogue_animation_cues=(
             ("room.harbor.object.harborkeeper.talk.0", "SpeakerHarborKeeper", 24, 12),))
         spoken = source.index('actorSay(SpeakerHarborKeeper,"Was suchst du hier?")')
         gesture = source.index("animateActor(SpeakerHarborKeeper,24);", spoken)
-        self.assertIn("setActorDirection(NORTH);", source[spoken:gesture])
+        self.assertIn("setActorDirection(0);", source[:spoken])
+        self.assertNotIn("setActorDirection(", source[spoken:gesture])
 
     def test_legacy_story_unchanged_and_invalid_cues_rejected(self):
         story = parse_story_document(self.raw)

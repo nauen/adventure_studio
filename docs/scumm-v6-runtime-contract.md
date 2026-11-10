@@ -190,6 +190,16 @@ Bestätigte VM-/ScummC-Bausteine sind `animateActor` (`0x82`),
 `setActorWalkScript`, `setActorTalkScript`, Layer, Walkbox-Flags,
 Walkgeschwindigkeit, Kostüm-Animationvariablen und Actor-Animationszähler.
 
+**V6-Richtungsgrenze (2026-11-10):** Die ScummC-Präprozessorwerte
+`WEST=0`, `EAST=1`, `SOUTH=2`, `NORTH=3` sind alte Richtungs-IDs
+(`include/scummVars6.s`). Bei `setActorDirection` erwartet die native
+ScummVM-v6-Actor-Operation jedoch Winkelgrade: N=0, E=90, S=180, W=270
+(`engines/scumm/script_v6.cpp`, `actor.cpp`, `util.cpp` im stock ScummVM).
+Die SCUMM-v6-Skriptgenerierung muss daher die **Winkel** schreiben;
+initiale SCUMM-Costume-Richtungsfelder und die `N/E/S/W`-COST-Kanäle
+sind davon getrennte Schnittstellen. Ein Vier-Richtungs-Spieltest bleibt
+das visuelle Abnahmegate.
+
 ScummC erzeugt Kostüme mit dem separaten `cost`-Compiler. Die Grammatik
 beschreibt Bilder, Limbs, Animationssequenzen und räumliche Bild-Offsets.
 Es ist **nicht** zulässig, beliebige Sprite-Sheet-Frames ohne Prüfung als

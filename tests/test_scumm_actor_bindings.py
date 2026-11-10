@@ -48,7 +48,7 @@ class ActorBootstrapTests(unittest.TestCase):
                         'putActorAt(Guide, 450, 110, Harbor);',
                         'walkActorTo(Guide, 480, 100);',
                         'waitForActor(Guide);',
-                        'setCurrentActor(Guide);', 'setActorDirection(WEST);',
+                        'setCurrentActor(Guide);', 'setActorDirection(270);',
                         'setCurrentActor(VAR_EGO);',
                         'animateActor(Guide,24);', 'setObjectState(Door,2);')
         offsets = [compiled.index(instruction) for instruction in instructions]
@@ -66,7 +66,7 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('if(VAR_OVERRIDE)', native_skip)
         self.assertIn('setObjectState(Door,2);', native_skip.split('} override {')[1])
         self.assertIn('putActorAt(Guide, 480, 100, Harbor);', native_skip.split('} override {')[1])
-        self.assertIn('setActorDirection(WEST);', native_skip.split('} override {')[1])
+        self.assertIn('setActorDirection(270);', native_skip.split('} override {')[1])
         inventory_skip = replace(sequence, skippable=True,
                                  steps=(*sequence.steps, PickupObjectStep('Key')))
         inventory_document = replace(document, interaction_sequences=(inventory_skip,))
@@ -154,7 +154,7 @@ class ActorBootstrapTests(unittest.TestCase):
         self.assertIn('actor Guide;', declaration)
         self.assertEqual(generated.count('cost NativeGestureCost = "NativeGesture.cost";'), 1)
         self.assertIn('putActorAt(Companion, 300, 110, Harbor);', generated)
-        self.assertIn('setActorDirection(WEST);', generated)
+        self.assertIn('setActorDirection(270);', generated)
         self.assertIn('putActorAt(Guide, 80, 100, Cellar);', generated)
         self.assertIn('room Cellar;', generated)
         self.assertIn('setActorName("Companion");', generated)

@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .palette_animation import PaletteCycle, validate_cycles
+from .scumm_direction import actor_facing_angle
 from .targets import RoomGeometry, validate_geometry
 
 _IDENTIFIER = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
@@ -480,18 +481,14 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         face = ""
         if direction is not None:
             actor = line_actors[key]
-            native = {"N": "NORTH", "E": "EAST", "S": "SOUTH", "W": "WEST"}[direction]
+            native = actor_facing_angle(direction)
             pad = " " * indent
             face = (f"{pad}setCurrentActor({actor});\n"
                     f"{pad}setActorDirection({native});\n"
                     f"{pad}setCurrentActor(VAR_EGO);\n")
         cue = cues.get(key)
-        # actorSay may select its native talking posture. Reapply an authored
-        # facing cue before starting the explicit Costume gesture so the
-        # selected directional COST frame is drawn during this line.
-        speaking_face = face if animation is not None else ""
         if cue is None:
-            return face + say(key, original, indent) + speaking_face + animate + " " * indent + "waitForMessage();\n" + standing
+            return face + say(key, original, indent) + animate + " " * indent + "waitForMessage();\n" + standing
         if cue.source_text != original:
             raise ValueError(f"Stale dialogue audio line: {key}")
         pad = " " * indent
@@ -510,7 +507,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
 
         stops = "".join(f"{pad}stopSound({sound_id});\n" for sound_id in sorted(
             {cue.sound_id, *(variant[1] for variant in cue.variants)}))
-        return face + sound("startSound") + say(key, original, indent) + speaking_face + animate + \
+        return face + sound("startSound") + say(key, original, indent) + animate + \
             f"{pad}waitForMessage();\n" + stops + standing
     def localized_name(hotspot: RoomHotspot) -> str:
         if catalog is None:

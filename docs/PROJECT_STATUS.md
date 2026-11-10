@@ -11,9 +11,14 @@ vier unterschiedlich gefärbte PNG-äquivalente Sprechframes, mit den
 vorhandenen Richtungs-Authoring-Operationen als `gesture` und `talk_start`
 gebunden. Ein neuer stock-ScummVM-Klicktest prüft die sichtbare Farbfolge
 und danach sechs stabile Standframes; das GitHub-Gate muss noch laufen.
-323 lokale Tests grün, generierter SCUMM-Quelltext enthält alle vier
-`setActorDirection`-Befehle. **Nicht als V behaupten, bevor der native
-Bildnachweis grün ist.** Nächstes Arbeitspaket nach Abnahme: zeitabhängige
+Die erste native Probe zeigte ausschließlich den Nord-Frame, obwohl alle
+vier Dialogtexte ausgegeben wurden. **Ursache identifiziert:** ScummC-
+Richtungskonstanten `NORTH/EAST/SOUTH/WEST` sind alte IDs 3/1/2/0,
+ScummVM-v6-`setActorDirection` erwartet dagegen Winkel 0/90/180/270.
+Die zentrale Exportabbildung für Actor-Initialisierung, Interaktionen und
+Dialoge wurde berichtigt; ein erneuter Interpreter-Nachweis läuft an.
+**Nicht als V behaupten, bevor der native Bildnachweis grün ist.**
+Nächstes Arbeitspaket nach Abnahme: zeitabhängige
 Sprechframe-Wechsel je Zeile authoren und sichtbar prüfen (D03).
 
 **Neues Produktpaket (2026-11-10, Implementierung):** Im Costume-Editor kann

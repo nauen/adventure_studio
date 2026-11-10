@@ -14,7 +14,10 @@ Eine regulär exportierte vierteilige Actor-Sprechkette dreht den Actor vor
 jeder Zeile auf N/E/S/W und verwendet pro Costume-Richtung einen anderen
 Frame. Die native ScummVM-Bildprobe verlangt die Farbfolge in Reihenfolge
 und sechs aufeinanderfolgende Standframes. Lokaler Source-/Modellnachweis
-und 323 Tests grün; **ScummVM-Bildbeweis noch nicht abgeschlossen**.
+und lokale Regressionstests grün. Die erste native Sichtprobe deckte eine
+falsche alte ScummC-Richtungs-ID bei `setActorDirection` auf; der Export
+verwendet jetzt die von ScummVM erwarteten Winkel. **Native Wiederholung
+noch offen.**
 
 **Richtungsspezifische PNG-Sprechposen authoren (2026-11-10, Implementierung):**
 Der Costume-Editor wählt je N/E/S/W einen importierten Frame für die native
