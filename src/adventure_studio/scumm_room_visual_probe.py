@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from .scumm_assets import RoomAsset, write_room_sources
+from .scumm_assets import RoomAsset, destination_fixture, write_room_sources
 from .scumm_binary import verify_room_binary
 from .scumm_launch import launch_smoke
 from .scumm_room_fixture import native_room
@@ -120,7 +120,7 @@ def run_visual_comparison(upstream: Path, generated: Path, destination: Path) ->
                        for y in range(height) for x in range(width))
         png = destination / f"{label}-authored-zplane.png"
         Image.frombytes("L", (width, height), pixels).save(png)
-        project = canonical_json(GameDocument("authored_mask", (base,)))
+        project = canonical_json(GameDocument("authored_mask", (base, destination_fixture())))
         authored = import_room_zplane(project, base.name, 1, str(png))
         room = parse_document(authored).rooms[0]
         results[label] = {
