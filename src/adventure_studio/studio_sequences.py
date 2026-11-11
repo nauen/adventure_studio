@@ -1526,8 +1526,33 @@ def has_unsaved_dialogue_speaking_drafts(
         raw: str | None, line_id: str | None, direction: str,
         sequence: str | None, session: dict | None) -> bool:
     """Include the currently edited field when checking a project switch."""
+    return bool(unsaved_dialogue_speaking_draft_targets(
+        raw, line_id, direction, sequence, session))
+
+
+def unsaved_dialogue_speaking_draft_targets(
+        raw: str | None, line_id: str | None, direction: str,
+        sequence: str | None, session: dict | None) -> tuple[str, ...]:
+    """Name the actual unsaved line/direction pairs in a stable author order."""
+    if not raw:
+        return ()
+    document_id = parse_document(raw).id
     current = record_dialogue_speaking_draft(raw, line_id, direction, sequence, session)
-    return bool(current["drafts"])
+    drafts = current["drafts"]
+    names = dict((key, label) for label, key in dialogue_animation_lines(raw))
+    directions = {"N": "Nord", "E": "Ost", "S": "Süd", "W": "West"}
+    result = []
+    for target_id, label in names.items():
+        for facing, facing_name in directions.items():
+            target = (document_id, target_id, facing)
+            if target not in drafts:
+                continue
+            saved = dialogue_speaking_sequence_selection(raw, target_id, facing)
+            changed = tuple(part.strip() for part in drafts[target].split(","))
+            persisted = tuple(part.strip() for part in saved.split(","))
+            if changed != persisted:
+                result.append(f"{label} · {facing_name} ({target_id})")
+    return tuple(result)
 
 
 def discard_dialogue_speaking_draft(raw: str, line_id: str, direction: str) -> str:
