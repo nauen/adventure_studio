@@ -53,6 +53,14 @@ def warns_before_tab_unload(page) -> bool:
     """Query the predicate used by Chromium's beforeunload handler."""
     return page.evaluate("window.adventureStudioHasUnsavedSpeakingDrafts()")
 
+def prevents_tab_unload(page) -> bool:
+    """Check the installed handler without destructively closing the tab."""
+    return page.evaluate("""() => {
+        const event = new Event('beforeunload', {cancelable: true});
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+    }""")
+
 
 def await_selection(page, elem_id: str, label: str) -> None:
     page.wait_for_function(
@@ -286,8 +294,10 @@ def main() -> None:
                 "#native-dialogue-session-unsaved textarea")).to_have_value(
                     "0", timeout=20000)
             assert not warns_before_tab_unload(page)
+            assert not prevents_tab_unload(page)
             sequence_input.fill("SpeakAlt, SpeakAlt")
             assert warns_before_tab_unload(page)
+            assert prevents_tab_unload(page)
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
@@ -297,6 +307,7 @@ def main() -> None:
                 "#native-dialogue-session-unsaved textarea")).to_have_value(
                     "1", timeout=20000)
             assert warns_before_tab_unload(page)
+            assert prevents_tab_unload(page)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
             expect(draft_save_status).to_contain_text(
@@ -310,6 +321,7 @@ def main() -> None:
                 "#native-dialogue-session-unsaved textarea")).to_have_value(
                     "0", timeout=20000)
             assert not warns_before_tab_unload(page)
+            assert not prevents_tab_unload(page)
             # The persistent saved-state indicator confirms discard; preview
             # feedback is cleared because no GIF belongs to the restored draft.
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
@@ -1186,16 +1198,6 @@ def main() -> None:
                 ("15. Mouth_Strip_r1_c2_repeat4", 14),
                 ("16. Mouth_Strip_r1_c2_repeat5", 15),
                 ("17. Mouth_Strip_r1_c2_repeat6", 16))
-            # Run the potentially destructive browser-close probe only after
-            # the complete editor roundtrip and exported-file assertions.
-            sequence_input.fill("SpeakAlt, SpeakAlt")
-            assert warns_before_tab_unload(page)
-            with page.expect_event("dialog", timeout=10000) as unload_dialog:
-                page.close(run_before_unload=True)
-            assert unload_dialog.value.type == "beforeunload"
-            unload_dialog.value.dismiss()
-            # Playwright's page.close() may still close a headless tab after
-            # dismiss(); this API cannot prove manual browser cancellation.
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
