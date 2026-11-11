@@ -30,6 +30,20 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #160, CI-Abnahme bestanden):**
+Ein visuell gewählter Sprite-Sheet-Bildblock kann unter Erhalt seiner
+internen Reihenfolge an eine beliebige Grenze der ursprünglichen
+Abspielfolge versetzt werden. Ungültige Ziele werden abgelehnt, Ziele
+innerhalb des Blocks verändern nichts; der bestehende native
+COST-Import verwendet die neue Abspielreihenfolge. Core- und Chromium-
+CI je zweimal grün (Browser-Run `42960294415`); stock-ScummVM-
+Regression im zweiten Versuch grün (Run `42960294253`, Attempt 2,
+Merge `6c5d979e`). Im ersten nativen Versuch war eine unveränderte
+Richtungs-Sprechprobe durch nicht reproduzierbare Frame-Abtastung
+fehlgeschlagen; dies bleibt als Teststabilitätsrisiko beobachtbar.
+D03 bleibt eine Teilfähigkeit; menschliche UI-Abnahme und
+vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #159, CI-Abnahme bestanden):**
 Zusammenhängende Sprite-Sheet-Abspielbilder können im Dialogeditor
 gemeinsam entfernt werden, sofern keine Quellzelle ihre letzte Kopie
