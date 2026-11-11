@@ -391,6 +391,21 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, composed, "copy_block", 2,
                 end_position=3, destination_position=2), "4,1,1,4,4,3")
+            removed_block = edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, copied, "remove_block", 5,
+                end_position=6)
+            self.assertEqual(removed_block, composed)
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, "4,1,4,1,3", "remove_block", 2,
+                end_position=3), "4,1,3")
+            with self.assertRaisesRegex(ValueError, "letzte Kopie"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "remove_block", 2,
+                    end_position=4)
+            with self.assertRaisesRegex(ValueError, "gültigen Bildblock"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "remove_block", 3,
+                    end_position=2)
             with self.assertRaisesRegex(ValueError, "gültigen Bildblock"):
                 edit_dialogue_png_sprite_sheet_sequence(
                     4, [1], reordered, None, composed, "copy_block", 3,
