@@ -9,6 +9,7 @@ from __future__ import annotations
 import tempfile
 import subprocess
 import os
+from math import isfinite
 from pathlib import Path
 
 from .studio_catalog import relationship_svg, story_catalog
@@ -906,12 +907,21 @@ def make_app():
                     native_dialogue_sprite_relocate_block = gr.Button(
                         "Bildblock hierhin verschieben",
                         elem_id="native-dialogue-sprite-relocate-block")
+                with gr.Row():
+                    native_dialogue_sprite_block_repetitions = gr.Number(
+                        label="Zusätzliche Blockkopien (1 = einmal einfügen)",
+                        value=2, precision=0,
+                        elem_id="native-dialogue-sprite-block-repetitions")
+                    native_dialogue_sprite_repeat_block = gr.Button(
+                        "Bildblock mehrfach einfügen",
+                        elem_id="native-dialogue-sprite-repeat-block")
                 gr.Markdown("**Ohne Zellnummern:** Oben eine Quellzelle auswählen, hier die gewünschte Position wählen und einfügen. Position 0 setzt vor das erste Bild; eine Position ab 1 setzt dahinter ein. Entfernen löscht nur zusätzliche Kopien, nicht das letzte Bild einer ausgewählten Zelle.")
                 gr.Markdown("**Abspielfolge umordnen:** Ein Bild in der Leiste anklicken und mit den beiden Abspielbild-Knöpfen um genau eine Position verschieben. Auch wiederholte Zellen lassen sich einzeln bewegen.")
                 gr.Markdown("**Bildblock verschieben:** Erstes Bild in der Leiste anklicken, dann das letzte Bild im Feld *Blockende* auswählen. Die beiden Bildblock-Knöpfe verschieben alle Bilder dazwischen gemeinsam um einen Platz.")
                 gr.Markdown("**Bildblock wiederholen:** Startbild und Blockende wählen, danach bei *Bildblock-Zielposition* das Einfügeziel festlegen. Die ursprünglichen Bilder bleiben erhalten; die Kopie kann auch innerhalb des ursprünglichen Blocks eingefügt werden.")
                 gr.Markdown("**Bildblock entfernen:** Startbild und Blockende wählen, dann *Bildblock entfernen* drücken. Der gesamte Abschnitt wird nur entfernt, wenn jede übernommene Quellzelle mindestens einmal in der verbleibenden Folge vorkommt.")
                 gr.Markdown("**Bildblock frei verschieben:** Startbild und Blockende wählen, danach die Zielposition in der ursprünglichen Folge festlegen (0 = vor dem ersten Bild, N = nach Bild N). Der Block wird dort ohne Kopie eingesetzt; Ziele im ausgewählten Block belassen die Folge unverändert.")
+                gr.Markdown("**Bildblock mehrfach wiederholen:** Start, Ende, Zielposition und eine positive Anzahl zusätzlicher Kopien wählen. Die gesamte erweiterte Abspielfolge erscheint in der Bildleiste, bevor sie als native COST-Frames übernommen wird. Für die temporäre PNG-Vorbereitung gilt eine Editor-Sicherheitsgrenze von 2048 Abspielbildern (kein SCUMM-v6-Limit).")
                 native_dialogue_sprite_playback_frames = gr.Gallery(
                     label="Tatsächliche Abspielfolge · Bild anklicken, um Position zu wählen",
                     columns=6, object_fit="contain", height=190,
@@ -2073,6 +2083,39 @@ def make_app():
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
              native_dialogue_sprite_timeline, native_dialogue_sprite_position,
              native_dialogue_sprite_block_end, native_dialogue_sprite_copy_destination],
+            [native_dialogue_sprite_timeline])
+
+        def png_sheet_repeat_block(sheet, columns, rows, margin_x, margin_y,
+                                   gap_x, gap_y, skipped, cell_order, repeats,
+                                   timeline, position, block_end, destination, copies):
+            try:
+                _overlay, tiles, _description = dialogue_png_sprite_sheet_preview(
+                    sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                    skipped, cell_order, repeats, timeline)
+                valid_copies = (int(copies) if type(copies) in (int, float)
+                                and isfinite(copies) and int(copies) == copies else None)
+                return edit_dialogue_png_sprite_sheet_sequence(
+                    len(tiles), skipped, cell_order, repeats, timeline,
+                    "repeat_block",
+                    int(position) if isinstance(position, str) and position.isdecimal() else None,
+                    end_position=(int(block_end) if isinstance(block_end, str)
+                                  and block_end.isdecimal() else None),
+                    destination_position=(int(destination) if isinstance(destination, str)
+                                          and destination.isdecimal() else None),
+                    repetitions=valid_copies)
+            except (ValueError, OSError) as error:
+                raise gr.Error(str(error)) from error
+
+        native_dialogue_sprite_repeat_block.click(
+            png_sheet_repeat_block,
+            [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+             native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+             native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+             native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+             native_dialogue_sprite_timeline, native_dialogue_sprite_position,
+             native_dialogue_sprite_block_end, native_dialogue_sprite_copy_destination,
+             native_dialogue_sprite_block_repetitions],
             [native_dialogue_sprite_timeline])
 
         def png_sheet_copy_block(sheet, columns, rows, margin_x, margin_y,
