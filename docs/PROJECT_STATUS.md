@@ -5,6 +5,21 @@ Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein
+vorhandener Costume-PNG-Frame lässt sich jetzt direkt **vor oder
+nach** einem ausgewählten nummerierten NPC-Sprechfolgeschritt
+einfügen. Damit können auch mittlere Positionen ohne manuelle
+Komma-IDs erweitert werden; Reihenfolge und übrige Frames bleiben
+erhalten, wiederholte Frames sind gültig. Die Aktion verändert nur
+den Entwurf und nutzt weiter die vorhandenen Pixel-/GIF-Vorschauen
+sowie explizites Speichern. Core-CI zweimal, Chromium-CI im ersten
+und gezielten dritten Lauf grün (zweiter Lauf scheiterte spät am
+unveränderten Sprite-Sheet-Redo-Test), stock-ScummVM-CI grün
+(PR #178, Merge `21ceb449`, Runs `42986776661` /
+`42986776696` / `42986776677`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Den ausgewählten nummerierten Sprechfolgeschritt
+mit einem Klick duplizieren, um wiederholte Posen leichter zu bauen.
+
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein
 nummerierter NPC-Sprechfolgeschritt lässt sich nun direkt durch
 einen anderen vorhandenen Costume-PNG-Frame ersetzen. Der Schritt
 behält seine Position, alle anderen Frames bleiben unverändert.
