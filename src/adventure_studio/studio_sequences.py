@@ -747,6 +747,23 @@ def edit_dialogue_png_sprite_sheet_sequence(
                 [sequence[end_position]] + sequence[position - 1:end_position])
         if tuple(sequence) == previous:
             return timeline or ""
+    elif action == "relocate_block":
+        if (position not in range(1, len(sequence) + 1) or
+                type(end_position) is not int or
+                end_position not in range(position, len(sequence) + 1)):
+            raise ValueError("Bitte einen gültigen Bildblock von Start bis Ende auswählen")
+        if (type(destination_position) is not int or
+                destination_position not in range(len(sequence) + 1)):
+            raise ValueError("Bitte eine gültige Zielposition für den Bildblock auswählen")
+        # Destination is a boundary in the original sequence: 0 before the
+        # first image, N after image N. Boundaries within the block are no-ops.
+        if position - 1 <= destination_position <= end_position:
+            return timeline or ""
+        block = sequence[position - 1:end_position]
+        del sequence[position - 1:end_position]
+        insertion = (destination_position if destination_position < position - 1
+                     else destination_position - len(block))
+        sequence[insertion:insertion] = block
     elif action == "remove_block":
         if (position not in range(1, len(sequence) + 1) or
                 type(end_position) is not int or
