@@ -1925,13 +1925,13 @@ def make_app():
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
             [native_dialogue_draft_save_status, native_dialogue_animation_line,
-             native_dialogue_direction])
+             native_dialogue_direction], show_progress="hidden")
         native_state.change(
             speaking_draft_navigation_guard,
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
             [native_dialogue_draft_save_status, native_dialogue_animation_line,
-             native_dialogue_direction])
+             native_dialogue_direction], show_progress="hidden")
         # Do not write a dropdown from its own change handler: Gradio may
         # retrigger the handler while its loading overlay blocks interaction.
         for source in (native_dialogue_animation_line, native_dialogue_direction):
@@ -1939,7 +1939,7 @@ def make_app():
                 dialogue_speaking_draft_save_status,
                 [native_state, native_dialogue_animation_line,
                  native_dialogue_direction, native_dialogue_speaking_sequence],
-                [native_dialogue_draft_save_status])
+                [native_dialogue_draft_save_status], show_progress="hidden")
 
         native_dialogue_draft_step.change(
             dialogue_speaking_draft_step_preview,
