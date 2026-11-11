@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #180, CI-Abnahme bestanden):**
+Der Editor kann ungespeicherte NPC-Sprechfolgenänderungen bewusst
+verwerfen und die vorhandene native Folge der gewählten Dialogzeile
+und Richtung aus dem Projekt wiederherstellen. Veraltete Editor-
+Vorschauen werden geleert. Keine Projekt-/Costume-/Opcode-Änderung,
+kein Capability-Statuswechsel. Core-/Chromium-CI je zweimal und
+stock-ScummVM-CI grün (Merge `2ecc5143`, Runs `42991905022`,
+`42991905238`, `42991905095`). Menschliche UI-Abnahme offen.
+Nächstes Editorpaket: Entwurf gegenüber gespeichertem Stand als
+ungespeichert/identisch kennzeichnen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #179, CI-Abnahme bestanden):**
 Ein ausgewählter nummerierter NPC-Sprechfolgeschritt kann direkt
 hinter sich dupliziert werden; die Frame-ID muss nicht erneut
