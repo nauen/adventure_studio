@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #175, CI-Abnahme bestanden):**
+Die PNG-Frame-Auswahl des NPC-Sprechfolgeneditors zeigt die
+gewählte Pose vor dem Anhängen mit echten Costume-Pixeln. Auswahl
+und Bild reagieren auf Projekt-/Sprecherwechsel. Kein Modell-/COST-
+oder Opcode-Eingriff und keine Änderung des Capability-Status.
+Core-/Chromium-CI je zweimal grün (Merge `b41ae487`, Runs
+`42981767588`, `42981767768`). Kein neuer ScummVM-Run für
+den rein lesenden UI-Diff; letzter nativer Lauf `42979576719`.
+Menschliche UI-Abnahme offen. Nächstes Editorpaket: Pixelbild des
+gewählten bereits eingefügten Folgenschritts anzeigen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #174, CI-Abnahme bestanden):**
 Sprechfolgen können jetzt im NPC-Dialogeditor per Frame-Dropdown
 und nummerierter Schrittauswahl ohne Komma-Texteingabe erstellt,
