@@ -13,7 +13,7 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
 - **Jetzt:** Genau R06.2 – mehrere PNG-Z-Masken im Studio importieren und vorhandenen Walkboxen je ZPxx-Ebene zuweisen. R10/SCAL wurde in PR #197 nach sechs grünen Checks gemergt (b66287a); NPC-Komfort nach #190 beendet.
 - **Abnahme:** Echter Studio-Pfad → zwei validierte PNG-Masken im RoomAsset/JSON mit Story-Verknüpfung → native ScummC-ZP01/ZP02 plus BOXD-Zuordnung → beide Z-Ebenen getrennt im unveränderten ScummVM als Actor-Verdeckung gegenüber maskenfreier Kontrolle sichtbar. Core-, Chromium- und native CI nachweisen.
-- **Blocker:** R06.2 noch nicht vollständig abgenommen; native Mehr-Ebenen-Spielprobe und Browser-Check auf finalem Commit müssen bestehen. Keine generelle Zusage für alle neun Z-Ebenen.
+- **Blocker:** R06.2 hat native Zwei-Ebenen-Actor-Verdeckung (Run 43103736222: 1556 → 0/0 Actor-Pixel) und Browser-Klickpfad (Run 43104689805) als Teilproben bestanden. Alle Gesamtchecks auf finalem Commit und Merge noch offen; keine generelle Zusage für neun Ebenen.
 - **Danach:** Erst nach vollständiger R06.2-Evidenz und Merge genau das nächste aus der Matrix priorisierte native Raum-/Walkbox-Paket; keine NPC-Komfortarbeit.
 
 ## Zuletzt tatsächlich geliefert
