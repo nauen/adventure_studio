@@ -5,6 +5,24 @@ Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im visuellen
+NPC-Dialog-Sprite-Sheet-Editor kann die letzte Änderung der freien
+Abspielfolge (Einfügen, Entfernen, Verschieben, Blockkopie und
+Wiederholung) per **Letzte Bildfolgen-Änderung rückgängig machen**
+zurückgenommen werden. Der kurzlebige Editor-State bindet vorherige
+und aktuelle Folge an Raster, Sprite-Sheet und Zellenauswahl;
+veraltete Zustände werden abgelehnt. Nach Undo ist der Knopf
+deaktiviert, bis erneut eine Änderung erfolgt. Vorbereitete native
+COST-Frames und Projektmodell werden nicht verändert. Core- und
+Chromium-CI je zweimal grün; Chromium beweist sieben Bildpositionen,
+Undo auf drei Bilder, erneutes Bearbeiten, neun native PNG-Frames,
+Import und JSON-Export. Stock-ScummVM-CI grün (PR #162,
+Merge `f9c78dd5`, Runs `42962623022` / `42962623007` /
+`42962623016`). Menschliche UI-Abnahme offen. **Nächstes Paket:**
+Eine rückgängig gemachte Bildfolgenänderung mit einem Redo-Schritt
+wiederherstellen können, sofern seit dem Undo keine neue Bearbeitung
+oder Raster-/Auswahländerung erfolgt ist.
+
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im visuellen
 NPC-Dialog-Sprite-Sheet-Editor lässt sich ein markierter Bildblock mit
 einer frei wählbaren positiven Anzahl zusätzlicher Kopien an einer
 Zielposition der bestehenden Folge einfügen. Die Originalfolge bleibt
