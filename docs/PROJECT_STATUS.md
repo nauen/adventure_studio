@@ -7,6 +7,22 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Beim Öffnen
+einer anderen nativen Projektdatei prüft der Studio-Editor, ob
+ungespeicherte NPC-Sprechfolgenentwürfe existieren – einschließlich
+der gerade bearbeiteten Folge. Bei Bedarf bleibt das alte Projekt
+unverändert geladen, bis **Anderes Projekt laden** den Verlust der
+Entwürfe ausdrücklich bestätigt; **Bisheriges Projekt behalten**
+bricht ohne Datenverlust ab. Ohne Entwürfe lädt die Datei direkt.
+Keine Änderung am Projektformat oder nativen COST-/SCUMM-v6-Export.
+Core-CI zweimal, Chromium-CI zweimal und stock-ScummVM-CI zweimal
+grün (PR #183, Runs `43013379811` / `43013386797` /
+`43013379816` / `43013386909` / `43013379961` /
+`43013386770`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Noch offene Sprechfolgenentwürfe vor dem
+Projektwechsel einzeln sichtbar machen, damit Nutzer gezielt
+entscheiden können, was verworfen wird.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ungespeicherte
 NPC-Sprechfolgen bleiben beim Wechsel zwischen Dialogzeilen und
 Blickrichtungen als sitzungsbezogene Entwürfe erhalten. Beim Zurückwechseln

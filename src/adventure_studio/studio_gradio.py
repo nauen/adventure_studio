@@ -61,6 +61,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
 from .studio_sequences import (dialogue_ending_animation_selection,
                                switch_dialogue_speaking_draft,
                                record_dialogue_speaking_draft,
+                               has_unsaved_dialogue_speaking_drafts,
                                edit_dialogue_ending_animation,
                                dialogue_ending_timeline,
                                edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
@@ -649,6 +650,15 @@ def make_app():
             native_state = gr.State(None)
             native_linked = gr.State(False)
             native_file = gr.File(label="Native Projekt-JSON öffnen", file_types=[".json"], type="filepath", elem_id="native-project-file")
+            native_pending_file = gr.State(None)
+            native_file_switch_status = gr.Markdown("", elem_id="native-file-switch-status")
+            with gr.Row():
+                native_file_switch_confirm = gr.Button(
+                    "Anderes Projekt laden · Entwürfe verwerfen",
+                    elem_id="native-file-switch-confirm", visible=False)
+                native_file_switch_cancel = gr.Button(
+                    "Bisheriges Projekt behalten", elem_id="native-file-switch-cancel",
+                    visible=False)
             native_sync_button = gr.Button("Aktuelle Story als natives Projekt übernehmen / aktualisieren")
             with gr.Accordion("Actors und Costumes erstellen", open=True):
                 gr.Markdown("Ein PNG wird in eine native 32-Farben-Costume mit Transparenzfarbe umgewandelt. Bilder mit mehr als 31 sichtbaren Farben werden auf 31 Farben reduziert. Weitere Frames behalten die vorhandenen Farben; ist die Palette voll, wird der Import mit einer klaren Meldung abgelehnt.")
@@ -1397,11 +1407,42 @@ def make_app():
                           native_costume_select, native_actor_list, native_costume_summary,
                           native_actor_initial]
         def native_load_with_drafts(path):
-            return (*native_load(path), {"target": None, "drafts": {}, "file": path})
+            return (*native_load(path), {"target": None, "drafts": {}, "file": path},
+                    None, "", gr.update(visible=False), gr.update(visible=False))
 
-        native_file.change(native_load_with_drafts, [native_file],
-                           [native_state, native_linked, *native_outputs,
-                            native_report, native_dialogue_draft_session])
+        native_file_outputs = [native_state, native_linked, *native_outputs,
+                               native_report, native_dialogue_draft_session,
+                               native_pending_file, native_file_switch_status,
+                               native_file_switch_confirm, native_file_switch_cancel]
+
+        def request_native_file_load(path, raw, line, direction, sequence, session):
+            if raw and path and path != (session or {}).get("file") and \
+                    has_unsaved_dialogue_speaking_drafts(
+                        raw, line, direction, sequence, session):
+                return ((gr.skip(),) * (len(native_file_outputs) - 4) +
+                        (path,
+                         "⚠️ **Ungespeicherte NPC-Sprechfolgen:** Das neue Projekt ist "
+                         "noch nicht geladen. Bestätigen verwirft die Entwürfe; "
+                         "Abbrechen behält das bisherige Projekt.",
+                         gr.update(visible=True), gr.update(visible=True)))
+            return native_load_with_drafts(path)
+
+        native_file.change(
+            request_native_file_load,
+            [native_file, native_state, native_dialogue_animation_line,
+             native_dialogue_direction, native_dialogue_speaking_sequence,
+             native_dialogue_draft_session], native_file_outputs)
+        native_file_switch_confirm.click(native_load_with_drafts,
+                                         [native_pending_file], native_file_outputs)
+
+        def cancel_native_file_load():
+            return None, "Projektwechsel abgebrochen; bisherige Entwürfe bleiben erhalten.", \
+                gr.update(visible=False), gr.update(visible=False)
+
+        native_file_switch_cancel.click(
+            cancel_native_file_load,
+            outputs=[native_pending_file, native_file_switch_status,
+                     native_file_switch_confirm, native_file_switch_cancel])
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])
         native_music_add.click(native_music_import,
@@ -1703,11 +1744,8 @@ def make_app():
                     direction_image, dialogue_speaking_sequence_selection(raw, line, direction), direction_status)
 
         def switch_with_session(raw, line, direction, sequence, session, file):
-            if (session or {}).get("file") != file:
-                session = {"target": None, "drafts": {}, "file": file}
             restored, updated = switch_dialogue_speaking_draft(
                 raw, line, direction, sequence, session)
-            updated["file"] = file
             return restored, updated
 
         def animation_with_session(raw, line, direction, sequence, session, file):

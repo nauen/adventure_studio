@@ -416,8 +416,20 @@ def main() -> None:
             assert dialogue_speaking_sequence_selection(sequence_data, first[1]) == "Speak, SpeakAlt"
             assert dialogue_speaking_sequence_selection(sequence_data, second[1]) == "SpeakAlt, Speak, SpeakAlt"
             assert dialogue_speaking_template_choices(sequence_data) == ["Begrüßung"]
+            sequence_input.fill("SpeakAlt")
             page.locator('#native-project-file button[aria-label="Clear"]').click()
             page.locator("#native-project-file input[type=file]").set_input_files(str(sequence_file))
+            expect(page.locator("#native-file-switch-status")).to_contain_text(
+                "Ungespeicherte NPC-Sprechfolgen", timeout=20000)
+            expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
+            page.locator("#native-file-switch-cancel").click()
+            expect(page.locator("#native-file-switch-status")).to_contain_text(
+                "Projektwechsel abgebrochen", timeout=20000)
+            expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
+            page.locator('#native-project-file button[aria-label="Clear"]').click()
+            page.locator("#native-project-file input[type=file]").set_input_files(str(sequence_file))
+            expect(page.locator("#native-file-switch-confirm")).to_be_visible(timeout=20000)
+            page.locator("#native-file-switch-confirm").click()
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
             select_option(page, "native-dialogue-template-select", "Begrüßung")

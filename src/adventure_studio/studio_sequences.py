@@ -1522,6 +1522,14 @@ def record_dialogue_speaking_draft(
     return updated
 
 
+def has_unsaved_dialogue_speaking_drafts(
+        raw: str | None, line_id: str | None, direction: str,
+        sequence: str | None, session: dict | None) -> bool:
+    """Include the currently edited field when checking a project switch."""
+    current = record_dialogue_speaking_draft(raw, line_id, direction, sequence, session)
+    return bool(current["drafts"])
+
+
 def discard_dialogue_speaking_draft(raw: str, line_id: str, direction: str) -> str:
     """Return the persisted line/direction frames, discarding only UI edits."""
     document = parse_document(raw)
