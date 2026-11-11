@@ -56,6 +56,8 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                dialogue_png_batch_preflight, dialogue_png_batch_image_diagnostics,
                                dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame,
                                replace_dialogue_png_batch_frame,
+                               dialogue_png_batch_selected_frame_id,
+                               set_dialogue_png_batch_frame_id,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -786,15 +788,22 @@ def make_app():
                         elem_id="native-dialogue-png-target")
                 native_dialogue_png_import = gr.Button(
                     "PNG importieren und Frame anhängen", elem_id="native-dialogue-png-import")
-                gr.Markdown("**Mehrere PNGs in einem Schritt:** Dateien auswählen, sortieren, ausschließen, wieder aufnehmen oder ein gewähltes Bild einzeln ersetzen. Die ursprünglichen Upload-Dateikarten bleiben unverändert; verbindlich sind die **Importauswahl und Bildvorschau** unten. Die Miniaturen zeigen Original-PNG-Pixel in der späteren nativen COST-Reihenfolge. Nur eine neue Mehrfach-Dateiauswahl setzt die Bearbeitung zurück. Ungültige PNGs, doppelte IDs oder eine volle Palette verhindern den gesamten Import ohne Teiländerungen.")
+                gr.Markdown("**Mehrere PNGs in einem Schritt:** Dateien auswählen, sortieren, ausschließen, wieder aufnehmen, ein Bild ersetzen oder dessen native Frame-ID ändern. Die ursprünglichen Upload-Dateikarten bleiben unverändert; verbindlich sind die **Importauswahl und Bildvorschau** unten. Nur eine neue Mehrfach-Dateiauswahl setzt die Bearbeitung zurück. Ungültige PNGs, doppelte IDs oder eine volle Palette verhindern den gesamten Import ohne Teiländerungen.")
                 native_dialogue_png_batch_files = gr.File(
                     label="Mehrere PNG-Dateien in Abspielreihenfolge", file_types=[".png"],
                     file_count="multiple", type="filepath", elem_id="native-dialogue-png-batch-files")
                 native_dialogue_png_batch_order = gr.State(None)
                 native_dialogue_png_batch_paths = gr.State(None)
+                native_dialogue_png_batch_frame_ids = gr.State({})
                 native_dialogue_png_batch_selected = gr.Dropdown(
                     label="PNG in der Importauswahl bearbeiten", choices=[],
                     elem_id="native-dialogue-png-batch-selected")
+                with gr.Row():
+                    native_dialogue_png_batch_id = gr.Textbox(
+                        label="Native Frame-ID des gewählten PNGs",
+                        elem_id="native-dialogue-png-batch-id")
+                    native_dialogue_png_batch_set_id = gr.Button(
+                        "Frame-ID übernehmen", elem_id="native-dialogue-png-batch-set-id")
                 with gr.Row():
                     native_dialogue_png_batch_up = gr.Button(
                         "↑ Nach oben", elem_id="native-dialogue-png-batch-up")
@@ -1515,62 +1524,90 @@ def make_app():
 
         def png_batch_new_files(raw, line, paths):
             order = None
-            return (list(paths) if paths else None, order, png_batch_selection(paths, order),
+            return (list(paths) if paths else None, {}, order, png_batch_selection(paths, order),
                     png_batch_excluded_selection(paths, order),
                     dialogue_png_batch_preview(raw, line, paths, order))
 
         native_dialogue_png_batch_files.change(
             png_batch_new_files,
             [native_state, native_dialogue_animation_line, native_dialogue_png_batch_files],
-            [native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
+            [native_dialogue_png_batch_paths, native_dialogue_png_batch_frame_ids,
+             native_dialogue_png_batch_order,
              native_dialogue_png_batch_selected,
              native_dialogue_png_batch_excluded,
              native_dialogue_png_batch_plan])
 
-        def png_batch_replace(raw, line, paths, order, selected, replacement):
+        def png_batch_replace(raw, line, paths, order, selected, replacement, frame_ids):
             try:
                 updated = replace_dialogue_png_batch_frame(paths, order, selected, replacement)
             except ValueError as error:
                 raise gr.Error(str(error)) from error
-            return (updated, png_batch_selection(updated, order, selected),
+            source_index = selected if order is None else order[selected]
+            updated_ids = dict(frame_ids or {})
+            updated_ids.pop(source_index, None)
+            return (updated, updated_ids, png_batch_selection(updated, order, selected),
                     png_batch_excluded_selection(updated, order),
-                    dialogue_png_batch_preview(raw, line, updated, order))
+                    dialogue_png_batch_preview(raw, line, updated, order, updated_ids))
 
         native_dialogue_png_batch_replace.click(
             png_batch_replace,
             [native_state, native_dialogue_animation_line, native_dialogue_png_batch_paths,
              native_dialogue_png_batch_order, native_dialogue_png_batch_selected,
-             native_dialogue_png_batch_replacement],
-            [native_dialogue_png_batch_paths, native_dialogue_png_batch_selected,
+             native_dialogue_png_batch_replacement, native_dialogue_png_batch_frame_ids],
+            [native_dialogue_png_batch_paths, native_dialogue_png_batch_frame_ids,
+             native_dialogue_png_batch_selected,
              native_dialogue_png_batch_excluded, native_dialogue_png_batch_plan])
 
-        def png_batch_readiness(raw, line, direction, paths, target, ticks, reset, order):
+        def png_batch_save_id(paths, order, selected, proposed, frame_ids):
+            try:
+                return set_dialogue_png_batch_frame_id(
+                    paths, order, selected, proposed, frame_ids)
+            except ValueError as error:
+                raise gr.Error(str(error)) from error
+
+        native_dialogue_png_batch_set_id.click(
+            png_batch_save_id,
+            [native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
+             native_dialogue_png_batch_selected, native_dialogue_png_batch_id,
+             native_dialogue_png_batch_frame_ids],
+            [native_dialogue_png_batch_frame_ids])
+        for source in (native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
+                       native_dialogue_png_batch_selected, native_dialogue_png_batch_frame_ids):
+            source.change(
+                dialogue_png_batch_selected_frame_id,
+                [native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
+                 native_dialogue_png_batch_selected, native_dialogue_png_batch_frame_ids],
+                [native_dialogue_png_batch_id])
+
+        def png_batch_readiness(raw, line, direction, paths, target, ticks, reset, order, frame_ids):
             ready, description = dialogue_png_batch_preflight(
-                raw, line, direction, paths, target, ticks, reset, order)
+                raw, line, direction, paths, target, ticks, reset, order, frame_ids)
             gallery, issues = dialogue_png_batch_image_diagnostics(
-                raw, line, direction, paths, target, ticks, reset, order)
+                raw, line, direction, paths, target, ticks, reset, order, frame_ids)
             return (("✅ " if ready else "⚠️ ") + description,
                     gr.update(interactive=ready), gallery, issues)
 
         for source in (native_state, native_dialogue_animation_line,
                        native_dialogue_direction, native_dialogue_png_batch_paths,
                        native_dialogue_png_target, native_dialogue_ending_ticks,
-                       native_dialogue_reset, native_dialogue_png_batch_order):
+                       native_dialogue_reset, native_dialogue_png_batch_order,
+                       native_dialogue_png_batch_frame_ids):
             source.change(
                 png_batch_readiness,
                 [native_state, native_dialogue_animation_line,
                  native_dialogue_direction, native_dialogue_png_batch_paths,
                  native_dialogue_png_target, native_dialogue_ending_ticks,
-                 native_dialogue_reset, native_dialogue_png_batch_order],
+                 native_dialogue_reset, native_dialogue_png_batch_order,
+                 native_dialogue_png_batch_frame_ids],
                 [native_dialogue_png_batch_readiness, native_dialogue_png_batch_import,
                  native_dialogue_png_batch_gallery, native_dialogue_png_batch_image_issues])
 
         for source in (native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
-                       native_dialogue_png_batch_selected):
+                       native_dialogue_png_batch_selected, native_dialogue_png_batch_frame_ids):
             source.change(
                 dialogue_png_batch_frame_preview,
                 [native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
-                 native_dialogue_png_batch_selected],
+                 native_dialogue_png_batch_selected, native_dialogue_png_batch_frame_ids],
                 [native_dialogue_png_batch_frame_image,
                  native_dialogue_png_batch_frame_status])
 
@@ -1594,12 +1631,12 @@ def make_app():
                  native_dialogue_png_batch_selected],
                 [native_dialogue_png_batch_selected])
 
-        def png_batch_play(paths, order, duration):
+        def png_batch_play(paths, order, duration, frame_ids):
             destination = (Path(tempfile.mkdtemp(prefix="adventure-studio-png-batch-preview-"))
                            / "staged.gif")
             try:
                 rendered = dialogue_png_batch_animation_preview(
-                    paths, order, duration, destination)
+                    paths, order, duration, destination, frame_ids)
                 return str(rendered), (f"{int(duration)} ms pro Bild nur in der Editor-Vorschau; "
                                        "die native COST-Abspielrate bestimmt ScummVM.")
             except (ValueError, OSError) as error:
@@ -1608,7 +1645,7 @@ def make_app():
         native_dialogue_png_batch_play.click(
             png_batch_play,
             [native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
-             native_dialogue_png_batch_duration],
+             native_dialogue_png_batch_duration, native_dialogue_png_batch_frame_ids],
             [native_dialogue_png_batch_animation, native_dialogue_png_batch_animation_status])
         # A previously rendered GIF must never masquerade as the current staged order.
         for source in (native_dialogue_png_batch_paths, native_dialogue_png_batch_order):
@@ -1616,60 +1653,65 @@ def make_app():
                           outputs=[native_dialogue_png_batch_animation,
                                    native_dialogue_png_batch_animation_status])
 
-        def png_batch_move(raw, line, paths, order, selected, step):
+        def png_batch_move(raw, line, paths, order, selected, frame_ids, step):
             moved, new_selected = move_dialogue_png_batch_frame(paths, order, selected, step)
             return (moved, png_batch_selection(paths, moved, new_selected),
                     png_batch_excluded_selection(paths, moved),
-                    dialogue_png_batch_preview(raw, line, paths, moved))
+                    dialogue_png_batch_preview(raw, line, paths, moved, frame_ids))
 
         for button, step in ((native_dialogue_png_batch_up, -1),
                              (native_dialogue_png_batch_down, 1)):
             button.click(
-                lambda raw, line, paths, order, selected, step=step: png_batch_move(
-                    raw, line, paths, order, selected, step),
+                lambda raw, line, paths, order, selected, frame_ids, step=step: png_batch_move(
+                    raw, line, paths, order, selected, frame_ids, step),
                 [native_state, native_dialogue_animation_line, native_dialogue_png_batch_paths,
-                 native_dialogue_png_batch_order, native_dialogue_png_batch_selected],
+                 native_dialogue_png_batch_order, native_dialogue_png_batch_selected,
+                 native_dialogue_png_batch_frame_ids],
                 [native_dialogue_png_batch_order, native_dialogue_png_batch_selected,
                  native_dialogue_png_batch_excluded,
                  native_dialogue_png_batch_plan])
-        def png_batch_remove(raw, line, paths, order, selected):
+        def png_batch_remove(raw, line, paths, order, selected, frame_ids):
             remaining, new_selected = remove_dialogue_png_batch_frame(
                 paths, order, selected)
             return (remaining, png_batch_selection(paths, remaining, new_selected),
                     png_batch_excluded_selection(paths, remaining),
-                    dialogue_png_batch_preview(raw, line, paths, remaining))
+                    dialogue_png_batch_preview(raw, line, paths, remaining, frame_ids))
 
         native_dialogue_png_batch_remove.click(
             png_batch_remove,
             [native_state, native_dialogue_animation_line, native_dialogue_png_batch_paths,
-             native_dialogue_png_batch_order, native_dialogue_png_batch_selected],
+             native_dialogue_png_batch_order, native_dialogue_png_batch_selected,
+             native_dialogue_png_batch_frame_ids],
             [native_dialogue_png_batch_order, native_dialogue_png_batch_selected,
              native_dialogue_png_batch_excluded,
              native_dialogue_png_batch_plan])
-        def png_batch_restore(raw, line, paths, order, excluded):
+        def png_batch_restore(raw, line, paths, order, excluded, frame_ids):
             restored, selected = restore_dialogue_png_batch_frame(
                 paths, order, excluded)
             return (restored, png_batch_selection(paths, restored, selected),
                     png_batch_excluded_selection(paths, restored),
-                    dialogue_png_batch_preview(raw, line, paths, restored))
+                    dialogue_png_batch_preview(raw, line, paths, restored, frame_ids))
 
         native_dialogue_png_batch_restore.click(
             png_batch_restore,
             [native_state, native_dialogue_animation_line, native_dialogue_png_batch_paths,
-             native_dialogue_png_batch_order, native_dialogue_png_batch_excluded],
+             native_dialogue_png_batch_order, native_dialogue_png_batch_excluded,
+             native_dialogue_png_batch_frame_ids],
             [native_dialogue_png_batch_order, native_dialogue_png_batch_selected,
              native_dialogue_png_batch_excluded, native_dialogue_png_batch_plan])
-        for source in (native_state, native_dialogue_animation_line):
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_png_batch_frame_ids):
             source.change(dialogue_png_batch_preview,
                           [native_state, native_dialogue_animation_line,
-                           native_dialogue_png_batch_paths, native_dialogue_png_batch_order],
+                           native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
+                           native_dialogue_png_batch_frame_ids],
                           [native_dialogue_png_batch_plan])
         native_dialogue_png_batch_import.click(
             lambda *args: native_edit(import_dialogue_png_batch, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_direction,
              native_dialogue_png_batch_paths, native_dialogue_png_target,
              native_dialogue_ending_ticks, native_dialogue_reset,
-             native_dialogue_png_batch_order],
+             native_dialogue_png_batch_order, native_dialogue_png_batch_frame_ids],
             [native_state, *native_outputs, native_report])
         for source in (native_state, native_dialogue_animation_line):
             source.change(dialogue_costume_isolation_preview,

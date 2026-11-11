@@ -372,23 +372,79 @@ def import_dialogue_png_frame(raw: str, line_id: str, direction: str,
         imported, line_id, direction, None, "Anhängen", frame_id, ending_ticks)
 
 
-def _dialogue_png_batch_entries(paths: list[str] | tuple[str, ...] | None
+def _dialogue_png_batch_entries(paths: list[str] | tuple[str, ...] | None,
+                                frame_ids: list[str] | tuple[str, ...] | None = None
                                 ) -> tuple[tuple[str, str], ...]:
     if not isinstance(paths, (list, tuple)) or not paths:
         raise ValueError("Bitte mindestens eine PNG-Datei auswählen")
     entries = []
-    for path in paths:
+    if frame_ids is not None and len(frame_ids) != len(paths):
+        raise ValueError("Die PNG-Frame-IDs passen nicht mehr zur Dateiauswahl")
+    for index, path in enumerate(paths):
         if not isinstance(path, str) or not path or Path(path).suffix.lower() != ".png":
             raise ValueError("Die Folge darf nur PNG-Dateien enthalten")
         stem = unicodedata.normalize("NFKD", Path(path).stem).encode("ascii", "ignore").decode("ascii")
         frame_id = re.sub(r"[^A-Za-z0-9_]", "_", stem).strip("_")
         if not frame_id or not frame_id[0].isalpha():
             frame_id = "Frame_" + (frame_id or "PNG")
+        if frame_ids is not None:
+            frame_id = frame_ids[index]
+            if not isinstance(frame_id, str) or not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", frame_id):
+                raise ValueError(f"Ungültige native Frame-ID für {Path(path).name}: "
+                                 "nur Buchstaben, Zahlen und _; Beginn mit Buchstabe")
         entries.append((path, frame_id))
     names = [frame_id for _path, frame_id in entries]
     if len(set(names)) != len(names):
         raise ValueError("Mehrere PNG-Dateinamen ergeben dieselbe Frame-ID; bitte Dateien umbenennen")
     return tuple(entries)
+
+
+def dialogue_png_batch_entries(paths: list[str] | tuple[str, ...] | None,
+                               order: list[int] | tuple[int, ...] | None = None,
+                               frame_ids: dict[int, str] | None = None
+                               ) -> tuple[tuple[str, str], ...]:
+    """Resolve explicit IDs by original upload index, across sorting and exclusion."""
+    included = dialogue_png_batch_order(paths, order)
+    indexes = tuple(range(len(paths))) if order is None else tuple(order)
+    if frame_ids is not None and (not isinstance(frame_ids, dict) or
+                                  any(type(index) is not int or index not in range(len(paths))
+                                      for index in frame_ids)):
+        raise ValueError("Die PNG-Frame-IDs passen nicht mehr zur Dateiauswahl")
+    default_ids = tuple(_dialogue_png_batch_entries((path,))[0][1] for path in included)
+    ids = tuple(frame_ids.get(index, default_id) if frame_ids else default_id
+                for index, default_id in zip(indexes, default_ids))
+    return _dialogue_png_batch_entries(included, ids)
+
+
+def set_dialogue_png_batch_frame_id(paths: list[str] | tuple[str, ...] | None,
+                                    order: list[int] | tuple[int, ...] | None,
+                                    selected: int | None, frame_id: str,
+                                    overrides: dict[int, str] | None = None
+                                    ) -> dict[int, str]:
+    """Set the selected native ID without mutating another staged upload."""
+    included = dialogue_png_batch_order(paths, order)
+    if type(selected) is not int or selected not in range(len(included)):
+        raise ValueError("Bitte zuerst ein PNG-Frame in der Importauswahl auswählen")
+    index = selected if order is None else order[selected]
+    updated = dict(overrides or {})
+    updated[index] = frame_id
+    _dialogue_png_batch_entries((included[selected],), (frame_id,))
+    return updated
+
+
+def dialogue_png_batch_selected_frame_id(paths: list[str] | tuple[str, ...] | None,
+                                          order: list[int] | tuple[int, ...] | None,
+                                          selected: int | None,
+                                          frame_ids: dict[int, str] | None = None) -> str:
+    """Show an editable ID even while other staged frames conflict."""
+    if not paths:
+        return ""
+    included = dialogue_png_batch_order(paths, order)
+    if type(selected) is not int or selected not in range(len(included)):
+        return ""
+    source_index = selected if order is None else order[selected]
+    default_id = _dialogue_png_batch_entries((included[selected],))[0][1]
+    return frame_ids.get(source_index, default_id) if frame_ids else default_id
 
 
 def dialogue_png_batch_order(paths: list[str] | tuple[str, ...] | None,
@@ -481,7 +537,8 @@ def restore_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
 
 def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
                                paths: list[str] | tuple[str, ...] | None,
-                               order: list[int] | tuple[int, ...] | None = None) -> str:
+                               order: list[int] | tuple[int, ...] | None = None,
+                               frame_ids: dict[int, str] | None = None) -> str:
     """Show the exact ordered native frame IDs before one batch import click."""
     if not paths:
         return "Noch keine PNG-Dateien ausgewählt"
@@ -489,7 +546,7 @@ def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
         included = dialogue_png_batch_order(paths, order)
         if not included:
             return "Alle PNG-Dateien aus der Importauswahl entfernt; bitte neue Dateien auswählen"
-        entries = _dialogue_png_batch_entries(included)
+        entries = dialogue_png_batch_entries(paths, order, frame_ids)
     except ValueError as error:
         return str(error)
     existing = set(dialogue_speaking_frames(raw, line_id)) if raw and line_id else set()
@@ -499,22 +556,23 @@ def dialogue_png_batch_preview(raw: str | None, line_id: str | None,
 
 
 def dialogue_png_batch_thumbnails(paths: list[str] | tuple[str, ...] | None,
-                                  order: list[int] | tuple[int, ...] | None = None
+                                  order: list[int] | tuple[int, ...] | None = None,
+                                  frame_ids: dict[int, str] | None = None
                                   ) -> list[tuple[str, str]]:
     """Display actual uploaded pixels in exactly the prospective COST order."""
     if not paths:
         return []
     included = dialogue_png_batch_order(paths, order)
-    return [(path, f"{position}. {frame_id}")
-            for position, path in enumerate(included, 1)
-            for _source, frame_id in _dialogue_png_batch_entries((path,))]
+    return [(path, f"{position}. {dialogue_png_batch_selected_frame_id(paths, order, position - 1, frame_ids)}")
+            for position, path in enumerate(included, 1)]
 
 
 def dialogue_png_batch_image_diagnostics(
         raw: str | None, line_id: str | None, direction: str | None,
         paths: list[str] | tuple[str, ...] | None, target: str | None,
         ending_ticks: int | float = 12, reset_to_stand: bool = True,
-        order: list[int] | tuple[int, ...] | None = None
+        order: list[int] | tuple[int, ...] | None = None,
+        frame_ids: dict[int, str] | None = None
         ) -> tuple[list[tuple[str, str]], str]:
     """Locate per-PNG import errors using the real native frame import path."""
     if not paths:
@@ -523,13 +581,16 @@ def dialogue_png_batch_image_diagnostics(
     if not included:
         return [], "Die Importauswahl enthält keine Bilder"
     if not raw or not line_id:
-        return dialogue_png_batch_thumbnails(paths, order), "Bitte eine Dialogzeile wählen"
+        return dialogue_png_batch_thumbnails(paths, order, frame_ids), "Bitte eine Dialogzeile wählen"
     updated = raw
     gallery = []
     failures = []
-    for position, path in enumerate(included, 1):
+    indexes = tuple(range(len(paths))) if order is None else tuple(order)
+    for position, (path, source_index) in enumerate(zip(included, indexes), 1):
         try:
-            frame_id = _dialogue_png_batch_entries((path,))[0][1]
+            default_id = _dialogue_png_batch_entries((path,))[0][1]
+            frame_id = frame_ids.get(source_index, default_id) if frame_ids else default_id
+            _dialogue_png_batch_entries((path,), (frame_id,))
             updated = import_dialogue_png_frame(updated, line_id, direction,
                                                 path, frame_id, target,
                                                 ending_ticks, reset_to_stand)
@@ -545,7 +606,8 @@ def dialogue_png_batch_image_diagnostics(
 def dialogue_png_batch_frame_preview(
         paths: list[str] | tuple[str, ...] | None,
         order: list[int] | tuple[int, ...] | None,
-        selected: int | None) -> tuple[str | None, str]:
+        selected: int | None,
+        frame_ids: dict[int, str] | None = None) -> tuple[str | None, str]:
     """Show the chosen staged frame and its position without importing it."""
     if not paths:
         return None, "Noch keine PNG-Dateien ausgewählt"
@@ -554,7 +616,7 @@ def dialogue_png_batch_frame_preview(
         return None, "Die Importauswahl enthält keine Bilder"
     if type(selected) is not int or selected not in range(len(included)):
         return None, "Bitte ein PNG in der Importauswahl auswählen"
-    _source, frame_id = _dialogue_png_batch_entries((included[selected],))[0]
+    frame_id = dialogue_png_batch_selected_frame_id(paths, order, selected, frame_ids)
     return included[selected], (f"Bild {selected + 1} von {len(included)} · "
                                 f"{frame_id} · noch nicht importiert")
 
@@ -575,7 +637,8 @@ def step_dialogue_png_batch_frame(
 def dialogue_png_batch_animation_preview(
         paths: list[str] | tuple[str, ...] | None,
         order: list[int] | tuple[int, ...] | None,
-        duration_ms: int | float, destination: Path) -> Path:
+        duration_ms: int | float, destination: Path,
+        frame_ids: dict[int, str] | None = None) -> Path:
     """Animate the staged, unsaved PNG order; never mutate the native project."""
     from PIL import Image
 
@@ -584,7 +647,7 @@ def dialogue_png_batch_animation_preview(
         raise ValueError("Vorschau-Framezeit muss zwischen 40 und 2000 Millisekunden liegen")
     included = dialogue_png_batch_order(paths, order)
     # Use the same filenames/IDs validation as the actual atomic import.
-    _dialogue_png_batch_entries(included)
+    dialogue_png_batch_entries(paths, order, frame_ids)
     frames = []
     for path in included:
         with Image.open(path) as source:
@@ -610,9 +673,10 @@ def import_dialogue_png_batch(raw: str, line_id: str, direction: str,
                               paths: list[str] | tuple[str, ...] | None, target: str,
                               ending_ticks: int | float = 12,
                               reset_to_stand: bool = True,
-                              order: list[int] | tuple[int, ...] | None = None) -> str:
+                              order: list[int] | tuple[int, ...] | None = None,
+                              frame_ids: dict[int, str] | None = None) -> str:
     """Import all PNGs in selection order, committing only the final valid JSON."""
-    entries = _dialogue_png_batch_entries(dialogue_png_batch_order(paths, order))
+    entries = dialogue_png_batch_entries(paths, order, frame_ids)
     document = parse_document(raw)
     selected = _dialogue_animation_targets(document).get(line_id)
     if selected is None:
@@ -637,7 +701,8 @@ def dialogue_png_batch_preflight(raw: str | None, line_id: str | None,
                                  paths: list[str] | tuple[str, ...] | None,
                                  target: str | None, ending_ticks: int | float = 12,
                                  reset_to_stand: bool = True,
-                                 order: list[int] | tuple[int, ...] | None = None
+                                 order: list[int] | tuple[int, ...] | None = None,
+                                 frame_ids: dict[int, str] | None = None
                                  ) -> tuple[bool, str]:
     """Check the real atomic import in memory before exposing its commit action."""
     if not raw or not line_id:
@@ -647,7 +712,7 @@ def dialogue_png_batch_preflight(raw: str | None, line_id: str | None,
         if not included:
             return False, "Die Importauswahl ist leer; bitte PNGs aufnehmen"
         import_dialogue_png_batch(raw, line_id, direction, paths, target,
-                                  ending_ticks, reset_to_stand, order)
+                                  ending_ticks, reset_to_stand, order, frame_ids)
     except (ValueError, OSError) as error:
         return False, f"Import blockiert: {error}"
     return True, f"Importbereit: {len(included)} PNG-Frame(s) für {target} · {direction}"
