@@ -477,6 +477,51 @@ def suggest_dialogue_png_batch_frame_id(raw: str | None, line_id: str | None,
     return set_dialogue_png_batch_frame_id(paths, order, selected, candidate, frame_ids)
 
 
+def resolve_dialogue_png_batch_frame_ids(raw: str | None, line_id: str | None,
+                                          paths: list[str] | tuple[str, ...] | None,
+                                          order: list[int] | tuple[int, ...] | None,
+                                          frame_ids: dict[int, str] | None = None
+                                          ) -> dict[int, str]:
+    """Fix all ID collisions atomically, preserving every already-free staged ID."""
+    included = dialogue_png_batch_order(paths, order)
+    if not included:
+        raise ValueError("Die Importauswahl enthält keine Bilder")
+    if not raw or not line_id:
+        raise ValueError("Bitte zuerst eine native Sprecher-Dialogzeile auswählen")
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    known = {frame.id for frame in costume.frames}
+    names = [dialogue_png_batch_selected_frame_id(paths, order, index, frame_ids)
+             for index in range(len(included))]
+    for path, name in zip(included, names):
+        _dialogue_png_batch_entries((path,), (name,))
+    # Reserve every first usable occurrence before assigning new suffixes.
+    reserved = set(known)
+    conflict_positions = []
+    for position, name in enumerate(names):
+        if name in reserved:
+            conflict_positions.append(position)
+        else:
+            reserved.add(name)
+    updated = dict(frame_ids or {})
+    indexes = tuple(range(len(paths))) if order is None else tuple(order)
+    for position in conflict_positions:
+        base = names[position]
+        suffix = 2
+        candidate = f"{base}_{suffix}"
+        while candidate in reserved:
+            suffix += 1
+            candidate = f"{base}_{suffix}"
+        updated[indexes[position]] = candidate
+        reserved.add(candidate)
+    dialogue_png_batch_entries(paths, order, updated)
+    return updated
+
+
 def dialogue_png_batch_order(paths: list[str] | tuple[str, ...] | None,
                              order: list[int] | tuple[int, ...] | None = None
                              ) -> tuple[str, ...]:
