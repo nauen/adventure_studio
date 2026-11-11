@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #172, CI-Abnahme bestanden):**
+Gespeicherte NPC-Sprechfolgenvorlagen zeigen vor ihrer Anwendung
+zusätzlich eine echte COST-Pixelanimation mit nativen Frame-Versätzen,
+gespeicherter Frame-Reihenfolge und frei wählbarer Editor-Bilddauer.
+Projekt, zugewiesene Animation und nativer SCUMM-v6-Export bleiben
+unverändert; die Engine-Abspielrate wird nicht simuliert. Kein neuer
+Opcode und keine Änderung des Capability-Status. Core-/Chromium-CI
+je zweimal, stock-ScummVM-CI grün (Merge `a155af14`, Runs
+`42975787067`, `42975787111`, `42975787000`). Menschliche
+UI-Abnahme offen. Nächstes Editorpaket: ungespeicherte Sprechfolge
+vor der Übernahme visuell abspielen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #171, CI-Abnahme bestanden):**
 Der NPC-Dialogeditor zeigt vor Anwendung einer gespeicherten
 Sprechfolgenvorlage Costume, Framezahl, native Frame-Reihenfolge
