@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der vorbereitete
+native Dialog-PNG-Import kann jetzt sämtliche Frame-ID-Konflikte mit
+**Alle Frame-ID-Konflikte beheben** in einem Schritt auflösen. Bereits
+freie IDs werden vor der Vergabe neuer Suffixe reserviert und bleiben
+unverändert, ebenso Reihenfolge, ausgeschlossene Dateien und Bildpixel.
+Die Reparatur verändert noch kein Projekt-JSON; der bestehende atomare
+COST-Import bleibt die verbindliche Freigabe. 334 lokale Python-Tests
+und alle drei CI-Gates grün. Chromium bestätigt zwei Konfliktlösungen
+mit einem Klick, zweiten nativen Import und JSON-Export; stock ScummVM
+bestand die vollständige Dialog-/Rezept-Regression (PR #132, Merge
+`c3ee855`, Runs `42939456745` / `42939456742` / `42939456814`).
+Menschliche UI-Abnahme offen. **Nächstes Paket:** Ein PNG-Sprite-Sheet
+in mehrere Animationsbilder aufteilen und diese als geordnete native
+COST-Importfolge im Studio verwenden können.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im vorbereiteten
 Dialog-PNG-Import vergibt **Freie Frame-ID vergeben** eine native ID
 für das ausgewählte Bild, ohne dessen Datei umzubenennen. Der Vorschlag
