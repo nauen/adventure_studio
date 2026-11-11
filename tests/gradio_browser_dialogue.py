@@ -481,6 +481,20 @@ def main() -> None:
             expect(sequence_input).to_have_value("Speak, Speak, Speak", timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
+            # Authors can recover cached drafts without initiating a file switch.
+            page.get_by_text("Offene Sprechfolgenentwürfe wieder öffnen").click()
+            page.locator("#native-drafts-refresh").click()
+            expect(page.locator("#native-drafts-status")).to_contain_text(
+                "2 offene Sprechfolgenentwürfe", timeout=20000)
+            select_option(page, "native-drafts-target",
+                          f"{second[0]} · Süd ({second[1]})")
+            page.locator("#native-drafts-open").click()
+            await_selection(page, "native-dialogue-line", second[0])
+            expect(sequence_input).to_have_value("Speak, Speak, Speak", timeout=20000)
+            expect(page.locator("#native-drafts-status")).to_contain_text(
+                "weiterhin ungespeichert", timeout=20000)
+            select_option(page, "native-dialogue-line", first[0])
+            expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
             page.locator('#native-project-file button[aria-label="Clear"]').click()
             page.locator("#native-project-file input[type=file]").set_input_files(str(sequence_file))
             expect(page.locator("#native-file-switch-status")).to_contain_text(
