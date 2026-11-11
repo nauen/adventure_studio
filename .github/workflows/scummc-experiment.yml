@@ -176,6 +176,21 @@ jobs:
         # its linked resource tree must contain the requested native chunks.
         # This is NOT a visual ScummVM occlusion/walking acceptance test.
         # Kept separate from the existing screenshot baseline.
+      - name: Verify authored BOXM walkbox routes in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_boxm_routing_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-boxm-routing
+      - name: Retain native BOXM routing evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-boxm-routing
+          path: |
+            /tmp/native-boxm-routing/native-boxm-routing-report.json
+            /tmp/native-boxm-routing/*-screenshots/scummvm-end.png
+            /tmp/native-boxm-routing/*-screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
       - name: Link Studio COST actor and render in stock ScummVM
         env:
           PYTHONPATH: src
@@ -489,21 +504,6 @@ jobs:
             /tmp/native-walkbox-boundary/native-walkbox-boundary-report.json
             /tmp/native-walkbox-boundary/*-screenshots/scummvm-end.png
             /tmp/native-walkbox-boundary/*-screenshots/scummvm-frame-report.json
-          if-no-files-found: ignore
-      - name: Verify authored BOXM walkbox routes in stock ScummVM
-        env:
-          PYTHONPATH: src
-        run: |
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_boxm_routing_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-boxm-routing
-      - name: Retain native BOXM routing evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-boxm-routing
-          path: |
-            /tmp/native-boxm-routing/native-boxm-routing-report.json
-            /tmp/native-boxm-routing/*-screenshots/scummvm-end.png
-            /tmp/native-boxm-routing/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Measure native SCAL perspective curve at three walking depths
         env:
