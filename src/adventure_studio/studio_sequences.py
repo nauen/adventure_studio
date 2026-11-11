@@ -166,7 +166,7 @@ def author_room_scale_curve(raw: str, room_name: str, slot: int, scale1: int,
     if len(set(indices)) != len(indices) or any(i > len(room.walkboxes) for i in indices):
         raise ValueError(f"Walkbox-Nummern müssen eindeutig zwischen 1 und {len(room.walkboxes)} liegen")
     curve = ScaleCurve(slot, scale1, y1, scale2, y2)
-    curves = tuple(sorted((item for item in room.scale_curves if item.slot != slot)
+    curves = tuple(sorted(tuple(item for item in room.scale_curves if item.slot != slot)
                           + (curve,), key=lambda item: item.slot))
     boxes = tuple(replace(box, scale=255, scale_slot=slot) if index in indices else box
                   for index, box in enumerate(room.walkboxes, start=1))
