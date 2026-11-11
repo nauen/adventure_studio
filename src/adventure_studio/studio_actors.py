@@ -319,11 +319,6 @@ def render_costume_preview(raw: str, costume_name: str, animation_name: str,
                            direction: str, frame_duration_ms: int | float,
                            destination: Path) -> Path:
     """Render authored frame order as a preview GIF, not a SCUMM runtime simulation."""
-    from PIL import Image
-
-    if (type(frame_duration_ms) not in (int, float) or int(frame_duration_ms) != frame_duration_ms
-            or not 40 <= frame_duration_ms <= 2000):
-        raise ValueError("Vorschau-Framezeit muss zwischen 40 und 2000 Millisekunden liegen")
     document = parse_document(raw)
     costume = next((item for item in document.costumes if item.name == costume_name), None)
     if costume is None:
@@ -334,11 +329,29 @@ def render_costume_preview(raw: str, costume_name: str, animation_name: str,
     selected = next((item for item in animation.directions if item.direction == direction), None)
     if selected is None:
         raise ValueError("Diese Animation hat keine Frames für die gewählte Richtung")
+    return render_costume_frame_sequence_preview(
+        raw, costume_name, selected.commands, frame_duration_ms,
+        destination, loop=selected.loop)
+
+
+
+def render_costume_frame_sequence_preview(
+        raw: str, costume_name: str, frame_ids: tuple[str, ...],
+        frame_duration_ms: int | float, destination: Path, *, loop: bool = True) -> Path:
+    """Render existing native COST pixel frames in order, without project edits."""
+    from PIL import Image
+
+    if (type(frame_duration_ms) not in (int, float) or int(frame_duration_ms) != frame_duration_ms
+            or not 40 <= frame_duration_ms <= 2000):
+        raise ValueError("Vorschau-Framezeit muss zwischen 40 und 2000 Millisekunden liegen")
+    document = parse_document(raw)
+    costume = next((item for item in document.costumes if item.name == costume_name), None)
+    if costume is None:
+        raise ValueError("Bitte eine vorhandene Costume auswählen")
     by_id = {frame.id: frame for frame in costume.frames}
-    frames = [by_id[command] for command in selected.commands if command in by_id]
+    frames = [by_id[command] for command in frame_ids if command in by_id]
     if not frames:
         raise ValueError("Die Animationsfolge enthält keine darstellbaren Frames")
-
     # All poses share the same native actor origin. A fixed canvas and nearest-
     # neighbor scaling retain the relative frame offsets and pixel-art edges.
     left = min(frame.offset_x for frame in frames)
@@ -362,7 +375,7 @@ def render_costume_preview(raw: str, costume_name: str, animation_name: str,
     destination.parent.mkdir(parents=True, exist_ok=True)
     options = {"save_all": True, "append_images": rendered[1:],
                "duration": int(frame_duration_ms), "optimize": False, "disposal": 2}
-    if selected.loop:
+    if loop:
         options["loop"] = 0
     rendered[0].save(destination, format="GIF", **options)
     return destination
