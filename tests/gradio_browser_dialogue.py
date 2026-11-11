@@ -685,17 +685,36 @@ def main() -> None:
                     durations.append(repeated_preview.info["duration"])
                     assert repeated_preview.convert("RGB").getpixel((4, 4)) == color
                 assert durations == [360, 180]
+            free_order = page.locator("#native-dialogue-sprite-timeline input")
+            free_order.fill("2,3,1")
+            expect(sprite_status).to_contain_text("außerhalb des Rasters", timeout=20000)
+            expect(sheet_gif).to_have_count(0, timeout=20000)
+            free_order.fill("2,1,2")
+            expect(sprite_status).to_contain_text("3 Abspielbilder · Freie Abspielsequenz",
+                                                   timeout=20000)
+            expect(preview_gallery).to_contain_text("Abspielpositionen 1, 3")
+            page.locator("#native-dialogue-sprite-play").click()
+            expect(sheet_gif.first).to_be_visible(timeout=20000)
+            free_response = page.request.get(urljoin(page.url, sheet_gif.first.get_attribute("src")))
+            assert free_response.ok
+            with Image.open(BytesIO(free_response.body())) as freely_ordered:
+                assert freely_ordered.n_frames == 3
+                for position, color in enumerate(((55, 205, 115), (170, 55, 210),
+                                                  (55, 205, 115))):
+                    freely_ordered.seek(position)
+                    assert freely_ordered.info["duration"] == 180
+                    assert freely_ordered.convert("RGB").getpixel((4, 4)) == color
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"
                            r"2\. Batch-Repaired\.png → CustomEnding_2.*"
                            r"3\. Mouth-Strip_r1_c2\.png → Mouth_Strip_r1_c2.*"
-                           r"4\. Mouth-Strip_r1_c2_repeat2\.png → Mouth_Strip_r1_c2_repeat2.*"
-                           r"5\. Mouth-Strip_r1_c1\.png → Mouth_Strip_r1_c1\s*$", re.S),
+                           r"4\. Mouth-Strip_r1_c1\.png → Mouth_Strip_r1_c1.*"
+                           r"5\. Mouth-Strip_r1_c2_repeat2\.png → Mouth_Strip_r1_c2_repeat2\s*$", re.S),
                 timeout=20000)
             await_batch_gallery_colors(page, [(225, 110, 40), (35, 205, 165),
-                                              (55, 205, 115), (55, 205, 115),
-                                              (170, 55, 210)])
+                                              (55, 205, 115), (170, 55, 210),
+                                              (55, 205, 115)])
             expect(readiness).to_contain_text("Import blockiert:", timeout=20000)
             page.locator("#native-dialogue-png-batch-resolve-ids").click()
             expect(readiness).to_contain_text("Importbereit: 5 PNG-Frame(s)", timeout=20000)
@@ -711,8 +730,8 @@ def main() -> None:
             assert dialogue_ending_timeline(sprite_raw, first[1], "N")[1][-5:] == (
                 ("9. Batch_B_2_2", 8), ("10. CustomEnding_2_2", 9),
                 ("11. Mouth_Strip_r1_c2", 10),
-                ("12. Mouth_Strip_r1_c2_repeat2", 11),
-                ("13. Mouth_Strip_r1_c1", 12))
+                ("12. Mouth_Strip_r1_c1", 11),
+                ("13. Mouth_Strip_r1_c2_repeat2", 12))
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
@@ -743,6 +762,7 @@ def main() -> None:
                 "reordered_sprite_sheet_cells_before_staging": True,
                 "animated_selected_sprite_sheet_before_staging": True,
                 "repeated_sprite_sheet_cell_before_native_import": True,
+                "freely_positioned_sprite_sheet_repetitions": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
