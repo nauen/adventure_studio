@@ -31,7 +31,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
-                               import_room_sound, room_sound_ids,
+                               import_room_sound, import_room_zplane, room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
                                dialogue_animation_lines, dialogue_animation_choices,
@@ -478,6 +478,19 @@ def make_app():
         except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
 
+    def native_zplane_import(raw, room, index, file_path):
+        if raw is None or not file_path:
+            raise gr.Error("Bitte zuerst ein natives Projekt und eine PNG-Z-Maske wählen")
+        try:
+            if type(index) not in (int, float) or not isfinite(index) or index != int(index):
+                raise ValueError("Z-Ebenenindex muss eine ganze Zahl sein")
+            updated = import_room_zplane(raw, room, int(index), file_path)
+            return (updated, *native_selectors(updated, selected_room=room),
+                    f"Z-Ebene {int(index)} für {room} gespeichert; ZPxx wird beim nativen Export erzeugt. "
+                    "Für dauerhafte Sicherung natives Projekt-JSON exportieren.")
+        except (ValueError, OSError, TypeError) as error:
+            raise gr.Error(str(error)) from error
+
     def native_download(raw, linked, story_raw):
         if raw is None:
             raise gr.Error("Bitte zuerst eine native Projektdatei laden")
@@ -764,6 +777,11 @@ def make_app():
                 native_room = gr.Dropdown(label="Raum")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
+            gr.Markdown("**Native Raumverdeckung (ZPxx):** Eine PNG-Maske in exakter Raumgröße importieren. Weiß verdeckt Actors, Schwarz lässt sie sichtbar; transparente Pixel sind frei. Ebene 1 zuerst anlegen, bestehende Ebenen können ersetzt werden. Die Änderung wird erst durch den Projekt-JSON-Export dauerhaft gesichert.")
+            with gr.Row():
+                native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath")
+                native_zplane_index = gr.Number(label="Z-Ebene (1–9)", value=1, precision=0)
+                native_zplane_add = gr.Button("Z-Maske ins native Projekt übernehmen")
             with gr.Row():
                 native_music_file = gr.File(label="Raummusik als MIDI importieren", file_types=[".mid", ".midi"], type="filepath")
                 native_music_id = gr.Textbox(label="Musik-ID", value="RoomTheme")
@@ -1692,6 +1710,9 @@ def make_app():
         native_sound_add.click(native_sound_import,
                                [native_state, native_room, native_sound_id, native_sound_file],
                                [native_state, *native_outputs, native_report])
+        native_zplane_add.click(native_zplane_import,
+                                [native_state, native_room, native_zplane_index, native_zplane_file],
+                                [native_state, *native_outputs, native_report])
         native_costume_button.click(lambda *args: native_asset_edit(create_costume, *args),
                                     [native_state, native_costume_file, native_costume_name],
                                     [native_state, *native_outputs, native_report])

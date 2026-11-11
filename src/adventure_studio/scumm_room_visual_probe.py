@@ -18,6 +18,8 @@ from .scumm_assets import RoomAsset, write_room_sources
 from .scumm_binary import verify_room_binary
 from .scumm_launch import launch_smoke
 from .scumm_room_fixture import native_room
+from .scumm_project import GameDocument, canonical_json, parse_document
+from .studio_sequences import import_room_zplane
 from .scumm_toolchain import _tool
 
 
@@ -108,11 +110,24 @@ def run_visual_comparison(upstream: Path, generated: Path, destination: Path) ->
     variants = (("masked", True, 180), ("unmasked", False, 180),
                 ("fullscale", False, 255))
     for label, occlusion, scale in variants:
+        # Exercise the *authored* project path, not just the native ZPlane
+        # fixture: PNG → JSON model → ScummC ZPxx → stock ScummVM pixels.
+        from PIL import Image
+
+        base = native_room(occlusion=False, far_scale=scale)
+        width, height = base.geometry.room_width, base.geometry.room_height
+        pixels = bytes(255 if occlusion and x > width // 2 and 60 < y < 110 else 0
+                       for y in range(height) for x in range(width))
+        png = destination / f"{label}-authored-zplane.png"
+        Image.frombytes("L", (width, height), pixels).save(png)
+        project = canonical_json(GameDocument("authored-mask", (base,)))
+        authored = import_room_zplane(project, base.name, 1, str(png))
+        room = parse_document(authored).rooms[0]
         results[label] = {
             "mask_enabled": occlusion,
             "box_scale": scale,
-            **render_native_room(native_room(occlusion=occlusion, far_scale=scale),
-                                 upstream, generated, destination, label),
+            "mask_authoring": "PNG → native project JSON → ZPxx",
+            **render_native_room(room, upstream, generated, destination, label),
         }
     results["comparison"] = verify_visual_effects(
         results["masked"]["dark_costume_pixels"],
