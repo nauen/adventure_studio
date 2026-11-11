@@ -24,6 +24,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 assign_dialogue_speaking_sequence,
     save_dialogue_speaking_template, apply_dialogue_speaking_template,
     dialogue_speaking_template_choices,
+    rename_dialogue_speaking_template, delete_dialogue_speaking_template,
                                                 assign_dialogue_direction_speaking_sequence,
                                                 dialogue_speaking_sequence_selection,
                                                 dialogue_speaking_timeline,
@@ -110,6 +111,23 @@ class DialogueAnimationTests(unittest.TestCase):
                          "Speak, SpeakAlt, Speak")
         self.assertEqual(dialogue_speaking_sequence_selection(raw, second), "")
         self.assertEqual(dialogue_speaking_template_choices(copied), ["Begrüßung"])
+        renamed = rename_dialogue_speaking_template(
+            copied, second, "Begrüßung", "Antwort")
+        self.assertEqual(dialogue_speaking_template_choices(renamed), ["Antwort"])
+        self.assertEqual(dialogue_speaking_sequence_selection(renamed, second),
+                         "Speak, SpeakAlt, Speak")
+        with self.assertRaisesRegex(ValueError, "existiert bereits"):
+            two_templates = save_dialogue_speaking_template(
+                renamed, first, "Zweite", "Speak")
+            rename_dialogue_speaking_template(
+                two_templates, second, "Antwort", "zweite")
+        deleted = delete_dialogue_speaking_template(
+            renamed, second, "Antwort")
+        self.assertEqual(dialogue_speaking_template_choices(deleted), [])
+        self.assertEqual(dialogue_speaking_sequence_selection(deleted, second),
+                         "Speak, SpeakAlt, Speak")
+        with self.assertRaisesRegex(ValueError, "vorhandene"):
+            delete_dialogue_speaking_template(deleted, second, "Antwort")
         with self.assertRaisesRegex(ValueError, "gespeicherte"):
             apply_dialogue_speaking_template(saved, second, "Unbekannt")
         document = parse_document(saved)
