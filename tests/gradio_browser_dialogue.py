@@ -255,7 +255,6 @@ def main() -> None:
                 str(saved))
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
-            select_option(page, "native-dialogue-template-select", "Begrüßung")
             select_option(page, "native-dialogue-line", second[0])
             await_selection(page, "native-dialogue-animation", "gesture")
             select_option(page, "native-dialogue-line", first[0])
@@ -309,6 +308,7 @@ def main() -> None:
             page.locator("#native-project-file input[type=file]").set_input_files(str(sequence_file))
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
+            select_option(page, "native-dialogue-template-select", "Begrüßung")
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
