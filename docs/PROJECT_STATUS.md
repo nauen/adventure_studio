@@ -4,6 +4,22 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Eine gewählte
+Sprite-Sheet-Zelle kann vor dem nativen Dialog-COST-Import beliebig oft
+unmittelbar hintereinander abgespielt werden. **Zelle nochmals
+abspielen** und **Wiederholung entfernen** verwalten die Anzahl ab eins;
+die Rastervorschau zeigt den Faktor, das Editor-GIF die verlängerte
+Haltezeit und der native Import separate eindeutig benannte PNG-Frames
+(`_repeat2`, `_repeat3` usw.). Ausgeschlossene Zellen, manuelle
+Reihenfolge und bereits vorbereitete Dateien bleiben erhalten;
+unpassende Wiederholungen werden sichtbar abgelehnt. 334 lokale Tests,
+Core-/Chromium-/stock-ScummVM-CI grün. Chromium prüft Wiederholung,
+GIF-Haltezeit, fünffachen nativen Import und JSON-Export (PR #146,
+Merge `496814a`, Runs `42949528348` / `42949528331` /
+`42949528349`). Menschliche UI-Abnahme offen. **Nächstes Paket:**
+Wiederholte Sheet-Zellen an frei wählbaren Positionen einer geplanten
+Animationsfolge einsetzen können (etwa A–B–A statt nur A–A–B).
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die ausgewählten
 PNG-Sprite-Sheet-Zellen lassen sich vor dem nativen Dialog-COST-Import
 als Editor-GIF in der tatsächlichen Abspielreihenfolge betrachten.

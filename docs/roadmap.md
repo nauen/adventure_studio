@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprite-Sheet-Zellen vor dem Import wiederholen (CI-Abnahme bestanden):**
+Für jede eingeschlossene Rasterzelle lässt sich ihre direkte Abspiel-
+wiederholung erhöhen oder entfernen. Editor-GIF, Zellenanzeige und
+nativer COST-Stapel verwenden dieselbe expandierte Sequenz; separate
+Frame-IDs verhindern Kollisionen. Bereits vorbereitete PNG-Frames
+und ausgeschlossene Rasterzellen bleiben unverändert. 334 lokale
+Tests und Core-/Chromium-/stock-ScummVM-CI grün; der Browser prüft
+den Wiederholungsfaktor, zusammengefasste GIF-Haltezeit und native
+Frame-Reihenfolge im JSON-Export (PR #146, Merge `496814a`, Runs
+`42949528348` / `42949528331` / `42949528349`). Menschliche
+UI-Abnahme offen. Danach: Wiederholungen an beliebigen Stellen
+der geplanten Sequenz platzieren.
+
 **Animierte Sprite-Sheet-Schnittvorschau (CI-Abnahme bestanden):**
 Das Studio zeigt vor dem Hinzufügen ein wiederholbares Editor-GIF aus
 genau den gewählten Rasterzellen in ihrer konfigurierten Abspielreihenfolge.
