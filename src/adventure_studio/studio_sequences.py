@@ -1484,6 +1484,15 @@ def switch_dialogue_speaking_draft(
     previous = dict(session or {})
     drafts = dict(previous.get("drafts", {}))
     target = (parse_document(raw).id, line_id, direction) if raw and line_id else None
+    old_target = previous.get("target")
+    if old_target and old_target != target and raw and old_target[0] == parse_document(raw).id:
+        saved_old = dialogue_speaking_sequence_selection(raw, old_target[1], old_target[2])
+        old_value = current_sequence or ""
+        if tuple(part.strip() for part in old_value.split(",")) == tuple(
+                part.strip() for part in saved_old.split(",")):
+            drafts.pop(old_target, None)
+        else:
+            drafts[old_target] = old_value
     saved_next = (dialogue_speaking_sequence_selection(raw, line_id, direction)
                   if target else "")
     # A saved edit invalidates its session copy; other directions stay intact.
