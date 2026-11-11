@@ -44,7 +44,7 @@ from adventure_studio.studio_sequences import (
     replace_dialogue_png_batch_frame, set_dialogue_png_batch_frame_id,
     dialogue_png_batch_selected_frame_id, dialogue_png_batch_entries,
     suggest_dialogue_png_batch_frame_id, resolve_dialogue_png_batch_frame_ids,
-    stage_dialogue_png_sprite_sheet)
+    stage_dialogue_png_sprite_sheet, dialogue_png_sprite_sheet_preview)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -296,14 +296,26 @@ class DialogueAnimationTests(unittest.TestCase):
                 left, top = 2 + col * 12, 3 + row * 10
                 spaced.paste(color, (left, top, left + 8, top + 8))
             spaced.save(spaced_sheet)
+            overlay, planned, description = dialogue_png_sprite_sheet_preview(
+                str(spaced_sheet), 2, 2, 2, 3, 4, 2)
+            self.assertEqual(overlay.size, (24, 24))
+            self.assertEqual(overlay.getpixel((2, 3)), (255, 75, 35, 255))
+            self.assertEqual(overlay.getpixel((0, 0)), (245, 10, 245, 255))
+            self.assertEqual(len(planned), 4)
+            self.assertEqual(planned[0][1], "1. Zeile 1, Spalte 1")
+            self.assertEqual(planned[-1][1], "4. Zeile 2, Spalte 2")
+            self.assertIn("4 PNG-Frames", description)
+            self.assertIn("8 × 8 Pixel", description)
             spaced_paths, spaced_order = stage_dialogue_png_sprite_sheet(
                 paths, (2, 0), str(spaced_sheet), 2, 2, 2, 3, 4, 2)
             self.assertEqual(spaced_order, (2, 0, 3, 4, 5, 6))
-            for tile, color in zip(spaced_paths[3:], sheet_colors):
+            for tile, color, (preview_tile, _label) in zip(
+                    spaced_paths[3:], sheet_colors, planned):
                 with Image.open(tile) as image:
                     self.assertEqual(image.size, (8, 8))
                     self.assertEqual(image.convert("RGBA").getpixel((0, 0)), color)
                     self.assertEqual(image.convert("RGBA").getpixel((7, 7)), color)
+                    self.assertEqual(image.convert("RGBA").tobytes(), preview_tile.tobytes())
             imported_spaced = import_dialogue_png_batch(
                 raw, first, "W", spaced_paths, "Sprechfolge", order=spaced_order)
             self.assertIn("SpacedSheet_r2_c1, SpacedSheet_r2_c2",
