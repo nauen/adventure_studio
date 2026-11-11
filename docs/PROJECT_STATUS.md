@@ -10,23 +10,11 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 
 ## Ein aktiver Produktpfad
 
-**Jetzt, Priorität 1:** P0.4/O03 – ein zur Laufzeit verschobenes
-Objekt muss im nativen Spiel sichtbar sein und an der **neuen** Position
-anklickbar bleiben; die alte Hitbox darf nicht weiter reagieren.
-Auf vorhandenen Room-Hotspot-/Objektzustandsdaten und dokumentiertem
-ScummC-v6-Vertrag aufbauen. Mindestabnahme: allgemeine Modelloperation,
-native Ausgabe, automatisierter Strukturtest und echte ScummVM-Klickprobe.
-
-**Blocker/Risiken:**
-
-- Offene native Einzelsprecher-/Mehrsprecher-Animation aus PR #80
-  nicht durch grüne Editor-Tests als gelöst deklarieren.
-- Menschliche Browser-Abnahme des tatsächlichen Abbrechens beim
-  Tab-Verlassen aus PR #187 fehlt; Editor-CI bestätigt bislang nur
-  den automatisierbaren Zustand.
-- P0.1–P0.3 besitzen bereits Modell-, Export- und native Teilnachweise,
-  sind aber nicht pauschal vollständig. Die früheren offenen Checkboxen
-  sind kein Grund, diese Grundlagen neu zu implementieren.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
+- **Jetzt:** #190 (NPC-Komfortabschluss) und #191 (Konsolidierung) sind gemergt; keine weitere NPC-Komfortfunktion. Nächste einzelne native Fähigkeit: **R06 – Raum-Z-Masken**.
+- **Abnahme:** Allgemein authorierbare Raumverdeckung im Modell, nativer ZPxx-Export, gezielte Binärtests und sichtbare Actor-Verdeckung beim Bewegen im unveränderten ScummVM.
+- **Blocker:** Bestehende ZPxx/JSON/ScummC- und ScummVM-Fixture nur Teilbelege; allgemeiner Modell-zu-Spiel-Nachweis fehlt. Menschliche #187-Tab-Abbruchprüfung und native Animation aus #80 offen.
+- **Danach:** Nur nach R06-Abnahme R08 – frei authorierbare Walkbox-Polygone mit BOXD und echtem Laufgrenzen-Nachweis; R09/R10 und O03 nachgeordnet.
 
 ## Zuletzt tatsächlich geliefert
 
