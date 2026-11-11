@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #170, CI-Abnahme bestanden):**
+Persistente Sprechfolgenvorlagen können validiert ins editierbare
+PNG-Frame-Eingabefeld geladen werden, ohne die native Animation
+oder das Projekt zu verändern. Erst das separate Aktualisieren
+speichert den Vorlageninhalt. Kein neuer SCUMM-v6-Opcode und keine
+Änderung des Capability-Status. Core-/Chromium-CI je zweimal grün,
+stock-ScummVM-CI im gezielten Wiederholungslauf nach bekanntem
+Timing-Fehler grün (Merge `7798745a`, Runs `42973044194`,
+`42973066066`, `42973044123`, `42973065810` Versuch 2,
+`42973065817` Versuch 2). Menschliche UI-Abnahme offen.
+Nächstes Editorpaket: Vorlageninhalt und Costume vor Anwendung anzeigen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #169, CI-Abnahme bestanden):**
 Der Inhalt persistenter NPC-Sprechfolgenvorlagen kann über das
 Studio mit validierten Frame-IDs ersetzt werden. Die Bearbeitung
