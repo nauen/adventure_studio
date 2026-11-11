@@ -9,6 +9,7 @@ from __future__ import annotations
 import tempfile
 import subprocess
 import os
+import json
 from math import isfinite
 from pathlib import Path
 
@@ -61,7 +62,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
 from .studio_sequences import (dialogue_ending_animation_selection,
                                switch_dialogue_speaking_draft,
                                record_dialogue_speaking_draft,
-                               unsaved_dialogue_speaking_draft_targets,
+                               unsaved_dialogue_speaking_draft_entries,
                                edit_dialogue_ending_animation,
                                dialogue_ending_timeline,
                                edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
@@ -656,6 +657,12 @@ def make_app():
                 label="Betroffene Dialogzeilen und Blickrichtungen",
                 interactive=False, lines=4, visible=False,
                 elem_id="native-file-switch-drafts")
+            native_file_switch_target = gr.Dropdown(
+                label="Ungespeicherten Entwurf zum Bearbeiten wählen",
+                choices=[], visible=False, elem_id="native-file-switch-target")
+            native_file_switch_open = gr.Button(
+                "Entwurf im Dialogeditor auswählen",
+                visible=False, elem_id="native-file-switch-open")
             with gr.Row():
                 native_file_switch_confirm = gr.Button(
                     "Anderes Projekt laden · Entwürfe verwerfen",
@@ -1413,25 +1420,33 @@ def make_app():
         def native_load_with_drafts(path):
             return (*native_load(path), {"target": None, "drafts": {}, "file": path},
                     None, "", gr.update(value="", visible=False),
+                    gr.update(choices=[], value=None, visible=False),
+                    gr.update(visible=False),
                     gr.update(visible=False), gr.update(visible=False))
 
         native_file_outputs = [native_state, native_linked, *native_outputs,
                                native_report, native_dialogue_draft_session,
                                native_pending_file, native_file_switch_status,
                                native_file_switch_drafts,
+                               native_file_switch_target, native_file_switch_open,
                                native_file_switch_confirm, native_file_switch_cancel]
 
         def request_native_file_load(path, raw, line, direction, sequence, session):
-            affected = (unsaved_dialogue_speaking_draft_targets(
+            entries = (unsaved_dialogue_speaking_draft_entries(
                 raw, line, direction, sequence, session)
                 if raw and path and path != (session or {}).get("file") else ())
-            if affected:
-                return ((gr.skip(),) * (len(native_file_outputs) - 5) +
+            if entries:
+                options = [(label, json.dumps([line_id, facing]))
+                           for label, line_id, facing in entries]
+                return ((gr.skip(),) * (len(native_file_outputs) - 7) +
                         (path,
                          "⚠️ **Ungespeicherte NPC-Sprechfolgen:** Das neue Projekt ist "
                          "noch nicht geladen. Bestätigen verwirft die Entwürfe; "
                          "Abbrechen behält das bisherige Projekt.",
-                         gr.update(value="\n".join(affected), visible=True),
+                         gr.update(value="\n".join(label for label, _, _ in entries),
+                                   visible=True),
+                         gr.update(choices=options, value=options[0][1], visible=True),
+                         gr.update(visible=True),
                          gr.update(visible=True), gr.update(visible=True)))
             return native_load_with_drafts(path)
 
@@ -1443,15 +1458,49 @@ def make_app():
         native_file_switch_confirm.click(native_load_with_drafts,
                                          [native_pending_file], native_file_outputs)
 
+        def open_unsaved_speaking_target(raw, line, direction, sequence, session,
+                                         selected):
+            try:
+                target_line, target_direction = json.loads(selected)
+            except (TypeError, ValueError) as error:
+                raise gr.Error("Bitte einen ungespeicherten Entwurf auswählen") from error
+            allowed = {(target_id, facing) for _label, target_id, facing in
+                       unsaved_dialogue_speaking_draft_entries(
+                           raw, line, direction, sequence, session)}
+            if (target_line, target_direction) not in allowed:
+                raise gr.Error("Der gewählte Entwurf ist nicht mehr ungespeichert")
+            view = dialogue_animation_update(raw, target_line, target_direction)
+            restored, updated = switch_dialogue_speaking_draft(
+                raw, target_line, target_direction, sequence, session)
+            return (gr.update(value=target_line), gr.update(value=target_direction),
+                    *view[:5], restored, view[-1], updated,
+                    "**Entwurf ausgewählt.** [Zum Sprechfolgeneditor](#native-dialogue-line) "
+                    "und dort ausdrücklich speichern, bevor das neue Projekt geladen wird.")
+
+        native_file_switch_open.click(
+            open_unsaved_speaking_target,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session,
+             native_file_switch_target],
+            [native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_animation, native_dialogue_reset,
+             native_dialogue_speaking_frame, native_dialogue_speaking_preview,
+             native_dialogue_direction_preview, native_dialogue_speaking_sequence,
+             native_dialogue_direction_status, native_dialogue_draft_session,
+             native_file_switch_status])
+
         def cancel_native_file_load():
             return None, "Projektwechsel abgebrochen; bisherige Entwürfe bleiben erhalten.", \
                 gr.update(value="", visible=False), \
+                gr.update(choices=[], value=None, visible=False), \
+                gr.update(visible=False), \
                 gr.update(visible=False), gr.update(visible=False)
 
         native_file_switch_cancel.click(
             cancel_native_file_load,
             outputs=[native_pending_file, native_file_switch_status,
                      native_file_switch_drafts,
+                     native_file_switch_target, native_file_switch_open,
                      native_file_switch_confirm, native_file_switch_cancel])
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])

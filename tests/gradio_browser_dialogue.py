@@ -446,6 +446,18 @@ def main() -> None:
                 timeout=20000)
             expect(draft_list).to_have_value(re.compile("Süd"), timeout=20000)
             expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
+            select_option(page, "native-file-switch-target",
+                          f"{second[0]} · Süd ({second[1]})")
+            page.locator("#native-file-switch-open").click()
+            await_selection(page, "native-dialogue-line", second[0])
+            expect(sequence_input).to_have_value("Speak, Speak, Speak", timeout=20000)
+            expect(page.locator("#native-file-switch-status")).to_contain_text(
+                "Entwurf ausgewählt", timeout=20000)
+            select_option(page, "native-file-switch-target",
+                          f"{first[0]} · Süd ({first[1]})")
+            page.locator("#native-file-switch-open").click()
+            await_selection(page, "native-dialogue-line", first[0])
+            expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
             page.locator("#native-file-switch-cancel").click()
             expect(page.locator("#native-file-switch-status")).to_contain_text(
                 "Projektwechsel abgebrochen", timeout=20000)
