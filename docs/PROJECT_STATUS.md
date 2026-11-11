@@ -4,6 +4,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Gespeicherte
+NPC-Sprechfolgenvorlagen lassen sich vor Zuweisung als animiertes GIF
+mit echten Costume-Pixeln, nativen Frame-Versätzen und gespeicherter
+Frame-Reihenfolge abspielen. Die einstellbare Bilddauer (40–2000 ms)
+gilt nur für die Editorvorschau; ScummVM bestimmt das native Timing.
+Bei Projekt-, Dialog-, Vorlagen- oder Zeitwechsel wird das bisherige
+GIF zurückgesetzt. Die Vorschau verändert weder Projekt-JSON noch
+eine zugewiesene COST-Animation. Core-/Chromium-CI je zweimal und
+stock-ScummVM-CI grün (PR #172, Merge `a155af14`, Runs
+`42975787067` / `42975787111` / `42975787000`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Auch die aktuell bearbeitete,
+noch nicht gespeicherte Sprechframe-Folge vor Übernahme animiert
+prüfen, ohne vorhandene Vorlagen oder Dialoganimationen zu verändern.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Persistente
 NPC-Sprechfolgenvorlagen zeigen vor der Anwendung eine lesbare
 Vorschau mit Vorlagenname, Costume, Anzahl und vollständiger
