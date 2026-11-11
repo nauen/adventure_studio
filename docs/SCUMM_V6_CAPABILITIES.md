@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #178, CI-Abnahme bestanden):**
+Der Editor kann einen importierten PNG-Sprechframe unmittelbar vor
+oder nach dem gewählten nummerierten Schritt einfügen. Wiederholte
+Frames und beliebige gültige Einfügepositionen bleiben erhalten;
+kein Schreibvorgang bis zur separaten Speichern-Aktion. Keine
+Modell-/COST-/Opcode-Änderung und kein Capability-Statuswechsel.
+Core-CI zweimal grün, Chromium im ersten und gezielten dritten
+Lauf grün (ein später unabhängiger Sprite-Redo-Testfehler im
+zweiten), stock-ScummVM-CI grün (Merge `21ceb449`, Runs
+`42986776661`, `42986776696`, `42986776677`). Menschliche
+UI-Abnahme offen. Nächstes Paket: ausgewählten Schritt duplizieren.
+
 **D03 – aktuelle Editor-Ergänzung (PR #177, CI-Abnahme bestanden):**
 Ein nummerierter NPC-Sprechfolgeschritt kann im Editor durch einen
 anderen vorhandenen Costume-Frame ersetzt werden. Index und übrige
