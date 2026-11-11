@@ -11,15 +11,16 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 ## Ein aktiver Produktpfad
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
-- **Jetzt:** Genau R09 – Verbindungen zwischen mehreren Walkboxen und native BOXM-Next-Hop-Routen im Studio authorieren ([PR #196](https://github.com/nauen/adventure_studio/pull/196), in Prüfung). R08.1 ist mit #194 in `main` gemergt (`7acc7fb3`); NPC-Komfort nach #190 beendet.
-- **Abnahme:** R09: echte Studio-Eingabe von Box-Verbindungen → RoomAsset/JSON einschließlich Story-Verknüpfung → BOXM → sichtbarer Unterschied zwischen verbundenen und getrennten Actor-Klickrouten in stock ScummVM. Modell-/Export-Core-Tests grün; [native BOXM-CI 43086709064](https://github.com/nauen/adventure_studio/actions/runs/43086709064) hat den verbundenen/unverbundenen Actor-Vergleich in stock ScummVM bestanden, [Artefakt](https://github.com/nauen/adventure_studio/actions/runs/43086709064/artifacts/13887995755). Abschließende Browser- und Gesamt-CI noch offen. R08.1-Nachweis: [native CI 43081496152](https://github.com/nauen/adventure_studio/actions/runs/43081496152).
-- **Blocker:** R09-ScummVM-Routingvergleich bestanden; abschließende Chromium-/Gesamt-CI auf dem finalen PR-Head und Merge noch ausstehend. Allgemeine Mehrboxen-/SCAL-Varianten und #80/#187 bleiben getrennt offen.
-- **Danach:** Nach vollständigem R09-Nachweis und Merge genau R10 – Perspektivskalierung (SCAL) im nativen Spiel. Kein paralleles R10-/NPC-Paket.
+- **Jetzt:** Genau R10 – native Perspektivkurven (SCAL) mit Slot 1–4 und Walkbox-Zuordnung im Studio authorieren. R09/BOXM wurde in [PR #196](https://github.com/nauen/adventure_studio/pull/196) gemergt (`d917ead4`); NPC-Komfort nach #190 beendet.
+- **Abnahme:** Studio-Eingabe → validiertes RoomAsset/JSON mit Story-Verknüpfung → nativer SCAL-Chunk und Walkbox-Slot → sichtbar zunehmende Actor-Silhouette bei drei Y-Positionen in unverändertem ScummVM. Implementierung auf R10-Branch; eigene Chromium-/stock-ScummVM-CI noch ausstehend. R09 abgenommen: [native CI 43087563847](https://github.com/nauen/adventure_studio/actions/runs/43087563847), [Chromium CI 43087563745](https://github.com/nauen/adventure_studio/actions/runs/43087563745), alle fünf finalen Checks grün.
+- **Blocker:** R10-Abnahme noch offen: realer Studio-Klickpfad, Core-/Dialog-/Chromium-CI und stock-ScummVM-R10-Perspektivvergleich müssen auf dem finalen R10-Commit bestehen. Keine Behauptung universeller Kurven-/Walkbox-Unterstützung.
+- **Danach:** Nach vollständiger R10-Evidenz und Merge genau das nächste priorisierte native Raum-/Walkbox-Paket gemäß Matrix; keine parallele NPC-Komfortarbeit.
 
 ## Zuletzt tatsächlich geliefert
 
 | PR | Nutzerfunktion | Evidenz/Grenze |
 | --- | --- | --- |
+| [#196](https://github.com/nauen/adventure_studio/pull/196) | Benachbarte Walkboxen verbinden, native BOXM-Next-Hop-Wege authorieren | Finale Core-, Chromium-, Dialog- und stock-ScummVM-CI grün; Merge `d917ead4`, nativer Run `43087563847` |
 | [#194](https://github.com/nauen/adventure_studio/pull/194) | Konvexe Vierpunkt-Walkbox im Editor authorieren und native Laufgrenze erreichen | Core, Dialog, Chromium und ScummVM-CI grün; Merge `7acc7fb3`; nur R08.1-Teilfähigkeit |
 | [#193](https://github.com/nauen/adventure_studio/pull/193) | PNG-Z-Maske authorieren, exportieren und Actor-Verdeckung in stock ScummVM sehen | Native `43073010730` grün; 350 Pixel verdeckt, Scope auf belegte PNG-Maskenfähigkeit begrenzt |
 | [#190](https://github.com/nauen/adventure_studio/pull/190) | Alle offenen NPC-Sprechfolgen atomar ins native Projekt übernehmen | Core `43068566462`, Chromium `43068566433`, native `43068566317` grün; `main` `f638cc68` |

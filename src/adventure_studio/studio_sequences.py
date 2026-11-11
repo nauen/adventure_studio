@@ -24,7 +24,7 @@ from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render
                             costume_timeline_images, render_costume_preview,
                             render_costume_frame_sequence_preview)
 from .scumm_costume import CostumeAnimation, CostumeDirection
-from .scumm_assets import Walkbox, ZPlane
+from .scumm_assets import ScaleCurve, Walkbox, ZPlane
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
@@ -139,6 +139,39 @@ def author_room_box_connections(raw: str, room_name: str, connections: str) -> s
     routes = tuple(tuple(row) for row in matrix)
     rooms = tuple(replace(item, box_routes=routes) if item.name == room_name else item
                   for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
+
+
+def author_room_scale_curve(raw: str, room_name: str, slot: int, scale1: int,
+                            y1: int, scale2: int, y2: int, box_indices: str) -> str:
+    """Author native SCAL curve and bind selected boxes without losing BOXM paths."""
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    if not room.walkboxes:
+        raise ValueError("SCAL benötigt mindestens eine vorhandene Walkbox")
+    height = room.geometry.room_height
+    if (type(slot) is not int or not 1 <= slot <= 4
+        or any(type(v) is not int for v in (scale1, y1, scale2, y2))
+        or not 1 <= scale1 <= 255 or not 1 <= scale2 <= 255
+        or not 0 <= y1 < y2 < height):
+        raise ValueError(f"SCAL: Slot 1–4, Skalierung 1–255 und 0 ≤ y1 < y2 < {height} eingeben")
+    if room.scale_slots is not None and any(room.scale_slots):
+        raise ValueError("Vorhandene rohe SCAL-Daten dürfen nicht still überschrieben werden")
+    tokens = [part.strip() for part in box_indices.split(",")]
+    if not tokens or any(not re.fullmatch(r"[1-9]\d*", part) for part in tokens):
+        raise ValueError("Walkbox-Nummern als 1,2,3 eingeben")
+    indices = tuple(int(part) for part in tokens)
+    if len(set(indices)) != len(indices) or any(i > len(room.walkboxes) for i in indices):
+        raise ValueError(f"Walkbox-Nummern müssen eindeutig zwischen 1 und {len(room.walkboxes)} liegen")
+    curve = ScaleCurve(slot, scale1, y1, scale2, y2)
+    curves = tuple(sorted(tuple(item for item in room.scale_curves if item.slot != slot)
+                          + (curve,), key=lambda item: item.slot))
+    boxes = tuple(replace(box, scale=255, scale_slot=slot) if index in indices else box
+                  for index, box in enumerate(room.walkboxes, start=1))
+    updated = replace(room, walkboxes=boxes, scale_curves=curves, scale_slots=None)
+    rooms = tuple(updated if item.name == room_name else item for item in document.rooms)
     return _checked(replace(document, rooms=rooms))
 
 

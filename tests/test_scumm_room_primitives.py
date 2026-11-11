@@ -12,7 +12,7 @@ from adventure_studio.scumm_assets import (ScaleCurve, ZPlane, _native_box_file,
                                           scummc_room_source, write_room_sources)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room, perspective_room
-from adventure_studio.studio_sequences import author_room_walkbox, author_room_box_connections, compose_story_project
+from adventure_studio.studio_sequences import author_room_walkbox, author_room_box_connections, author_room_scale_curve, compose_story_project
 from adventure_studio.studio_sequences import import_room_zplane
 
 
@@ -95,6 +95,50 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ohne Selbstverbindung"):
             author_room_box_connections(updated, "Harbor", "2-2")
         self.assertEqual(parse_document(updated).rooms[0].walkboxes, room.walkboxes)
+
+    def test_studio_authored_scal_json_story_and_native_box_encoding(self):
+        base = native_room(occlusion=False, far_scale=255)
+        raw = canonical_json(GameDocument("studio_scal", (base, destination_fixture())))
+        updated = author_room_scale_curve(raw, "Harbor", 1, 80, 70, 255, 155, "1,2")
+        room = parse_document(updated).rooms[0]
+        self.assertEqual(room.scale_curves, (ScaleCurve(1, 80, 70, 255, 155),))
+        self.assertEqual(tuple(box.scale_slot for box in room.walkboxes), (1, 1))
+        self.assertEqual(room.box_routes, base.box_routes)
+        self.assertIsNone(room.scale_slots)
+        binary = _native_box_file(room)
+        self.assertEqual(struct.unpack_from("<H", binary, 27)[0], 0x8000)
+        self.assertEqual(struct.unpack_from("<H", binary, 48)[0], 0x8000)
+        scal = binary.index(b"SCAL")
+        self.assertEqual(struct.unpack_from("<HHHH", binary, scal + 8),
+                         (80, 70, 255, 155))
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        composed = parse_document(compose_story_project(story, updated))
+        self.assertEqual(next(r for r in composed.rooms if r.name == "Harbor").scale_curves,
+                         room.scale_curves)
+        self.assertEqual(author_room_scale_curve(updated, "Harbor", 1, 80, 70, 255, 155, "1,2"),
+                         updated)
+        second = author_room_scale_curve(updated, "Harbor", 2, 120, 80, 220, 145, "2")
+        assigned = parse_document(second).rooms[0]
+        self.assertEqual(tuple(box.scale_slot for box in assigned.walkboxes), (1, 2))
+        self.assertEqual([c.slot for c in assigned.scale_curves], [1, 2])
+
+    def test_studio_scal_rejects_invalid_and_nonzero_raw_curves(self):
+        base = native_room()
+        raw = canonical_json(GameDocument("bad_scal", (base, destination_fixture())))
+        with self.assertRaisesRegex(ValueError, "Slot"):
+            author_room_scale_curve(raw, "Harbor", 5, 80, 70, 255, 155, "1")
+        with self.assertRaisesRegex(ValueError, "Skalierung"):
+            author_room_scale_curve(raw, "Harbor", 1, 0, 70, 255, 155, "1")
+        with self.assertRaisesRegex(ValueError, "eindeutig"):
+            author_room_scale_curve(raw, "Harbor", 1, 80, 70, 255, 155, "1,1")
+        with self.assertRaisesRegex(ValueError, "eindeutig"):
+            author_room_scale_curve(raw, "Harbor", 1, 80, 70, 255, 155, "3")
+        with self.assertRaisesRegex(ValueError, "nicht still"):
+            dirty = replace(base, scale_slots=b"\x01" + bytes(31))
+            author_room_scale_curve(
+                canonical_json(GameDocument("dirty", (dirty, destination_fixture()))),
+                "Harbor", 1, 80, 70, 255, 155, "1")
 
     @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
     def test_authored_png_mask_roundtrips_to_native_room_assets(self):

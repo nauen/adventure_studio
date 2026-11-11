@@ -31,7 +31,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
-                               import_room_sound, import_room_zplane, author_room_walkbox, author_room_box_connections,
+                               import_room_sound, import_room_zplane, author_room_walkbox, author_room_box_connections, author_room_scale_curve,
                                room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
@@ -516,6 +516,21 @@ def make_app():
         except (ValueError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
+    def native_scal_author(raw, room, slot, scale1, y1, scale2, y2, box_numbers):
+        if raw is None:
+            raise gr.Error("Bitte zuerst ein natives Projekt laden")
+        try:
+            values = (slot, scale1, y1, scale2, y2)
+            if any(type(value) not in (int, float) or not isfinite(value)
+                   or value != int(value) for value in values):
+                raise ValueError("SCAL-Slot, Skalierungen und Y-Werte müssen ganze Zahlen sein")
+            updated = author_room_scale_curve(raw, room, *map(int, values), box_numbers)
+            return (updated, *native_selectors(updated, selected_room=room),
+                    f"SCAL-Kurve {int(slot)} für {room} gespeichert; native SCAL-Ressource "
+                    "wird beim Export erzeugt. Für dauerhafte Sicherung Projekt-JSON exportieren.")
+        except (ValueError, TypeError) as error:
+            raise gr.Error(str(error)) from error
+
     def native_download(raw, linked, story_raw):
         if raw is None:
             raise gr.Error("Bitte zuerst eine native Projektdatei laden")
@@ -816,6 +831,24 @@ def make_app():
             with gr.Row():
                 native_box_routes_connections = gr.Textbox(label="Walkbox-Verbindungen", value="1-2", elem_id="native-box-routes-connections")
                 native_box_routes_add = gr.Button("BOXM-Verbindungen übernehmen", elem_id="native-box-routes-add")
+            gr.Markdown("**Native Perspektive (SCAL):** Skalierung 1–255 zwischen zwei Y-Werten. "
+                        "Slot 1–4 wird vorhandenen Walkboxen zugeordnet; "
+                        "andere Boxen, BOXM-Wege und Kurven bleiben erhalten.")
+            with gr.Row():
+                native_scal_slot = gr.Number(label="SCAL-Slot (1–4)", value=1, precision=0,
+                                             elem_id="native-scal-slot")
+                native_scal_s1 = gr.Number(label="Skalierung oben (1–255)", value=80,
+                                           precision=0, elem_id="native-scal-scale1")
+                native_scal_y1 = gr.Number(label="Y oben", value=70, precision=0,
+                                           elem_id="native-scal-y1")
+                native_scal_s2 = gr.Number(label="Skalierung unten (1–255)", value=255,
+                                           precision=0, elem_id="native-scal-scale2")
+                native_scal_y2 = gr.Number(label="Y unten", value=155, precision=0,
+                                           elem_id="native-scal-y2")
+            with gr.Row():
+                native_scal_boxes = gr.Textbox(label="Walkbox-Nummern (z. B. 1,2)", value="1,2",
+                                               elem_id="native-scal-boxes")
+                native_scal_add = gr.Button("SCAL-Perspektive übernehmen", elem_id="native-scal-add")
             with gr.Row():
                 native_music_file = gr.File(label="Raummusik als MIDI importieren", file_types=[".mid", ".midi"], type="filepath")
                 native_music_id = gr.Textbox(label="Musik-ID", value="RoomTheme")
@@ -1753,6 +1786,10 @@ def make_app():
         native_box_routes_add.click(native_box_routes_author,
                                     [native_state, native_room, native_box_routes_connections],
                                     [native_state, *native_outputs, native_report])
+        native_scal_add.click(native_scal_author,
+                              [native_state, native_room, native_scal_slot, native_scal_s1,
+                               native_scal_y1, native_scal_s2, native_scal_y2, native_scal_boxes],
+                              [native_state, *native_outputs, native_report])
         native_costume_button.click(lambda *args: native_asset_edit(create_costume, *args),
                                     [native_state, native_costume_file, native_costume_name],
                                     [native_state, *native_outputs, native_report])
