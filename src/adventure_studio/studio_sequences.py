@@ -1536,6 +1536,54 @@ def dialogue_speaking_timeline_preview(raw: str, line_id: str,
                                   direction, duration_ms, destination)
 
 
+def save_dialogue_speaking_template(
+        templates: dict[str, tuple[str, tuple[str, ...]]] | None,
+        raw: str, line_id: str, name: str, frame_ids: str
+        ) -> dict[str, tuple[str, tuple[str, ...]]]:
+    """Keep a named, validated speaking sequence for reuse in this UI session."""
+    label = name.strip() if isinstance(name, str) else ""
+    if not label or len(label) > 80:
+        raise ValueError("Vorlagenname muss zwischen 1 und 80 Zeichen enthalten")
+    saved = dict(templates or {})
+    if any(existing.casefold() == label.casefold() for existing in saved):
+        raise ValueError("Eine Sprechfolgenvorlage mit diesem Namen existiert bereits")
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte zuerst eine Sprecher-Dialogzeile auswählen")
+    if not isinstance(frame_ids, str) or not frame_ids.strip():
+        raise ValueError("Bitte zuerst eine Sprechfolge eingeben")
+    sequence = tuple(item.strip() for item in frame_ids.split(","))
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    available = {frame.id for frame in costume.frames}
+    if any(not item or item not in available for item in sequence):
+        raise ValueError("Die Vorlage darf nur vorhandene PNG-Frames enthalten")
+    saved[label] = (costume.name, sequence)
+    return saved
+
+
+def apply_dialogue_speaking_template(
+        raw: str, line_id: str,
+        templates: dict[str, tuple[str, tuple[str, ...]]] | None,
+        name: str, reset_to_stand: bool = True) -> str:
+    """Apply a session template through the regular native per-line save path."""
+    saved = templates or {}
+    if not isinstance(name, str) or name not in saved:
+        raise ValueError("Bitte eine gespeicherte Sprechfolgenvorlage auswählen")
+    source_costume, sequence = saved[name]
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    if actor.costume != source_costume:
+        raise ValueError("Die Vorlage gehört zu einer anderen Costume; "
+                         "bitte eine Dialogzeile derselben Costume auswählen")
+    return assign_dialogue_speaking_sequence(
+        raw, line_id, ", ".join(sequence), reset_to_stand)
+
+
 def assign_dialogue_speaking_sequence(raw: str, line_id: str, frame_ids: str,
                                       reset_to_stand: bool = True,
                                       direction: str | None = None) -> str:

@@ -38,6 +38,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                 dialogue_direction_animation_preview,
                                assign_dialogue_speaking_frame,
                                assign_dialogue_speaking_sequence,
+                               save_dialogue_speaking_template,
+                               apply_dialogue_speaking_template,
                                assign_dialogue_direction_speaking_sequence,
                                dialogue_speaking_sequence_selection,
                                dialogue_speaking_timeline, edit_dialogue_speaking_timeline,
@@ -777,6 +779,33 @@ def make_app():
             with gr.Row():
                 native_dialogue_speaking_sequence = gr.Textbox(label="Sprechframes dieser Dialogzeile", elem_id="native-dialogue-speaking-sequence")
                 native_dialogue_sequence_apply = gr.Button("Für alle Richtungen speichern", elem_id="native-dialogue-sequence-apply")
+            with gr.Accordion("Sprechfolge als Vorlage für weitere Dialogzeilen", open=False):
+                gr.Markdown("Benannte Vorlagen gelten in dieser Studio-Sitzung für "
+                            "Dialogzeilen **derselben Costume**. Gespeichert werden "
+                            "die tatsächlichen importierten PNG-Frame-IDs aus dem "
+                            "Feld oben, nicht Sprite-Sheet-Zellnummern. "
+                            "Die Übernahme speichert die Folge direkt für **alle "
+                            "Richtungen** der ausgewählten Zielzeile; bestehende "
+                            "Zeilen bleiben unverändert. Vorlagen gehören noch "
+                            "nicht zur exportierten Projektdatei.")
+                with gr.Row():
+                    native_dialogue_template_name = gr.Textbox(
+                        label="Name der Sprechfolgenvorlage",
+                        elem_id="native-dialogue-template-name")
+                    native_dialogue_template_save = gr.Button(
+                        "Aktuelle Sprechfolge als Vorlage merken",
+                        elem_id="native-dialogue-template-save")
+                with gr.Row():
+                    native_dialogue_template_select = gr.Dropdown(
+                        label="Gespeicherte Sprechfolgenvorlage", choices=[],
+                        elem_id="native-dialogue-template-select")
+                    native_dialogue_template_apply = gr.Button(
+                        "Vorlage auf gewählte Dialogzeile anwenden",
+                        elem_id="native-dialogue-template-apply")
+                native_dialogue_templates = gr.State({})
+                native_dialogue_template_status = gr.Markdown(
+                    "Noch keine Sprechfolgenvorlage in dieser Sitzung",
+                    elem_id="native-dialogue-template-status")
             native_dialogue_speaking_preview = gr.Image(
                 label="PNG-Sprechpose · echte Costume-Pixel (Editor-Vorschau)",
                 interactive=False, type="pil", height=270,
@@ -1599,6 +1628,34 @@ def make_app():
             lambda *args: native_edit(assign_dialogue_speaking_sequence, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_sequence,
              native_dialogue_reset], [native_state, *native_outputs, native_report])
+        def remember_dialogue_template(raw, line, name, sequence, templates):
+            if raw is None:
+                raise gr.Error("Bitte zuerst ein natives Projekt laden")
+            try:
+                updated = save_dialogue_speaking_template(
+                    templates, raw, line, name, sequence)
+            except ValueError as error:
+                raise gr.Error(str(error)) from error
+            return (updated, gr.update(choices=list(updated), value=name.strip()),
+                    f"Sprechfolgenvorlage **{name.strip()}** für diese Sitzung gemerkt")
+
+        native_dialogue_template_save.click(
+            remember_dialogue_template,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_template_name, native_dialogue_speaking_sequence,
+             native_dialogue_templates],
+            [native_dialogue_templates, native_dialogue_template_select,
+             native_dialogue_template_status])
+
+        native_dialogue_template_apply.click(
+            lambda raw, line, templates, name, reset: native_edit(
+                apply_dialogue_speaking_template,
+                raw, line, templates, name, reset),
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_templates, native_dialogue_template_select,
+             native_dialogue_reset],
+            [native_state, *native_outputs, native_report])
+
         native_dialogue_direction_sequence_apply.click(
             lambda *args: native_edit(assign_dialogue_direction_speaking_sequence, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_direction,
