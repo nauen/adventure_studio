@@ -43,7 +43,7 @@ from adventure_studio.studio_sequences import (
 from adventure_studio.studio_sequences import (
     replace_dialogue_png_batch_frame, set_dialogue_png_batch_frame_id,
     dialogue_png_batch_selected_frame_id, dialogue_png_batch_entries,
-    suggest_dialogue_png_batch_frame_id)
+    suggest_dialogue_png_batch_frame_id, resolve_dialogue_png_batch_frame_ids)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -225,6 +225,30 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertTrue(dialogue_png_batch_preflight(
                 already_imported, first, "W", [paths[0]], "Sprechfolge",
                 frame_ids=suggested_existing)[0])
+            bulk_paths = [paths[0], paths[0], paths[0], paths[1], paths[2]]
+            bulk_order = (2, 1, 0, 3)
+            bulk_overrides = {0: "Frame_01_red_2", 3: "MyUnique", 4: "ExcludedID"}
+            resolved = resolve_dialogue_png_batch_frame_ids(
+                already_imported, first, bulk_paths, bulk_order, bulk_overrides)
+            self.assertEqual(resolved, {0: "Frame_01_red_2", 1: "Frame_01_red_4",
+                                        2: "Frame_01_red_3", 3: "MyUnique", 4: "ExcludedID"})
+            self.assertEqual(resolve_dialogue_png_batch_frame_ids(
+                already_imported, first, bulk_paths, bulk_order, resolved), resolved)
+            self.assertEqual([frame for _path, frame in dialogue_png_batch_entries(
+                bulk_paths, bulk_order, resolved)],
+                ["Frame_01_red_3", "Frame_01_red_4", "Frame_01_red_2", "MyUnique"])
+            self.assertTrue(dialogue_png_batch_preflight(
+                already_imported, first, "W", bulk_paths, "Sprechfolge",
+                order=bulk_order, frame_ids=resolved)[0])
+            imported_bulk = import_dialogue_png_batch(
+                already_imported, first, "W", bulk_paths, "Sprechfolge",
+                order=bulk_order, frame_ids=resolved)
+            self.assertIn("Frame_01_red_3, Frame_01_red_4, Frame_01_red_2, MyUnique",
+                          dialogue_speaking_sequence_selection(imported_bulk, first, "W"))
+            self.assertEqual(resolve_dialogue_png_batch_frame_ids(
+                raw, first, [paths[0]], None), {})
+            with self.assertRaisesRegex(ValueError, "keine Bilder"):
+                resolve_dialogue_png_batch_frame_ids(raw, first, paths, ())
             with self.assertRaisesRegex(ValueError, "zuerst eine native Sprecher"):
                 suggest_dialogue_png_batch_frame_id(None, first, paths, None, 0)
             with self.assertRaisesRegex(ValueError, "zuerst ein PNG"):

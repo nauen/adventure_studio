@@ -580,12 +580,9 @@ def main() -> None:
             assert next(actor for actor in batch_document.actors
                         if actor.id == "SpeakerHarborKeeper").costume == "WitnessCostume"
             # Both staged native IDs now collide with the imported Costume.
-            # Resolve them in place with one click each, then import again.
-            page.locator("#native-dialogue-png-batch-suggest-id").click()
+            # Resolve the complete import sequence at once, preserving order.
+            page.locator("#native-dialogue-png-batch-resolve-ids").click()
             expect(custom_id).to_have_value("CustomEnding_2", timeout=20000)
-            select_option(page, "native-dialogue-png-batch-selected", "1. Batch-B.png")
-            page.locator("#native-dialogue-png-batch-suggest-id").click()
-            expect(custom_id).to_have_value("Batch_B_2", timeout=20000)
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2\s*2\. Batch-Repaired\.png → CustomEnding_2\s*$"),
                 timeout=20000)
@@ -627,6 +624,7 @@ def main() -> None:
                 "replaced_selected_staged_png_without_reupload": True,
                 "edited_staged_native_frame_id_without_file_rename": True,
                 "suggested_conflict_free_native_frame_ids": True,
+                "resolved_all_staged_native_frame_id_conflicts": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
