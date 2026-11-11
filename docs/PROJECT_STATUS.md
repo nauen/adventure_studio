@@ -10,23 +10,11 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 
 ## Ein aktiver Produktpfad
 
-**Jetzt, Priorität 1:** P0.4/O03 – ein zur Laufzeit verschobenes
-Objekt muss im nativen Spiel sichtbar sein und an der **neuen** Position
-anklickbar bleiben; die alte Hitbox darf nicht weiter reagieren.
-Auf vorhandenen Room-Hotspot-/Objektzustandsdaten und dokumentiertem
-ScummC-v6-Vertrag aufbauen. Mindestabnahme: allgemeine Modelloperation,
-native Ausgabe, automatisierter Strukturtest und echte ScummVM-Klickprobe.
-
-**Blocker/Risiken:**
-
-- Offene native Einzelsprecher-/Mehrsprecher-Animation aus PR #80
-  nicht durch grüne Editor-Tests als gelöst deklarieren.
-- Menschliche Browser-Abnahme des tatsächlichen Abbrechens beim
-  Tab-Verlassen aus PR #187 fehlt; Editor-CI bestätigt bislang nur
-  den automatisierbaren Zustand.
-- P0.1–P0.3 besitzen bereits Modell-, Export- und native Teilnachweise,
-  sind aber nicht pauschal vollständig. Die früheren offenen Checkboxen
-  sind kein Grund, diese Grundlagen neu zu implementieren.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit nachgewiesenem Spielverhalten in stock ScummVM.
+- **Jetzt:** PR #190 ist auf `main` als `f638cc68` gemergt; NPC-Komfort endet hier. [PR #191](https://github.com/nauen/adventure_studio/pull/191) konsolidiert PRs, CI, Matrix, Roadmap und Status. Danach genau R06 – Raumgrafik/Z-Masken.
+- **Abnahme:** R06 als ein vertikales Paket: frei authorierbare Raumverdeckung im Modell, nativer ZPxx-Export und korrekte Actor-Verdeckung beim Bewegen im unveränderten ScummVM; gezielte automatisierte Tests und echte Spielprobe.
+- **Blocker:** Die menschliche Tab-Abbruchabnahme aus #187 sowie native Einzel-/Mehrsprecher-Animation aus #80 sind offen. R06 hat bisher nur Teilbelege (ZPlane/JSON/ScummC und begrenzte native Fixture), keinen allgemeinen Authoring- und Gameplay-Abschluss.
+- **Danach:** Erst nach R06-Evidenz R08 – freie Walkbox-Polygone mit BOXD und realen Actor-Laufgrenzen; R09/R10 sowie P0.4/O03 bleiben nachgeordnet.
 
 ## Zuletzt tatsächlich geliefert
 
