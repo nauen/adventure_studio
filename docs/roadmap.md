@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Bildblöcke frei in der Sprite-Sheet-Abspielfolge kopieren
+(CI-Abnahme bestanden):** Der Editor übernimmt einen aus Start- und
+Endbild gewählten zusammenhängenden Bereich als zusätzliche Kopie an
+einer frei wählbaren Position. Die Originalfolge bleibt unverändert;
+auch Zielpositionen innerhalb des Quellblocks sind erlaubt. Die
+gemeinsame validierte Reihenfolge steuert GIF, nativen COST-Import und
+JSON-Export. 334 lokale Tests laut PR, Core-/Chromium-/stock-ScummVM-CI
+zweimal grün (PR #158, Merge `fea8d462`, Runs `42958027740` /
+`42958026815` / `42958026806`). Menschliche UI-Abnahme offen.
+Danach: zusammenhängende Bildblöcke mit Schutz der letzten Zellkopie
+in einem Schritt entfernen.
+
 **Zusammenhängende Abspielbild-Blöcke verschieben (CI-Abnahme bestanden):**
 Das erste Bild wird per Bildleistenklick und das letzte per Dropdown
 gewählt. Beide Blockknöpfe verschieben alle enthaltenen Abspielbilder
