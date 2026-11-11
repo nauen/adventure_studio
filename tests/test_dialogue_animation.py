@@ -22,6 +22,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 dialogue_direction_animation_preview,
                                                 assign_dialogue_speaking_frame,
                                                 assign_dialogue_speaking_sequence,
+    save_dialogue_speaking_template, apply_dialogue_speaking_template,
                                                 assign_dialogue_direction_speaking_sequence,
                                                 dialogue_speaking_sequence_selection,
                                                 dialogue_speaking_timeline,
@@ -60,6 +61,31 @@ EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    def test_named_speaking_templates_reuse_validated_native_frames(self):
+        _story, raw = self.fixture()
+        first, second = (key for _label, key in dialogue_animation_lines(raw))
+        templates = save_dialogue_speaking_template(
+            None, raw, first, "Begrüßung", "Speak, SpeakAlt, Speak")
+        self.assertEqual(templates["Begrüßung"][1],
+                         ("Speak", "SpeakAlt", "Speak"))
+        with self.assertRaisesRegex(ValueError, "existiert bereits"):
+            save_dialogue_speaking_template(
+                templates, raw, first, "begrüßung", "SpeakAlt")
+        with self.assertRaisesRegex(ValueError, "vorhandene PNG-Frames"):
+            save_dialogue_speaking_template(
+                templates, raw, first, "Ungültig", "NotAFrame")
+        copied = apply_dialogue_speaking_template(
+            raw, second, templates, "Begrüßung")
+        self.assertEqual(dialogue_speaking_sequence_selection(copied, second),
+                         "Speak, SpeakAlt, Speak")
+        self.assertEqual(dialogue_speaking_sequence_selection(raw, second), "Speak")
+        with self.assertRaisesRegex(ValueError, "gespeicherte"):
+            apply_dialogue_speaking_template(raw, second, templates, "Unbekannt")
+        isolated = isolate_dialogue_speaker_costume(raw, second)
+        with self.assertRaisesRegex(ValueError, "anderen Costume"):
+            apply_dialogue_speaking_template(
+                isolated, second, templates, "Begrüßung")
+
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Import benötigt Pillow")
     def test_ordered_png_batch_import_is_atomic_and_native(self):
         from PIL import Image
