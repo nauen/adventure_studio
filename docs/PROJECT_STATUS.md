@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Eine
+persistente NPC-Sprechfolgenvorlage lässt sich jetzt direkt mit
+der aktuellen Liste importierter PNG-Frame-IDs aktualisieren,
+ohne sie zu löschen und neu anzulegen. Name und Costume-Bindung
+bleiben unverändert; ungültige oder fremde Frame-/Costume-Kontexte
+werden abgewiesen. Bereits zugewiesene COST-Dialoganimationen
+ändern sich erst bei ausdrücklicher Anwendung der Vorlage.
+Core- und Chromium-CI je zweimal, stock-ScummVM-CI grün
+(PR #169, Merge `9dfc6676`, Runs `42972075904` / `42972095162` /
+`42972075837` / `42972095157` / `42972095201`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Eine gespeicherte Vorlage
+zur Bearbeitung direkt in das Sprechframes-Eingabefeld laden,
+damit auch lange Folgen ohne manuelles Abschreiben verändert
+und anschließend aktualisiert werden können.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Persistente
 NPC-Sprechfolgenvorlagen lassen sich direkt im Studio umbenennen oder
 löschen. Umbenennen prüft Namen und case-insensitive Duplikate;
