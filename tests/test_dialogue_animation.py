@@ -48,7 +48,8 @@ from adventure_studio.studio_sequences import (
     dialogue_png_sprite_sheet_animation_preview,
     dialogue_png_sprite_sheet_order, move_dialogue_png_sprite_sheet_cell)
 from adventure_studio.studio_sequences import (
-    dialogue_png_sprite_sheet_sequence, change_dialogue_png_sprite_sheet_repetition)
+    dialogue_png_sprite_sheet_sequence, change_dialogue_png_sprite_sheet_repetition,
+    edit_dialogue_png_sprite_sheet_sequence)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -347,6 +348,22 @@ class DialogueAnimationTests(unittest.TestCase):
                 4, [1], reordered, {3: 3}, free_timeline), (3, 0, 3, 2))
             self.assertEqual(dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, {3: 3}, "  "), (3, 3, 3, 0, 2))
+            composed = edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, "", "insert", 2, 3)
+            self.assertEqual(composed, "4,1,4,3")
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "remove", 3), "4,1,3")
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "reset"), "")
+            with self.assertRaisesRegex(ValueError, "letzte Kopie"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "remove", 2)
+            with self.assertRaisesRegex(ValueError, "übernommene"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "insert", 0, 1)
+            with self.assertRaisesRegex(ValueError, "Einfügeposition"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "insert", 99, 3)
             for value, message in (("4,1,3", ""), ("4,1,,3", "mit Kommas"),
                                    ("4,1,5,3", "außerhalb"),
                                    ("4,1,2,3", "ausgeschlossene"),
