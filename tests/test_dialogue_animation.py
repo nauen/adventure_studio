@@ -23,6 +23,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 assign_dialogue_speaking_frame,
                                                 assign_dialogue_speaking_sequence,
     save_dialogue_speaking_template, apply_dialogue_speaking_template,
+    dialogue_speaking_template_choices,
                                                 assign_dialogue_direction_speaking_sequence,
                                                 dialogue_speaking_sequence_selection,
                                                 dialogue_speaking_timeline,
@@ -89,24 +90,29 @@ class DialogueAnimationTests(unittest.TestCase):
                 path = Path(directory) / (name + ".png")
                 Image.new("RGBA", (8, 8), color).save(path)
                 raw = add_costume_frame(raw, "WitnessCostume", str(path), name)
-        templates = save_dialogue_speaking_template(
-            None, raw, first, "Begrüßung", "Speak, SpeakAlt, Speak")
-        self.assertEqual(templates["Begrüßung"][1],
-                         ("Speak", "SpeakAlt", "Speak"))
+        self.assertEqual(dialogue_speaking_template_choices(raw), [])
+        saved = save_dialogue_speaking_template(
+            raw, first, "Begrüßung", "Speak, SpeakAlt, Speak")
+        self.assertEqual(dialogue_speaking_template_choices(saved), ["Begrüßung"])
+        template = parse_document(saved).speaking_sequence_templates[0]
+        self.assertEqual(template.frames, ("Speak", "SpeakAlt", "Speak"))
+        self.assertEqual(parse_document(canonical_json(parse_document(saved))),
+                         parse_document(saved))
         with self.assertRaisesRegex(ValueError, "existiert bereits"):
             save_dialogue_speaking_template(
-                templates, raw, first, "begrüßung", "SpeakAlt")
+                saved, first, "begrüßung", "SpeakAlt")
         with self.assertRaisesRegex(ValueError, "vorhandene PNG-Frames"):
             save_dialogue_speaking_template(
-                templates, raw, first, "Ungültig", "NotAFrame")
+                saved, first, "Ungültig", "NotAFrame")
         copied = apply_dialogue_speaking_template(
-            raw, second, templates, "Begrüßung")
+            saved, second, "Begrüßung")
         self.assertEqual(dialogue_speaking_sequence_selection(copied, second),
                          "Speak, SpeakAlt, Speak")
         self.assertEqual(dialogue_speaking_sequence_selection(raw, second), "")
+        self.assertEqual(dialogue_speaking_template_choices(copied), ["Begrüßung"])
         with self.assertRaisesRegex(ValueError, "gespeicherte"):
-            apply_dialogue_speaking_template(raw, second, templates, "Unbekannt")
-        document = parse_document(raw)
+            apply_dialogue_speaking_template(saved, second, "Unbekannt")
+        document = parse_document(saved)
         different_costume = canonical_json(replace(
             document, actors=tuple(
                 replace(actor, costume=original.costumes[0].name)
@@ -114,7 +120,10 @@ class DialogueAnimationTests(unittest.TestCase):
                 for actor in document.actors)))
         with self.assertRaisesRegex(ValueError, "anderen Costume"):
             apply_dialogue_speaking_template(
-                different_costume, second, templates, "Begrüßung")
+                different_costume, second, "Begrüßung")
+        # The optional field does not change the v1 format or legacy files.
+        self.assertNotIn('"speaking_sequence_templates"', raw)
+        self.assertIn('"format_version":1', saved)
 
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Import benötigt Pillow")
     def test_ordered_png_batch_import_is_atomic_and_native(self):
