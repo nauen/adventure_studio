@@ -579,6 +579,31 @@ def main() -> None:
             assert "Batch_Excluded" not in batch_raw
             assert next(actor for actor in batch_document.actors
                         if actor.id == "SpeakerHarborKeeper").costume == "WitnessCostume"
+            # Both staged native IDs now collide with the imported Costume.
+            # Resolve them in place with one click each, then import again.
+            page.locator("#native-dialogue-png-batch-suggest-id").click()
+            expect(custom_id).to_have_value("CustomEnding_2", timeout=20000)
+            select_option(page, "native-dialogue-png-batch-selected", "1. Batch-B.png")
+            page.locator("#native-dialogue-png-batch-suggest-id").click()
+            expect(custom_id).to_have_value("Batch_B_2", timeout=20000)
+            expect(batch_preview).to_have_value(
+                re.compile(r"1\. Batch-B\.png → Batch_B_2\s*2\. Batch-Repaired\.png → CustomEnding_2\s*$"),
+                timeout=20000)
+            await_batch_gallery_colors(page, [(225, 110, 40), (35, 205, 165)])
+            expect(image_issues).to_have_value("Keine bildbezogenen Konflikte erkannt", timeout=20000)
+            expect(readiness).to_contain_text("Importbereit: 2 PNG-Frame(s)", timeout=20000)
+            expect(batch_import).to_be_enabled()
+            batch_import.click()
+            expect(ending_gallery.locator("img")).to_have_count(8, timeout=20000)
+            page.locator("#native-project-export-button").click()
+            expect(sequence_link.first).to_be_visible(timeout=20000)
+            with page.expect_download() as suggested_info:
+                sequence_link.first.click()
+            suggested_file = evidence / "suggested-id-project.json"
+            suggested_info.value.save_as(str(suggested_file))
+            suggested_raw = suggested_file.read_text(encoding="utf-8")
+            assert dialogue_ending_timeline(suggested_raw, first[1], "N")[1][-2:] == (
+                ("7. Batch_B_2", 6), ("8. CustomEnding_2", 7))
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
@@ -601,6 +626,7 @@ def main() -> None:
                 "staged_png_per_image_conflict_labels": True,
                 "replaced_selected_staged_png_without_reupload": True,
                 "edited_staged_native_frame_id_without_file_rename": True,
+                "suggested_conflict_free_native_frame_ids": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
