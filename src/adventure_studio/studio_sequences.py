@@ -1459,6 +1459,14 @@ def dialogue_speaking_sequence_selection(raw: str, line_id: str | None,
     return ", ".join(sequence) if all(command in frames for command in sequence) else ""
 
 
+def discard_dialogue_speaking_draft(raw: str, line_id: str, direction: str) -> str:
+    """Return the persisted line/direction frames, discarding only UI edits."""
+    document = parse_document(raw)
+    if _dialogue_animation_targets(document).get(line_id) is None:
+        raise ValueError("Bitte zuerst eine Sprecher-Dialogzeile auswählen")
+    return dialogue_speaking_sequence_selection(raw, line_id, direction)
+
+
 def dialogue_speaking_timeline(raw: str, line_id: str | None, direction: str):
     """Show the selected line's actual native COST direction, in frame order."""
     if direction not in ("N", "E", "S", "W"):
