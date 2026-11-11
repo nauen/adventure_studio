@@ -4,6 +4,23 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der NPC-Dialogeditor
+kann ein PNG-Sprite-Sheet über frei wählbare Spalten und Zeilen in
+einzelne RGBA-PNG-Frames zerteilen. Die Bilder werden zeilenweise an
+die vorbereitete native COST-Importfolge angehängt, ohne bestehende
+Reihenfolge, ausgeschlossene Bilder oder individuelle IDs zu verlieren.
+Ungültige Raster und nicht teilbare Bildabmessungen werden abgelehnt;
+die atomare Vorprüfung und der native Import bleiben maßgeblich.
+334 lokale Python-Tests und alle drei CI-Workflows grün. Chromium
+bestätigt Sprite-Sheet-Pixel, vierfachen nativen Import und JSON-Export;
+stock ScummVM bestand die vollständige Dialog-/Rezept-Regression im
+unveränderten zweiten Lauf nach einer zeitabhängigen Richtungs-
+Sichtprobe im ersten (PR #134, Merge `7972b25`, Runs
+`42940798608` / `42940798599` / `42940798619`). Menschliche
+UI-Abnahme offen.
+**Nächstes Paket:** Sprite-Sheets mit Zellabständen und Außenrändern
+unterstützen, damit auch nicht dicht gekachelte Grafiken verwendbar sind.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der vorbereitete
 native Dialog-PNG-Import kann jetzt sämtliche Frame-ID-Konflikte mit
 **Alle Frame-ID-Konflikte beheben** in einem Schritt auflösen. Bereits
