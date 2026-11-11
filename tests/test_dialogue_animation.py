@@ -43,7 +43,8 @@ from adventure_studio.studio_sequences import (
 from adventure_studio.studio_sequences import (
     replace_dialogue_png_batch_frame, set_dialogue_png_batch_frame_id,
     dialogue_png_batch_selected_frame_id, dialogue_png_batch_entries,
-    suggest_dialogue_png_batch_frame_id, resolve_dialogue_png_batch_frame_ids)
+    suggest_dialogue_png_batch_frame_id, resolve_dialogue_png_batch_frame_ids,
+    stage_dialogue_png_sprite_sheet)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -249,6 +250,53 @@ class DialogueAnimationTests(unittest.TestCase):
                 raw, first, [paths[0]], None), {})
             with self.assertRaisesRegex(ValueError, "keine Bilder"):
                 resolve_dialogue_png_batch_frame_ids(raw, first, paths, ())
+            sheet = root / "MouthSheet.png"
+            artwork = Image.new("RGBA", (16, 16))
+            sheet_colors = ((240, 50, 65, 255), (60, 220, 70, 255),
+                            (45, 85, 235, 255), (215, 155, 35, 255))
+            for position, color in enumerate(sheet_colors):
+                artwork.paste(color, ((position % 2) * 8, (position // 2) * 8,
+                                      (position % 2 + 1) * 8, (position // 2 + 1) * 8))
+            artwork.save(sheet)
+            staged, staged_order = stage_dialogue_png_sprite_sheet(
+                paths, (2, 0), str(sheet), 2, 2)
+            self.assertEqual(staged[:3], tuple(paths))
+            self.assertEqual(staged_order, (2, 0, 3, 4, 5, 6))
+            self.assertEqual(dialogue_png_batch_excluded(staged, staged_order),
+                             (("2. 02-green.png", 1),))
+            self.assertEqual([Path(path).name for path in dialogue_png_batch_order(
+                staged, staged_order)][2:],
+                ["MouthSheet_r1_c1.png", "MouthSheet_r1_c2.png",
+                 "MouthSheet_r2_c1.png", "MouthSheet_r2_c2.png"])
+            for tile, color in zip(staged[3:], sheet_colors):
+                with Image.open(tile) as image:
+                    self.assertEqual(image.size, (8, 8))
+                    self.assertEqual(image.convert("RGBA").getpixel((4, 4)), color)
+            staged_ids = {0: "ExistingCustom"}
+            self.assertIn("2. 01-red.png → ExistingCustom",
+                          dialogue_png_batch_preview(raw, first, staged,
+                                                     staged_order, staged_ids))
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", staged, "Sprechfolge", order=staged_order,
+                frame_ids=staged_ids)[0])
+            imported_sheet = import_dialogue_png_batch(
+                raw, first, "W", staged, "Sprechfolge",
+                order=staged_order, frame_ids=staged_ids)
+            self.assertIn("MouthSheet_r2_c1, MouthSheet_r2_c2",
+                          dialogue_speaking_sequence_selection(imported_sheet, first, "W"))
+            export_document(parse_document(imported_sheet), root / "sheet-native")
+            sheet_costume = next(actor.costume for actor in parse_document(imported_sheet).actors
+                                 if actor.id == "SpeakerHarborKeeper")
+            self.assertIn("MouthSheet_r1_c1, MouthSheet_r1_c2, MouthSheet_r2_c1",
+                          (root / "sheet-native" / f"{sheet_costume}.scost").read_text())
+            only_sheet, only_order = stage_dialogue_png_sprite_sheet(
+                None, None, str(sheet), 1, 1)
+            self.assertEqual(len(only_sheet), 1)
+            self.assertEqual(only_order, (0,))
+            with self.assertRaisesRegex(ValueError, "teilbar"):
+                stage_dialogue_png_sprite_sheet(None, None, str(sheet), 3, 2)
+            with self.assertRaisesRegex(ValueError, "positive ganze Zahlen"):
+                stage_dialogue_png_sprite_sheet(None, None, str(sheet), 0, 2)
             with self.assertRaisesRegex(ValueError, "zuerst eine native Sprecher"):
                 suggest_dialogue_png_batch_frame_id(None, first, paths, None, 0)
             with self.assertRaisesRegex(ValueError, "zuerst ein PNG"):

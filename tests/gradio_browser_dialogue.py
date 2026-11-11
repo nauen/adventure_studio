@@ -601,6 +601,39 @@ def main() -> None:
             suggested_raw = suggested_file.read_text(encoding="utf-8")
             assert dialogue_ending_timeline(suggested_raw, first[1], "N")[1][-2:] == (
                 ("7. Batch_B_2", 6), ("8. CustomEnding_2", 7))
+            # Append two actual Sprite-Sheet tiles to the edited staged
+            # selection, then import/export all four native COST frames.
+            sprite_sheet = evidence / "Mouth-Strip.png"
+            strip = Image.new("RGBA", (16, 8))
+            strip.paste((170, 55, 210, 255), (0, 0, 8, 8))
+            strip.paste((55, 205, 115, 255), (8, 0, 16, 8))
+            strip.save(sprite_sheet)
+            page.locator("#native-dialogue-sprite-sheet input[type=file]").set_input_files(
+                str(sprite_sheet))
+            page.locator("#native-dialogue-sprite-add").click()
+            expect(batch_preview).to_have_value(
+                re.compile(r"1\. Batch-B\.png → Batch_B_2.*"
+                           r"2\. Batch-Repaired\.png → CustomEnding_2.*"
+                           r"3\. Mouth-Strip_r1_c1\.png → Mouth_Strip_r1_c1.*"
+                           r"4\. Mouth-Strip_r1_c2\.png → Mouth_Strip_r1_c2", re.S),
+                timeout=20000)
+            await_batch_gallery_colors(page, [(225, 110, 40), (35, 205, 165),
+                                              (170, 55, 210), (55, 205, 115)])
+            expect(readiness).to_contain_text("Import blockiert:", timeout=20000)
+            page.locator("#native-dialogue-png-batch-resolve-ids").click()
+            expect(readiness).to_contain_text("Importbereit: 4 PNG-Frame(s)", timeout=20000)
+            batch_import.click()
+            expect(ending_gallery.locator("img")).to_have_count(12, timeout=20000)
+            page.locator("#native-project-export-button").click()
+            expect(sequence_link.first).to_be_visible(timeout=20000)
+            with page.expect_download() as sprite_info:
+                sequence_link.first.click()
+            sprite_file = evidence / "sprite-sheet-project.json"
+            sprite_info.value.save_as(str(sprite_file))
+            sprite_raw = sprite_file.read_text(encoding="utf-8")
+            assert dialogue_ending_timeline(sprite_raw, first[1], "N")[1][-4:] == (
+                ("9. Batch_B_2_2", 8), ("10. CustomEnding_2_2", 9),
+                ("11. Mouth_Strip_r1_c1", 10), ("12. Mouth_Strip_r1_c2", 11))
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
@@ -625,6 +658,7 @@ def main() -> None:
                 "edited_staged_native_frame_id_without_file_rename": True,
                 "suggested_conflict_free_native_frame_ids": True,
                 "resolved_all_staged_native_frame_id_conflicts": True,
+                "imported_sprite_sheet_as_native_costume_frames": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

@@ -60,6 +60,7 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                set_dialogue_png_batch_frame_id,
                                suggest_dialogue_png_batch_frame_id,
                                resolve_dialogue_png_batch_frame_ids,
+                               stage_dialogue_png_sprite_sheet,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -790,10 +791,24 @@ def make_app():
                         elem_id="native-dialogue-png-target")
                 native_dialogue_png_import = gr.Button(
                     "PNG importieren und Frame anhängen", elem_id="native-dialogue-png-import")
-                gr.Markdown("**Mehrere PNGs in einem Schritt:** Dateien auswählen, sortieren, ausschließen, wieder aufnehmen, ein Bild ersetzen oder dessen native Frame-ID ändern. **Freie Frame-ID vergeben** löst den Konflikt des gewählten Bilds; **Alle Frame-ID-Konflikte beheben** repariert den gesamten vorbereiteten Stapel, ohne bereits freie IDs zu verändern. Die ursprünglichen Upload-Dateikarten bleiben unverändert; verbindlich sind die **Importauswahl und Bildvorschau** unten. Nur eine neue Mehrfach-Dateiauswahl setzt die Bearbeitung zurück. Ungültige PNGs, doppelte IDs oder eine volle Palette verhindern den gesamten Import ohne Teiländerungen.")
+                gr.Markdown("**Mehrere PNGs in einem Schritt:** Dateien auswählen, sortieren, ausschließen, wieder aufnehmen, ein Bild ersetzen oder dessen native Frame-ID ändern. **Sprite-Sheet-Frames hinzufügen** zerlegt ein PNG-Raster zeilenweise in zusätzliche Bilder. **Freie Frame-ID vergeben** löst den Konflikt des gewählten Bilds; **Alle Frame-ID-Konflikte beheben** repariert den gesamten vorbereiteten Stapel, ohne bereits freie IDs zu verändern. Die ursprünglichen Upload-Dateikarten bleiben unverändert; verbindlich sind die **Importauswahl und Bildvorschau** unten. Nur eine neue Mehrfach-Dateiauswahl setzt die Bearbeitung zurück. Ungültige PNGs, doppelte IDs oder eine volle Palette verhindern den gesamten Import ohne Teiländerungen.")
                 native_dialogue_png_batch_files = gr.File(
                     label="Mehrere PNG-Dateien in Abspielreihenfolge", file_types=[".png"],
                     file_count="multiple", type="filepath", elem_id="native-dialogue-png-batch-files")
+                with gr.Row():
+                    native_dialogue_sprite_sheet = gr.File(
+                        label="PNG-Sprite-Sheet (gleichmäßiges Raster)",
+                        file_types=[".png"], type="filepath", file_count="single",
+                        elem_id="native-dialogue-sprite-sheet")
+                    native_dialogue_sprite_columns = gr.Number(
+                        label="Spalten", value=2, precision=0,
+                        elem_id="native-dialogue-sprite-columns")
+                    native_dialogue_sprite_rows = gr.Number(
+                        label="Zeilen", value=1, precision=0,
+                        elem_id="native-dialogue-sprite-rows")
+                    native_dialogue_sprite_add = gr.Button(
+                        "Sprite-Sheet-Frames hinzufügen",
+                        elem_id="native-dialogue-sprite-add")
                 native_dialogue_png_batch_order = gr.State(None)
                 native_dialogue_png_batch_paths = gr.State(None)
                 native_dialogue_png_batch_frame_ids = gr.State({})
@@ -1542,6 +1557,28 @@ def make_app():
              native_dialogue_png_batch_order,
              native_dialogue_png_batch_selected,
              native_dialogue_png_batch_excluded,
+             native_dialogue_png_batch_plan])
+
+        def png_batch_add_sprite_sheet(raw, line, paths, order, frame_ids,
+                                       sheet, columns, rows):
+            try:
+                selected = len(dialogue_png_batch_order(paths, order)) if paths else 0
+                updated, new_order = stage_dialogue_png_sprite_sheet(
+                    paths, order, sheet, columns, rows)
+            except (ValueError, OSError) as error:
+                raise gr.Error(f"Sprite-Sheet kann nicht hinzugefügt werden: {error}") from error
+            return (updated, new_order, png_batch_selection(updated, new_order, selected),
+                    png_batch_excluded_selection(updated, new_order),
+                    dialogue_png_batch_preview(raw, line, updated, new_order, frame_ids))
+
+        native_dialogue_sprite_add.click(
+            png_batch_add_sprite_sheet,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
+             native_dialogue_png_batch_frame_ids, native_dialogue_sprite_sheet,
+             native_dialogue_sprite_columns, native_dialogue_sprite_rows],
+            [native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
+             native_dialogue_png_batch_selected, native_dialogue_png_batch_excluded,
              native_dialogue_png_batch_plan])
 
         def png_batch_replace(raw, line, paths, order, selected, replacement, frame_ids):
