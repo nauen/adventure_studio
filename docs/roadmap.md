@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprite-Sheet-Zellen vor dem Import umordnen (CI-Abnahme bestanden):**
+Über eine Zellenauswahl und Vor-/Zurück-Knöpfe lässt sich die native
+Abspielreihenfolge der gewählten Rasterbilder ändern. Ausgeschlossene
+Zellen bleiben für die Wiederaufnahme in der Permutation erhalten;
+Miniaturen zeigen die tatsächliche Abspielposition. COST-Import und
+JSON-Export folgen der benutzerdefinierten Sequenz, während bereits
+vorbereitete Frames unverändert bleiben. 334 lokale Tests sowie Core-,
+Chromium- und stock-ScummVM-CI grün; Browser-Nachweis inklusive
+vertauschter Pixel-/Frame-/Exportfolge (PR #142, Merge `8409083`,
+Runs `42946980659` / `42946980608` / `42946980481`). Menschliche
+UI-Abnahme offen. Danach: Abspielvorschau der gewählten Zellsequenz
+vor der Übernahme.
+
 **Auswahl einzelner Sprite-Sheet-Zellen (CI-Abnahme bestanden):**
 In der PNG-Schnittvorschau lassen sich Einzelzellen durch einen Klick
 ein- oder ausschließen. Grafik-Overlay, Miniaturtexte und Zählung

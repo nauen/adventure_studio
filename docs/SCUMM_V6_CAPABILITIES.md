@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #142, CI-Abnahme bestanden):**
+Die Abspielreihenfolge der ausgewählten Sprite-Sheet-Zellen lässt sich
+in der Schnittvorschau verändern und vor dem nativen COST-Import
+kontrollieren. Ausgeschlossene Zellen bleiben wiederaufnehmbar;
+der native Frame-Stapel folgt der gewählten Reihenfolge. 334 lokale
+Tests, realer Chromium-Import-/JSON-Export-Nachweis (Run
+`42946980608`) und vollständige stock-ScummVM-Regression (Run
+`42946980481`, Merge `8409083`) bestanden. D03 bleibt eine
+Teilfähigkeit; menschliche UI-Abnahme und vollständiger Lippensync
+bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #140, CI-Abnahme bestanden):**
 Einzelne Zellen eines PNG-Sprite-Sheets können in der Schnittvorschau
 vorbereitet, ausgeschlossen und wieder aufgenommen werden; nur die

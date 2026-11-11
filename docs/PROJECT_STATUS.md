@@ -4,6 +4,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die für den
+nativen Dialog-COST-Import gewählten Sprite-Sheet-Zellen können bereits
+in der Schnittvorschau über **Zelle nach vorne/hinten** in eine eigene
+Abspielreihenfolge gebracht werden. Die Miniaturen zeigen die Position
+auch nach Ausschluss und Wiederaufnahme einzelner Zellen; der Import
+erzeugt exakt diese Reihenfolge, ohne zuvor vorbereitete PNG-Frames
+zu verändern. Ungültige oder veraltete Reihenfolgen werden abgelehnt.
+334 lokale Tests und Core-/Chromium-/stock-ScummVM-CI grün; Chromium
+prüfte die vertauschte Reihenfolge in der Oberfläche, beim nativen
+Import und im exportierten JSON (PR #142, Merge `8409083`, Runs
+`42946980659` / `42946980608` / `42946980481`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Die gewählte Sprite-Sheet-
+Abspielreihenfolge vor dem Import direkt animiert abspielen können.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der NPC-Dialogeditor
 erlaubt, einzelne Zellen eines PNG-Sprite-Sheets schon in der visuellen
 Schnittvorschau per Klick auszuschließen oder wieder auszuwählen. Das
