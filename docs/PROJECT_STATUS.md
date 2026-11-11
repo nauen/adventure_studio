@@ -4,7 +4,7 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Produktpaket in Prüfung (2026-11-11):** Die vorbereitete native
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die vorbereitete native
 PNG-Importgalerie kennzeichnet jetzt einzelne Bilder mit `⚠️`, wenn
 deren Import in der aktuellen Reihenfolge scheitert. Direkt darunter
 stehen Position, Dateiname und konkreter Fehler (z. B. doppelte
@@ -12,8 +12,12 @@ Frame-ID, PNG-Defekt, Costume-Palette). Die Vorschau simuliert dafür
 den tatsächlichen Frame-Import im verworfenen JSON-Zwischenstand und
 unterscheidet sichere Bilder von Konfliktbildern; die verbindliche
 Gesamtprüfung und der gesperrte Importknopf bleiben unverändert.
-Kein neues Projektfeld oder SCUMM-Opcode. Lokale Tests grün;
-Chromium-/CI-Abnahme und menschliche Bedienabnahme offen.
+Kein neues Projektfeld oder SCUMM-Opcode. 334 lokale Tests und alle
+drei CI-Workflows grün. Chromium prüft die konkreten Dateifehler und
+`⚠️`-Miniaturen nach echtem Import einschließlich JSON-Export; die
+native ScummVM-Dialog-/Rezept-Regression bestand vollständig
+(PR #124, Merge `a3e1281`, Runs `42933208866` / `42933208843` /
+`42933208842`). Menschliche Bedienabnahme offen.
 **Nächstes Paket:** Ein einzelnes fehlerhaftes Upload-PNG gezielt durch
 eine neue Datei ersetzen, ohne die übrige geordnete Auswahl zu verlieren.
 
