@@ -11,15 +11,16 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 ## Ein aktiver Produktpfad
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
-- **Jetzt:** #190 (NPC-Komfortabschluss) und #191 (Konsolidierung) sind gemergt; keine weitere NPC-Komfortfunktion. Nächste einzelne native Fähigkeit: **R06 – Raum-Z-Masken**.
-- **Abnahme:** Allgemein authorierbare Raumverdeckung im Modell, nativer ZPxx-Export, gezielte Binärtests und sichtbare Actor-Verdeckung beim Bewegen im unveränderten ScummVM.
-- **Blocker:** Bestehende ZPxx/JSON/ScummC- und ScummVM-Fixture nur Teilbelege; allgemeiner Modell-zu-Spiel-Nachweis fehlt. Menschliche #187-Tab-Abbruchprüfung und native Animation aus #80 offen.
-- **Danach:** Nur nach R06-Abnahme R08 – frei authorierbare Walkbox-Polygone mit BOXD und echtem Laufgrenzen-Nachweis; R09/R10 und O03 nachgeordnet.
+- **Jetzt:** Nach #190/#191/#192 liefert [PR #193](https://github.com/nauen/adventure_studio/pull/193) genau R06.1 – frei importierbare PNG-Z-Masken in nativen Räumen. NPC-Komfort beendet.
+- **Abnahme:** Modell/JSON (einschließlich Story-Verknüpfung) → ZPxx → unverändertes ScummVM belegt: [native Run 43073010730](https://github.com/nauen/adventure_studio/actions/runs/43073010730) vollständig grün, maskierter Actor 0 versus unmaskiert 350 dunkle Pixel; [Artefakt](https://github.com/nauen/adventure_studio/actions/runs/43073010730/artifacts/13880271730). Core und echter Chromium-Upload/Export grün.
+- **Blocker:** Noch kein universeller R06-Nachweis für Mehr-Ebenen- und alle Maskenvarianten. Menschliche #187-Tab-Abbruchprüfung und native Animation aus #80 bleiben offen.
+- **Danach:** Genau R08 – freie Walkbox-Polygone mit BOXD und realen Actor-Laufgrenzen. R09/R10 und O03 nachgeordnet.
 
 ## Zuletzt tatsächlich geliefert
 
 | PR | Nutzerfunktion | Evidenz/Grenze |
 | --- | --- | --- |
+| [#193](https://github.com/nauen/adventure_studio/pull/193) | PNG-Z-Maske authorieren, exportieren und Actor-Verdeckung in stock ScummVM sehen | Native `43073010730` grün; 350 Pixel verdeckt, Scope auf belegte PNG-Maskenfähigkeit begrenzt |
 | [#190](https://github.com/nauen/adventure_studio/pull/190) | Alle offenen NPC-Sprechfolgen atomar ins native Projekt übernehmen | Core `43068566462`, Chromium `43068566433`, native `43068566317` grün; `main` `f638cc68` |
 | [#189](https://github.com/nauen/adventure_studio/pull/189) | Einzelnen offenen NPC-Sprechentwurf verwerfen, andere behalten | Core `43062376826`, Chromium `43062376847` grün; `main` `65fbd16` |
 | [#188](https://github.com/nauen/adventure_studio/pull/188) | Offene Sprechfolgen ohne Projektwechsel wieder öffnen | Core `43052463816`, Chromium `43052463728` grün; `main` `fe62c4c` |

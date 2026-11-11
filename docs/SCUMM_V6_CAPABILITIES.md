@@ -582,7 +582,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | R03 | 8-Pixel-Breitenvalidierung | A | I | T | – | Zu Opcode/Masken-Gates erweitern |
 | R04 | Mehrere Räume und Entry-/Exit-Scripts | A | I (Teil) | T | V (Teil) | Script-Lifetime bei Wechsel |
 | R05 | Objektbilder mit mehreren States | A | I (Teil) | T | V (Teil) | N Zustände/Parent-States |
-| R06 | ZPxx-Masken der Raumgrafik | A | I (Teil: RoomAsset/JSON, ScummC-BMP/ZPxx) | T (Teil: Raum-/Binärtests) | V (Teil: native Masken-Gegenprobe im Room-Visual-Workflow) | Frei authorierte Mehr-Ebenen-Masken und Varianten/Grenzen |
+| R06 | ZPxx-Masken der Raumgrafik | A | I (Teil: Studio-PNG→RoomAsset/JSON→ScummC-BMP/ZPxx) | T (Teil: PNG-Import/Story-Komposition/Binär-/Chromium-Tests) | V (Teil: stock ScummVM Run 43073010730, 350 Actor-Pixel durch authorierte Maske verdeckt) | Mehr-Ebenen-Authoring und allgemeine Engine-Varianten/Grenzen |
 | R07 | Objektbilder mit Z-Masken | A | – | – | – | Writer/Decoder-Fixture |
 | R08 | Walkbox-Polygone und Maskennummern | A (Teil) | I (Teil: RoomAsset/JSON, BOXD) | T (Teil: Box-Writer) | V (Teil: native Fixture) | Frei authorierte Polygone und allgemeine Laufgrenzen |
 | R09 | Walkbox-Verbindungen/Wege | A (Teil) | I (Teil: BOXM, Routendaten) | T (Teil: Binär-/Validierungstest) | V (Teil: native Fixture) | Allgemeines Boxennetz mit Spieler-Klickrouten |
