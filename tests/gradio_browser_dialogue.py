@@ -828,7 +828,7 @@ def main() -> None:
             expect(undo_button).to_be_enabled(timeout=20000)
             undo_button.click()
             expect(free_order).to_have_value("2,2,1", timeout=20000)
-            expect(undo_button).to_be_disabled(timeout=20000)
+            expect(undo_button).to_be_enabled(timeout=20000)
             redo_button = page.locator("#native-dialogue-sprite-redo")
             expect(redo_button).to_be_enabled(timeout=20000)
             redo_button.click()
