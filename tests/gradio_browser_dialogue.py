@@ -288,13 +288,6 @@ def main() -> None:
             assert not warns_before_tab_unload(page)
             sequence_input.fill("SpeakAlt, SpeakAlt")
             assert warns_before_tab_unload(page)
-            # Verify the actual Chromium browser dialog, not only the
-            # JavaScript predicate. Dismissing must preserve the draft.
-            with page.expect_event("dialog", timeout=10000) as unload_dialog:
-                page.close(run_before_unload=True)
-            assert unload_dialog.value.type == "beforeunload"
-            unload_dialog.value.dismiss()
-            expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
@@ -1193,6 +1186,16 @@ def main() -> None:
                 ("15. Mouth_Strip_r1_c2_repeat4", 14),
                 ("16. Mouth_Strip_r1_c2_repeat5", 15),
                 ("17. Mouth_Strip_r1_c2_repeat6", 16))
+            # Run the potentially destructive browser-close probe only after
+            # the complete editor roundtrip and exported-file assertions.
+            sequence_input.fill("SpeakAlt, SpeakAlt")
+            assert warns_before_tab_unload(page)
+            with page.expect_event("dialog", timeout=10000) as unload_dialog:
+                page.close(run_before_unload=True)
+            assert unload_dialog.value.type == "beforeunload"
+            unload_dialog.value.dismiss()
+            assert not page.is_closed(), "Abbruch der Tab-Warnung hat den Editor geschlossen"
+            expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
@@ -1227,7 +1230,8 @@ def main() -> None:
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
-            page.screenshot(path=str(evidence / "failure.png"), full_page=True)
+            if not page.is_closed():
+                page.screenshot(path=str(evidence / "failure.png"), full_page=True)
             for elem_id in ("native-project-file", "native-dialogue-line",
                             "native-dialogue-pose", "native-dialogue-animation",
                             "native-project-export-file"):
