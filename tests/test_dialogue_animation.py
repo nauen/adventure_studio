@@ -51,7 +51,9 @@ from adventure_studio.studio_sequences import (
     dialogue_png_sprite_sheet_sequence, change_dialogue_png_sprite_sheet_repetition,
     edit_dialogue_png_sprite_sheet_sequence, dialogue_png_sprite_sheet_playback_frames,
     track_dialogue_png_sprite_sheet_undo, undo_dialogue_png_sprite_sheet_edit,
-    redo_dialogue_png_sprite_sheet_edit)
+    redo_dialogue_png_sprite_sheet_edit,
+    dialogue_png_sprite_sheet_history_choices,
+    jump_dialogue_png_sprite_sheet_history)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -422,6 +424,29 @@ class DialogueAnimationTests(unittest.TestCase):
             history = track_dialogue_png_sprite_sheet_undo(
                 history, "4,4,3,1", context)
             self.assertEqual(history[2], 3)
+            choices = dialogue_png_sprite_sheet_history_choices(history)
+            self.assertEqual([value for _label, value in choices], [0, 1, 2, 3])
+            self.assertIn("Auf 4 Bilder erweitert", choices[1][0])
+            self.assertIn("Folge mit 4 Bildern geändert", choices[3][0])
+            selected, history = jump_dialogue_png_sprite_sheet_history(
+                history, "4,4,3,1", context, 1)
+            self.assertEqual(selected, composed)
+            self.assertEqual(history[2], 1)
+            selected, history = jump_dialogue_png_sprite_sheet_history(
+                history, selected, context, 3)
+            self.assertEqual(selected, "4,4,3,1")
+            with self.assertRaisesRegex(ValueError, "nicht verfügbar"):
+                jump_dialogue_png_sprite_sheet_history(
+                    history, selected, context, 9)
+            with self.assertRaisesRegex(ValueError, "nicht verfügbar"):
+                jump_dialogue_png_sprite_sheet_history(
+                    history, selected, context, True)
+            with self.assertRaisesRegex(ValueError, "passt nicht"):
+                jump_dialogue_png_sprite_sheet_history(
+                    history, selected, ("other.png",), 1)
+            with self.assertRaisesRegex(ValueError, "passt nicht"):
+                jump_dialogue_png_sprite_sheet_history(
+                    history, composed, context, 1)
             previous, history = undo_dialogue_png_sprite_sheet_edit(
                 history, "4,4,3,1", context)
             self.assertEqual(previous, "4,4,1,3")
