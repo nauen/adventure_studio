@@ -309,6 +309,20 @@ def main() -> None:
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
             select_option(page, "native-dialogue-template-select", "Begrüßung")
+            page.locator(
+                "#native-dialogue-template-name input, #native-dialogue-template-name textarea"
+            ).fill("Antwort")
+            page.locator("#native-dialogue-template-rename").click()
+            expect(page.locator("#native-dialogue-template-status")).to_contain_text(
+                "umbenannt", timeout=20000)
+            expect(page.locator("#native-dialogue-template-select input")).to_have_value(
+                "Antwort", timeout=20000)
+            page.locator("#native-dialogue-template-delete").click()
+            expect(page.locator("#native-dialogue-template-status")).to_contain_text(
+                "gelöscht", timeout=20000)
+            expect(page.locator("#native-dialogue-template-select input")).to_have_value(
+                "", timeout=20000)
+
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
