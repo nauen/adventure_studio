@@ -1715,24 +1715,23 @@ def make_app():
                 raw, line, direction, sequence, session, file)
             return (*view[:-2], restored, view[-1], updated)
 
-        def dialogue_animation_refresh(raw, line, direction, sequence, session, file):
+        def dialogue_animation_refresh(raw, line, direction):
             lines = dialogue_animation_lines(raw) if raw else ()
             current = line if line in {identity for _label, identity in lines} else None
             return (gr.update(choices=lines, value=current),
-                    *animation_with_session(raw, current, direction, sequence, session, file))
+                    *dialogue_animation_update(raw, current, direction))
 
         # Retain the selected authored line across a save, and refresh both
         # its animation and PNG pose from the persisted project. Old/stale
         # lines are cleared instead of silently selecting another speaker.
         native_state.change(
             dialogue_animation_refresh,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction,
-             native_dialogue_speaking_sequence, native_dialogue_draft_session, native_file],
+            [native_state, native_dialogue_animation_line, native_dialogue_direction],
             [native_dialogue_animation_line, native_dialogue_animation,
              native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status, native_dialogue_draft_session])
+             native_dialogue_direction_status])
         # Programmatic dropdown refreshes from native_state already render
         # the previews. Only real user selection should request them again;
         # overlapping identical Gradio image writes can truncate HTTP PNGs.
