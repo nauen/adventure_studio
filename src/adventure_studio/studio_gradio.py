@@ -242,9 +242,6 @@ window.addEventListener('beforeunload', function (event) {
 
 
 def make_app():
-    # Gradio 5 resolves callback type annotations in the module namespace.
-    # Keep the dependency optional until the studio is actually started.
-    global gr
     try:
         import gradio as gr
     except ImportError as exc:
@@ -538,10 +535,7 @@ def make_app():
         path.write_text(combined, encoding="utf-8")
         return str(path)
 
-    with gr.Blocks(
-            title="Adventure Studio", head=_SPEAKING_DRAFT_UNLOAD_GUARD,
-            css=("#native-dialogue-session-unsaved, "
-                 "#native-dialogue-saved-sequence {display:none !important;}")) as app:
+    with gr.Blocks(title="Adventure Studio") as app:
         gr.Markdown("# Adventure Studio\nStory schreiben, KI-Änderungen prüfen und als SCUMM-fähige Daten speichern.")
         state = gr.State(initial)
         pending = gr.State(None)
@@ -3310,7 +3304,10 @@ def make_app():
 def main() -> None:
     codespaces = os.environ.get("CODESPACES", "").lower() == "true"
     make_app().launch(server_name="0.0.0.0" if codespaces else "127.0.0.1",
-                      server_port=7860, share=False, inbrowser=not codespaces)
+                      server_port=7860, share=False, inbrowser=not codespaces,
+                      head=_SPEAKING_DRAFT_UNLOAD_GUARD,
+                      css=("#native-dialogue-session-unsaved, "
+                           "#native-dialogue-saved-sequence {display:none !important;}"))
 
 
 if __name__ == "__main__":
