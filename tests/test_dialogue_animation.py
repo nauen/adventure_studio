@@ -40,6 +40,7 @@ from adventure_studio.studio_sequences import (
     dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview,
     dialogue_png_batch_preflight, dialogue_png_batch_image_diagnostics,
     dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame)
+from adventure_studio.studio_sequences import replace_dialogue_png_batch_frame
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -142,6 +143,28 @@ class DialogueAnimationTests(unittest.TestCase):
                           dialogue_png_batch_preview(raw, first, paths, order))
             with self.assertRaisesRegex(ValueError, "Reihenfolge passt nicht"):
                 dialogue_png_batch_order(paths, (0, 0, 1))
+            replacement = root / "04-repaired.png"
+            Image.new("RGBA", (8, 8), (55, 155, 205, 255)).save(replacement)
+            replaced = replace_dialogue_png_batch_frame(paths, (2, 1), 0, str(replacement))
+            self.assertEqual(replaced, (paths[0], paths[1], str(replacement)))
+            self.assertEqual(dialogue_png_batch_order(replaced, (2, 1)),
+                             (str(replacement), paths[1]))
+            self.assertEqual(dialogue_png_batch_excluded(replaced, (2, 1)),
+                             (("1. 01-red.png", 0),))
+            self.assertEqual(dialogue_png_batch_preflight(
+                raw, first, "W", [paths[0], paths[0]], "Sprechfolge")[0], False)
+            repaired_duplicate = replace_dialogue_png_batch_frame(
+                [paths[0], paths[0]], None, 1, str(replacement))
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", repaired_duplicate, "Sprechfolge")[0])
+            imported_repair = import_dialogue_png_batch(
+                raw, first, "W", replaced, "Sprechfolge", order=(2, 1))
+            self.assertEqual(dialogue_speaking_sequence_selection(imported_repair, first, "W"),
+                             "Pose, Frame_04_repaired, Frame_02_green")
+            with self.assertRaisesRegex(ValueError, "zuerst ein PNG"):
+                replace_dialogue_png_batch_frame(paths, (2, 1), None, str(replacement))
+            with self.assertRaisesRegex(ValueError, "Ersatz"):
+                replace_dialogue_png_batch_frame(paths, (2, 1), 0, None)
             with self.assertRaisesRegex(ValueError, "Reihenfolge passt nicht"):
                 import_dialogue_png_batch(raw, first, "W", paths, "Sprechfolge",
                                           order=(0, 4))

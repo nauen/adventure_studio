@@ -406,6 +406,22 @@ def dialogue_png_batch_order(paths: list[str] | tuple[str, ...] | None,
     return tuple(paths[index] for index in indexes)
 
 
+def replace_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
+                                     order: list[int] | tuple[int, ...] | None,
+                                     selected: int | None,
+                                     replacement: str | None) -> tuple[str, ...]:
+    """Replace one included upload, keeping all source indexes and exclusions stable."""
+    included = dialogue_png_batch_order(paths, order)
+    if type(selected) is not int or selected not in range(len(included)):
+        raise ValueError("Bitte zuerst ein PNG-Frame in der Importauswahl auswählen")
+    if not isinstance(replacement, str) or not replacement or Path(replacement).suffix.lower() != ".png":
+        raise ValueError("Bitte eine neue PNG-Datei als Ersatz auswählen")
+    source_index = selected if order is None else order[selected]
+    updated = list(paths)
+    updated[source_index] = replacement
+    return tuple(updated)
+
+
 def move_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
                                   order: list[int] | tuple[int, ...] | None,
                                   selected: int | None, step: int
