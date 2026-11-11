@@ -587,25 +587,41 @@ def _dialogue_png_sprite_sheet_cells(
 def dialogue_png_sprite_sheet_preview(
         sheet_path: str | None, columns: int | float, rows: int | float,
         margin_x: int | float = 0, margin_y: int | float = 0,
-        gap_x: int | float = 0, gap_y: int | float = 0
+        gap_x: int | float = 0, gap_y: int | float = 0,
+        skipped: list[int] | tuple[int, ...] | None = None
         ) -> tuple[object, list[tuple[object, str]], str]:
     """Show the exact prospective source rectangles without staging any frames."""
     from PIL import ImageDraw
 
     pixels, boxes = _dialogue_png_sprite_sheet_cells(
         sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
+    excluded = _dialogue_png_sprite_skipped(boxes, skipped)
     overlay = pixels.copy()
     draw = ImageDraw.Draw(overlay)
-    for left, top, right, bottom in boxes:
+    for index, (left, top, right, bottom) in enumerate(boxes):
         draw.rectangle((left, top, right - 1, bottom - 1),
-                       outline=(255, 75, 35, 255), width=1)
+                       outline=((130, 130, 130, 255) if index in excluded else
+                                (255, 75, 35, 255)), width=1)
     thumbnails = [(pixels.crop(box), f"{index}. Zeile {(index - 1) // int(columns) + 1}, "
-                    f"Spalte {(index - 1) % int(columns) + 1}")
+                    f"Spalte {(index - 1) % int(columns) + 1} · "
+                    + ("⛔ Überspringen" if index - 1 in excluded else "✓ Übernehmen"))
                   for index, box in enumerate(boxes, 1)]
     width = boxes[0][2] - boxes[0][0]
     height = boxes[0][3] - boxes[0][1]
-    return overlay, thumbnails, (f"{len(boxes)} PNG-Frames in Zeilenreihenfolge "
+    return overlay, thumbnails, (f"{len(boxes) - len(excluded)} von {len(boxes)} "
+                                  "PNG-Frames ausgewählt · Zeilenreihenfolge "
                                   f"· je {width} × {height} Pixel · noch nicht hinzugefügt")
+
+
+def _dialogue_png_sprite_skipped(boxes: tuple[tuple[int, int, int, int], ...],
+                                 skipped: list[int] | tuple[int, ...] | None) -> set[int]:
+    if skipped is None:
+        return set()
+    if (not isinstance(skipped, (list, tuple)) or
+            any(type(index) is not int or index not in range(len(boxes)) for index in skipped) or
+            len(set(skipped)) != len(skipped)):
+        raise ValueError("Die ausgewählten Sprite-Sheet-Zellen passen nicht mehr zum Raster")
+    return set(skipped)
 
 
 def stage_dialogue_png_sprite_sheet(
@@ -613,7 +629,8 @@ def stage_dialogue_png_sprite_sheet(
         order: list[int] | tuple[int, ...] | None,
         sheet_path: str | None, columns: int | float, rows: int | float,
         margin_x: int | float = 0, margin_y: int | float = 0,
-        gap_x: int | float = 0, gap_y: int | float = 0
+        gap_x: int | float = 0, gap_y: int | float = 0,
+        skipped: list[int] | tuple[int, ...] | None = None
         ) -> tuple[tuple[str, ...], tuple[int, ...]]:
     """Append row-major PNG tiles to the staged native batch, preserving exclusions."""
     originals = tuple(paths or ())
@@ -624,9 +641,14 @@ def stage_dialogue_png_sprite_sheet(
         raise ValueError("Die PNG-Reihenfolge passt nicht mehr zur Dateiauswahl")
     pixels, boxes = _dialogue_png_sprite_sheet_cells(
         sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
+    excluded = _dialogue_png_sprite_skipped(boxes, skipped)
+    if len(excluded) == len(boxes):
+        raise ValueError("Bitte mindestens eine Sprite-Sheet-Zelle für den Import auswählen")
     destination = Path(tempfile.mkdtemp(prefix="adventure-studio-sprite-sheet-"))
     tiles = []
     for index, box in enumerate(boxes):
+        if index in excluded:
+            continue
         row, column = divmod(index, int(columns))
         tile = destination / f"{Path(sheet_path).stem}_r{row + 1}_c{column + 1}.png"
         pixels.crop(box).save(tile)
