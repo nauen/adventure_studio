@@ -630,6 +630,25 @@ def dialogue_png_sprite_sheet_preview(
                                   f"· je {width} × {height} Pixel · noch nicht hinzugefügt")
 
 
+def dialogue_png_sprite_sheet_playback_frames(
+        sheet_path: str | None, columns: int | float, rows: int | float,
+        margin_x: int | float = 0, margin_y: int | float = 0,
+        gap_x: int | float = 0, gap_y: int | float = 0,
+        skipped: list[int] | tuple[int, ...] | None = None,
+        cell_order: list[int] | tuple[int, ...] | None = None,
+        repeats: dict[int, int] | None = None,
+        timeline: str | None = None) -> list[tuple[object, str]]:
+    """Return one inspectable thumbnail for every actual native playback position."""
+    pixels, boxes = _dialogue_png_sprite_sheet_cells(
+        sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
+    sequence = dialogue_png_sprite_sheet_sequence(
+        len(boxes), skipped, cell_order, repeats, timeline)
+    if not sequence:
+        raise ValueError("Bitte mindestens eine Sprite-Sheet-Zelle für die Folge auswählen")
+    return [(pixels.crop(boxes[source]), f"{position}. Bild · Zelle {source + 1}")
+            for position, source in enumerate(sequence, 1)]
+
+
 def _dialogue_png_sprite_repeat_counts(count: int,
                                        repeats: dict[int, int] | None) -> dict[int, int]:
     if repeats is None:
