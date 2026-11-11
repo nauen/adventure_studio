@@ -53,6 +53,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                assign_dialogue_direction_speaking_sequence,
                                dialogue_speaking_sequence_selection,
                                discard_dialogue_speaking_draft,
+                               dialogue_speaking_draft_save_status,
                                dialogue_speaking_timeline, edit_dialogue_speaking_timeline,
                                dialogue_speaking_timeline_preview,
                                dialogue_animation_phase_selection,
@@ -793,6 +794,9 @@ def make_app():
                 native_dialogue_draft_discard = gr.Button(
                     "Entwurf verwerfen · gespeicherte Folge laden",
                     elem_id="native-dialogue-draft-discard")
+            native_dialogue_draft_save_status = gr.Markdown(
+                "Bitte eine Sprecher-Dialogzeile auswählen",
+                elem_id="native-dialogue-draft-save-status")
             gr.Markdown("**Sprechfolge per Klick bearbeiten:** PNG-Frame auswählen, "
                         "hinzufügen und einen nummerierten Schritt zum Verschieben "
                         "oder Entfernen auswählen. Wiederholte Frames sind erlaubt. "
@@ -1908,6 +1912,14 @@ def make_app():
             [native_dialogue_draft_step])
         native_dialogue_speaking_sequence.input(
             lambda: None, outputs=[native_dialogue_draft_step_preview])
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_direction, native_dialogue_speaking_sequence):
+            source.change(
+                dialogue_speaking_draft_save_status,
+                [native_state, native_dialogue_animation_line,
+                 native_dialogue_direction, native_dialogue_speaking_sequence],
+                [native_dialogue_draft_save_status])
+
         native_dialogue_draft_step.change(
             dialogue_speaking_draft_step_preview,
             [native_state, native_dialogue_animation_line,
