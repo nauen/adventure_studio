@@ -279,12 +279,18 @@ def main() -> None:
             sequence_input.fill("SpeakAlt, SpeakAlt")
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
+            select_option(page, "native-dialogue-line", second[0])
+            expect(sequence_input).to_have_value("Speak", timeout=20000)
+            select_option(page, "native-dialogue-line", first[0])
+            expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-dialogue-draft-discard").click()
             expect(sequence_input).to_have_value("Speak", timeout=20000)
             expect(draft_save_status).to_contain_text(
                 "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
-            expect(page.locator("#native-dialogue-draft-animation-status")).to_contain_text(
-                "Entwurf verworfen; gespeicherte Folge wiederhergestellt.", timeout=20000)
+            # The persistent saved-state indicator confirms discard; preview
+            # feedback is cleared because no GIF belongs to the restored draft.
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
             expect(picker_image.first).to_be_visible(timeout=20000)
             initial_src = picker_image.first.get_attribute("src")
@@ -389,7 +395,6 @@ def main() -> None:
             page.locator("#native-dialogue-template-save").click()
             expect(page.locator("#native-dialogue-template-status")).to_contain_text(
                 "Begrüßung", timeout=20000)
-            sequence_input.fill("pending line selection")
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
             page.locator("#native-dialogue-template-apply").click()
@@ -465,19 +470,29 @@ def main() -> None:
             expect(page.locator("#native-dialogue-template-select input")).to_have_value(
                 "", timeout=20000)
 
+            page.locator("#native-dialogue-draft-discard").click()
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
-            # Wait for the direction-change callback to finish before typing:
-            # otherwise its late text update can overwrite the author's edit.
+            select_option(page, "native-dialogue-direction", "Süd")
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("SpeakAlt")
             select_option(page, "native-dialogue-direction", "Nord")
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             sequence_input.fill("SpeakAlt, Speak")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-dialogue-direction-sequence-apply").click()
+            expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
+                "Interaktionsablauf geändert und validiert", timeout=20000)
             expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
             select_option(page, "native-dialogue-direction", "Süd")
+            expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
+            page.locator("#native-dialogue-draft-discard").click()
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-direction", "Nord")
             expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)

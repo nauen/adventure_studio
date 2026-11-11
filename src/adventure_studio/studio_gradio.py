@@ -59,6 +59,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_animation_phase_selection,
                                edit_dialogue_animation_phases, edit_dialogue_animation)
 from .studio_sequences import (dialogue_ending_animation_selection,
+                               switch_dialogue_speaking_draft,
+                               record_dialogue_speaking_draft,
                                edit_dialogue_ending_animation,
                                dialogue_ending_timeline,
                                edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
@@ -797,6 +799,7 @@ def make_app():
             native_dialogue_draft_save_status = gr.Markdown(
                 "Bitte eine Sprecher-Dialogzeile auswählen",
                 elem_id="native-dialogue-draft-save-status")
+            native_dialogue_draft_session = gr.State({"target": None, "drafts": {}, "file": None})
             gr.Markdown("**Sprechfolge per Klick bearbeiten:** PNG-Frame auswählen, "
                         "hinzufügen und einen nummerierten Schritt zum Verschieben "
                         "oder Entfernen auswählen. Wiederholte Frames sind erlaubt. "
@@ -1393,8 +1396,12 @@ def make_app():
                           native_target, native_sequence, native_step, native_steps,
                           native_costume_select, native_actor_list, native_costume_summary,
                           native_actor_initial]
-        native_file.change(native_load, [native_file], [native_state, native_linked,
-                                                       *native_outputs, native_report])
+        def native_load_with_drafts(path):
+            return (*native_load(path), {"target": None, "drafts": {}, "file": path})
+
+        native_file.change(native_load_with_drafts, [native_file],
+                           [native_state, native_linked, *native_outputs,
+                            native_report, native_dialogue_draft_session])
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])
         native_music_add.click(native_music_import,
@@ -1695,6 +1702,20 @@ def make_app():
                     dialogue_speaking_frame_preview(raw, line, selected_frame),
                     direction_image, dialogue_speaking_sequence_selection(raw, line, direction), direction_status)
 
+        def switch_with_session(raw, line, direction, sequence, session, file):
+            if (session or {}).get("file") != file:
+                session = {"target": None, "drafts": {}, "file": file}
+            restored, updated = switch_dialogue_speaking_draft(
+                raw, line, direction, sequence, session)
+            updated["file"] = file
+            return restored, updated
+
+        def animation_with_session(raw, line, direction, sequence, session, file):
+            view = dialogue_animation_update(raw, line, direction)
+            restored, updated = switch_with_session(
+                raw, line, direction, sequence, session, file)
+            return (*view[:-2], restored, view[-1], updated)
+
         def dialogue_animation_refresh(raw, line, direction):
             lines = dialogue_animation_lines(raw) if raw else ()
             current = line if line in {identity for _label, identity in lines} else None
@@ -1716,22 +1737,34 @@ def make_app():
         # the previews. Only real user selection should request them again;
         # overlapping identical Gradio image writes can truncate HTTP PNGs.
         native_dialogue_animation_line.input(
-            dialogue_animation_update,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction],
+            animation_with_session,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session, native_file],
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status])
-        for direction_control in (native_dialogue_animation, native_dialogue_direction):
-            direction_control.input(
-                dialogue_direction_animation_preview,
-                [native_state, native_dialogue_animation_line,
-                 native_dialogue_animation, native_dialogue_direction],
-                [native_dialogue_direction_preview, native_dialogue_direction_status])
+             native_dialogue_direction_status, native_dialogue_draft_session])
+        native_dialogue_animation.input(
+            dialogue_direction_animation_preview,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_animation, native_dialogue_direction],
+            [native_dialogue_direction_preview, native_dialogue_direction_status])
+
+        def direction_with_session(raw, line, animation, direction, sequence,
+                                   session, file):
+            image, status = dialogue_direction_animation_preview(
+                raw, line, animation, direction)
+            restored, updated = switch_with_session(
+                raw, line, direction, sequence, session, file)
+            return image, status, restored, updated
+
         native_dialogue_direction.input(
-            dialogue_speaking_sequence_selection,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction],
-            [native_dialogue_speaking_sequence])
+            direction_with_session,
+            [native_state, native_dialogue_animation_line, native_dialogue_animation,
+             native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session, native_file],
+            [native_dialogue_direction_preview, native_dialogue_direction_status,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session])
         native_dialogue_speaking_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
@@ -1760,7 +1793,7 @@ def make_app():
             [native_state, *native_outputs, native_report,
              native_dialogue_template_select, native_dialogue_template_status])
 
-        def load_dialogue_template_for_editing(raw, line, selected):
+        def load_dialogue_template_for_editing(raw, line, direction, selected, session):
             if raw is None:
                 raise gr.Error("Bitte zuerst ein natives Projekt laden")
             try:
@@ -1770,13 +1803,15 @@ def make_app():
                 raise gr.Error(str(error)) from error
             return (sequence,
                     f"Vorlage **{selected}** ins Sprechframes-Feld geladen; "
-                    "noch nicht gespeichert")
+                    "noch nicht gespeichert",
+                    record_dialogue_speaking_draft(raw, line, direction, sequence, session))
 
         native_dialogue_template_load.click(
             load_dialogue_template_for_editing,
-            [native_state, native_dialogue_animation_line,
-             native_dialogue_template_select],
-            [native_dialogue_speaking_sequence, native_dialogue_template_status])
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_template_select, native_dialogue_draft_session],
+            [native_dialogue_speaking_sequence, native_dialogue_template_status,
+             native_dialogue_draft_session])
 
         def refresh_dialogue_template_frames(raw, line, selected, sequence):
             outcome = native_edit(
@@ -1912,18 +1947,34 @@ def make_app():
             [native_dialogue_draft_step])
         native_dialogue_speaking_sequence.input(
             lambda: None, outputs=[native_dialogue_draft_step_preview])
+        native_dialogue_speaking_sequence.input(
+            record_dialogue_speaking_draft,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_direction, native_dialogue_speaking_sequence,
+             native_dialogue_draft_session],
+            [native_dialogue_draft_session], show_progress="hidden")
+        def speaking_draft_session_status(raw, line, direction, sequence):
+            status = dialogue_speaking_draft_save_status(raw, line, direction, sequence)
+            if status == "Ungespeicherte Änderungen an der Sprechfolge":
+                status += " · Entwurf bleibt bei Zeilen- und Richtungswechsel in dieser Sitzung erhalten."
+            return status
+
         native_dialogue_speaking_sequence.change(
-            dialogue_speaking_draft_save_status,
+            speaking_draft_session_status,
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
-            [native_dialogue_draft_save_status])
-        for source in (native_state, native_dialogue_animation_line,
-                       native_dialogue_direction):
+            [native_dialogue_draft_save_status], show_progress="hidden")
+        native_state.change(
+            speaking_draft_session_status,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_direction, native_dialogue_speaking_sequence],
+            [native_dialogue_draft_save_status], show_progress="hidden")
+        for source in (native_dialogue_animation_line, native_dialogue_direction):
             source.change(
-                dialogue_speaking_draft_save_status,
+                speaking_draft_session_status,
                 [native_state, native_dialogue_animation_line,
                  native_dialogue_direction, native_dialogue_speaking_sequence],
-                [native_dialogue_draft_save_status])
+                [native_dialogue_draft_save_status], show_progress="hidden")
 
         native_dialogue_draft_step.change(
             dialogue_speaking_draft_step_preview,
@@ -1933,13 +1984,15 @@ def make_app():
         for source in (native_state, native_dialogue_animation_line):
             source.change(lambda: None, outputs=[native_dialogue_draft_step_preview])
 
-        def change_speaking_draft(raw, line, sequence, frame, step, operation):
+        def change_speaking_draft(raw, line, direction, sequence, frame, step,
+                                  session, operation):
             try:
                 updated, selected = edit_dialogue_speaking_draft(
                     raw, line, sequence, operation, frame, step)
                 return (updated,
                         gr.update(choices=speaking_draft_steps(updated), value=selected),
-                        dialogue_speaking_draft_step_preview(raw, line, updated, selected), "")
+                        dialogue_speaking_draft_step_preview(raw, line, updated, selected), "",
+                        record_dialogue_speaking_draft(raw, line, direction, updated, session))
             except ValueError as error:
                 raise gr.Error(f"Sprechfolge nicht bearbeitbar: {error}") from error
 
@@ -1952,31 +2005,35 @@ def make_app():
                                   (native_dialogue_draft_insert_after, "Danach einfügen"),
                                   (native_dialogue_draft_duplicate, "Duplizieren")):
             button.click(
-                lambda raw, line, sequence, frame, step, op=operation:
-                    change_speaking_draft(raw, line, sequence, frame, step, op),
-                [native_state, native_dialogue_animation_line,
+                lambda raw, line, direction, sequence, frame, step, session, op=operation:
+                    change_speaking_draft(raw, line, direction, sequence, frame, step,
+                                          session, op),
+                [native_state, native_dialogue_animation_line, native_dialogue_direction,
                  native_dialogue_speaking_sequence, native_dialogue_draft_frame,
-                 native_dialogue_draft_step],
+                 native_dialogue_draft_step, native_dialogue_draft_session],
                 [native_dialogue_speaking_sequence, native_dialogue_draft_step,
                  native_dialogue_draft_step_preview,
-                 native_dialogue_draft_animation_status])
+                 native_dialogue_draft_animation_status,
+                 native_dialogue_draft_session])
 
-        def discard_speaking_draft(raw, line, direction):
+        def discard_speaking_draft(raw, line, direction, session):
             if not raw:
                 raise gr.Error("Bitte zuerst ein natives Projekt laden")
             try:
                 saved = discard_dialogue_speaking_draft(raw, line, direction)
                 return (saved, gr.update(choices=speaking_draft_steps(saved), value=None),
-                        None, None, "Entwurf verworfen; gespeicherte Folge wiederhergestellt.")
+                        None, None, "",
+                        record_dialogue_speaking_draft(raw, line, direction, saved, session))
             except ValueError as error:
                 raise gr.Error(f"Entwurf nicht wiederherstellbar: {error}") from error
 
         native_dialogue_draft_discard.click(
             discard_speaking_draft,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction],
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_draft_session],
             [native_dialogue_speaking_sequence, native_dialogue_draft_step,
              native_dialogue_draft_step_preview, native_dialogue_draft_animation,
-             native_dialogue_draft_animation_status])
+             native_dialogue_draft_animation_status, native_dialogue_draft_session])
 
         def play_dialogue_draft(raw, line, frames, duration):
             if not raw:

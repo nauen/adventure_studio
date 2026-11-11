@@ -14,6 +14,18 @@ Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
 `tests/test_scumm_reference_contract.py` prüft den Quellenindex auf
 Vollständigkeit gegenüber den 64 IDs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #182, CI-Abnahme bestanden):**
+Ungespeicherte NPC-Sprechfolgenentwürfe bleiben je Dialogzeile und
+Blickrichtung innerhalb der Editor-Sitzung beim Zielwechsel erhalten.
+Auch Frame-Wiederholungen werden wiederhergestellt. Ein neu geladenes
+Projekt startet ohne Entwürfe aus der vorherigen Datei. Kein Eingriff
+in Projektformat, native COST-/Opcode-Ausgabe oder Capability-Status.
+Core-CI zweimal, Chromium-CI zweimal und stock-ScummVM-CI grün
+(Runs `43010611586`, `43010618494`, `43010611601`,
+`43010618610`, `43010618465`). Menschliche UI-Abnahme offen.
+Nächstes Editorpaket: Vor einem Projektdateiwechsel über noch
+ungespeicherte Sprechfolgenentwürfe informieren.
+
 **D03 – aktuelle Editor-Ergänzung (PR #181, CI-Abnahme bestanden):**
 Der NPC-Sprechfolgeneditor unterscheidet den noch nicht gespeicherten
 Entwurf vom nativen Projektstand der gewählten Dialogzeile und

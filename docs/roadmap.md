@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprechfolgenentwürfe bei Zielwechsel behalten (CI-Abnahme
+bestanden):** Bearbeitete NPC-Sprechfolgen werden in der laufenden
+Editor-Sitzung getrennt je Dialogzeile und Blickrichtung gehalten.
+Ein Wechsel und späteres Zurückkehren stellt den ungespeicherten
+Entwurf einschließlich wiederholter Frame-IDs wieder her. Laden
+einer anderen Projektdatei setzt die Sitzung zurück; native
+Projekt-/COST-Daten ändern sich erst beim expliziten Speichern.
+Core-CI zweimal, Chromium-CI zweimal und stock-ScummVM-CI grün
+(PR #182, Runs `43010611586` / `43010618494` /
+`43010611601` / `43010618610` / `43010618465`).
+Menschliche UI-Abnahme offen. **Danach:** Vor Projektdateiwechsel
+über verbliebene ungespeicherte Sprechfolgenentwürfe informieren.
+
 **Ungespeicherte Sprechfolgen sichtbar kennzeichnen (CI-Abnahme
 bestanden):** Der Editor vergleicht den Entwurf der aktuellen
 NPC-Dialogzeile/Blickrichtung mit den gespeicherten Frames und zeigt
