@@ -10,10 +10,10 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Nach dem NPC-Abschluss #190 und der Konsolidierung #191/#192 liefert [PR #193](https://github.com/nauen/adventure_studio/pull/193) genau **R06.1 – PNG-Z-Maske im Studio authorieren und nativ abspielen**. Kein weiteres NPC-Komfortpaket.
-- **Abnahme:** Echter Studio-PNG-Upload → validiertes Projekt-JSON (auch bei Story-Verknüpfung) → ScummC-ZPxx → stock ScummVM. Native [CI 43073010730](https://github.com/nauen/adventure_studio/actions/runs/43073010730) grün: 0 dunkle Actor-Pixel maskiert, 350 ohne Maske, `occlusion_passed=true`; [Screenshot-/Vergleichsartefakt](https://github.com/nauen/adventure_studio/actions/runs/43073010730/artifacts/13880271730). Core/Chromium-Upload und JSON-Roundtrip grün.
-- **Blocker:** Dies ist **eine vollständig belegte PNG-Maskenfähigkeit**, kein allgemeiner R06-Abschluss für beliebige Mehr-Ebenen-/Enginevarianten. Menschliche #187-Tab-Abbruchprüfung und native Mehrsprecher-Fragen aus #80 bleiben separat offen.
-- **Danach:** Genau **R08 – frei definierbare Walkbox-Polygone** mit BOXD und echten Actor-Laufgrenzen als nächstes Paket auswählen; R09/R10 und P0.4/O03 bleiben nachgeordnet.
+- **Jetzt:** Nach NPC-Abschluss #190, Konsolidierung #191/#192 und PNG-Z-Maske #193 liefert [PR #194](https://github.com/nauen/adventure_studio/pull/194) genau **R08.1 – eine frei gezeichnete konvexe Vierpunkt-Walkbox** durch Studio → Projekt-JSON → natives BOXD. Kein neues NPC-Komfortpaket.
+- **Abnahme:** Echter Chromium-Editorlauf mit Authoring und JSON-Roundtrip; native [CI 43079024249](https://github.com/nauen/adventure_studio/actions/runs/43079024249) grün: dieselbe Actor-Zielkoordinate wird mit der raumweiten Walkbox erreicht (Scroll in die entfernte Raumhälfte), mit der begrenzten Walkbox nicht; Actor bleibt links sichtbar (1.612 gemessene Actor-Pixel), `native_walkbox_boundary_passed=true`. [Native Evidenz](https://github.com/nauen/adventure_studio/actions/runs/43079024249/artifacts/13884270940).
+- **Blocker:** R08.1 belegt **eine** authorierte konvexe Walkbox mit realer nativer Laufgrenze, nicht beliebige Polygone, Mehrboxennetze oder R09-Routing. #187 (menschlicher Tab-Abbruch) und #80 (Mehrsprecher-Animation) bleiben getrennt. PR #194 bleibt bis grüner Gesamt-CI und Merge offen.
+- **Danach:** Erst nach R08.1-Abnahme/Merge genau **R09 – mehrere Walkboxen, Verbindungen und native Actor-Routen via BOXM** auswählen; R10/SCAL und O03 folgen später.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
@@ -21,7 +21,7 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 | --- | --- | --- |
 | P0.1 – Raum-Binärprüfung | Chunk-/Offset-Parser und deterministische Tests vorhanden | Allgemeinheit und noch nicht abgedeckte Binärvarianten separat prüfen |
 | P0.2 / R06 – Z-Masken | PNG-Authoring über Studio/JSON/ZPxx und native Actor-Verdeckung für eine Ebene belegt | Mehrere Ebenen und allgemeine Varianten/Grenzen nicht als voll verifiziert behaupten |
-| P0.3 / R08–R10 – Walkbox/SCAL | `RoomAsset.walkboxes`, BOXM, SCAL, JSON und native Sicht-/Skalierungsprobe vorhanden | Allgemeine Wege-/Boxennetze, frei erstellte Polygone und Perspektivvarianten offen |
+| P0.3 / R08–R10 – Walkbox/SCAL | `RoomAsset.walkboxes`, BOXM, SCAL, JSON und native Sicht-/Skalierungsprobe; R08.1 mit frei authorierter konvexer Box und nativer Laufgrenze belegt | Allgemeine Polygone, Wege-/Boxennetze und Perspektivvarianten offen |
 | P0.5 / A01–A07 – Actors/Costumes | COST, Framefolgen, COUNT und viele Gameplay-Teilproben vorhanden | Alle Actor-/Costume-Varianten und native Mehrsprecher-Animation noch nicht fertig |
 
 Diese Teilstände ergeben sich aus
