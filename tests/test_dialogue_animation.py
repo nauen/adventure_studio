@@ -33,6 +33,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
     load_dialogue_speaking_template_for_editing,
                                                 assign_dialogue_direction_speaking_sequence,
                                                 dialogue_speaking_sequence_selection,
+    discard_dialogue_speaking_draft,
                                                 dialogue_speaking_timeline,
                                                 edit_dialogue_speaking_timeline,
                                                 dialogue_speaking_timeline_preview)
@@ -136,6 +137,12 @@ class DialogueAnimationTests(unittest.TestCase):
             edit_dialogue_speaking_draft(raw, first, "", "Davor einfügen", "Speak", 0)
         with self.assertRaisesRegex(ValueError, "vorhandenen PNG-Frame"):
             edit_dialogue_speaking_draft(raw, first, "Speak", "Danach einfügen", "Missing", 0)
+        saved_before_discard = dialogue_speaking_sequence_selection(raw, first, "S")
+        self.assertEqual(discard_dialogue_speaking_draft(raw, first, "S"),
+                         saved_before_discard)
+        self.assertEqual(parse_document(raw), parse_document(canonical_json(parse_document(raw))))
+        with self.assertRaisesRegex(ValueError, "Sprecher-Dialogzeile"):
+            discard_dialogue_speaking_draft(raw, "unknown", "S")
         before_draft = parse_document(raw)
         draft, step = edit_dialogue_speaking_draft(
             raw, first, "", "Hinzufügen", "Speak")
