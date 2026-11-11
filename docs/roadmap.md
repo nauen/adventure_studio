@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Persistente Vorlage zur Bearbeitung laden (CI-Abnahme
+bestanden):** Der NPC-Dialogeditor kann die Frame-Liste einer
+gewählten Vorlage in das Sprechframes-Feld übernehmen. Die Aktion
+prüft Costume und Zielzeile, speichert aber noch nichts; der
+vorhandene Aktualisieren-Button übernimmt Änderungen separat.
+Core-CI zweimal, Chromium-CI zweimal und stock-ScummVM-CI grün,
+beide längeren Gates nach Wiederholung bekannter zeitabhängiger
+Fehlschläge (PR #170, Merge `7798745a`, Runs `42973044194` /
+`42973066066` / `42973044123` / `42973065810` Versuch 2 /
+`42973065817` Versuch 2). Menschliche UI-Abnahme offen.
+**Danach:** Ausgewählte Vorlagen mit Costume und Framefolge vor
+Anwendung sichtbar zusammenfassen.
+
 **Persistente Sprechfolgenvorlagen aktualisieren (CI-Abnahme
 bestanden):** Eine vorhandene Vorlage kann nach Bearbeitung der
 PNG-Frame-Reihenfolge unter gleichem Namen gespeichert werden.
