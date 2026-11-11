@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprechfolgeschritt direkt ersetzen (CI-Abnahme bestanden):**
+Der Editor tauscht einen ausgewählten nummerierten Schritt gegen
+einen anderen bereits importierten Costume-PNG-Frame aus, ohne
+andere Schrittpositionen zu verändern. Die Aktion editiert nur
+das Eingabefeld und hält die Pixel-/GIF-Vorschauen anschlussfähig.
+Core-/Chromium-CI je zweimal grün und stock-ScummVM-CI nach
+bekannter zeitabhängiger Probe-Wiederholung grün (PR #177,
+Merge `ec865541`, Runs `42985182737` / `42985183040` /
+`42985182780`). Menschliche UI-Abnahme offen. **Danach:** Neue
+Frames vor oder nach dem gewählten nummerierten Schritt einfügen,
+nicht ausschließlich am Ende anhängen.
+
 **Gewählten Sprechfolgeschritt visuell prüfen (CI-Abnahme bestanden):**
 Der NPC-Dialogeditor zeigt die echte Costume-Pixelpose eines
 nummerierten, noch nicht gespeicherten Sprechschritts vor einer
