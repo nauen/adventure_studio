@@ -118,6 +118,16 @@ class DialogueAnimationTests(unittest.TestCase):
             dialogue_speaking_draft_step_preview(raw, first, "Speak", 2)
         with self.assertRaisesRegex(ValueError, "Frame-ID"):
             dialogue_speaking_draft_step_preview(raw, first, "Speak, ", 1)
+        inserted, selected = edit_dialogue_speaking_draft(
+            raw, first, "Speak, SpeakAlt", "Davor einfügen", "SpeakAlt", 0)
+        self.assertEqual((inserted, selected), ("SpeakAlt, Speak, SpeakAlt", 0))
+        inserted, selected = edit_dialogue_speaking_draft(
+            raw, first, inserted, "Danach einfügen", "Speak", 2)
+        self.assertEqual((inserted, selected), ("SpeakAlt, Speak, SpeakAlt, Speak", 3))
+        with self.assertRaisesRegex(ValueError, "Sprechschritt"):
+            edit_dialogue_speaking_draft(raw, first, "", "Davor einfügen", "Speak", 0)
+        with self.assertRaisesRegex(ValueError, "vorhandenen PNG-Frame"):
+            edit_dialogue_speaking_draft(raw, first, "Speak", "Danach einfügen", "Missing", 0)
         before_draft = parse_document(raw)
         draft, step = edit_dialogue_speaking_draft(
             raw, first, "", "Hinzufügen", "Speak")
