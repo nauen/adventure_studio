@@ -5,6 +5,23 @@ Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Eine
+persistente NPC-Sprechfolgenvorlage lässt sich jetzt über **Zum
+Bearbeiten laden** direkt in das Sprechframes-Eingabefeld übernehmen.
+Die Aktion validiert Vorlagenname, Zielsprecher und Costume, ändert
+aber weder Projekt-JSON noch zugewiesene COST-Dialoganimationen.
+Nach Anpassung kann die Vorlage mit dem vorhandenen Aktualisieren-
+Knopf explizit gespeichert werden. Core-CI zweimal und Chromium-
+UI-CI zweimal grün; ein späterer unveränderter Browser-Teiltest
+und der unveränderte ScummVM-Frame-Timing-Test brauchten je einen
+gezielten Wiederholungslauf (PR #170, Merge `7798745a`, Runs
+`42973044194` / `42973066066` / `42973044123` /
+`42973065810` Versuch 2 / `42973065817` Versuch 2).
+Menschliche UI-Abnahme offen. **Nächstes Paket:** Die Inhalte
+einer ausgewählten Vorlage mit Costume und Frame-Reihenfolge vor
+der Anwendung als deutliche Vorschau anzeigen, damit die
+Zielzuweisung informierter erfolgen kann.
+
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Eine
 persistente NPC-Sprechfolgenvorlage lässt sich jetzt direkt mit
 der aktuellen Liste importierter PNG-Frame-IDs aktualisieren,
 ohne sie zu löschen und neu anzulegen. Name und Costume-Bindung
