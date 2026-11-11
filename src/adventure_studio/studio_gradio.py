@@ -1501,7 +1501,7 @@ def make_app():
             restored, updated = switch_dialogue_speaking_draft(
                 raw, target_line, target_direction, sequence, session)
             return (gr.update(value=target_line), gr.update(value=target_direction),
-                    *view[:5], restored, view[-1], updated, view[-2],
+                    *view[:5], restored, view[-1], updated,
                     "**Entwurf ausgewählt.** [Zum Sprechfolgeneditor](#native-dialogue-line) "
                     "und dort ausdrücklich speichern, bevor das neue Projekt geladen wird.")
 
@@ -1515,7 +1515,7 @@ def make_app():
              native_dialogue_speaking_frame, native_dialogue_speaking_preview,
              native_dialogue_direction_preview, native_dialogue_speaking_sequence,
              native_dialogue_direction_status, native_dialogue_draft_session,
-             native_dialogue_saved_sequence, native_file_switch_status])
+             native_file_switch_status])
 
         def cancel_native_file_load():
             return None, "Projektwechsel abgebrochen; bisherige Entwürfe bleiben erhalten.", \
@@ -1879,15 +1879,13 @@ def make_app():
             view = dialogue_animation_update(raw, line, direction)
             restored, updated = switch_with_session(
                 raw, line, direction, sequence, session, file)
-            return (*view[:-2], restored, view[-1], updated, view[-2])
+            return (*view[:-2], restored, view[-1], updated)
 
         def dialogue_animation_refresh(raw, line, direction):
             lines = dialogue_animation_lines(raw) if raw else ()
             current = line if line in {identity for _label, identity in lines} else None
             return (gr.update(choices=lines, value=current),
-                    *dialogue_animation_update(raw, current, direction),
-                    dialogue_speaking_sequence_selection(raw, current, direction)
-                    if raw and current else "")
+                    *dialogue_animation_update(raw, current, direction))
 
         # Retain the selected authored line across a save, and refresh both
         # its animation and PNG pose from the persisted project. Old/stale
@@ -1899,7 +1897,19 @@ def make_app():
              native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status, native_dialogue_saved_sequence])
+             native_dialogue_direction_status])
+
+        def saved_speaking_sequence(raw, line, direction):
+            return (dialogue_speaking_sequence_selection(raw, line, direction)
+                    if raw and line else "")
+
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_direction):
+            source.change(
+                saved_speaking_sequence,
+                [native_state, native_dialogue_animation_line,
+                 native_dialogue_direction], [native_dialogue_saved_sequence],
+                show_progress="hidden")
 
         def cached_speaking_drafts(raw, session):
             return ("1" if unsaved_dialogue_speaking_draft_entries(
@@ -1920,8 +1930,7 @@ def make_app():
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status, native_dialogue_draft_session,
-             native_dialogue_saved_sequence])
+             native_dialogue_direction_status, native_dialogue_draft_session])
         native_dialogue_animation.input(
             dialogue_direction_animation_preview,
             [native_state, native_dialogue_animation_line,
@@ -1934,9 +1943,7 @@ def make_app():
                 raw, line, animation, direction)
             restored, updated = switch_with_session(
                 raw, line, direction, sequence, session, file)
-            return (image, status, restored, updated,
-                    dialogue_speaking_sequence_selection(raw, line, direction)
-                    if raw and line else "")
+            return image, status, restored, updated
 
         native_dialogue_direction.input(
             direction_with_session,
@@ -1944,8 +1951,7 @@ def make_app():
              native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_draft_session, native_file],
             [native_dialogue_direction_preview, native_dialogue_direction_status,
-             native_dialogue_speaking_sequence, native_dialogue_draft_session,
-             native_dialogue_saved_sequence])
+             native_dialogue_speaking_sequence, native_dialogue_draft_session])
         native_dialogue_speaking_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
@@ -2109,14 +2115,12 @@ def make_app():
                 speaking_draft_frame_choices,
                 [native_state, native_dialogue_animation_line],
                 [native_dialogue_draft_frame,
-                 native_dialogue_draft_frame_preview],
-                concurrency_id="npc_speaking_frame_preview", concurrency_limit=1)
+                 native_dialogue_draft_frame_preview])
         native_dialogue_draft_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line,
              native_dialogue_draft_frame],
-            [native_dialogue_draft_frame_preview],
-            concurrency_id="npc_speaking_frame_preview", concurrency_limit=1)
+            [native_dialogue_draft_frame_preview])
 
         def speaking_draft_steps(sequence):
             parts = [item.strip() for item in sequence.split(",")] if sequence and sequence.strip() else []
