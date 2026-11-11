@@ -689,6 +689,33 @@ def dialogue_png_sprite_sheet_sequence(count: int,
                  for _ in range(counts.get(index, 1)))
 
 
+def track_dialogue_png_sprite_sheet_undo(
+        history: tuple[tuple[object, ...], str, str] | None,
+        timeline: str, context: tuple[object, ...]
+        ) -> tuple[tuple[object, ...], str, str]:
+    """Remember one previous edit only within the same sheet/grid configuration."""
+    if not isinstance(timeline, str):
+        raise ValueError("Die Abspielsequenz muss eine Zellnummernliste sein")
+    if history is None:
+        return context, "", timeline
+    if history[0] != context:
+        return context, timeline, timeline
+    _, previous, current = history
+    return (context, current, timeline) if current != timeline else history
+
+
+def undo_dialogue_png_sprite_sheet_edit(
+        history: tuple[tuple[object, ...], str, str] | None,
+        timeline: str, context: tuple[object, ...]
+        ) -> tuple[str, tuple[tuple[object, ...], str, str]]:
+    """Undo a single matching change; a second click cannot undo the undo."""
+    if (history is None or history[0] != context or history[2] != timeline or
+            history[1] == history[2]):
+        raise ValueError("Keine rückgängig machbare Änderung der aktuellen Bildfolge")
+    previous = history[1]
+    return previous, (context, previous, previous)
+
+
 def edit_dialogue_png_sprite_sheet_sequence(
         count: int, skipped: list[int] | tuple[int, ...] | None,
         cell_order: list[int] | tuple[int, ...] | None,

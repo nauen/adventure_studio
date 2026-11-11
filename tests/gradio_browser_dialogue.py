@@ -824,6 +824,21 @@ def main() -> None:
                                               (55, 205, 115), (55, 205, 115),
                                               (55, 205, 115)],
                                        "native-dialogue-sprite-playback-frames")
+            undo_button = page.locator("#native-dialogue-sprite-undo")
+            expect(undo_button).to_be_enabled(timeout=20000)
+            undo_button.click()
+            expect(free_order).to_have_value("2,2,1", timeout=20000)
+            expect(undo_button).to_be_disabled(timeout=20000)
+            await_batch_gallery_colors(page, [(55, 205, 115), (55, 205, 115),
+                                              (170, 55, 210)],
+                                       "native-dialogue-sprite-playback-frames")
+            playback_gallery.locator("img").first.click()
+            page.keyboard.press("Escape")
+            select_option(page, "native-dialogue-sprite-block-end",
+                          "2 · nach Bild 2 (Zelle 2)")
+            page.keyboard.press("Escape")
+            page.locator("#native-dialogue-sprite-repeat-block").click()
+            expect(free_order).to_have_value("2,2,1,2,2,2,2", timeout=20000)
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"
