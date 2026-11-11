@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Betroffene Sprechfolgen vor Projektwechsel auflisten (CI-Abnahme
+bestanden):** Die bestehende Bestätigung zeigt eine schreibgeschützte
+Liste aller noch abweichenden Dialogzeilen/Richtungen mit stabiler ID,
+einschließlich aktuell eingegebener Frames. Bei Abbrechen bleiben
+die Entwürfe erhalten, bei Bestätigen verschwinden sie mit der
+alten Sitzung. Core- und Chromium-CI je zweimal grün (PR #184,
+Runs `43024142670`, `43024150087`, `43024142817`,
+`43024150372`); native stock-ScummVM-CI nach gezielter
+Wiederholung eines unveränderten zeitabhängigen Frame-Checks grün
+(Run `43024149992`). Menschliche UI-Abnahme offen.
+**Danach:** Direkt aus der Warnung eine betroffene Zeile/Richtung
+öffnen und vor dem Projektwechsel speichern.
+
 **Projektwechsel mit ungespeicherten Sprechfolgen absichern
 (CI-Abnahme bestanden):** Beim Dateiimport bleibt das bisherige
 Projekt geladen, wenn mindestens ein NPC-Sprechfolgenentwurf offen
