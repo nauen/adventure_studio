@@ -1744,17 +1744,27 @@ def make_app():
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
              native_dialogue_direction_status, native_dialogue_draft_session])
-        for direction_control in (native_dialogue_animation, native_dialogue_direction):
-            direction_control.input(
-                dialogue_direction_animation_preview,
-                [native_state, native_dialogue_animation_line,
-                 native_dialogue_animation, native_dialogue_direction],
-                [native_dialogue_direction_preview, native_dialogue_direction_status])
+        native_dialogue_animation.input(
+            dialogue_direction_animation_preview,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_animation, native_dialogue_direction],
+            [native_dialogue_direction_preview, native_dialogue_direction_status])
+
+        def direction_with_session(raw, line, animation, direction, sequence,
+                                   session, file):
+            image, status = dialogue_direction_animation_preview(
+                raw, line, animation, direction)
+            restored, updated = switch_with_session(
+                raw, line, direction, sequence, session, file)
+            return image, status, restored, updated
+
         native_dialogue_direction.input(
-            switch_with_session,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+            direction_with_session,
+            [native_state, native_dialogue_animation_line, native_dialogue_animation,
+             native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_draft_session, native_file],
-            [native_dialogue_speaking_sequence, native_dialogue_draft_session])
+            [native_dialogue_direction_preview, native_dialogue_direction_status,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session])
         native_dialogue_speaking_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
