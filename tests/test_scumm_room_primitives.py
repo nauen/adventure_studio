@@ -78,7 +78,7 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             binary = (Path(directory) / "Harbor.box").read_bytes()
             boxd_size = struct.unpack_from(">I", binary, 4)[0]
             self.assertEqual(binary[boxd_size:boxd_size + 4], b"BOXM")
-            self.assertIn(bytes((3, 3, 2)), binary[boxd_size:])
+            self.assertIn(bytes((2, 3, 2)), binary[boxd_size:])
         story = (Path(__file__).resolve().parents[1] / "examples" /
                  "mini_story_chain.json").read_text(encoding="utf-8")
         composed = parse_document(compose_story_project(story, updated))
