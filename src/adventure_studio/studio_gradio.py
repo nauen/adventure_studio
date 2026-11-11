@@ -1938,7 +1938,7 @@ def make_app():
                     raw, line, sequence, operation, frame, step)
                 return (updated,
                         gr.update(choices=speaking_draft_steps(updated), value=selected),
-                        dialogue_speaking_draft_step_preview(raw, line, updated, selected))
+                        dialogue_speaking_draft_step_preview(raw, line, updated, selected), "")
             except ValueError as error:
                 raise gr.Error(f"Sprechfolge nicht bearbeitbar: {error}") from error
 
@@ -1957,7 +1957,8 @@ def make_app():
                  native_dialogue_speaking_sequence, native_dialogue_draft_frame,
                  native_dialogue_draft_step],
                 [native_dialogue_speaking_sequence, native_dialogue_draft_step,
-                 native_dialogue_draft_step_preview])
+                 native_dialogue_draft_step_preview,
+                 native_dialogue_draft_animation_status])
 
         def discard_speaking_draft(raw, line, direction):
             if not raw:
@@ -1996,11 +1997,16 @@ def make_app():
             [native_dialogue_draft_animation,
              native_dialogue_draft_animation_status])
         for source in (native_state, native_dialogue_animation_line,
-                       native_dialogue_speaking_sequence,
                        native_dialogue_draft_duration):
             source.change(lambda: (None, ""),
                           outputs=[native_dialogue_draft_animation,
                                    native_dialogue_draft_animation_status])
+        # Programmatic updates (notably discard) already set their own status.
+        # Clearing it again on the sequence's change event races that feedback.
+        native_dialogue_speaking_sequence.change(
+            lambda: None, outputs=[native_dialogue_draft_animation])
+        native_dialogue_speaking_sequence.input(
+            lambda: "", outputs=[native_dialogue_draft_animation_status])
 
         native_dialogue_template_apply.click(
             lambda raw, line, name, reset: native_edit(
