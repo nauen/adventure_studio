@@ -9,21 +9,11 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 
 ## Aktiver Entscheidungsstand
 
-| Rang | Paket | Produktnutzen und Abnahme | Zustand |
-| --- | --- | --- | --- |
-| 0 | [PR #190](https://github.com/nauen/adventure_studio/pull/190): mehrere NPC-Sprechentwürfe gemeinsam übernehmen | Alle offenen Folgen atomar ins native Projekt speichern und exportieren | **Gemergt** (`f638cc68`); Core `43068566462`, Chromium `43068566433`, native `43068566317` grün |
-| **1** | **P0.4 / O03: bewegliches, anklickbares Objekt** | Ein sichtbares Objekt zur Laufzeit versetzen; Klick gilt danach an der neuen, nicht an der alten Position; native v6-Spielprobe | **Nächstes Produktpaket** |
-| 2 | P0.4 / O04–O02: Eltern-/Kind- und Zustandsbilder | Mehrere sichtbare Zustände mit korrekter Interaktion und nativer Spielprobe | Offen; nach O03 neu priorisieren |
-| 3 | A05 / R06–R10: allgemeine Verdeckung und Laufbereiche | Frei authorierte Masken/Walkboxen und verifizierte Actor-Bewegung jenseits des Fixtures | Grundlagen vorhanden, allgemeiner Authoring-/Gameplay-Nachweis offen |
-| 4 | S02–S04 / A08: parallele Actor- und Cutscene-Abläufe | Koordinierte Figurenaktionen, Überspringen mit korrektem Endzustand | Offen |
-
-**Der nächste Implementierungsschnitt ist P0.4/O03.** Er baut auf den
-vorhandenen Room-Hotspots, Objektzuständen und nativen ScummC-Routinen auf.
-Vor dem Code wird der bereits dokumentierte `drawObjectAt`-Vertrag auf
-die fehlende v6-Variante geprüft; keine neue allgemeine Quellenrecherche.
-Der kleinste akzeptierte Nutzerpfad ist ein Editor-/Projektzustand mit
-einem verschobenen Objekt, dessen Darstellung **und** Trefferbereich
-nach der Verschiebung im unveränderten ScummVM funktionieren.
+- **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
+- **Jetzt:** Nach den gemergten [PR #190](https://github.com/nauen/adventure_studio/pull/190) und [PR #191](https://github.com/nauen/adventure_studio/pull/191) endet die NPC-Komfortkette. Genau **R06 – frei authorierbare Raum-Z-Masken** ist das nächste native Produktpaket.
+- **Abnahme:** Ein Autor definiert im allgemeinen Raum-Modell eine Verdeckung, exportiert sie nativ als ZPxx und beobachtet im unveränderten ScummVM, wie ein Actor beim Bewegen korrekt vor beziehungsweise hinter dieser Raumebene erscheint. Relevante leere, einfache und mehrere Verdeckungsbereiche sowie Binär- und Gameplay-Verhalten gezielt prüfen.
+- **Blocker:** ZPlane, JSON, ScummC-ZPxx und eine native Fixture sind bereits vorhanden, jedoch kein allgemeiner Authoring-/Gameplay-Abschluss. Die menschliche Tab-Abbruchabnahme aus #187 und native Mehrsprecher-Fragen aus #80 bleiben separat offen.
+- **Danach:** Erst nach R06-Evidenz **R08 – frei definierbare Walkbox-Polygone** mit BOXD und verifizierten Actor-Laufgrenzen. R09/R10 sowie P0.4/O03 folgen als eigene spätere Pakete.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
