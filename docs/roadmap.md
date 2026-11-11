@@ -10,10 +10,10 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Genau R10 – native SCAL-Perspektivkurven im Studio anlegen, mit Walkboxen verknüpfen und in stock ScummVM nachweisen. R09/BOXM mit [PR #196](https://github.com/nauen/adventure_studio/pull/196) erfolgreich gemergt (`d917ead4`); keine NPC-Komfortpakete nach #190.
-- **Abnahme:** Reale Studio-Eingabe mit Slot 1–4, zwei Y-/Skalierungs-Endpunkten und Walkbox-Auswahl → RoomAsset/JSON/Story → native SCAL-Bytes und Box-Slots → in stock ScummVM sichtbar unterschiedliche Actor-Silhouetten bei mindestens drei Y-Positionen. Eigener R10-Chromium-/ScummVM-Lauf noch ausstehend; R09-Boxrouting final bestanden ([CI 43087563847](https://github.com/nauen/adventure_studio/actions/runs/43087563847)).
-- **Blocker:** R10-Core-, Chromium-, Dialog- und ScummVM-Gates auf finalem Head müssen grün sein; bis dahin kein R10-Merge. Noch nicht abgedeckte Mehrboxen-/Perspektivvarianten explizit offen.
-- **Danach:** Genau das nächste aus der Capability-Matrix priorisierte native Raum-/Walkbox-Paket, erst nach R10-Abnahme und Merge.
+- **Jetzt:** Genau R06.2 – zwei unabhängig authorierte PNG-Z-Masken mit Walkbox-ZPxx-Zuordnung in stock ScummVM nachweisen. R10/SCAL wurde mit PR #197 und sechs grünen CI-Checks in main gemergt (b66287a); NPC-Komfort nach #190 beendet.
+- **Abnahme:** Realer Studio-Klickpfad: zwei PNG-Z-Ebenen und Walkbox-Ebenenauswahl → RoomAsset/JSON/Story → ScummC ZP01/ZP02 und BOXD-Maskenwert → zwei getrennte, sichtbare Verdeckungsfälle in unverändertem ScummVM, mit freier Kontrollvariante. Core-, Chromium- und native CI müssen auf finalem R06.2-Commit grün sein.
+- **Blocker:** R06.2 ist in Entwicklung: natives Mehr-Ebenen-Rendering und Browser-Evidenz auf finalem Commit noch nicht bestätigt. ScummC-Kapazität von bis zu neun Masken ist kein Beleg universeller ScummVM-Unterstützung.
+- **Danach:** Erst nach grüner R06.2-CI und Merge genau das nächste priorisierte native Raum-/Walkbox-Paket gemäß Capability-Matrix; keine parallelen NPC-Komfortpakete.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
