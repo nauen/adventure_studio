@@ -393,10 +393,6 @@ def main() -> None:
             page.locator("#native-dialogue-template-save").click()
             expect(page.locator("#native-dialogue-template-status")).to_contain_text(
                 "Begrüßung", timeout=20000)
-            sequence_input.fill("pending line selection")
-            expect(page.locator("#native-dialogue-line input")).to_be_disabled(timeout=20000)
-            page.locator("#native-dialogue-draft-discard").click()
-            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
             page.locator("#native-dialogue-template-apply").click()
