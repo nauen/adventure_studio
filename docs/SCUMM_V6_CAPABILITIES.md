@@ -15,6 +15,13 @@ Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
 Vollständigkeit gegenüber den 64 IDs.
 
 **D03 – Editor-Ergänzung (2026-11-11, Abnahme ausstehend):**
+Mehrere ungespeicherte NPC-Sprechfolgen können über die vorhandene
+native Writer-/Validatorroutine gemeinsam in den Projektstand
+übernommen werden. Ein Fehler blockiert die gesamte Übernahme;
+eine explizite Bestätigung ist erforderlich. Kein neuer Opcode,
+keine Änderung am Projektformat oder D03-Capability-Status.
+
+**D03 – Editor-Ergänzung (PR #189, Core-/Chromium-CI bestanden):**
 Ungespeicherte NPC-Sprechfolgen können aus der Entwurfsübersicht
 einzeln nach ausdrücklicher Bestätigung verworfen werden. Andere
 Sitzungsentwürfe bleiben erhalten; für das aktive Ziel erscheint
