@@ -271,7 +271,25 @@ def main() -> None:
             # callback that can race with the immediately following save.
             await_selection(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            picker_image = page.locator("#native-dialogue-draft-frame-preview img")
+            expect(picker_image.first).to_be_visible(timeout=20000)
+            initial_src = picker_image.first.get_attribute("src")
+            select_option(page, "native-dialogue-draft-frame", "Speak")
+            expect(picker_image.first).not_to_have_attribute(
+                "src", initial_src, timeout=20000)
+            red_src = picker_image.first.get_attribute("src")
+            red_response = page.request.get(urljoin(page.url, red_src))
+            assert red_response.ok
+            with Image.open(BytesIO(red_response.body())) as red_picture:
+                assert red_picture.convert("RGB").getpixel((128, 128))[0] > 180
             select_option(page, "native-dialogue-draft-frame", "SpeakAlt")
+            expect(picker_image.first).not_to_have_attribute(
+                "src", red_src, timeout=20000)
+            green_response = page.request.get(
+                urljoin(page.url, picker_image.first.get_attribute("src")))
+            assert green_response.ok
+            with Image.open(BytesIO(green_response.body())) as green_picture:
+                assert green_picture.convert("RGB").getpixel((128, 128))[1] > 180
             page.locator("#native-dialogue-draft-add").click()
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-draft-step", "2. SpeakAlt")

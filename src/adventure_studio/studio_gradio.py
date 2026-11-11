@@ -798,6 +798,10 @@ def make_app():
                     elem_id="native-dialogue-draft-frame")
                 native_dialogue_draft_add = gr.Button(
                     "Frame anhängen", elem_id="native-dialogue-draft-add")
+            native_dialogue_draft_frame_preview = gr.Image(
+                label="Ausgewählter PNG-Frame · echte Costume-Pixel vor dem Anhängen",
+                interactive=False, type="pil", height=270,
+                elem_id="native-dialogue-draft-frame-preview")
             with gr.Row():
                 native_dialogue_draft_step = gr.Dropdown(
                     label="Schritt der aktuellen Sprechfolge", choices=[],
@@ -1850,16 +1854,23 @@ def make_app():
 
         def speaking_draft_frame_choices(raw, line):
             if not raw or not line:
-                return gr.update(choices=[], value=None)
+                return gr.update(choices=[], value=None), None
             choices, _selected = dialogue_speaking_frame_selection(raw, line)
-            return gr.update(choices=list(choices),
-                             value=choices[0] if choices else None)
+            selected = choices[0] if choices else None
+            return (gr.update(choices=list(choices), value=selected),
+                    dialogue_speaking_frame_preview(raw, line, selected))
 
         for source in (native_state, native_dialogue_animation_line):
             source.change(
                 speaking_draft_frame_choices,
                 [native_state, native_dialogue_animation_line],
-                [native_dialogue_draft_frame])
+                [native_dialogue_draft_frame,
+                 native_dialogue_draft_frame_preview])
+        native_dialogue_draft_frame.input(
+            dialogue_speaking_frame_preview,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_draft_frame],
+            [native_dialogue_draft_frame_preview])
 
         def speaking_draft_steps(sequence):
             parts = [item.strip() for item in sequence.split(",")] if sequence and sequence.strip() else []
