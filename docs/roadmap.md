@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Persistente Sprechfolgenvorlagen verwalten (CI-Abnahme
+bestanden):** Der NPC-Dialogeditor kann gespeicherte Vorlagen
+umbenennen und löschen. Bereits den Dialogzeilen zugewiesene native
+Sprechfolgen bleiben beim Löschen der Vorlage unverändert;
+Namensduplikate werden verhindert. Keine Änderung am Projektformat
+oder SCUMM-v6-Export. Core-/Chromium-CI je zweimal und
+stock-ScummVM-CI grün (PR #168, Merge `9bd627c7`, Runs
+`42971106128` / `42971131395` / `42971106080` /
+`42971131510` / `42971131455`). Menschliche UI-Abnahme offen.
+**Danach:** Vorhandene Vorlagen mit neuen Sprechframes aktualisieren.
+
 **Benannte NPC-Sprechfolgen dauerhaft im Projekt speichern
 (CI-Abnahme bestanden):** Vorlagen enthalten Name, Costume und native
 PNG-Frame-IDs im optionalen `speaking_sequence_templates`-Feld des
