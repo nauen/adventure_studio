@@ -291,7 +291,7 @@ def main() -> None:
             # Verify the actual Chromium browser dialog, not only the
             # JavaScript predicate. Dismissing must preserve the draft.
             with page.expect_event("dialog", timeout=10000) as unload_dialog:
-                page.evaluate("setTimeout(() => location.reload(), 0)")
+                page.close(run_before_unload=True)
             assert unload_dialog.value.type == "beforeunload"
             unload_dialog.value.dismiss()
             expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
