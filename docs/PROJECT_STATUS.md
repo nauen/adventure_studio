@@ -4,6 +4,23 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im visuellen
+NPC-Dialog-Sprite-Sheet-Editor lässt sich ein markierter Bildblock mit
+einer frei wählbaren positiven Anzahl zusätzlicher Kopien an einer
+Zielposition der bestehenden Folge einfügen. Die Originalfolge bleibt
+erhalten; die vollständige erweiterte Bildleiste zeigt die sieben
+Abspielbilder vor dem nativen COST-Import. Ungültige Mengen und Ziele
+werden abgewiesen. Für diese Batch-Operation gilt ein explizites
+temporäres Editor-Staging-Limit von 2048 Abspielbildern, keine native
+SCUMM-v6-Modellgrenze. Core- und Chromium-CI jeweils zweimal grün;
+Chromium prüfte sieben Pixelbilder, neun native COST-PNGs, Import
+und JSON-Export; stock-ScummVM-CI grün (PR #161,
+Merge `0ff8a565`, Runs `42961680836` / `42961680499` /
+`42961680844`). Menschliche UI-Abnahme offen. **Nächstes Paket:**
+Die letzte Änderung an einer frei zusammengestellten Sprite-Sheet-
+Abspielfolge im Editor rückgängig machen können, ohne die ganze Folge
+zurückzusetzen oder vorbereitete native Frames zu verlieren.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein markierter
 Bildblock der Dialog-Sprite-Sheet-Abspielfolge lässt sich direkt an eine
 beliebige Zielgrenze der ursprünglichen Folge verschieben, ohne Kopie
