@@ -281,7 +281,8 @@ def main() -> None:
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value(
-                "SpeakAlt, Speak, SpeakAlt", timeout=20000)
+                dialogue_speaking_sequence_selection(sequence_data, second[1], "S"),
+                timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
             expect(draft_save_status).to_contain_text(
