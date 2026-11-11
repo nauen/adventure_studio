@@ -643,8 +643,6 @@ def dialogue_png_sprite_sheet_playback_frames(
         sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
     sequence = dialogue_png_sprite_sheet_sequence(
         len(boxes), skipped, cell_order, repeats, timeline)
-    if not sequence:
-        raise ValueError("Bitte mindestens eine Sprite-Sheet-Zelle für die Folge auswählen")
     return [(pixels.crop(boxes[source]), f"{position}. Bild · Zelle {source + 1}")
             for position, source in enumerate(sequence, 1)]
 

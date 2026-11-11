@@ -352,6 +352,8 @@ class DialogueAnimationTests(unittest.TestCase):
                 "3. Bild · Zelle 4", "4. Bild · Zelle 3"])
             self.assertEqual(timeline_cards[0][0].tobytes(), timeline_cards[2][0].tobytes())
             self.assertNotEqual(timeline_cards[0][0].tobytes(), timeline_cards[1][0].tobytes())
+            self.assertEqual(dialogue_png_sprite_sheet_playback_frames(
+                str(spaced_sheet), 2, 2, 2, 3, 4, 2, [0, 1, 2, 3]), [])
             self.assertEqual(dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, {3: 3}, free_timeline), (3, 0, 3, 2))
             self.assertEqual(dialogue_png_sprite_sheet_sequence(
