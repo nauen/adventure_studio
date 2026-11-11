@@ -1912,18 +1912,28 @@ def make_app():
             [native_dialogue_draft_step])
         native_dialogue_speaking_sequence.input(
             lambda: None, outputs=[native_dialogue_draft_step_preview])
+        def speaking_draft_navigation_guard(raw, line, direction, sequence):
+            status = dialogue_speaking_draft_save_status(raw, line, direction, sequence)
+            dirty = status == "Ungespeicherte Änderungen an der Sprechfolge"
+            if dirty:
+                status += " · Vor einem Zeilen- oder Richtungswechsel speichern oder verwerfen."
+            return (status, gr.update(interactive=not dirty),
+                    gr.update(interactive=not dirty))
+
         native_dialogue_speaking_sequence.change(
-            dialogue_speaking_draft_save_status,
+            speaking_draft_navigation_guard,
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
-            [native_dialogue_draft_save_status])
+            [native_dialogue_draft_save_status, native_dialogue_animation_line,
+             native_dialogue_direction])
         for source in (native_state, native_dialogue_animation_line,
                        native_dialogue_direction):
             source.change(
-                dialogue_speaking_draft_save_status,
+                speaking_draft_navigation_guard,
                 [native_state, native_dialogue_animation_line,
                  native_dialogue_direction, native_dialogue_speaking_sequence],
-                [native_dialogue_draft_save_status])
+                [native_dialogue_draft_save_status, native_dialogue_animation_line,
+                 native_dialogue_direction])
 
         native_dialogue_draft_step.change(
             dialogue_speaking_draft_step_preview,
