@@ -42,7 +42,8 @@ from adventure_studio.studio_sequences import (
     dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame)
 from adventure_studio.studio_sequences import (
     replace_dialogue_png_batch_frame, set_dialogue_png_batch_frame_id,
-    dialogue_png_batch_selected_frame_id, dialogue_png_batch_entries)
+    dialogue_png_batch_selected_frame_id, dialogue_png_batch_entries,
+    suggest_dialogue_png_batch_frame_id)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -207,6 +208,25 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertTrue(dialogue_png_batch_preflight(
                 raw, first, "W", multiple_duplicates, "Sprechfolge",
                 frame_ids=fully_repaired)[0])
+            suggested = suggest_dialogue_png_batch_frame_id(
+                raw, first, multiple_duplicates, None, 1)
+            self.assertEqual(suggested, {1: "Frame_01_red_2"})
+            suggested = suggest_dialogue_png_batch_frame_id(
+                raw, first, multiple_duplicates, None, 2, suggested)
+            self.assertEqual(suggested, {1: "Frame_01_red_2", 2: "Frame_01_red_3"})
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", multiple_duplicates, "Sprechfolge",
+                frame_ids=suggested)[0])
+            already_imported = import_dialogue_png_batch(
+                raw, first, "W", [paths[0]], "Sprechfolge")
+            suggested_existing = suggest_dialogue_png_batch_frame_id(
+                already_imported, first, [paths[0]], None, 0)
+            self.assertEqual(suggested_existing, {0: "Frame_01_red_2"})
+            self.assertTrue(dialogue_png_batch_preflight(
+                already_imported, first, "W", [paths[0]], "Sprechfolge",
+                frame_ids=suggested_existing)[0])
+            with self.assertRaisesRegex(ValueError, "zuerst eine native Sprecher"):
+                suggest_dialogue_png_batch_frame_id(None, first, paths, None, 0)
             with self.assertRaisesRegex(ValueError, "zuerst ein PNG"):
                 replace_dialogue_png_batch_frame(paths, (2, 1), None, str(replacement))
             with self.assertRaisesRegex(ValueError, "Ersatz"):

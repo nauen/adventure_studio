@@ -447,6 +447,36 @@ def dialogue_png_batch_selected_frame_id(paths: list[str] | tuple[str, ...] | No
     return frame_ids.get(source_index, default_id) if frame_ids else default_id
 
 
+def suggest_dialogue_png_batch_frame_id(raw: str | None, line_id: str | None,
+                                         paths: list[str] | tuple[str, ...] | None,
+                                         order: list[int] | tuple[int, ...] | None,
+                                         selected: int | None,
+                                         frame_ids: dict[int, str] | None = None
+                                         ) -> dict[int, str]:
+    """Reserve the first free native ID across this Costume and included uploads."""
+    included = dialogue_png_batch_order(paths, order)
+    if type(selected) is not int or selected not in range(len(included)):
+        raise ValueError("Bitte zuerst ein PNG-Frame in der Importauswahl auswählen")
+    if not raw or not line_id:
+        raise ValueError("Bitte zuerst eine native Sprecher-Dialogzeile auswählen")
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    used = {frame.id for frame in costume.frames}
+    used.update(dialogue_png_batch_selected_frame_id(paths, order, index, frame_ids)
+                for index in range(len(included)) if index != selected)
+    original = dialogue_png_batch_selected_frame_id(paths, order, selected, frame_ids)
+    candidate = original
+    suffix = 2
+    while candidate in used:
+        candidate = f"{original}_{suffix}"
+        suffix += 1
+    return set_dialogue_png_batch_frame_id(paths, order, selected, candidate, frame_ids)
+
+
 def dialogue_png_batch_order(paths: list[str] | tuple[str, ...] | None,
                              order: list[int] | tuple[int, ...] | None = None
                              ) -> tuple[str, ...]:
