@@ -16,6 +16,7 @@ on:
       - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_authored_scal_probe.py'
+      - 'src/adventure_studio/scumm_multi_zplane_probe.py'
   push:
     paths:
       - '.github/workflows/scummc-experiment.yml'
@@ -26,6 +27,7 @@ on:
       - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_authored_scal_probe.py'
+      - 'src/adventure_studio/scumm_multi_zplane_probe.py'
       - 'src/adventure_studio/scumm_scal_probe.py'
       - 'src/adventure_studio/scumm_camera_probe.py'
       - 'src/adventure_studio/scumm_costume.py'
@@ -192,6 +194,22 @@ jobs:
             /tmp/native-boxm-routing/native-boxm-routing-report.json
             /tmp/native-boxm-routing/*-screenshots/scummvm-end.png
             /tmp/native-boxm-routing/*-screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
+      - name: Verify two Studio-authored Z-plane layers in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_multi_zplane_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-multi-zplanes
+      - name: Retain multi-Z-plane native screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-two-zplanes
+          path: |
+            /tmp/native-multi-zplanes/multi-zplane-report.json
+            /tmp/native-multi-zplanes/*-project.json
+            /tmp/native-multi-zplanes/*-screenshots/scummvm-end.png
+            /tmp/native-multi-zplanes/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify Studio-authored SCAL perspective in stock ScummVM
         env:
