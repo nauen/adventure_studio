@@ -50,7 +50,8 @@ from adventure_studio.studio_sequences import (
 from adventure_studio.studio_sequences import (
     dialogue_png_sprite_sheet_sequence, change_dialogue_png_sprite_sheet_repetition,
     edit_dialogue_png_sprite_sheet_sequence, dialogue_png_sprite_sheet_playback_frames,
-    track_dialogue_png_sprite_sheet_undo, undo_dialogue_png_sprite_sheet_edit)
+    track_dialogue_png_sprite_sheet_undo, undo_dialogue_png_sprite_sheet_edit,
+    redo_dialogue_png_sprite_sheet_edit)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -415,11 +416,23 @@ class DialogueAnimationTests(unittest.TestCase):
                     end_position=2, destination_position=0)
             context = ("sheet.png", 2, 2, (3, 0), ())
             history = track_dialogue_png_sprite_sheet_undo(None, composed, context)
-            self.assertEqual(history, (context, "", composed))
+            self.assertEqual(history, (context, "", composed, None))
             earlier, history = undo_dialogue_png_sprite_sheet_edit(history, composed, context)
             self.assertEqual(earlier, "")
+            self.assertEqual(history[3], composed)
             with self.assertRaisesRegex(ValueError, "Keine rückgängig"):
                 undo_dialogue_png_sprite_sheet_edit(history, earlier, context)
+            restored, history = redo_dialogue_png_sprite_sheet_edit(history, earlier, context)
+            self.assertEqual(restored, composed)
+            self.assertIsNone(history[3])
+            with self.assertRaisesRegex(ValueError, "Keine wiederherstellbare"):
+                redo_dialogue_png_sprite_sheet_edit(history, restored, context)
+            earlier, history = undo_dialogue_png_sprite_sheet_edit(history, restored, context)
+            history = track_dialogue_png_sprite_sheet_undo(
+                history, "4,4,1,3", context)
+            self.assertIsNone(history[3])
+            with self.assertRaisesRegex(ValueError, "Keine wiederherstellbare"):
+                redo_dialogue_png_sprite_sheet_edit(history, "4,4,1,3", context)
             history = track_dialogue_png_sprite_sheet_undo(history, composed, context)
             history = track_dialogue_png_sprite_sheet_undo(
                 history, "4,4,1,3", context)
@@ -428,9 +441,12 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual(previous, composed)
             self.assertEqual(track_dialogue_png_sprite_sheet_undo(
                 history, "4,4,1,3", ("other.png",))[1:],
-                ("4,4,1,3", "4,4,1,3"))
+                ("4,4,1,3", "4,4,1,3", None))
             with self.assertRaisesRegex(ValueError, "Keine rückgängig"):
                 undo_dialogue_png_sprite_sheet_edit(
+                    history, "4,4,1,3", ("other.png",))
+            with self.assertRaisesRegex(ValueError, "Keine wiederherstellbare"):
+                redo_dialogue_png_sprite_sheet_edit(
                     history, "4,4,1,3", ("other.png",))
             repeated_block = edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, composed, "repeat_block", 2,
