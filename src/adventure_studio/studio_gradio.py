@@ -1917,8 +1917,9 @@ def make_app():
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
             [native_dialogue_draft_save_status])
-        for source in (native_dialogue_animation_line, native_dialogue_direction):
-            source.input(
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_direction):
+            source.change(
                 dialogue_speaking_draft_save_status,
                 [native_state, native_dialogue_animation_line,
                  native_dialogue_direction, native_dialogue_speaking_sequence],
