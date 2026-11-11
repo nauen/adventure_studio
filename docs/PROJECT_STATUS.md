@@ -7,6 +7,16 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Neues Produktpaket (2026-11-11, Abnahme ausstehend):** In der
+Übersicht ungespeicherter NPC-Sprechfolgen kann ein ausgewählter
+Entwurf nach bewusster Bestätigung einzeln verworfen werden. Andere
+Sitzungsentwürfe bleiben erhalten; betrifft die Wahl die aktive
+Dialogzeile/Richtung, zeigt der Editor wieder die gespeicherte Folge.
+Ein inzwischen gespeicherter oder ungültiger Listeneintrag wird
+abgewiesen. Keine Änderung an Projektformat, COST oder SCUMM-v6-Export.
+**Nächstes Gate:** echter Chromium-Nutzerpfad und Core-CI; die manuelle
+Browser-Tab-Abbruchabnahme aus PR #187 bleibt offen.
+
 **Neues Produktpaket (2026-11-11, Abnahme ausstehend):** Der native
 NPC-Dialogeditor bietet eine eigenständige Liste offener
 Sprechfolgenentwürfe. Autoren können sie ohne Projektdateiwechsel
