@@ -222,6 +222,22 @@ def catalog_view(raw: str):
             list(catalog.dialogue_choices), list(catalog.assets), gallery, relationship_svg(raw))
 
 
+_SPEAKING_DRAFT_UNLOAD_GUARD = """<script>
+window.addEventListener('beforeunload', function (event) {
+    const field = (id) => document.querySelector(
+        '#' + id + ' input, #' + id + ' textarea')?.value ?? '';
+    const frames = (value) => value.trim()
+        ? value.split(',').map((part) => part.trim()).join(',') : '';
+    const cached = field('native-dialogue-session-unsaved') === '1';
+    const active = frames(field('native-dialogue-speaking-sequence')) !==
+        frames(field('native-dialogue-saved-sequence'));
+    if (!cached && !active) return;
+    event.preventDefault();
+    event.returnValue = '';
+});
+</script>"""
+
+
 def make_app():
     try:
         import gradio as gr
@@ -516,7 +532,10 @@ def make_app():
         path.write_text(combined, encoding="utf-8")
         return str(path)
 
-    with gr.Blocks(title="Adventure Studio") as app:
+    with gr.Blocks(
+            title="Adventure Studio", head=_SPEAKING_DRAFT_UNLOAD_GUARD,
+            css=("#native-dialogue-session-unsaved, "
+                 "#native-dialogue-saved-sequence {display:none !important;}")) as app:
         gr.Markdown("# Adventure Studio\nStory schreiben, KI-Änderungen prüfen und als SCUMM-fähige Daten speichern.")
         state = gr.State(initial)
         pending = gr.State(None)
@@ -821,6 +840,12 @@ def make_app():
                 "Bitte eine Sprecher-Dialogzeile auswählen",
                 elem_id="native-dialogue-draft-save-status")
             native_dialogue_draft_session = gr.State({"target": None, "drafts": {}, "file": None})
+            native_dialogue_session_unsaved = gr.Textbox(
+                value="0", interactive=False, show_label=False,
+                elem_id="native-dialogue-session-unsaved")
+            native_dialogue_saved_sequence = gr.Textbox(
+                value="", interactive=False, show_label=False,
+                elem_id="native-dialogue-saved-sequence")
             gr.Markdown("**Sprechfolge per Klick bearbeiten:** PNG-Frame auswählen, "
                         "hinzufügen und einen nummerierten Schritt zum Verschieben "
                         "oder Entfernen auswählen. Wiederholte Frames sind erlaubt. "
@@ -1870,6 +1895,28 @@ def make_app():
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
              native_dialogue_direction_status])
+
+        def saved_speaking_sequence(raw, line, direction):
+            return (dialogue_speaking_sequence_selection(raw, line, direction)
+                    if raw and line else "")
+
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_direction):
+            source.change(
+                saved_speaking_sequence,
+                [native_state, native_dialogue_animation_line,
+                 native_dialogue_direction], [native_dialogue_saved_sequence],
+                show_progress="hidden")
+
+        def cached_speaking_drafts(raw, session):
+            return ("1" if unsaved_dialogue_speaking_draft_entries(
+                raw, None, "S", None, session) else "0")
+
+        for source in (native_state, native_dialogue_draft_session):
+            source.change(cached_speaking_drafts,
+                          [native_state, native_dialogue_draft_session],
+                          [native_dialogue_session_unsaved],
+                          show_progress="hidden")
         # Programmatic dropdown refreshes from native_state already render
         # the previews. Only real user selection should request them again;
         # overlapping identical Gradio image writes can truncate HTTP PNGs.

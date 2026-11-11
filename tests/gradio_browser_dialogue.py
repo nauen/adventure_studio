@@ -49,6 +49,15 @@ def displayed_value(page, elem_id: str) -> str:
     return dropdown.inner_text()
 
 
+def warns_before_tab_unload(page) -> bool:
+    """Exercise the actual Chromium beforeunload listener without closing the test tab."""
+    return page.evaluate("""() => {
+        const event = new Event('beforeunload', {cancelable: true});
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+    }""")
+
+
 def await_selection(page, elem_id: str, label: str) -> None:
     page.wait_for_function(
         """({id, label}) => {
@@ -276,11 +285,22 @@ def main() -> None:
             draft_save_status = page.locator("#native-dialogue-draft-save-status")
             expect(draft_save_status).to_contain_text(
                 "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
+            expect(page.locator(
+                "#native-dialogue-session-unsaved input, "
+                "#native-dialogue-session-unsaved textarea")).to_have_value(
+                    "0", timeout=20000)
+            assert not warns_before_tab_unload(page)
             sequence_input.fill("SpeakAlt, SpeakAlt")
+            assert warns_before_tab_unload(page)
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            expect(page.locator(
+                "#native-dialogue-session-unsaved input, "
+                "#native-dialogue-session-unsaved textarea")).to_have_value(
+                    "1", timeout=20000)
+            assert warns_before_tab_unload(page)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
             expect(draft_save_status).to_contain_text(
@@ -289,6 +309,11 @@ def main() -> None:
             expect(sequence_input).to_have_value("Speak", timeout=20000)
             expect(draft_save_status).to_contain_text(
                 "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
+            expect(page.locator(
+                "#native-dialogue-session-unsaved input, "
+                "#native-dialogue-session-unsaved textarea")).to_have_value(
+                    "0", timeout=20000)
+            assert not warns_before_tab_unload(page)
             # The persistent saved-state indicator confirms discard; preview
             # feedback is cleared because no GIF belongs to the restored draft.
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
