@@ -685,7 +685,9 @@ def main() -> None:
                     durations.append(repeated_preview.info["duration"])
                     assert repeated_preview.convert("RGB").getpixel((4, 4)) == color
                 assert durations == [360, 180]
-            free_order = page.locator("#native-dialogue-sprite-timeline input")
+            free_order = page.locator(
+                "#native-dialogue-sprite-timeline textarea, "
+                "#native-dialogue-sprite-timeline input")
             free_order.fill("2,3,1")
             expect(sprite_status).to_contain_text("außerhalb des Rasters", timeout=20000)
             expect(sheet_gif).to_have_count(0, timeout=20000)
