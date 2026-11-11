@@ -42,6 +42,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_speaking_template_choices,
                                rename_dialogue_speaking_template,
                                update_dialogue_speaking_template,
+                               load_dialogue_speaking_template_for_editing,
                                delete_dialogue_speaking_template,
                                apply_dialogue_speaking_template,
                                assign_dialogue_direction_speaking_sequence,
@@ -799,7 +800,9 @@ def make_app():
                             "unverändert. **Vorlage aktualisieren** übernimmt "
                             "die Sprechframes aus dem Feld oben in die "
                             "ausgewählte Vorlage, ohne bestehende "
-                            "Dialoganimationen zu verändern.")
+                            "Dialoganimationen zu verändern. **Zum Bearbeiten "
+                            "laden** setzt nur das Sprechframes-Feld und "
+                            "speichert noch nichts im Projekt.")
                 with gr.Row():
                     native_dialogue_template_name = gr.Textbox(
                         label="Name der Sprechfolgenvorlage",
@@ -814,9 +817,13 @@ def make_app():
                     native_dialogue_template_apply = gr.Button(
                         "Vorlage auf gewählte Dialogzeile anwenden",
                         elem_id="native-dialogue-template-apply")
-                native_dialogue_template_update = gr.Button(
-                    "Ausgewählte Vorlage mit Sprechframes aktualisieren",
-                    elem_id="native-dialogue-template-update")
+                with gr.Row():
+                    native_dialogue_template_load = gr.Button(
+                        "Ausgewählte Vorlage zum Bearbeiten laden",
+                        elem_id="native-dialogue-template-load")
+                    native_dialogue_template_update = gr.Button(
+                        "Ausgewählte Vorlage mit Sprechframes aktualisieren",
+                        elem_id="native-dialogue-template-update")
                 with gr.Row():
                     native_dialogue_template_rename = gr.Button(
                         "Ausgewählte Vorlage umbenennen",
@@ -1664,6 +1671,24 @@ def make_app():
              native_dialogue_template_name, native_dialogue_speaking_sequence],
             [native_state, *native_outputs, native_report,
              native_dialogue_template_select, native_dialogue_template_status])
+
+        def load_dialogue_template_for_editing(raw, line, selected):
+            if raw is None:
+                raise gr.Error("Bitte zuerst ein natives Projekt laden")
+            try:
+                sequence = load_dialogue_speaking_template_for_editing(
+                    raw, line, selected)
+            except ValueError as error:
+                raise gr.Error(str(error)) from error
+            return (sequence,
+                    f"Vorlage **{selected}** ins Sprechframes-Feld geladen; "
+                    "noch nicht gespeichert")
+
+        native_dialogue_template_load.click(
+            load_dialogue_template_for_editing,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_template_select],
+            [native_dialogue_speaking_sequence, native_dialogue_template_status])
 
         def refresh_dialogue_template_frames(raw, line, selected, sequence):
             outcome = native_edit(
