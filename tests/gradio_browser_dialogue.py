@@ -800,8 +800,9 @@ def main() -> None:
             page.keyboard.press("Escape")
             select_option(page, "native-dialogue-sprite-block-end",
                           "2 · nach Bild 2 (Zelle 1)")
-            select_option(page, "native-dialogue-sprite-copy-destination",
-                          "3 · nach Bild 3 (Zelle 2)")
+            expect(page.locator("#native-dialogue-sprite-copy-destination input")).to_have_value(
+                "3 · nach Bild 3 (Zelle 2)", timeout=20000)
+            page.keyboard.press("Escape")
             page.locator("#native-dialogue-sprite-relocate-block").click()
             expect(free_order).to_have_value("2,2,1", timeout=20000)
             await_batch_gallery_colors(page, [(55, 205, 115), (55, 205, 115),
