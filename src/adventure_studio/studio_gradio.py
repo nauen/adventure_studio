@@ -223,7 +223,7 @@ def catalog_view(raw: str):
 
 
 _SPEAKING_DRAFT_UNLOAD_GUARD = """<script>
-window.addEventListener('beforeunload', function (event) {
+window.adventureStudioHasUnsavedSpeakingDrafts = function () {
     const field = (id) => document.querySelector(
         '#' + id + ' input, #' + id + ' textarea')?.value ?? '';
     const frames = (value) => value.trim()
@@ -231,7 +231,10 @@ window.addEventListener('beforeunload', function (event) {
     const cached = field('native-dialogue-session-unsaved') === '1';
     const active = frames(field('native-dialogue-speaking-sequence')) !==
         frames(field('native-dialogue-saved-sequence'));
-    if (!cached && !active) return;
+    return cached || active;
+};
+window.addEventListener('beforeunload', function (event) {
+    if (!window.adventureStudioHasUnsavedSpeakingDrafts()) return;
     event.preventDefault();
     event.returnValue = '';
 });

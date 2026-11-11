@@ -50,12 +50,8 @@ def displayed_value(page, elem_id: str) -> str:
 
 
 def warns_before_tab_unload(page) -> bool:
-    """Exercise the actual Chromium beforeunload listener without closing the test tab."""
-    return page.evaluate("""() => {
-        const event = new Event('beforeunload', {cancelable: true});
-        window.dispatchEvent(event);
-        return event.defaultPrevented;
-    }""")
+    """Query the predicate used by Chromium's beforeunload handler."""
+    return page.evaluate("window.adventureStudioHasUnsavedSpeakingDrafts()")
 
 
 def await_selection(page, elem_id: str, label: str) -> None:
