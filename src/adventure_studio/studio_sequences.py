@@ -6,6 +6,7 @@ from dataclasses import replace
 from hashlib import sha1
 from pathlib import Path
 import re
+import tempfile
 import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep,
@@ -535,6 +536,50 @@ def dialogue_png_batch_order(paths: list[str] | tuple[str, ...] | None,
             any(index not in range(len(paths)) for index in indexes)):
         raise ValueError("Die PNG-Reihenfolge passt nicht mehr zur Dateiauswahl; bitte neu auswählen")
     return tuple(paths[index] for index in indexes)
+
+
+def stage_dialogue_png_sprite_sheet(
+        paths: list[str] | tuple[str, ...] | None,
+        order: list[int] | tuple[int, ...] | None,
+        sheet_path: str | None, columns: int | float, rows: int | float
+        ) -> tuple[tuple[str, ...], tuple[int, ...]]:
+    """Append row-major PNG tiles to the staged native batch, preserving exclusions."""
+    from PIL import Image
+
+    if (not isinstance(sheet_path, str) or not sheet_path or
+            Path(sheet_path).suffix.lower() != ".png"):
+        raise ValueError("Bitte ein PNG-Sprite-Sheet auswählen")
+    for label, count in (("Spalten", columns), ("Zeilen", rows)):
+        if (type(count) not in (int, float) or count < 1 or
+                int(count) != count):
+            raise ValueError(f"Sprite-Sheet-{label} müssen positive ganze Zahlen sein")
+    columns, rows = int(columns), int(rows)
+    originals = tuple(paths or ())
+    included_indexes = (tuple(range(len(originals))) if order is None else tuple(order))
+    if originals:
+        dialogue_png_batch_order(originals, order)
+    elif included_indexes:
+        raise ValueError("Die PNG-Reihenfolge passt nicht mehr zur Dateiauswahl")
+    with Image.open(sheet_path) as source:
+        if source.format != "PNG" or getattr(source, "n_frames", 1) != 1:
+            raise ValueError("Das Sprite-Sheet muss ein einzelnes PNG-Bild sein")
+        width, height = source.size
+        if width % columns or height % rows:
+            raise ValueError("Sprite-Sheet-Abmessungen müssen durch Spalten und Zeilen teilbar sein")
+        if width < columns or height < rows:
+            raise ValueError("Die Sprite-Sheet-Zellen müssen mindestens ein Pixel groß sein")
+        cell_width, cell_height = width // columns, height // rows
+        pixels = source.convert("RGBA")
+    destination = Path(tempfile.mkdtemp(prefix="adventure-studio-sprite-sheet-"))
+    tiles = []
+    for row in range(rows):
+        for column in range(columns):
+            tile = destination / f"{Path(sheet_path).stem}_r{row + 1}_c{column + 1}.png"
+            pixels.crop((column * cell_width, row * cell_height,
+                         (column + 1) * cell_width, (row + 1) * cell_height)).save(tile)
+            tiles.append(str(tile))
+    indexes = (*included_indexes, *range(len(originals), len(originals) + len(tiles)))
+    return (*originals, *tiles), indexes
 
 
 def replace_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
