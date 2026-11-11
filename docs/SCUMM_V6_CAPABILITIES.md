@@ -14,6 +14,18 @@ Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
 `tests/test_scumm_reference_contract.py` prüft den Quellenindex auf
 Vollständigkeit gegenüber den 64 IDs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #181, CI-Abnahme bestanden):**
+Der NPC-Sprechfolgeneditor unterscheidet den noch nicht gespeicherten
+Entwurf vom nativen Projektstand der gewählten Dialogzeile und
+Blickrichtung, auch nach Speichern oder Verwerfen. Frame-Reihenfolge
+und Wiederholungen bleiben beim Vergleich relevant. Keine Änderung
+an Projektformat, COST-/Opcode-Ausgabe oder Capability-Status.
+Core-CI zweimal, Chromium-CI zweimal und stock-ScummVM-CI grün
+(Runs `42997451056`, `42997457816`, `42997454461`,
+`42997457721`, `42997457852`). Menschliche UI-Abnahme offen.
+Nächstes Editorpaket: Ungespeicherte Entwürfe bei Zielwechsel
+vor unbeabsichtigtem Verlust schützen.
+
 ## Statusmodell
 
 | Status | Bedeutung |

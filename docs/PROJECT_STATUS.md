@@ -1,8 +1,25 @@
+Warning: truncated output (original token count: 32161)
+Total output lines: 2055
+
 # Adventure Studio – Projektstatus und Chat-Übergabe
 
 Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
+
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der
+NPC-Sprechfolgeneditor zeigt an, ob die aktuelle Framefolge der
+gewählten Dialogzeile und Blickrichtung dem gespeicherten Stand
+entspricht oder ungespeicherte Änderungen enthält. Der Vergleich
+berücksichtigt Reihenfolge und Wiederholungen und wird bei Eingabe,
+Verwerfen, Speichern und Zielwechsel aktualisiert. Der Entwurf wird
+für diese Anzeige nicht persistiert; COST-/SCUMM-v6-Export bleiben
+unverändert. Core-CI zweimal, Chromium-CI zweimal und native
+stock-ScummVM-CI grün (PR #181, Runs `42997451056` /
+`42997457816` / `42997454461` / `42997457721` /
+`42997457852`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Bei einem Dialogzeilen- oder Richtungswechsel
+einen ungespeicherten Entwurf vor unbeabsichtigtem Verlust schützen.
 
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein
 ungespeicherter NPC-Sprechfolgenentwurf kann mit einem eigenen
@@ -947,145 +964,7 @@ Sprechpose ist damit für diesen vierteiligen Actor-Dialog auf Stufe V
 nachgewiesen; vollständiger Lippensync ist **nicht** erreicht.
 **Offen:** übrige Gesamt-CI-Gates, menschliche Gradio-Bedienabnahme.
 **Nächstes Produktpaket:** zeitabhängige Sprechframe-Wechsel je Zeile
-authoren und sichtbar in ScummVM prüfen (D03).
-
-**Neues Produktpaket (2026-11-10, Implementierung):** Im Costume-Editor kann
-der Autor ein importiertes PNG-Frame gezielt für Nord, Ost, Süd oder West
-als Sprechpose setzen. Der bestehende native `gesture`-Slot 24 und
-`talk_start` 16 werden nur in dieser Richtung geändert; die anderen
-Richtungen sowie `stand` 12 und `talk_stop` 20 bleiben erhalten. Beim
-Richtungswechsel erscheint der gespeicherte Frame wieder im Auswahlfeld.
-Ein Modell-/COST-Quelltest und 322 lokale Regressionstests sind grün.
-Ein echter Gradio-Chromium-Test für N/O-Wechsel, Speichern und Reimport
-ist auf Commit `bf35cc2` grün (beide Gradio-Smoke-Jobs, beide Core-Testjobs).
-Die bewusst leere Einzel-PNG-Vorauswahl bei richtungsabhängigen Frames
-wird im Browservertrag berücksichtigt; die Costume-Auswahl bleibt nach
-dem Speichern erhalten.
-**Offen:** native ScummVM-Dreh-/Sprechprobe
-mit vier unterschiedlichen PNG-Frames sowie menschliche UI-Abnahme.
-**Nächstes Produktpaket:** Vier-Richtungs-Sprechposen im generierten Spiel
-durch Drehen und Sprechen sichtbar nachweisen; erst danach D03 weiterführen.
-
-**Aktuelles Browser-Abnahmepaket (2026-11-10, PR in Prüfung):**
-Der native Dialogeditor hat einen realen Chromium-Klicktest erhalten, nicht
-nur einen Gradio-HTTP-Startcheck. Der Browser lädt eine native Projektdatei
-mit zwei unterschiedlichen Sprechposen derselben NPC-Figur, wählt die
-betreffenden Dialogzeilen, sieht die gespeicherten PNG-Frames, ändert die
-Pose über den tatsächlichen Button, exportiert JSON, leert das File-Feld
-und importiert das gespeicherte Projekt erneut. Dabei bleiben die
-zugeordneten Dialog-Cues konsistent. **Nachweis:** GitHub-Gradio-Smoke
-`Click through native NPC dialogue pose editing in real Chrome` grün;
-Screenshots und exportierte JSON als Artefakte. Core-Tests ebenfalls grün.
-**Offen:** menschliche Bedienabnahme und etwaige unabhängige
-Responsive-Layout-Probleme; der Chromium-Workflow ersetzt diese nicht.
-**Nächstes Produktpaket:** direkte visuelle PNG-Pose-Vorschau im
-Dialogeditor, damit Autoren das gewählte Bild ohne Wechsel zum
-Costume-Bereich prüfen können.
-
-**Produktpaket (2026-11-10, PR in Prüfung):** Nach Auswahl einer nativen
-Sprecher-Dialogzeile zeigt der Gradio-Editor die bereits zugewiesene
-PNG-Sprechpose wieder an. Er liest dazu die persistierte Dialog-Cue-Animation
-und löst einen einzelnen, für alle vorhandenen Blickrichtungen eindeutigen
-COST-Frame auf. Mehrteilige/uneindeutige Costume-Animationen werden nicht
-als einzelnes PNG ausgegeben; der Animationsselektor bleibt verfügbar.
-Die ausgewählte Dialogzeile bleibt beim Speichern erhalten und die Editorfelder
-werden aus dem aktualisierten Projekt neu gelesen; veraltete Zeilen werden
-zurückgesetzt. Ein gezielter Roundtrip-/Reassignment-/Mehrframe-Test ist grün.
-**Offen:** vollständige Gradio-CI und interaktive manuelle Bedienabnahme.
-**Nächster Schritt:** Manuelle Bedienabnahme des Gradio-Pfads mit importierten
-PNG-Frames, Zeilenwechsel, Speichern und erneutem Laden.
-
-**Produktpaket (2026-11-10, PR in Prüfung):** Der native NPC-Dialogeditor
-zeigt nun eine direkte 256×256-Bildvorschau der gewählten Sprecher-PNG-Pose.
-Die Vorschau rendert den tatsächlich gespeicherten indizierten Costume-Frame
-mit dessen SCUMM-Palette; sie ist ausdrücklich eine statische Editor-Vorschau,
-keine Simulation des ScummVM-Animations-Timings. Nach Dialogzeilenwechsel,
-Frameauswahl (auch vor dem Zuweisen), Speichern und Projekt-Reimport wird
-die Anzeige aktualisiert oder ohne gültige Auswahl geleert. Ein Pillow-Test
-prüft beide unterschiedlichen Costume-Palettenfarben und die unveränderte
-Dialogzuordnung bei vorläufiger Auswahl. Der reale Chromium-Klicktest
-prüft rote und grüne Bildpixel in der Oberfläche und den gespeicherten
-Roundtrip; Core- und Gradio-CI auf Code-Commit `f940d93` grün.
-**Offen:** PR-Gesamt-CI und menschliche Bedienabnahme.
-**Nächstes Paket:** Die Sprechpose im Dialogeditor bei der Auswahl visuell
-neben dem Actor bzw. der jeweiligen Dialogzeile darstellen, mit
-gezielter Ausrichtung für unterschiedliche Blickrichtungen; weiterhin
-ohne vollständigen Lippensync zu behaupten.
-
-**Aktuelles Produktpaket (2026-11-10, PR in Prüfung):**
-Der NPC-Dialogeditor bietet eine zusätzliche Richtungsvorschau für die
-tatsächlich ausgewählte indizierte Costume-Sprechanimation mit den
-Richtungen **Nord, Ost, Süd, West**. Anders als die vereinfachte
-Ein-PNG-Zuweisung zeigt sie pro Richtung deren eigenen nativen Frame –
-auch wenn die vier Richtungen verschiedene Frames haben. Ein
-unbekannter Richtungszweig, eine native Kommando-Folge oder mehrere
-Frames wird ausdrücklich ohne erfundenes Einzelbild gemeldet.
-Die echte Palettenauflösung bleibt erhalten; die unabhängige
-Vorschaukarte enthält ihre Richtung als Überschrift.
-**Tests:** Eine PNG-Fixture belegt pro Richtung die korrekte Farbe und
-schützt Mehrframe-Fälle vor falscher Anzeige. Ein Gradio-Chromium-Test
-klickt Nord, West und Ost und prüft Status und echte Pixel; Core und
-Browser-Gate auf Code-Commit `981ab80` grün.
-**Offen:** native ScummVM-Spielansicht für *unterschiedliche Richtungsframes*
-(nicht durch den Editor-Screenshot ersetzt), menschliche UI-Abnahme,
-vollständiger Lippensync.
-**Nächstes Produktpaket:** Richtungsabhängige Frames direkt im
-Costume-Editor anlegen und über einen native ScummVM-Dreh-/Sprechtest
-mit allen vier Blickrichtungen verifizieren.
-
-## Nordstern
-
-Ein vollständiger, originaler SCUMM-v6-Generator für klassische
-Point-and-Click-Adventures. Technischer Output: native Ressourcen und
-Bytecode, lauffähig in ScummVM ohne eigene Adventure-Studio-Engine.
-Die kreative Oberfläche soll später auch komplexe, cineastische
-Sequenzen authoren können.
-
-**Aktuelles Produktpaket (2026-11-10, PR #81):** Im Studio lassen sich
-zwei oder mehr Dialogzeilen derselben Figur mit unterschiedlichen importierten
-PNG-Sprechframes versehen. Die erste Pose nutzt die bewährte native
-`gesture`-/`talk_start`-Zuordnung, weitere Posen bekommen stabile
-COST-Animationsslots ab 28. Ein anderer Dialog-Cue bleibt dabei unverändert;
-gleiche Frames werden wiederverwendet und gemeinsam genutzte Costumes geschützt.
-Der Editor-zu-COST-/SCUMM-Quellpfad ist regressionsgetestet. **Native E2E-Abnahme:
-zwei unterscheidbare Posen derselben Figur sichtbar in stock ScummVM**, der
-native Schritt ist auf Commit `eb5ba420` zweimal erfolgreich (GitHub-Actions-Dialogschritt `Play two different PNG speaking poses`). Die früher belegte
-Standpose bleibt als Abschlussprüfung erhalten.
-**Noch offen:** Abschluss der Gesamt-CI und manuelle Gradio-Bedienabnahme.
-**Nächstes Paket:** Sichtbare Auswahl/Rückmeldung der bereits einer Dialogzeile
-zugeordneten PNG-Sprechpose im Gradio-Editor und interaktive Bedienabnahme.
-
-## Aktuelles Produktpaket (2026-11-09)
-
-**Neues Paket – PNG-Sprechpose direkt an der Dialogzeile (PR in Arbeit):**
-Der native Dialogeditor bietet nun die importierten Frames genau der
-gewählten Sprecherfigur an. Eine Aktion erzeugt daraus die nativen
-Talk-Start-/Stop-/Gestenanimationen und bindet die Geste an die Zeile.
-Eine zwischen mehreren Actors geteilte Costume wird dabei nicht still
-überschrieben, sondern mit konkreter Fehlermeldung abgewiesen; der Autor
-muss zuerst eine eigene Costume zuordnen. 319 lokale Tests grün,
-einschließlich des Dialog-zu-PNG-zu-COST-Quellpfads. Die bereits belegte
-stock-ScummVM-Sprechgesten-/Standpose-Semantik bleibt unverändert.
-**Offen:** CI des neuen Pakets und manuelle Gradio-Bedienabnahme.
-**Nächstes Produktpaket:** Mehrere verschiedene Sprechframes je Figur
-und Dialogzeile, ohne die globale native Talk-Start-Costume zu überschreiben.
-
-**Vorheriges Paket – auf `main` integriert:** PR #78 wurde als Commit
-`9fde9e97` mit vollständig grüner CI und nachgewiesener stock-ScummVM-
-Sprechgeste samt Standpose gemergt. Ältere Debugging-Absätze unten
-sind historische Befunde, keine aktuellen Blocker.
-
-**Aktuellster nativer Nachweis (vor Merge):** Der stock-ScummVM-Dialogtest
-hat die rote Sprechgeste mit 256 Pixeln sichtbar gemacht und später
-deren Rückkehr zu 0 Pixeln bestätigt. Nach Anpassung der Bildprobe auf
-sechs *aufeinanderfolgende* Standframes ist der native Gesten-/Standpose-
-Schritt auf Commit `2dc5271` **grün**. Ausschlaggebend waren die
-reservierten COST-Talk-Start-/Stop-Slots 16/20 und ein begrenztes
-Endzustands-Wartefenster; die Geste 24 bleibt als editierbarer Cue
-erhalten. Der Studio-Ein-Klick-Pfad erzeugt jetzt selbst `talk_start`
-(Index 16) aus dem gewählten PNG-Frame und `talk_stop` (Index 20) aus
-der Standpose; der Validator prüft die Übereinstimmung bei aktiviertem
-Reset. 318 lokale Tests grün. **Noch offen:** vollständiger aktueller
+authoren und sichtbar in ScummVM prüfe…2161 tokens truncated…lokale Tests grün. **Noch offen:** vollständiger aktueller
 CI-Lauf und interaktive Gradio-Bedienabnahme. Die folgenden älteren
 Absätze dokumentieren die Fehlersuche, nicht mehr den letzten Status.
 
