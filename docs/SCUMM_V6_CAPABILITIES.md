@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #158, CI-Abnahme bestanden):**
+Ein zusammenhängender Bildblock der Sprite-Sheet-Abspielfolge kann an
+jeder Position einschließlich vor dem ersten Bild und mitten im
+Ausgangsblock kopiert werden. Das Studio validiert Auswahl und
+Zielposition, erhält die Originalsequenz und exportiert die verlängerte
+Folge über den bestehenden nativen COST-Pfad. 334 lokale Tests laut
+PR, Chromium-Pixel-/Import-/Export-Nachweis (Run `42958026815`) und
+stock-ScummVM-Regression (Run `42958026806`, Merge `fea8d462`)
+bestanden. D03 bleibt eine Teilfähigkeit; menschliche UI-Abnahme und
+vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #156, CI-Abnahme bestanden):**
 Ein zusammenhängender Abschnitt der visuellen Sprite-Sheet-Folge lässt
 sich über Startbild und Blockende markieren und gemeinsam nach vorne
