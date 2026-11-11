@@ -14,6 +14,19 @@ Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
 `tests/test_scumm_reference_contract.py` prüft den Quellenindex auf
 Vollständigkeit gegenüber den 64 IDs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #183, CI-Abnahme bestanden):**
+Ein Wechsel der nativen Projektdatei erfordert bei noch offenen
+NPC-Sprechfolgenentwürfen eine ausdrückliche Bestätigung.
+Abbrechen erhält den bestehenden Projekt- und Sitzungsspeicher;
+Bestätigen lädt die neue Datei und setzt den Entwurfsspeicher zurück.
+Kein neuer Opcode, keine Änderung an COST-/Projektformat oder
+Capability-Status. Core-, Chromium- und stock-ScummVM-CI je
+zweimal grün (Runs `43013379811`, `43013386797`,
+`43013379816`, `43013386909`, `43013379961`,
+`43013386770`). Menschliche UI-Abnahme offen.
+Nächstes Editorpaket: Betroffene Dialogzeilen und Blickrichtungen
+im Bestätigungsdialog aufzählen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #182, CI-Abnahme bestanden):**
 Ungespeicherte NPC-Sprechfolgenentwürfe bleiben je Dialogzeile und
 Blickrichtung innerhalb der Editor-Sitzung beim Zielwechsel erhalten.

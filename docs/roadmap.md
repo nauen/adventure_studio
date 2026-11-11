@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Projektwechsel mit ungespeicherten Sprechfolgen absichern
+(CI-Abnahme bestanden):** Beim Dateiimport bleibt das bisherige
+Projekt geladen, wenn mindestens ein NPC-Sprechfolgenentwurf offen
+ist. Eine explizite Bestätigung lädt die neue Datei und verwirft
+die Sitzung; Abbrechen erhält die bisherigen Editoränderungen.
+Ohne offenen Entwurf bleibt der direkte Import erhalten.
+Core-, Chromium- und stock-ScummVM-CI je zweimal grün
+(PR #183, Runs `43013379811` / `43013386797` /
+`43013379816` / `43013386909` / `43013379961` /
+`43013386770`). Menschliche UI-Abnahme offen.
+**Danach:** Vor dem Bestätigen die betroffenen Zeilen/Richtungen
+mit noch ungespeicherten Sprechfolgen anzeigen.
+
 **Sprechfolgenentwürfe bei Zielwechsel behalten (CI-Abnahme
 bestanden):** Bearbeitete NPC-Sprechfolgen werden in der laufenden
 Editor-Sitzung getrennt je Dialogzeile und Blickrichtung gehalten.
