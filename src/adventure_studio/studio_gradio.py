@@ -774,14 +774,14 @@ def make_app():
                                                        choices=[("Keine Startanimation", None)])
                     native_actor_initial_save = gr.Button("Startanimation speichern")
             with gr.Row():
-                native_room = gr.Dropdown(label="Raum")
+                native_room = gr.Dropdown(label="Raum", elem_id="native-room")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             gr.Markdown("**Native Raumverdeckung (ZPxx):** Eine PNG-Maske in exakter Raumgröße importieren. Weiß verdeckt Actors, Schwarz lässt sie sichtbar; transparente Pixel sind frei. Ebene 1 zuerst anlegen, bestehende Ebenen können ersetzt werden. Die Änderung wird erst durch den Projekt-JSON-Export dauerhaft gesichert.")
             with gr.Row():
-                native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath")
-                native_zplane_index = gr.Number(label="Z-Ebene (1–9)", value=1, precision=0)
-                native_zplane_add = gr.Button("Z-Maske ins native Projekt übernehmen")
+                native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-zplane-file")
+                native_zplane_index = gr.Number(label="Z-Ebene (1–9)", value=1, precision=0, elem_id="native-zplane-index")
+                native_zplane_add = gr.Button("Z-Maske ins native Projekt übernehmen", elem_id="native-zplane-add")
             with gr.Row():
                 native_music_file = gr.File(label="Raummusik als MIDI importieren", file_types=[".mid", ".midi"], type="filepath")
                 native_music_id = gr.Textbox(label="Musik-ID", value="RoomTheme")
