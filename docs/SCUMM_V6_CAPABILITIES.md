@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #144, CI-Abnahme bestanden):**
+Die bereits gewählte PNG-Sprite-Sheet-Abspielreihenfolge lässt sich vor
+der nativen COST-Übernahme als Editor-GIF mit einstellbarer Framezeit
+und unveränderten PNG-Zellpixeln abspielen. Die Vorschau hat keine
+Auswirkung auf das Projektmodell oder native ScummVM-Timing. 334 lokale
+Tests, Chromium-Pixel-/Timing-/Import-/JSON-Export-Nachweis (Run
+`42948204777`) und vollständige stock-ScummVM-Regression (Run
+`42948204871`, Merge `648b856`) bestanden. D03 bleibt eine
+Teilfähigkeit; menschliche UI-Abnahme und vollständiger Lippensync
+bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #142, CI-Abnahme bestanden):**
 Die Abspielreihenfolge der ausgewählten Sprite-Sheet-Zellen lässt sich
 in der Schnittvorschau verändern und vor dem nativen COST-Import
