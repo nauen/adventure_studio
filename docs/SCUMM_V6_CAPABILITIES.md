@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #140, CI-Abnahme bestanden):**
+Einzelne Zellen eines PNG-Sprite-Sheets können in der Schnittvorschau
+vorbereitet, ausgeschlossen und wieder aufgenommen werden; nur die
+ausgewählten Rasterzellen gelangen in den nativen COST-Stapelimport.
+Die bestehende atomare Importvorprüfung bleibt maßgeblich. 334 lokale
+Tests, Chromium-Auswahl-/Import-/JSON-Export-Nachweis (Run
+`42944948283`) und vollständige stock-ScummVM-Regression (Run
+`42944948354`, Merge `61d4484`) bestanden. D03 bleibt eine
+Teilfähigkeit; menschliche UI-Abnahme und vollständiger Lippensync
+bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #138, CI-Abnahme bestanden):**
 Die Sprite-Sheet-Raster-/Schnittvorschau zeigt vor dem Hinzufügen
 die exakten Bildzellen und eingezeichneten Grenzen. Sie verwendet
