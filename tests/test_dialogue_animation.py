@@ -416,38 +416,47 @@ class DialogueAnimationTests(unittest.TestCase):
                     end_position=2, destination_position=0)
             context = ("sheet.png", 2, 2, (3, 0), ())
             history = track_dialogue_png_sprite_sheet_undo(None, composed, context)
-            self.assertEqual(history, (context, "", composed, None))
-            earlier, history = undo_dialogue_png_sprite_sheet_edit(history, composed, context)
-            self.assertEqual(earlier, "")
-            self.assertEqual(history[3], composed)
-            with self.assertRaisesRegex(ValueError, "Keine rückgängig"):
-                undo_dialogue_png_sprite_sheet_edit(history, earlier, context)
-            restored, history = redo_dialogue_png_sprite_sheet_edit(history, earlier, context)
-            self.assertEqual(restored, composed)
-            self.assertIsNone(history[3])
+            self.assertEqual(history, (context, ("", composed), 1))
+            history = track_dialogue_png_sprite_sheet_undo(
+                history, "4,4,1,3", context)
+            history = track_dialogue_png_sprite_sheet_undo(
+                history, "4,4,3,1", context)
+            self.assertEqual(history[2], 3)
+            previous, history = undo_dialogue_png_sprite_sheet_edit(
+                history, "4,4,3,1", context)
+            self.assertEqual(previous, "4,4,1,3")
+            previous, history = undo_dialogue_png_sprite_sheet_edit(
+                history, previous, context)
+            self.assertEqual(previous, composed)
+            restored, history = redo_dialogue_png_sprite_sheet_edit(
+                history, previous, context)
+            self.assertEqual(restored, "4,4,1,3")
+            restored, history = redo_dialogue_png_sprite_sheet_edit(
+                history, restored, context)
+            self.assertEqual(restored, "4,4,3,1")
             with self.assertRaisesRegex(ValueError, "Keine wiederherstellbare"):
                 redo_dialogue_png_sprite_sheet_edit(history, restored, context)
-            earlier, history = undo_dialogue_png_sprite_sheet_edit(history, restored, context)
+            previous, history = undo_dialogue_png_sprite_sheet_edit(
+                history, restored, context)
             history = track_dialogue_png_sprite_sheet_undo(
-                history, "4,4,1,3", context)
-            self.assertIsNone(history[3])
+                history, "4,1,3,4", context)
+            self.assertEqual(history[1][-1], "4,1,3,4")
             with self.assertRaisesRegex(ValueError, "Keine wiederherstellbare"):
-                redo_dialogue_png_sprite_sheet_edit(history, "4,4,1,3", context)
-            history = track_dialogue_png_sprite_sheet_undo(history, composed, context)
-            history = track_dialogue_png_sprite_sheet_undo(
-                history, "4,4,1,3", context)
-            previous, _history = undo_dialogue_png_sprite_sheet_edit(
-                history, "4,4,1,3", context)
-            self.assertEqual(previous, composed)
-            self.assertEqual(track_dialogue_png_sprite_sheet_undo(
-                history, "4,4,1,3", ("other.png",))[1:],
-                ("4,4,1,3", "4,4,1,3", None))
+                redo_dialogue_png_sprite_sheet_edit(history, "4,1,3,4", context)
+            changed_context = track_dialogue_png_sprite_sheet_undo(
+                history, "4,1,3,4", ("other.png",))
+            self.assertEqual(changed_context[1:], (("4,1,3,4",), 0))
             with self.assertRaisesRegex(ValueError, "Keine rückgängig"):
                 undo_dialogue_png_sprite_sheet_edit(
-                    history, "4,4,1,3", ("other.png",))
-            with self.assertRaisesRegex(ValueError, "Keine wiederherstellbare"):
-                redo_dialogue_png_sprite_sheet_edit(
-                    history, "4,4,1,3", ("other.png",))
+                    history, "4,1,3,4", ("other.png",))
+            long_history = None
+            for number in range(30):
+                long_history = track_dialogue_png_sprite_sheet_undo(
+                    long_history, f"1,{number}", context)
+            self.assertEqual(len(long_history[1]), 21)
+            self.assertEqual(long_history[2], 20)
+            self.assertEqual(long_history[1][0], "1,9")
+            self.assertEqual(long_history[1][-1], "1,29")
             repeated_block = edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, composed, "repeat_block", 2,
                 end_position=3, destination_position=4, repetitions=2)

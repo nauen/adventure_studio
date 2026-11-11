@@ -689,42 +689,52 @@ def dialogue_png_sprite_sheet_sequence(count: int,
                  for _ in range(counts.get(index, 1)))
 
 
+# Bounded, in-memory editor history; this is not a SCUMM-v6 sequence limit.
+SPRITE_SHEET_UNDO_STEPS = 20
+
+
 def track_dialogue_png_sprite_sheet_undo(
-        history: tuple[tuple[object, ...], str, str, str | None] | None,
+        history: tuple[tuple[object, ...], tuple[str, ...], int] | None,
         timeline: str, context: tuple[object, ...]
-        ) -> tuple[tuple[object, ...], str, str, str | None]:
-    """Keep one undo/redo pair only within the same sheet/grid configuration."""
+        ) -> tuple[tuple[object, ...], tuple[str, ...], int]:
+    """Record each actual edit, discarding redo states on a new branch."""
     if not isinstance(timeline, str):
         raise ValueError("Die Abspielsequenz muss eine Zellnummernliste sein")
     if history is None:
-        return context, "", timeline, None
+        states = ("",) if timeline == "" else ("", timeline)
+        return context, states, len(states) - 1
     if history[0] != context:
-        return context, timeline, timeline, None
-    _, previous, current, redo = history
-    return (context, current, timeline, None) if current != timeline else history
+        return context, (timeline,), 0
+    _, states, index = history
+    if states[index] == timeline:
+        return history
+    updated = (*states[:index + 1], timeline)[-(SPRITE_SHEET_UNDO_STEPS + 1):]
+    return context, updated, len(updated) - 1
 
 
 def undo_dialogue_png_sprite_sheet_edit(
-        history: tuple[tuple[object, ...], str, str, str | None] | None,
+        history: tuple[tuple[object, ...], tuple[str, ...], int] | None,
         timeline: str, context: tuple[object, ...]
-        ) -> tuple[str, tuple[tuple[object, ...], str, str, str | None]]:
-    """Undo one matching change; retain exactly one redo opportunity."""
-    if (history is None or history[0] != context or history[2] != timeline or
-            history[1] == history[2]):
+        ) -> tuple[str, tuple[tuple[object, ...], tuple[str, ...], int]]:
+    """Move backward one state without changing the stored future."""
+    if (history is None or history[0] != context or
+            history[1][history[2]] != timeline or history[2] == 0):
         raise ValueError("Keine rückgängig machbare Änderung der aktuellen Bildfolge")
-    previous = history[1]
-    return previous, (context, previous, previous, history[2])
+    next_index = history[2] - 1
+    return history[1][next_index], (context, history[1], next_index)
 
 
 def redo_dialogue_png_sprite_sheet_edit(
-        history: tuple[tuple[object, ...], str, str, str | None] | None,
+        history: tuple[tuple[object, ...], tuple[str, ...], int] | None,
         timeline: str, context: tuple[object, ...]
-        ) -> tuple[str, tuple[tuple[object, ...], str, str, str | None]]:
-    """Restore a single undone edit, unless another edit/context replaced it."""
-    if (history is None or history[0] != context or history[2] != timeline or
-            history[3] is None):
+        ) -> tuple[str, tuple[tuple[object, ...], tuple[str, ...], int]]:
+    """Move forward one state while no intervening edit changed the branch."""
+    if (history is None or history[0] != context or
+            history[1][history[2]] != timeline or
+            history[2] == len(history[1]) - 1):
         raise ValueError("Keine wiederherstellbare Änderung der aktuellen Bildfolge")
-    return history[3], (context, history[2], history[3], None)
+    next_index = history[2] + 1
+    return history[1][next_index], (context, history[1], next_index)
 
 
 def edit_dialogue_png_sprite_sheet_sequence(

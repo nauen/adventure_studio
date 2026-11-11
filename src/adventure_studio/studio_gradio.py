@@ -874,7 +874,10 @@ def make_app():
                         "Rückgängig gemachte Änderung wiederherstellen",
                         interactive=False, elem_id="native-dialogue-sprite-redo")
                     native_dialogue_sprite_undo_history = gr.State(None)
-                gr.Markdown("Eine eingetragene **freie Abspielsequenz** gilt für Vorschau und Import anstelle der Knopf-Reihenfolge. Jede übernommene Zelle muss mindestens einmal vorkommen; ausgeschlossene Zellen sind nicht erlaubt. Feld leeren, um zur Knopf-Reihenfolge zurückzukehren. Ein neues Raster setzt das Feld zurück. **Rückgängig** nimmt genau die letzte Änderung zurück; **Wiederherstellen** wendet sie erneut an, solange keine neue Bearbeitung, kein anderes Raster oder keine veränderte Zellauswahl dazwischenkommt.")
+                native_dialogue_sprite_history_status = gr.Markdown(
+                    "Bildfolgenverlauf: noch keine Bearbeitung · bis zu 20 Schritte",
+                    elem_id="native-dialogue-sprite-history-status")
+                gr.Markdown("Eine eingetragene **freie Abspielsequenz** gilt für Vorschau und Import anstelle der Knopf-Reihenfolge. Jede übernommene Zelle muss mindestens einmal vorkommen; ausgeschlossene Zellen sind nicht erlaubt. Feld leeren, um zur Knopf-Reihenfolge zurückzukehren. Ein neues Raster setzt das Feld zurück. **Rückgängig** und **Wiederherstellen** durchlaufen bis zu 20 Bearbeitungsschritte. Die Anzeige nennt die aktuelle Position; neue Änderungen verwerfen den Redo-Zweig, und ein Raster- oder Zellauswahlwechsel beendet den alten Verlauf.")
                 with gr.Row():
                     native_dialogue_sprite_position = gr.Dropdown(
                         label="Position in der Abspielsequenz (0 = Anfang)", choices=[],
@@ -1872,6 +1875,13 @@ def make_app():
                     tuple(skipped or ()), tuple(cell_order or ()),
                     tuple(sorted((repeats or {}).items())))
 
+        def png_sheet_history_controls(history):
+            _context, states, index = history
+            return (gr.update(interactive=index > 0),
+                    gr.update(interactive=index < len(states) - 1),
+                    f"Bildfolgenverlauf: Schritt {index} von {len(states) - 1} "
+                    "· maximal 20 Bearbeitungsschritte")
+
         def png_sheet_track_undo(sheet, columns, rows, margin_x, margin_y,
                                  gap_x, gap_y, skipped, cell_order, repeats,
                                  timeline, history):
@@ -1879,8 +1889,7 @@ def make_app():
                 sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                 skipped, cell_order, repeats)
             updated = track_dialogue_png_sprite_sheet_undo(history, timeline, context)
-            return (updated, gr.update(interactive=updated[1] != updated[2]),
-                    gr.update(interactive=updated[3] is not None))
+            return (updated, *png_sheet_history_controls(updated))
 
         native_dialogue_sprite_timeline.change(
             png_sheet_track_undo,
@@ -1891,7 +1900,7 @@ def make_app():
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
              native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
             [native_dialogue_sprite_undo_history, native_dialogue_sprite_undo,
-             native_dialogue_sprite_redo])
+             native_dialogue_sprite_redo, native_dialogue_sprite_history_status])
 
         def png_sheet_undo(sheet, columns, rows, margin_x, margin_y, gap_x,
                            gap_y, skipped, cell_order, repeats, timeline, history):
@@ -1901,8 +1910,7 @@ def make_app():
             try:
                 previous, updated = undo_dialogue_png_sprite_sheet_edit(
                     history, timeline, context)
-                return (previous, updated, gr.update(interactive=False),
-                        gr.update(interactive=True))
+                return (previous, updated, *png_sheet_history_controls(updated))
             except ValueError as error:
                 raise gr.Error(str(error)) from error
 
@@ -1915,7 +1923,8 @@ def make_app():
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
              native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
             [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
-             native_dialogue_sprite_undo, native_dialogue_sprite_redo])
+             native_dialogue_sprite_undo, native_dialogue_sprite_redo,
+             native_dialogue_sprite_history_status])
 
         def png_sheet_redo(sheet, columns, rows, margin_x, margin_y, gap_x,
                            gap_y, skipped, cell_order, repeats, timeline, history):
@@ -1925,8 +1934,7 @@ def make_app():
             try:
                 restored, updated = redo_dialogue_png_sprite_sheet_edit(
                     history, timeline, context)
-                return (restored, updated, gr.update(interactive=True),
-                        gr.update(interactive=False))
+                return (restored, updated, *png_sheet_history_controls(updated))
             except ValueError as error:
                 raise gr.Error(str(error)) from error
 
@@ -1939,7 +1947,8 @@ def make_app():
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
              native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
             [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
-             native_dialogue_sprite_undo, native_dialogue_sprite_redo])
+             native_dialogue_sprite_undo, native_dialogue_sprite_redo,
+             native_dialogue_sprite_history_status])
 
         def png_sheet_select_playback(evt: gr.SelectData):
             if evt is None or type(evt.index) is not int:
