@@ -816,6 +816,13 @@ def make_app():
                 native_dialogue_draft_replace = gr.Button(
                     "Schritt durch gewählten Frame ersetzen",
                     elem_id="native-dialogue-draft-replace")
+            with gr.Row():
+                native_dialogue_draft_insert_before = gr.Button(
+                    "Frame vor Schritt einfügen",
+                    elem_id="native-dialogue-draft-insert-before")
+                native_dialogue_draft_insert_after = gr.Button(
+                    "Frame nach Schritt einfügen",
+                    elem_id="native-dialogue-draft-insert-after")
             native_dialogue_draft_step_preview = gr.Image(
                 label="Ausgewählter Sprechschritt · echte Costume-Pixel vor dem Verschieben",
                 interactive=False, type="pil", height=270,
@@ -1916,7 +1923,9 @@ def make_app():
                                   (native_dialogue_draft_up, "Nach oben"),
                                   (native_dialogue_draft_down, "Nach unten"),
                                   (native_dialogue_draft_remove, "Entfernen"),
-                                  (native_dialogue_draft_replace, "Ersetzen")):
+                                  (native_dialogue_draft_replace, "Ersetzen"),
+                                  (native_dialogue_draft_insert_before, "Davor einfügen"),
+                                  (native_dialogue_draft_insert_after, "Danach einfügen")):
             button.click(
                 lambda raw, line, sequence, frame, step, op=operation:
                     change_speaking_draft(raw, line, sequence, frame, step, op),
