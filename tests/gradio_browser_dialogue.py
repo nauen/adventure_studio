@@ -310,6 +310,12 @@ def main() -> None:
                 "Natives Projekt geladen und validiert", timeout=30000)
             select_option(page, "native-dialogue-template-select", "Begrüßung")
             await_selection(page, "native-dialogue-line", first[0])
+            sequence_input.fill("unfertiger Entwurf")
+            page.locator("#native-dialogue-template-load").click()
+            expect(sequence_input).to_have_value(
+                "Speak, SpeakAlt", timeout=20000)
+            expect(page.locator("#native-dialogue-template-status")).to_contain_text(
+                "noch nicht gespeichert", timeout=20000)
             sequence_input.fill("SpeakAlt, Speak")
             page.locator("#native-dialogue-template-update").click()
             expect(page.locator("#native-dialogue-template-status")).to_contain_text(

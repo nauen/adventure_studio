@@ -1571,6 +1571,24 @@ def save_dialogue_speaking_template(
         SpeakingSequenceTemplate(label, costume.name, sequence))))
 
 
+def load_dialogue_speaking_template_for_editing(
+        raw: str, line_id: str, name: str) -> str:
+    """Read one validated project template into an editable sequence, without saving."""
+    document = parse_document(raw)
+    template = next((item for item in document.speaking_sequence_templates
+                     if item.name == name), None)
+    if template is None:
+        raise ValueError("Bitte eine gespeicherte Sprechfolgenvorlage auswählen")
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte zuerst eine Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    if actor.costume != template.costume:
+        raise ValueError("Die Vorlage gehört zu einer anderen Costume; "
+                         "bitte eine Dialogzeile derselben Costume auswählen")
+    return ", ".join(template.frames)
+
+
 def update_dialogue_speaking_template(
         raw: str, line_id: str, name: str, frame_ids: str) -> str:
     """Replace a persisted template's frames without editing assigned animations."""
