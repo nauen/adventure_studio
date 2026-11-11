@@ -893,6 +893,9 @@ def make_app():
                     native_dialogue_sprite_move_block_down = gr.Button(
                         "Bildblock nach hinten",
                         elem_id="native-dialogue-sprite-move-block-down")
+                    native_dialogue_sprite_remove_block = gr.Button(
+                        "Bildblock entfernen",
+                        elem_id="native-dialogue-sprite-remove-block")
                 with gr.Row():
                     native_dialogue_sprite_copy_destination = gr.Dropdown(
                         label="Bildblock-Kopie einfügen nach Position (0 = Anfang)",
@@ -904,6 +907,7 @@ def make_app():
                 gr.Markdown("**Abspielfolge umordnen:** Ein Bild in der Leiste anklicken und mit den beiden Abspielbild-Knöpfen um genau eine Position verschieben. Auch wiederholte Zellen lassen sich einzeln bewegen.")
                 gr.Markdown("**Bildblock verschieben:** Erstes Bild in der Leiste anklicken, dann das letzte Bild im Feld *Blockende* auswählen. Die beiden Bildblock-Knöpfe verschieben alle Bilder dazwischen gemeinsam um einen Platz.")
                 gr.Markdown("**Bildblock wiederholen:** Startbild und Blockende wählen, danach bei *Bildblock-Kopie einfügen* die Zielposition festlegen. Die ursprünglichen Bilder bleiben erhalten; die Kopie kann auch innerhalb des ursprünglichen Blocks eingefügt werden.")
+                gr.Markdown("**Bildblock entfernen:** Startbild und Blockende wählen, dann *Bildblock entfernen* drücken. Der gesamte Abschnitt wird nur entfernt, wenn jede übernommene Quellzelle mindestens einmal in der verbleibenden Folge vorkommt.")
                 native_dialogue_sprite_playback_frames = gr.Gallery(
                     label="Tatsächliche Abspielfolge · Bild anklicken, um Position zu wählen",
                     columns=6, object_fit="contain", height=190,
@@ -2010,6 +2014,33 @@ def make_app():
                  native_dialogue_sprite_timeline, native_dialogue_sprite_position,
                  native_dialogue_sprite_block_end],
                 [native_dialogue_sprite_timeline])
+
+        def png_sheet_remove_block(sheet, columns, rows, margin_x, margin_y,
+                                   gap_x, gap_y, skipped, cell_order, repeats,
+                                   timeline, position, block_end):
+            try:
+                _overlay, tiles, _description = dialogue_png_sprite_sheet_preview(
+                    sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                    skipped, cell_order, repeats, timeline)
+                return edit_dialogue_png_sprite_sheet_sequence(
+                    len(tiles), skipped, cell_order, repeats, timeline,
+                    "remove_block",
+                    int(position) if isinstance(position, str) and position.isdecimal() else None,
+                    end_position=(int(block_end) if isinstance(block_end, str)
+                                  and block_end.isdecimal() else None))
+            except (ValueError, OSError) as error:
+                raise gr.Error(str(error)) from error
+
+        native_dialogue_sprite_remove_block.click(
+            png_sheet_remove_block,
+            [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+             native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+             native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+             native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+             native_dialogue_sprite_timeline, native_dialogue_sprite_position,
+             native_dialogue_sprite_block_end],
+            [native_dialogue_sprite_timeline])
 
         def png_sheet_copy_block(sheet, columns, rows, margin_x, margin_y,
                                  gap_x, gap_y, skipped, cell_order, repeats,
