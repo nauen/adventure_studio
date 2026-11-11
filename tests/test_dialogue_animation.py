@@ -61,9 +61,34 @@ EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
 
 
 class DialogueAnimationTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Test benötigt Pillow")
     def test_named_speaking_templates_reuse_validated_native_frames(self):
+        from PIL import Image
+
         _story, raw = self.fixture()
+        original = parse_document(raw)
+        costume = replace(original.costumes[0], name="WitnessCostume")
+        actors = tuple(replace(actor, costume="WitnessCostume")
+                       if actor.id == "SpeakerWitness" else actor
+                       for actor in original.actors)
+        room = original.rooms[0]
+        rules = tuple(replace(rule, actor_lines=tuple(
+            (key, "SpeakerWitness") for key, _actor in rule.actor_lines))
+            for rule in room.talk_rules)
+        hotspots = tuple(replace(hotspot, talk_actor_lines=tuple(
+            "SpeakerWitness" for _actor in hotspot.talk_actor_lines))
+            if hotspot.talk_actor_lines else hotspot for hotspot in room.hotspots)
+        raw = canonical_json(replace(
+            original, actors=actors, costumes=(*original.costumes, costume),
+            rooms=(replace(room, talk_rules=rules, hotspots=hotspots),
+                   *original.rooms[1:])))
         first, second = (key for _label, key in dialogue_animation_lines(raw))
+        with tempfile.TemporaryDirectory() as directory:
+            for name, color in (("Speak", (225, 35, 35, 255)),
+                                ("SpeakAlt", (35, 225, 35, 255))):
+                path = Path(directory) / (name + ".png")
+                Image.new("RGBA", (8, 8), color).save(path)
+                raw = add_costume_frame(raw, "WitnessCostume", str(path), name)
         templates = save_dialogue_speaking_template(
             None, raw, first, "Begrüßung", "Speak, SpeakAlt, Speak")
         self.assertEqual(templates["Begrüßung"][1],
@@ -78,7 +103,7 @@ class DialogueAnimationTests(unittest.TestCase):
             raw, second, templates, "Begrüßung")
         self.assertEqual(dialogue_speaking_sequence_selection(copied, second),
                          "Speak, SpeakAlt, Speak")
-        self.assertEqual(dialogue_speaking_sequence_selection(raw, second), "Speak")
+        self.assertEqual(dialogue_speaking_sequence_selection(raw, second), "")
         with self.assertRaisesRegex(ValueError, "gespeicherte"):
             apply_dialogue_speaking_template(raw, second, templates, "Unbekannt")
         isolated = isolate_dialogue_speaker_costume(raw, second)
