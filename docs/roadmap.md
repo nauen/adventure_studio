@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprechframes klickbar zusammenstellen (CI-Abnahme bestanden):**
+Der NPC-Dialogeditor bietet eine Liste verfügbarer Costume-Frames,
+Frame anhängen sowie nummerierte Schritte nach oben/unten bewegen
+oder entfernen. Wiederholungen, leere und beliebig lange Folgen
+werden ohne festes UI-Demolimit verarbeitet. Der Entwurf bleibt
+mit bestehender GIF-Vorschau und Speichern verbunden; kein
+Projekt-Write durch Klickaktionen. Core-/Chromium-CI je zweimal,
+stock-ScummVM-CI grün (PR #174, Merge `94a83464`, Runs
+`42979576693` / `42979576683` / `42979576719`). Menschliche
+UI-Abnahme offen. **Danach:** Gewählten Frame vor dem Hinzufügen
+als echte Costume-Pixelvorschau sichtbar machen.
+
 **Ungespeicherte Sprechfolge animiert prüfen (CI-Abnahme bestanden):**
 Die aktuelle Komma-Liste von NPC-Sprechframes kann direkt vor
 Speichern oder Zuweisen in ein GIF aus echten Costume-Frames
