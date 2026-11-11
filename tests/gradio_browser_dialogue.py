@@ -277,7 +277,7 @@ def main() -> None:
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             page.get_by_text("Sprechfolge als Vorlage für weitere Dialogzeilen",
                              exact=True).click()
-            page.locator("#native-dialogue-template-name input").fill("Begrüßung")
+            page.locator("#native-dialogue-template-name input, #native-dialogue-template-name textarea").fill("Begrüßung")
             page.locator("#native-dialogue-template-save").click()
             expect(page.locator("#native-dialogue-template-status")).to_contain_text(
                 "Begrüßung", timeout=20000)
