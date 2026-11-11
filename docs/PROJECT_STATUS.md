@@ -4,6 +4,24 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Eine zuletzt
+rückgängig gemachte Änderung der freien Dialog-Sprite-Sheet-
+Abspielfolge kann jetzt mit **Rückgängig gemachte Änderung
+wiederherstellen** (Redo) erneut angewendet werden. Redo aktiviert
+wieder Undo; eine neue Bearbeitung verwirft die Redo-Möglichkeit,
+und ein veralteter Sheet-/Raster-/Zellkontext wird abgelehnt.
+Damit kann zwischen zwei Bearbeitungsständen gewechselt werden,
+ohne vorbereitete native COST-Frames oder das Projektmodell zu
+verändern. Core- und Chromium-CI jeweils zweimal grün; Chromium
+prüft Undo→Redo→Undo→neue Bearbeitung, Pixel, neun native
+PNG-Frames, Import und JSON-Export; stock-ScummVM-CI grün
+(PR #163, Merge `0744476c`, Runs `42963555709` /
+`42963555662` / `42963555655`). Menschliche UI-Abnahme
+offen. **Nächstes Paket:** Mehrere aufeinanderfolgende
+Bildfolgenänderungen mit einer begrenzten, klar angezeigten
+Undo-/Redo-Historie durchlaufen können, ohne Raster- oder
+Importzustände zu vermischen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im visuellen
 NPC-Dialog-Sprite-Sheet-Editor kann die letzte Änderung der freien
 Abspielfolge (Einfügen, Entfernen, Verschieben, Blockkopie und
