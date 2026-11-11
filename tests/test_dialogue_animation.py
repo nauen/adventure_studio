@@ -118,6 +118,14 @@ class DialogueAnimationTests(unittest.TestCase):
             dialogue_speaking_draft_step_preview(raw, first, "Speak", 2)
         with self.assertRaisesRegex(ValueError, "Frame-ID"):
             dialogue_speaking_draft_step_preview(raw, first, "Speak, ", 1)
+        copied, selected = edit_dialogue_speaking_draft(
+            raw, first, "Speak, SpeakAlt", "Duplizieren", step_index=0)
+        self.assertEqual((copied, selected), ("Speak, Speak, SpeakAlt", 1))
+        copied, selected = edit_dialogue_speaking_draft(
+            raw, first, copied, "Duplizieren", step_index=2)
+        self.assertEqual((copied, selected), ("Speak, Speak, SpeakAlt, SpeakAlt", 3))
+        with self.assertRaisesRegex(ValueError, "Sprechschritt"):
+            edit_dialogue_speaking_draft(raw, first, "", "Duplizieren", step_index=0)
         inserted, selected = edit_dialogue_speaking_draft(
             raw, first, "Speak, SpeakAlt", "Davor einfügen", "SpeakAlt", 0)
         self.assertEqual((inserted, selected), ("SpeakAlt, Speak, SpeakAlt", 0))
