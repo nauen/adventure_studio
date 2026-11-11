@@ -876,7 +876,15 @@ def make_app():
                     native_dialogue_sprite_reset_timeline = gr.Button(
                         "Freie Folge zurücksetzen",
                         elem_id="native-dialogue-sprite-reset-timeline")
+                with gr.Row():
+                    native_dialogue_sprite_move_position_up = gr.Button(
+                        "Abspielbild nach vorne",
+                        elem_id="native-dialogue-sprite-move-position-up")
+                    native_dialogue_sprite_move_position_down = gr.Button(
+                        "Abspielbild nach hinten",
+                        elem_id="native-dialogue-sprite-move-position-down")
                 gr.Markdown("**Ohne Zellnummern:** Oben eine Quellzelle auswählen, hier die gewünschte Position wählen und einfügen. Position 0 setzt vor das erste Bild; eine Position ab 1 setzt dahinter ein. Entfernen löscht nur zusätzliche Kopien, nicht das letzte Bild einer ausgewählten Zelle.")
+                gr.Markdown("**Abspielfolge umordnen:** Ein Bild in der Leiste anklicken und mit den beiden Abspielbild-Knöpfen um genau eine Position verschieben. Auch wiederholte Zellen lassen sich einzeln bewegen.")
                 native_dialogue_sprite_playback_frames = gr.Gallery(
                     label="Tatsächliche Abspielfolge · Bild anklicken, um Position zu wählen",
                     columns=6, object_fit="contain", height=190,
@@ -1899,6 +1907,37 @@ def make_app():
 
         native_dialogue_sprite_reset_timeline.click(
             lambda: "", outputs=[native_dialogue_sprite_timeline])
+
+        def png_sheet_move_playback(sheet, columns, rows, margin_x, margin_y,
+                                    gap_x, gap_y, skipped, cell_order, repeats,
+                                    timeline, position, step):
+            try:
+                _overlay, tiles, _description = dialogue_png_sprite_sheet_preview(
+                    sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                    skipped, cell_order, repeats, timeline)
+                return edit_dialogue_png_sprite_sheet_sequence(
+                    len(tiles), skipped, cell_order, repeats, timeline, "move",
+                    int(position) if isinstance(position, str) and position.isdecimal() else None,
+                    step=step)
+            except (ValueError, OSError) as error:
+                raise gr.Error(str(error)) from error
+
+        for button, step in ((native_dialogue_sprite_move_position_up, -1),
+                             (native_dialogue_sprite_move_position_down, 1)):
+            button.click(
+                lambda sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                       skipped, cell_order, repeats, timeline, position,
+                       step=step: png_sheet_move_playback(
+                           sheet, columns, rows, margin_x, margin_y, gap_x,
+                           gap_y, skipped, cell_order, repeats, timeline,
+                           position, step),
+                [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+                 native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+                 native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+                 native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+                 native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+                 native_dialogue_sprite_timeline, native_dialogue_sprite_position],
+                [native_dialogue_sprite_timeline])
 
         def png_sheet_play(sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                            skipped, cell_order, repeats, timeline, duration):

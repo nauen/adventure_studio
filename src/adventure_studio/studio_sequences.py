@@ -694,7 +694,7 @@ def edit_dialogue_png_sprite_sheet_sequence(
         cell_order: list[int] | tuple[int, ...] | None,
         repeats: dict[int, int] | None, timeline: str | None,
         action: str, position: int | None = None,
-        source_index: int | None = None) -> str:
+        source_index: int | None = None, step: int | None = None) -> str:
     """Compose a free play sequence using source-cell and position selectors."""
     if action == "reset":
         return ""
@@ -718,6 +718,15 @@ def edit_dialogue_png_sprite_sheet_sequence(
         if sequence.count(index) <= 1:
             raise ValueError("Die letzte Kopie einer ausgewählten Zelle muss erhalten bleiben")
         sequence.pop(position - 1)
+    elif action == "move":
+        if position not in range(1, len(sequence) + 1):
+            raise ValueError("Bitte ein vorhandenes Abspielbild zum Verschieben auswählen")
+        if type(step) is not int or step not in (-1, 1):
+            raise ValueError("Ungültige Richtung für das Verschieben eines Abspielbildes")
+        target = position - 1 + step
+        if target not in range(len(sequence)) or sequence[target] == sequence[position - 1]:
+            return timeline or ""
+        sequence[position - 1], sequence[target] = sequence[target], sequence[position - 1]
     else:
         raise ValueError("Unbekannte Bearbeitung der Sprite-Sheet-Abspielsequenz")
     return ",".join(str(index + 1) for index in sequence)
