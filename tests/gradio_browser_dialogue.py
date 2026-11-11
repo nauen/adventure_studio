@@ -1230,6 +1230,8 @@ def main() -> None:
             saved_before_discard = sequence_input.input_value()
             sequence_input.fill(saved_before_discard + ", Speak")
             page.locator("#native-drafts-refresh").click()
+            expect(page.locator("#native-drafts-status")).to_contain_text(
+                "offene Sprechfolgenentwürfe", timeout=20000)
             select_option(page, "native-drafts-target",
                           f"{first[0]} · Süd ({first[1]})")
             page.locator("#native-drafts-discard-confirm input[type=checkbox]").check()
