@@ -242,6 +242,9 @@ window.addEventListener('beforeunload', function (event) {
 
 
 def make_app():
+    # Gradio 5 resolves callback type annotations in the module namespace.
+    # Keep the dependency optional until the studio is actually started.
+    global gr
     try:
         import gradio as gr
     except ImportError as exc:
