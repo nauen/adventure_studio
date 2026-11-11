@@ -208,6 +208,13 @@ class InteractionSequence:
 
 
 @dataclass(frozen=True)
+class SpeakingSequenceTemplate:
+    name: str
+    costume: str
+    frames: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class GameDocument:
     id: str
     rooms: tuple[RoomAsset, ...]
@@ -222,6 +229,7 @@ class GameDocument:
     default_voice_language: str = "en"
     dialogue_voice_cues: tuple[DialogueVoiceCue, ...] = ()
     dialogue_animation_cues: tuple[DialogueAnimationCue, ...] = ()
+    speaking_sequence_templates: tuple[SpeakingSequenceTemplate, ...] = ()
 
 
 def _only(data: object, allowed: set[str], required: set[str]) -> dict:
@@ -248,6 +256,11 @@ def document_dict(document: GameDocument) -> dict:
     return {
         "format_version": 1,
         "id": document.id,
+        **({"speaking_sequence_templates": [
+            {"name": template.name, "costume": template.costume,
+             "frames": list(template.frames)}
+            for template in document.speaking_sequence_templates]}
+           if document.speaking_sequence_templates else {}),
         **({"costumes": [{
             "name": costume.name,
             "palette": [list(rgb) for rgb in costume.palette],
@@ -431,6 +444,23 @@ def document_dict(document: GameDocument) -> dict:
 
 
 def _validate_document(document: GameDocument) -> None:
+    costume_frames = {costume.name: {frame.id for frame in costume.frames}
+                      for costume in document.costumes}
+    seen_template_names = set()
+    for template in document.speaking_sequence_templates:
+        if (not isinstance(template, SpeakingSequenceTemplate)
+                or not isinstance(template.name, str)
+                or not 1 <= len(template.name.strip()) <= 80
+                or template.name != template.name.strip()
+                or template.name.casefold() in seen_template_names
+                or not isinstance(template.costume, str)
+                or template.costume not in costume_frames
+                or not isinstance(template.frames, tuple) or not template.frames
+                or any(not isinstance(frame, str)
+                       or frame not in costume_frames[template.costume]
+                       for frame in template.frames)):
+            raise ValueError("Invalid or duplicate speaking sequence template")
+        seen_template_names.add(template.name.casefold())
     if (not isinstance(document.default_voice_language, str)
             or not re.fullmatch(r"[a-z]{2}", document.default_voice_language)):
         raise ValueError("Default voice language requires a two-letter code")
@@ -843,7 +873,7 @@ def parse_document(source: str) -> GameDocument:
         root = json.loads(source)
     except json.JSONDecodeError as error:
         raise ValueError("Invalid project JSON") from error
-    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets", "sound_assets", "default_voice_language", "dialogue_voice_cues", "dialogue_animation_cues"},
+    data = _only(root, {"format_version", "id", "rooms", "costumes", "actors", "animation_rules", "animation_input_rules", "animation_triggers", "interaction_sequences", "music_assets", "sound_assets", "default_voice_language", "dialogue_voice_cues", "dialogue_animation_cues", "speaking_sequence_templates"},
                  {"format_version", "id", "rooms"})
     if type(data["format_version"]) is not int or data["format_version"] != 1:
         raise ValueError("Unsupported project format version")
@@ -1241,11 +1271,22 @@ def parse_document(source: str) -> GameDocument:
                                "ending_animation", "ending_animation_ticks"},
                      {"line_id", "source_text", "animation"})
         animation_cues.append(DialogueAnimationCue(**item))
+    raw_templates = data.get("speaking_sequence_templates", [])
+    if not isinstance(raw_templates, list):
+        raise ValueError("Invalid speaking sequence template collection")
+    templates = []
+    for raw_template in raw_templates:
+        item = _only(raw_template, {"name", "costume", "frames"},
+                     {"name", "costume", "frames"})
+        if not isinstance(item["frames"], list):
+            raise ValueError("Invalid speaking sequence template frames")
+        templates.append(SpeakingSequenceTemplate(
+            item["name"], item["costume"], tuple(item["frames"])))
     document = GameDocument(data["id"], tuple(rooms), tuple(costumes), tuple(actors),
                             tuple(animation_rules), tuple(animation_inputs), tuple(animation_triggers),
                             tuple(interaction_sequences), tuple(music_assets), tuple(sound_assets),
                             data.get("default_voice_language", "en"), tuple(voice_cues),
-                            tuple(animation_cues))
+                            tuple(animation_cues), tuple(templates))
     _validate_document(document)
     return document
 
