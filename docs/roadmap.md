@@ -9,8 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Alle offenen NPC-Sprechfolgen gemeinsam speichern
+(Abnahme ausstehend):** Der Editor übernimmt nach ausdrücklicher
+Bestätigung sämtliche offenen Dialogzeilen-/Blickrichtungsentwürfe
+über den bestehenden nativen COST-Speicherpfad. Die Übernahme ist
+atomar: ungültige Frames verhindern den gesamten Wechsel des
+Projektstands. Der Editor markiert danach alle Entwürfe als gespeichert;
+erst der native Projekt-JSON-Export sichert dauerhaft die Datei.
+**Danach:** Core-/Chromium-CI, Merge und manuelle Tab-Abbruchabnahme.
+
 **Einzelnen Sprechfolgenentwurf aus der Übersicht verwerfen
-(Abnahme ausstehend):** Autoren können genau eine Zeile und Richtung
+(PR #189, Core-/Chromium-CI bestanden):** Autoren können genau eine Zeile und Richtung
 markieren und das Verwerfen bewusst bestätigen. Das aktive Eingabefeld
 kehrt ggf. zum gespeicherten Wert zurück, andere Sitzungsentwürfe
 bleiben unverändert. Die Liste wird nach dem Verwerfen aktualisiert.
