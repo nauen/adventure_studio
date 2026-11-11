@@ -584,7 +584,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | R05 | Objektbilder mit mehreren States | A | I (Teil) | T | V (Teil) | N Zustände/Parent-States |
 | R06 | ZPxx-Masken der Raumgrafik | A | I (Teil: Studio-PNG→RoomAsset/JSON→ScummC-BMP/ZPxx) | T (Teil: PNG-Import/Story-Komposition/Binär-/Chromium-Tests) | V (Teil: stock ScummVM Run 43073010730, 350 Actor-Pixel durch authorierte Maske verdeckt) | Mehr-Ebenen-Authoring und allgemeine Engine-Varianten/Grenzen |
 | R07 | Objektbilder mit Z-Masken | A | – | – | – | Writer/Decoder-Fixture |
-| R08 | Walkbox-Polygone und Maskennummern | A (Teil) | I (Teil: RoomAsset/JSON, BOXD) | T (Teil: Box-Writer) | V (Teil: native Fixture) | Frei authorierte Polygone und allgemeine Laufgrenzen |
+| R08 | Walkbox-Polygone und Maskennummern | A (Teil: Studio-Vierpunktbox) | I (Teil: frei authorierte konvexe Box→RoomAsset/JSON→BOXD) | T (Teil: Validierung, Story-Verknüpfung, JSON-Roundtrip, Chromium) | V (Teil: stock ScummVM Run 43079024249, raumweite Box erreicht Fernziel, begrenzte verhindert Übergang, 1.612 Actor-Pixel) | R08.1 für eine konvexe Vierpunkt-Laufgrenze belegt; beliebige Polygone/Mehrboxennetze und R09-Routing offen |
 | R09 | Walkbox-Verbindungen/Wege | A (Teil) | I (Teil: BOXM, Routendaten) | T (Teil: Binär-/Validierungstest) | V (Teil: native Fixture) | Allgemeines Boxennetz mit Spieler-Klickrouten |
 | R10 | Perspektive/SCAL und Box-Skalierung | A | I (Teil: SCAL-Slots und Kurven) | T (Teil: Skalierungs-Probe) | V (Teil: native Vergleichsprobe) | Allgemeine Kurven/Actor-Skalierung und Spielvarianten |
 | R11 | Actor-zu-Actor-Tiefe / Sam-&-Max-Sortierung | A | – | – | – | Sichtreihenfolge in v6 |

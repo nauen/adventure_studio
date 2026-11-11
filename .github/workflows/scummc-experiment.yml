@@ -13,6 +13,7 @@ on:
       - 'src/adventure_studio/scumm_sound_effect_probe.py'
       - 'src/adventure_studio/scumm_voc_fixture.py'
       - 'src/adventure_studio/scumm_launch.py'
+      - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
   push:
     paths:
       - '.github/workflows/scummc-experiment.yml'
@@ -20,6 +21,7 @@ on:
       - 'src/adventure_studio/scumm_binary.py'
       - 'src/adventure_studio/scumm_room_fixture.py'
       - 'src/adventure_studio/scumm_room_visual_probe.py'
+      - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
       - 'src/adventure_studio/scumm_scal_probe.py'
       - 'src/adventure_studio/scumm_camera_probe.py'
       - 'src/adventure_studio/scumm_costume.py'
@@ -470,6 +472,21 @@ jobs:
             /tmp/native-visual-comparison/native-room-visual-comparison.json
             /tmp/native-visual-comparison/*-screenshots/scummvm-end.png
             /tmp/native-visual-comparison/*-screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
+      - name: Verify freely authored BOXD walking boundary in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_walkbox_boundary_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-walkbox-boundary
+      - name: Retain native walkbox boundary evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-walkbox-boundary
+          path: |
+            /tmp/native-walkbox-boundary/native-walkbox-boundary-report.json
+            /tmp/native-walkbox-boundary/*-screenshots/scummvm-end.png
+            /tmp/native-walkbox-boundary/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Measure native SCAL perspective curve at three walking depths
         env:

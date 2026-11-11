@@ -24,10 +24,51 @@ from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render
                             costume_timeline_images, render_costume_preview,
                             render_costume_frame_sequence_preview)
 from .scumm_costume import CostumeAnimation, CostumeDirection
-from .scumm_assets import ZPlane
+from .scumm_assets import Walkbox, ZPlane
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
+
+
+def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str) -> str:
+    """Create or replace one convex native walkbox without inventing box routes."""
+    document = parse_document(raw)
+    room = next((room for room in document.rooms if room.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    if type(index) is not int or not 1 <= index <= 254:
+        raise ValueError("Walkbox-Nummer muss zwischen 1 und 254 liegen")
+    if index > len(room.walkboxes) + 1:
+        raise ValueError("Walkboxen müssen lückenlos ab 1 angelegt werden")
+    if index == len(room.walkboxes) + 1 and room.box_routes:
+        raise ValueError("Neue Walkbox benötigt eine angepasste BOXM-Verbindungsmatrix; bestehende Wege bleiben unverändert")
+    parts = [part.strip() for part in corners_text.split(";")]
+    if len(parts) != 4:
+        raise ValueError("Vier Eckpunkte in der Reihenfolge UL;UR;LR;LL erforderlich")
+    points = []
+    for part in parts:
+        if not re.fullmatch(r"\d+\s*,\s*\d+", part):
+            raise ValueError("Eckpunkte als x,y; x,y; x,y; x,y eingeben")
+        points.append(tuple(int(value.strip()) for value in part.split(",")))
+    width, height = room.geometry.room_width, room.geometry.room_height
+    if any(not 0 <= x < width or not 0 <= y < height for x, y in points):
+        raise ValueError(f"Walkbox-Eckpunkte müssen innerhalb {width} × {height} liegen")
+    turns = []
+    for i in range(4):
+        x1, y1 = points[i]
+        x2, y2 = points[(i + 1) % 4]
+        x3, y3 = points[(i + 2) % 4]
+        turns.append((x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2))
+    if any(turn <= 0 for turn in turns):
+        raise ValueError("Walkbox muss ein nicht entartetes, konvexes Polygon in UL/UR/LR/LL-Reihenfolge sein")
+    boxes = list(room.walkboxes)
+    if index <= len(boxes):
+        boxes[index - 1] = replace(boxes[index - 1], corners=tuple(points))
+    else:
+        boxes.append(Walkbox(tuple(points)))
+    rooms = tuple(replace(item, walkboxes=tuple(boxes)) if item.name == room_name else item
+                  for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
 
 
 def import_room_zplane(raw: str, room_name: str, index: int, png_path: str) -> str:
@@ -2249,10 +2290,15 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
     for room in project.rooms:
         previous = native_by_room.get(room.name)
         zplanes = previous.zplanes if previous is not None else ()
-        if zplanes and (room.geometry.room_width != previous.geometry.room_width or
-                        room.geometry.room_height != previous.geometry.room_height):
-            raise ValueError(f"Raum-Z-Maske für {room.name} passt nicht mehr zur Story-Raumgröße")
-        rooms.append(replace(room, music_id=music_by_room.get(room.name), zplanes=zplanes))
+        if previous is not None and (zplanes or previous.walkboxes) and (
+                room.geometry.room_width != previous.geometry.room_width or
+                room.geometry.room_height != previous.geometry.room_height):
+            raise ValueError(f"Raum-Z-Maske/Walkbox für {room.name} passt nicht mehr zur Story-Raumgröße")
+        rooms.append(replace(room, music_id=music_by_room.get(room.name), zplanes=zplanes,
+                             walkboxes=previous.walkboxes if previous is not None else (),
+                             box_routes=previous.box_routes if previous is not None else (),
+                             scale_slots=previous.scale_slots if previous is not None else None,
+                             scale_curves=previous.scale_curves if previous is not None else ()))
     composed = replace(project, rooms=tuple(rooms),
                        costumes=native.costumes, actors=native.actors,
                        animation_rules=native.animation_rules,

@@ -1309,11 +1309,28 @@ def main() -> None:
                 if room.name == authored_room.name)
             assert exported_room.zplanes[0].pixels[20 * width + 10] == 1
             assert sum(exported_room.zplanes[0].pixels) == 1
+            page.locator("#native-walkbox-corners textarea, #native-walkbox-corners input").fill(
+                "0,70; 110,70; 110,150; 0,150")
+            page.locator("#native-walkbox-add").click()
+            expect(page.locator(
+                "#native-project-report textarea, #native-project-report input"
+            )).to_have_value(re.compile("Walkbox 1.*gespeichert"), timeout=30000)
+            page.locator("#native-project-export-button").click()
+            with page.expect_download() as walkbox_download:
+                sequence_link.first.click()
+            walkbox_project = evidence / "authored-walkbox-project.json"
+            walkbox_download.value.save_as(str(walkbox_project))
+            walkbox_room = next(room for room in parse_document(
+                walkbox_project.read_text(encoding="utf-8")).rooms
+                if room.name == authored_room.name)
+            assert walkbox_room.walkboxes[0].corners == (
+                (0, 70), (110, 70), (110, 150), (0, 150))
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
                 "independent_direction_sequences": True,
                 "authored_native_png_zplane": True,
+                "authored_native_walkbox_polygon": True,
                 "graphical_line_timeline": True,
                 "native_dialogue_phases": True,
                 "native_ending_gesture": True,
