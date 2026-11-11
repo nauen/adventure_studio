@@ -30,6 +30,16 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #179, CI-Abnahme bestanden):**
+Ein ausgewählter nummerierter NPC-Sprechfolgeschritt kann direkt
+hinter sich dupliziert werden; die Frame-ID muss nicht erneut
+ausgewählt werden. Nur der Editorentwurf ändert sich, native
+COST-/SCUMM-v6-Ausgabe und Capability-Status bleiben unverändert.
+Core-/Chromium-CI je zweimal und stock-ScummVM-CI grün
+(Merge `bdf03581`, Runs `42989783006`, `42989782942`,
+`42989783195`). Menschliche UI-Abnahme offen. Nächstes Paket:
+Editorentwurf verwerfen und gespeicherte Folge wiederherstellen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #178, CI-Abnahme bestanden):**
 Der Editor kann einen importierten PNG-Sprechframe unmittelbar vor
 oder nach dem gewählten nummerierten Schritt einfügen. Wiederholte
