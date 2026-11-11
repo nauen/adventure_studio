@@ -49,7 +49,8 @@ from adventure_studio.studio_sequences import (
     dialogue_png_sprite_sheet_order, move_dialogue_png_sprite_sheet_cell)
 from adventure_studio.studio_sequences import (
     dialogue_png_sprite_sheet_sequence, change_dialogue_png_sprite_sheet_repetition,
-    edit_dialogue_png_sprite_sheet_sequence, dialogue_png_sprite_sheet_playback_frames)
+    edit_dialogue_png_sprite_sheet_sequence, dialogue_png_sprite_sheet_playback_frames,
+    track_dialogue_png_sprite_sheet_undo, undo_dialogue_png_sprite_sheet_edit)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -412,6 +413,25 @@ class DialogueAnimationTests(unittest.TestCase):
                 edit_dialogue_png_sprite_sheet_sequence(
                     4, [1], reordered, None, composed, "relocate_block", 3,
                     end_position=2, destination_position=0)
+            context = ("sheet.png", 2, 2, (3, 0), ())
+            history = track_dialogue_png_sprite_sheet_undo(None, composed, context)
+            self.assertEqual(history, (context, "", composed))
+            earlier, history = undo_dialogue_png_sprite_sheet_edit(history, composed, context)
+            self.assertEqual(earlier, "")
+            with self.assertRaisesRegex(ValueError, "Keine rückgängig"):
+                undo_dialogue_png_sprite_sheet_edit(history, earlier, context)
+            history = track_dialogue_png_sprite_sheet_undo(history, composed, context)
+            history = track_dialogue_png_sprite_sheet_undo(
+                history, "4,4,1,3", context)
+            previous, _history = undo_dialogue_png_sprite_sheet_edit(
+                history, "4,4,1,3", context)
+            self.assertEqual(previous, composed)
+            self.assertEqual(track_dialogue_png_sprite_sheet_undo(
+                history, "4,4,1,3", ("other.png",))[1:],
+                ("4,4,1,3", "4,4,1,3"))
+            with self.assertRaisesRegex(ValueError, "Keine rückgängig"):
+                undo_dialogue_png_sprite_sheet_edit(
+                    history, "4,4,1,3", ("other.png",))
             repeated_block = edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, composed, "repeat_block", 2,
                 end_position=3, destination_position=4, repetitions=2)
