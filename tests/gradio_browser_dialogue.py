@@ -862,6 +862,20 @@ def main() -> None:
             expect(free_order).to_have_value("2,2,1,2,2,2,2,2", timeout=20000)
             expect(page.locator("#native-dialogue-sprite-history-status")).to_contain_text(
                 "Schritt", timeout=20000)
+            history_picker = page.locator(
+                "#native-dialogue-sprite-history-position input[role='combobox']")
+            expect(history_picker).to_be_enabled(timeout=20000)
+            history_picker.click()
+            page.get_by_role(
+                "option", name=re.compile(r"Auf 7 Bilder erweitert.*2,2,1,2,2,2,2")
+            ).last.click(timeout=12000)
+            expect(free_order).to_have_value("2,2,1,2,2,2,2", timeout=20000)
+            expect(redo_button).to_be_enabled(timeout=20000)
+            history_picker.click()
+            page.get_by_role(
+                "option", name=re.compile(r"Auf 8 Bilder erweitert.*2,2,1,2,2,2,2,2")
+            ).click(timeout=12000)
+            expect(free_order).to_have_value("2,2,1,2,2,2,2,2", timeout=20000)
             undo_button.click()
             expect(free_order).to_have_value("2,2,1,2,2,2,2", timeout=20000)
             undo_button.click()

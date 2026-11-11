@@ -71,6 +71,8 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                track_dialogue_png_sprite_sheet_undo,
                                undo_dialogue_png_sprite_sheet_edit,
                                redo_dialogue_png_sprite_sheet_edit,
+                               dialogue_png_sprite_sheet_history_choices,
+                               jump_dialogue_png_sprite_sheet_history,
                                change_dialogue_png_sprite_sheet_repetition,
                                move_dialogue_png_sprite_sheet_cell,
                                dialogue_costume_isolation_preview,
@@ -877,7 +879,11 @@ def make_app():
                 native_dialogue_sprite_history_status = gr.Markdown(
                     "Bildfolgenverlauf: noch keine Bearbeitung · bis zu 20 Schritte",
                     elem_id="native-dialogue-sprite-history-status")
-                gr.Markdown("Eine eingetragene **freie Abspielsequenz** gilt für Vorschau und Import anstelle der Knopf-Reihenfolge. Jede übernommene Zelle muss mindestens einmal vorkommen; ausgeschlossene Zellen sind nicht erlaubt. Feld leeren, um zur Knopf-Reihenfolge zurückzukehren. Ein neues Raster setzt das Feld zurück. **Rückgängig** und **Wiederherstellen** durchlaufen bis zu 20 Bearbeitungsschritte. Die Anzeige nennt die aktuelle Position; neue Änderungen verwerfen den Redo-Zweig, und ein Raster- oder Zellauswahlwechsel beendet den alten Verlauf.")
+                native_dialogue_sprite_history_position = gr.Dropdown(
+                    label="Bildfolgenverlauf: Bearbeitungsstand direkt auswählen",
+                    choices=[], interactive=False,
+                    elem_id="native-dialogue-sprite-history-position")
+                gr.Markdown("Eine eingetragene **freie Abspielsequenz** gilt für Vorschau und Import anstelle der Knopf-Reihenfolge. Jede übernommene Zelle muss mindestens einmal vorkommen; ausgeschlossene Zellen sind nicht erlaubt. Feld leeren, um zur Knopf-Reihenfolge zurückzukehren. Ein neues Raster setzt das Feld zurück. **Rückgängig** und **Wiederherstellen** durchlaufen bis zu 20 Bearbeitungsschritte. Über **Bildfolgenverlauf** kann ein Stand direkt ausgewählt werden; die Einträge benennen die Änderung anhand der Bildanzahl. Neue Änderungen verwerfen den Redo-Zweig, und ein Raster- oder Zellauswahlwechsel beendet den alten Verlauf.")
                 with gr.Row():
                     native_dialogue_sprite_position = gr.Dropdown(
                         label="Position in der Abspielsequenz (0 = Anfang)", choices=[],
@@ -1880,7 +1886,10 @@ def make_app():
             return (gr.update(interactive=index > 0),
                     gr.update(interactive=index < len(states) - 1),
                     f"Bildfolgenverlauf: Schritt {index} von {len(states) - 1} "
-                    "· maximal 20 Bearbeitungsschritte")
+                    "· maximal 20 Bearbeitungsschritte",
+                    gr.update(
+                        choices=dialogue_png_sprite_sheet_history_choices(history),
+                        value=index, interactive=len(states) > 1))
 
         def png_sheet_track_undo(sheet, columns, rows, margin_x, margin_y,
                                  gap_x, gap_y, skipped, cell_order, repeats,
@@ -1900,7 +1909,8 @@ def make_app():
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
              native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
             [native_dialogue_sprite_undo_history, native_dialogue_sprite_undo,
-             native_dialogue_sprite_redo, native_dialogue_sprite_history_status])
+             native_dialogue_sprite_redo, native_dialogue_sprite_history_status,
+             native_dialogue_sprite_history_position])
 
         def png_sheet_undo(sheet, columns, rows, margin_x, margin_y, gap_x,
                            gap_y, skipped, cell_order, repeats, timeline, history):
@@ -1924,7 +1934,8 @@ def make_app():
              native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
             [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
              native_dialogue_sprite_undo, native_dialogue_sprite_redo,
-             native_dialogue_sprite_history_status])
+             native_dialogue_sprite_history_status,
+             native_dialogue_sprite_history_position])
 
         def png_sheet_redo(sheet, columns, rows, margin_x, margin_y, gap_x,
                            gap_y, skipped, cell_order, repeats, timeline, history):
@@ -1948,7 +1959,35 @@ def make_app():
              native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
             [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
              native_dialogue_sprite_undo, native_dialogue_sprite_redo,
-             native_dialogue_sprite_history_status])
+             native_dialogue_sprite_history_status,
+             native_dialogue_sprite_history_position])
+
+        def png_sheet_jump_history(sheet, columns, rows, margin_x, margin_y,
+                                   gap_x, gap_y, skipped, cell_order, repeats,
+                                   timeline, history, position):
+            context = png_sheet_undo_context(
+                sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                skipped, cell_order, repeats)
+            try:
+                restored, updated = jump_dialogue_png_sprite_sheet_history(
+                    history, timeline, context, position)
+                return (restored, updated, *png_sheet_history_controls(updated))
+            except ValueError as error:
+                raise gr.Error(str(error)) from error
+
+        native_dialogue_sprite_history_position.input(
+            png_sheet_jump_history,
+            [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+             native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+             native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+             native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+             native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
+             native_dialogue_sprite_history_position],
+            [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
+             native_dialogue_sprite_undo, native_dialogue_sprite_redo,
+             native_dialogue_sprite_history_status,
+             native_dialogue_sprite_history_position])
 
         def png_sheet_select_playback(evt: gr.SelectData):
             if evt is None or type(evt.index) is not int:

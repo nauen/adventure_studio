@@ -737,6 +737,47 @@ def redo_dialogue_png_sprite_sheet_edit(
     return history[1][next_index], (context, history[1], next_index)
 
 
+
+def dialogue_png_sprite_sheet_history_choices(
+        history: tuple[tuple[object, ...], tuple[str, ...], int] | None
+        ) -> list[tuple[str, int]]:
+    """Give every reachable history state a readable, factual description."""
+    if history is None:
+        return []
+    states = history[1]
+    choices = []
+    for index, timeline in enumerate(states):
+        count = len([cell for cell in timeline.split(",") if cell.strip()])
+        if index == 0:
+            label = "Ausgangsstand" if len(states) <= 1 or timeline == "" else "Ältester Stand"
+        else:
+            previous_count = len([cell for cell in states[index - 1].split(",")
+                                  if cell.strip()])
+            if count > previous_count:
+                label = f"Auf {count} Bilder erweitert"
+            elif count < previous_count:
+                label = f"Auf {count} Bilder gekürzt"
+            else:
+                label = f"Folge mit {count} Bildern geändert"
+        preview = timeline if len(timeline) <= 32 else timeline[:29] + "…"
+        choices.append((f"Schritt {index}: {label} · {preview or '(Knopf-Reihenfolge)'}",
+                        index))
+    return choices
+
+
+def jump_dialogue_png_sprite_sheet_history(
+        history: tuple[tuple[object, ...], tuple[str, ...], int] | None,
+        timeline: str, context: tuple[object, ...], position: int
+        ) -> tuple[str, tuple[tuple[object, ...], tuple[str, ...], int]]:
+    """Navigate to an existing state without inventing a new history entry."""
+    if (history is None or history[0] != context or
+            history[1][history[2]] != timeline):
+        raise ValueError("Der Bildfolgenverlauf passt nicht zum aktuellen Editorzustand")
+    if type(position) is not int or not 0 <= position < len(history[1]):
+        raise ValueError("Diese Bildfolgen-Historienposition ist nicht verfügbar")
+    return history[1][position], (context, history[1], position)
+
+
 def edit_dialogue_png_sprite_sheet_sequence(
         count: int, skipped: list[int] | tuple[int, ...] | None,
         cell_order: list[int] | tuple[int, ...] | None,
