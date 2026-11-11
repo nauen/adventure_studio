@@ -40,7 +40,9 @@ from adventure_studio.studio_sequences import (
     dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview,
     dialogue_png_batch_preflight, dialogue_png_batch_image_diagnostics,
     dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame)
-from adventure_studio.studio_sequences import replace_dialogue_png_batch_frame
+from adventure_studio.studio_sequences import (
+    replace_dialogue_png_batch_frame, set_dialogue_png_batch_frame_id,
+    dialogue_png_batch_selected_frame_id, dialogue_png_batch_entries)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -161,6 +163,50 @@ class DialogueAnimationTests(unittest.TestCase):
                 raw, first, "W", replaced, "Sprechfolge", order=(2, 1))
             self.assertEqual(dialogue_speaking_sequence_selection(imported_repair, first, "W"),
                              "Pose, Frame_04_repaired, Frame_02_green")
+            overrides = set_dialogue_png_batch_frame_id(
+                replaced, (2, 1), 0, "CustomGesture")
+            self.assertEqual(overrides, {2: "CustomGesture"})
+            self.assertEqual(dialogue_png_batch_selected_frame_id(
+                replaced, (1, 2), 1, overrides), "CustomGesture")
+            self.assertEqual(dialogue_png_batch_entries(replaced, (2, 1), overrides),
+                             ((str(replacement), "CustomGesture"), (paths[1], "Frame_02_green")))
+            self.assertIn("1. 04-repaired.png → CustomGesture",
+                          dialogue_png_batch_preview(raw, first, replaced, (2, 1), overrides))
+            self.assertEqual(dialogue_png_batch_thumbnails(replaced, (2, 1), overrides)[0],
+                             (str(replacement), "1. CustomGesture"))
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", replaced, "Sprechfolge", order=(2, 1), frame_ids=overrides)[0])
+            native_override = import_dialogue_png_batch(
+                raw, first, "W", replaced, "Sprechfolge", order=(2, 1), frame_ids=overrides)
+            self.assertEqual(dialogue_speaking_sequence_selection(native_override, first, "W"),
+                             "Pose, CustomGesture, Frame_02_green")
+            export_document(parse_document(native_override), root / "custom-id-native")
+            override_costume = next(actor.costume for actor in parse_document(native_override).actors
+                                    if actor.id == "SpeakerHarborKeeper")
+            self.assertIn("body(Pose, CustomGesture, Frame_02_green)",
+                          (root / "custom-id-native" / f"{override_costume}.scost").read_text())
+            collision = set_dialogue_png_batch_frame_id(
+                [paths[0], paths[0]], None, 1, "UniqueCopy")
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", [paths[0], paths[0]], "Sprechfolge", frame_ids=collision)[0])
+            with self.assertRaisesRegex(ValueError, "Ungültige native Frame-ID"):
+                set_dialogue_png_batch_frame_id(replaced, (2, 1), 0, "3 invalid")
+            conflicting = set_dialogue_png_batch_frame_id(
+                replaced, (2, 1), 0, "Frame_02_green")
+            self.assertFalse(dialogue_png_batch_preflight(
+                raw, first, "W", replaced, "Sprechfolge",
+                order=(2, 1), frame_ids=conflicting)[0])
+            multiple_duplicates = [paths[0], paths[0], paths[0]]
+            partially_repaired = set_dialogue_png_batch_frame_id(
+                multiple_duplicates, None, 1, "UniqueMiddle")
+            self.assertFalse(dialogue_png_batch_preflight(
+                raw, first, "W", multiple_duplicates, "Sprechfolge",
+                frame_ids=partially_repaired)[0])
+            fully_repaired = set_dialogue_png_batch_frame_id(
+                multiple_duplicates, None, 2, "UniqueLast", partially_repaired)
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", multiple_duplicates, "Sprechfolge",
+                frame_ids=fully_repaired)[0])
             with self.assertRaisesRegex(ValueError, "zuerst ein PNG"):
                 replace_dialogue_png_batch_frame(paths, (2, 1), None, str(replacement))
             with self.assertRaisesRegex(ValueError, "Ersatz"):

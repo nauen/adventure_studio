@@ -545,6 +545,16 @@ def main() -> None:
             expect(page.get_by_text("Bild 2 von 2 · Batch_Repaired · noch nicht importiert")).to_be_visible(timeout=20000)
             await_batch_frame_color(page, (35, 205, 165))
             expect(image_issues).to_have_value("Keine bildbezogenen Konflikte erkannt", timeout=20000)
+            custom_id = page.locator(
+                "#native-dialogue-png-batch-id textarea, #native-dialogue-png-batch-id input")
+            expect(custom_id).to_have_value("Batch_Repaired", timeout=20000)
+            custom_id.fill("CustomEnding")
+            page.locator("#native-dialogue-png-batch-set-id").click()
+            expect(batch_preview).to_have_value(
+                re.compile(r"1\. Batch-B\.png → Batch_B\s*2\. Batch-Repaired\.png → CustomEnding\s*$"),
+                timeout=20000)
+            expect(page.get_by_text("Bild 2 von 2 · CustomEnding · noch nicht importiert")).to_be_visible(timeout=20000)
+            await_batch_gallery_colors(page, [(225, 110, 40), (35, 205, 165)])
             expect(readiness).to_contain_text("Importbereit: 2 PNG-Frame(s)", timeout=20000)
             batch_import.click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
@@ -564,7 +574,7 @@ def main() -> None:
             batch_document = parse_document(batch_file.read_text(encoding="utf-8"))
             batch_raw = batch_file.read_text(encoding="utf-8")
             last_two = dialogue_ending_timeline(batch_raw, first[1], "N")[1][-2:]
-            assert last_two == (("5. Batch_B", 4), ("6. Batch_Repaired", 5))
+            assert last_two == (("5. Batch_B", 4), ("6. CustomEnding", 5))
             assert "Batch_A" not in batch_raw
             assert "Batch_Excluded" not in batch_raw
             assert next(actor for actor in batch_document.actors
@@ -590,6 +600,7 @@ def main() -> None:
                 "staged_png_import_preflight": True,
                 "staged_png_per_image_conflict_labels": True,
                 "replaced_selected_staged_png_without_reupload": True,
+                "edited_staged_native_frame_id_without_file_rename": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
