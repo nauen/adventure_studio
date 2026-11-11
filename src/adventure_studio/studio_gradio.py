@@ -2004,7 +2004,7 @@ def make_app():
                 status += " · Entwurf bleibt bei Zeilen- und Richtungswechsel in dieser Sitzung erhalten."
             return status
 
-        native_dialogue_speaking_sequence.change(
+        native_dialogue_speaking_sequence.input(
             speaking_draft_session_status,
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
