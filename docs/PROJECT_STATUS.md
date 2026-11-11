@@ -7,26 +7,37 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Neues Produktpaket (2026-11-11, Abnahme ausstehend):** In der
+**Neues Produktpaket (2026-11-11, Abnahme ausstehend):** Autoren können
+alle offenen NPC-Sprechfolgenentwürfe nach ausdrücklicher Bestätigung
+gemeinsam in das native Projekt übernehmen. Dialogzeile und Blickrichtung
+bleiben getrennt; die native Speicher-/Validierungsroutine wird je Ziel
+angewendet. Scheitert ein Entwurf, wird kein Teilstand übernommen.
+Die Übersicht wird geleert und der Editor zeigt die gespeicherte Folge;
+für dauerhafte Sicherung ist weiterhin der Projekt-JSON-Export nötig.
+**Nächstes Gate:** Core-/Chromium-CI und Merge; die manuelle
+Tab-Abbruchabnahme aus PR #187 bleibt offen.
+
+**Produktpaket (2026-11-11, PR #189, Core-/Chromium-CI bestanden):** In der
 Übersicht ungespeicherter NPC-Sprechfolgen kann ein ausgewählter
 Entwurf nach bewusster Bestätigung einzeln verworfen werden. Andere
 Sitzungsentwürfe bleiben erhalten; betrifft die Wahl die aktive
 Dialogzeile/Richtung, zeigt der Editor wieder die gespeicherte Folge.
 Ein inzwischen gespeicherter oder ungültiger Listeneintrag wird
 abgewiesen. Keine Änderung an Projektformat, COST oder SCUMM-v6-Export.
-**Nächstes Gate:** echter Chromium-Nutzerpfad und Core-CI; die manuelle
-Browser-Tab-Abbruchabnahme aus PR #187 bleibt offen.
+Core-CI Run `43062376826` und Chromium-CI Run `43062376847` grün.
+Die native Gameplay-CI lief für die editorseitige Abnahme separat.
+Die manuelle Browser-Tab-Abbruchabnahme aus PR #187 bleibt offen.
 
-**Neues Produktpaket (2026-11-11, Abnahme ausstehend):** Der native
+**Produktpaket (2026-11-11, PR #188, Core-/Chromium-CI bestanden):** Der native
 NPC-Dialogeditor bietet eine eigenständige Liste offener
 Sprechfolgenentwürfe. Autoren können sie ohne Projektdateiwechsel
 aktualisieren, nach Dialogzeile und Blickrichtung auswählen und mit
 zugehörigem Sitzungstext sowie Costume-Vorschau wieder öffnen.
 Das Öffnen speichert nicht. Die vorhandene Prüfung verhindert, dass
 inzwischen gespeicherte Ziele irrtümlich geöffnet werden. Projektformat,
-COST und SCUMM-v6-Export bleiben unverändert. **Offen:** Chromium-Abnahme
-des neuen Nutzerpfads, menschliche Prüfung des Tab-Verlassen-Abbruchs
-aus PR #187; danach nächstes nutzbares Produktpaket wählen.
+COST und SCUMM-v6-Export bleiben unverändert. Core-CI Run
+`43052463816` und Chromium-CI Run `43052463728` grün.
+Die menschliche Prüfung des Tab-Verlassen-Abbruchs aus PR #187 bleibt offen.
 
 **Produktpaket (2026-11-11, PR #187, CI-Abnahme bestanden):**
 Die Gradio-6-Studiooberfläche warnt beim Browser-Tab-Verlassen bzw.
