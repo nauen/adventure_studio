@@ -30,6 +30,16 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #136, CI-Abnahme bestanden):**
+Für den vorbereiteten Sprite-Sheet-Import können horizontale und
+vertikale Außenränder und Zellabstände unabhängig festgelegt werden;
+Frame-Ausschnitte sind ohne Skalierung und Randpixel im bestehenden
+nativen COST-Pfad nutzbar. 334 lokale Tests, realer Chromium-Pixel-/
+Import-/JSON-Export-Nachweis (Run `42942425274`) und vollständige
+stock-ScummVM-Regression (Run `42942425281`, Merge `396b9e8`)
+bestanden. D03 bleibt eine Teilfähigkeit; menschliche UI-Abnahme und
+vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #134, CI-Abnahme bestanden):**
 Ein PNG-Sprite-Sheet mit frei angegebenem Spalten-/Zeilenraster lässt
 sich im NPC-Dialogeditor in separate native Animationsframes zerlegen,

@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprite-Sheets mit Außenrändern und Zellabständen (CI-Abnahme bestanden):**
+Der Studio-Import akzeptiert separate X/Y-Außenränder und X/Y-
+Zellabstände als Pixelparameter. Ein exaktes Raster ohne Skalierung
+und ohne Bildverlust in den ausgewählten Zellen ist Voraussetzung;
+ungültige Größen werden abgelehnt, `0` erhält die bisherige Variante.
+334 lokale Tests und Core-/Chromium-/stock-ScummVM-CI grün; der
+Browser bestätigt 2 px Rand, 4 px Lücke, korrekte Pixel und nativen
+COST-Import samt JSON-Export (PR #136, Merge `396b9e8`, Runs
+`42942425436` / `42942425274` / `42942425281`). Menschliche
+UI-Abnahme offen. Danach: sichtbare Raster- und Schnittvorschau
+vor dem Aufteilen des Sheets.
+
 **PNG-Sprite-Sheet als native Animationsfolge (CI-Abnahme bestanden):**
 Der NPC-Dialogeditor teilt ein Raster-PNG ohne Änderung der Pixelgröße
 und Transparenz zeilenweise in mehrere separate Importbilder auf und
