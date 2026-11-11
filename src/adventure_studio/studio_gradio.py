@@ -1395,11 +1395,12 @@ def make_app():
                           native_target, native_sequence, native_step, native_steps,
                           native_costume_select, native_actor_list, native_costume_summary,
                           native_actor_initial]
-        native_file.change(native_load, [native_file], [native_state, native_linked,
-                                                       *native_outputs, native_report])
-        native_file.change(
-            lambda: {"target": None, "drafts": {}},
-            outputs=[native_dialogue_draft_session], show_progress="hidden")
+        def native_load_with_drafts(path):
+            return (*native_load(path), {"target": None, "drafts": {}})
+
+        native_file.change(native_load_with_drafts, [native_file],
+                           [native_state, native_linked, *native_outputs,
+                            native_report, native_dialogue_draft_session])
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])
         native_music_add.click(native_music_import,
