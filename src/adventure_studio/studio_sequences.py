@@ -72,6 +72,24 @@ def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str)
 
 
 
+
+def author_room_walkbox_zplane(raw: str, room_name: str, box_index: int, zplane_index: int) -> str:
+    """Assign a native room ZPxx layer to an existing walkbox, without changing routes."""
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    if type(box_index) is not int or not 1 <= box_index <= len(room.walkboxes):
+        raise ValueError("Eine vorhandene Walkbox-Nummer wählen")
+    if type(zplane_index) is not int or not 0 <= zplane_index <= len(room.zplanes):
+        raise ValueError("Z-Ebene muss 0 oder eine vorhandene PNG-Z-Maske sein")
+    boxes = list(room.walkboxes)
+    boxes[box_index - 1] = replace(boxes[box_index - 1], mask=zplane_index)
+    rooms = tuple(replace(item, walkboxes=tuple(boxes)) if item.name == room_name else item
+                  for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
+
+
 def author_room_box_connections(raw: str, room_name: str, connections: str) -> str:
     """Author touching box links and deterministic shortest-hop native BOXM routes.
 
