@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #165, CI-Abnahme bestanden):**
+Die NPC-Dialog-Sprite-Sheet-Historie bietet jetzt beschriftete
+Bearbeitungsstände und direkte Auswahl jedes verfügbaren Schritts.
+Stale Sheet-/Raster-/Zellkontexte und ungültige Auswahlpositionen
+werden abgelehnt. Dies ändert keine native COST-/SCUMM-v6-Fähigkeit
+oder Matrixbewertung. Core-/Chromium-CI je zweimal und stock-
+ScummVM-CI grün (Merge `039f22ad`; Runs `42966089591`,
+`42966116983`, `42966089618`, `42966117054`, `42966117068`).
+Menschliche UI-Abnahme offen. Nächste Editor-Funktion:
+benannte Bildfolgenvorlagen zwischen NPC-Dialogzeilen wiederverwenden.
+
 **D03 – aktuelle Editor-Ergänzung (PR #164, CI-Abnahme bestanden):**
 Im visuellen Dialog-Sprite-Sheet-Editor sind jetzt bis zu 20
 aufeinanderfolgende Änderungen der Abspielfolge rückgängig machbar
