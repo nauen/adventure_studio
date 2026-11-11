@@ -49,7 +49,9 @@ def main() -> None:
                                              timeout=30000)
                 for index, image in ((1, first), (2, second)):
                     page.locator("#native-zplane-index input").fill(str(index))
-                    page.locator("#native-zplane-file input[type=file]").set_input_files(str(image))
+                    with page.expect_file_chooser() as file_chooser:
+                        page.locator("#native-zplane-file").click()
+                    file_chooser.value.set_files(str(image))
                     page.locator("#native-zplane-add").click()
                     expect(report).to_have_value(re.compile(fr"Z-Ebene {index}.*gespeichert"),
                                                  timeout=30000)
