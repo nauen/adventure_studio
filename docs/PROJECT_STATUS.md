@@ -4,14 +4,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
-**Produktpaket in Prüfung (2026-11-11):** Ein Klick auf ein Miniaturbild
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein Klick auf ein Miniaturbild
 in der vorbereiteten PNG-Importgalerie wählt unmittelbar genau dieses
 Frame. Einzelbildvorschau, Positions-/Frame-ID-Anzeige, Dropdown und
 Vorwärts-/Rückwärtsnavigation verwenden dieselbe Auswahl. Der
 Auswahlwert bleibt an die aktuellen Dropdown-Optionen gebunden;
 Projekt-JSON und COST-Export
-bleiben unverändert. 334 lokale Tests grün; Chromium- und native
-CI-Abnahme sowie menschliche Bedienabnahme offen. **Nächstes Paket:**
+bleiben unverändert. 334 lokale Tests und Core-/Chromium-CI grün;
+ein echter Miniaturklick zeigt den erwarteten PNG-Pixelwert und die
+Frame-ID, die übrigen Sortier-/Exportpfade bleiben grün. Die bestehende
+native ScummVM-Regression bestand auf dem ersten PR-Commit, spätere
+Korrekturen änderten nur die Gradio-Auswahlbindung und den Browsertest
+(PR #120, Merge `6e9db6d`, Runs `42929768607` / `42929768636` /
+`42927794343`). Menschliche Bedienabnahme offen. **Nächstes Paket:**
 Importhindernisse (insbesondere doppelte Frame-IDs und Palette) bereits
 vor dem Importklick in der Vorschau benennen.
 

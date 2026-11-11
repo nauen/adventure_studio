@@ -9,13 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Miniaturklick als direkte Frame-Navigation (in Prüfung):**
+**Miniaturklick als direkte Frame-Navigation (CI-Abnahme bestanden):**
 Ein beliebiges Bild der vorbereiteten Importfolge lässt sich durch
 Klick auf seine Galerie-Karte direkt auswählen. Die bestehende
 Einzelbildansicht zeigt die echten PNG-Pixel, Position und geplante
 native ID. Keine Änderung am Importformat; die Auswahl bleibt an
-die aktuellen Galerie-/Dropdown-Einträge gebunden. 334 lokale Tests grün, Browser-/CI-Gates
-ausstehend. Anschließend: präventive Importfehleranzeige für die
+die aktuellen Galerie-/Dropdown-Einträge gebunden. 334 lokale Tests
+und Core-/Chromium-CI grün, einschließlich echtem Pixel- und
+Export/Reimport-Nachweis. Die bestehende native Regression war auf dem
+ersten PR-Commit grün, danach nur UI-Ereignisbindung und Browsertest
+angepasst (PR #120, Merge `6e9db6d`, Runs `42929768607` /
+`42929768636` / `42927794343`). Menschliche UI-Abnahme offen.
+Anschließend: präventive Importfehleranzeige für die
 vorbereitete Sequenz.
 
 **Einzelbild-Navigation in der noch nicht importierten PNG-Folge (CI-Abnahme bestanden):**
