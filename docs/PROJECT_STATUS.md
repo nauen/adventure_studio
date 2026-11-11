@@ -7,6 +7,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ungespeicherte
+NPC-Sprechfolgen bleiben beim Wechsel zwischen Dialogzeilen und
+Blickrichtungen als sitzungsbezogene Entwürfe erhalten. Beim Zurückwechseln
+erscheinen Reihenfolge und wiederholte Frame-IDs wieder wie bearbeitet;
+Speichern und bewusstes Verwerfen arbeiten weiterhin auf der jeweils
+gewählten Zeile und Richtung. Beim Laden einer anderen Projektdatei wird
+der Entwurfsspeicher zurückgesetzt. Projektformat und COST-/SCUMM-v6-
+Export bleiben unverändert. Core-CI zweimal, Chromium-CI zweimal und
+stock-ScummVM-CI grün (PR #182, Runs `43010611586` /
+`43010618494` / `43010611601` / `43010618610` /
+`43010618465`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Vor dem Wechsel der Projektdatei auf noch
+ungespeicherte Sprechfolgenentwürfe hinweisen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der
 NPC-Sprechfolgeneditor zeigt an, ob die aktuelle Framefolge der
 gewählten Dialogzeile und Blickrichtung dem gespeicherten Stand
