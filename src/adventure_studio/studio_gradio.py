@@ -54,6 +54,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                assign_dialogue_direction_speaking_sequence,
                                dialogue_speaking_sequence_selection,
                                discard_dialogue_speaking_draft,
+                               discard_selected_dialogue_speaking_draft,
                                dialogue_speaking_draft_save_status,
                                dialogue_speaking_timeline, edit_dialogue_speaking_timeline,
                                dialogue_speaking_timeline_preview,
@@ -851,6 +852,11 @@ def make_app():
                     elem_id="native-drafts-target")
                 native_drafts_open = gr.Button(
                     "Ausgewählten Entwurf öffnen", elem_id="native-drafts-open")
+                native_drafts_discard_confirm = gr.Checkbox(
+                    label="Ausgewählten ungespeicherten Entwurf wirklich verwerfen",
+                    value=False, elem_id="native-drafts-discard-confirm")
+                native_drafts_discard = gr.Button(
+                    "Nur diesen Entwurf verwerfen", elem_id="native-drafts-discard")
                 native_drafts_status = gr.Markdown("", elem_id="native-drafts-status")
             native_dialogue_session_unsaved = gr.Textbox(
                 value="0", interactive=False, show_label=False,
@@ -1560,6 +1566,32 @@ def make_app():
              native_dialogue_speaking_frame, native_dialogue_speaking_preview,
              native_dialogue_direction_preview, native_dialogue_speaking_sequence,
              native_dialogue_direction_status, native_dialogue_draft_session,
+             native_drafts_status])
+
+        def discard_listed_speaking_target(raw, line, direction, sequence, session,
+                                           selected, confirmed):
+            if not confirmed:
+                raise gr.Error("Bitte das Verwerfen dieses Entwurfs zuerst bestätigen")
+            try:
+                target_line, target_direction = json.loads(selected)
+                saved_or_current, updated = discard_selected_dialogue_speaking_draft(
+                    raw, line, direction, sequence, session,
+                    target_line, target_direction)
+            except (TypeError, ValueError) as error:
+                raise gr.Error(f"Entwurf nicht verworfen: {error}") from error
+            target_choices, _ = list_unsaved_speaking_targets(
+                raw, line, direction, saved_or_current, updated)
+            return (saved_or_current, updated, target_choices,
+                    gr.update(value=False),
+                    "**Entwurf verworfen.** Andere ungespeicherte Sprechfolgen bleiben erhalten.")
+
+        native_drafts_discard.click(
+            discard_listed_speaking_target,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session,
+             native_drafts_target, native_drafts_discard_confirm],
+            [native_dialogue_speaking_sequence, native_dialogue_draft_session,
+             native_drafts_target, native_drafts_discard_confirm,
              native_drafts_status])
 
         def cancel_native_file_load():
