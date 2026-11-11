@@ -25,6 +25,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
     save_dialogue_speaking_template, apply_dialogue_speaking_template,
     dialogue_speaking_template_choices, dialogue_speaking_template_preview,
     dialogue_speaking_template_animation_preview,
+    dialogue_speaking_draft_animation_preview,
     rename_dialogue_speaking_template, delete_dialogue_speaking_template,
     update_dialogue_speaking_template,
     load_dialogue_speaking_template_for_editing,
@@ -94,6 +95,35 @@ class DialogueAnimationTests(unittest.TestCase):
                 path = Path(directory) / (name + ".png")
                 Image.new("RGBA", (8, 8), color).save(path)
                 raw = add_costume_frame(raw, "WitnessCostume", str(path), name)
+        with tempfile.TemporaryDirectory() as directory:
+            draft_path = Path(directory) / "unsaved.gif"
+            before = parse_document(raw)
+            rendered = dialogue_speaking_draft_animation_preview(
+                raw, first, "Speak, SpeakAlt, Speak", 260, draft_path)
+            self.assertEqual(rendered, draft_path)
+            with Image.open(draft_path) as gif:
+                self.assertEqual(gif.format, "GIF")
+                self.assertEqual(gif.n_frames, 3)
+                self.assertEqual(gif.info["duration"], 260)
+                for index, channel in enumerate((0, 1, 0)):
+                    gif.seek(index)
+                    self.assertGreater(gif.convert("RGB").getpixel((128, 128))[channel], 180)
+            self.assertEqual(parse_document(raw), before)
+            self.assertEqual(dialogue_speaking_sequence_selection(raw, first),
+                             dialogue_speaking_sequence_selection(
+                                 canonical_json(before), first))
+            with self.assertRaisesRegex(ValueError, "Sprechfolge eingeben"):
+                dialogue_speaking_draft_animation_preview(
+                    raw, first, "", 260, draft_path)
+            with self.assertRaisesRegex(ValueError, "vorhandene PNG-Frames"):
+                dialogue_speaking_draft_animation_preview(
+                    raw, first, "Speak, Unbekannt", 260, draft_path)
+            with self.assertRaisesRegex(ValueError, "Sprecher-Dialogzeile"):
+                dialogue_speaking_draft_animation_preview(
+                    raw, "falsche-Zeile", "Speak", 260, draft_path)
+            with self.assertRaisesRegex(ValueError, "Millisekunden"):
+                dialogue_speaking_draft_animation_preview(
+                    raw, first, "Speak", 15, draft_path)
         self.assertEqual(dialogue_speaking_template_choices(raw), [])
         saved = save_dialogue_speaking_template(
             raw, first, "Begrüßung", "Speak, SpeakAlt, Speak")

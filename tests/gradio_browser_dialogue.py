@@ -272,6 +272,22 @@ def main() -> None:
             await_selection(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
             sequence_input.fill("Speak, SpeakAlt")
+            page.locator("#native-dialogue-draft-duration input").fill("260")
+            page.locator("#native-dialogue-draft-play").click()
+            draft_gif = page.locator("#native-dialogue-draft-animation img")
+            expect(draft_gif.first).to_be_visible(timeout=20000)
+            expect(page.locator("#native-dialogue-draft-animation-status")).to_contain_text(
+                "260 ms pro Bild · nur Entwurf", timeout=20000)
+            draft_response = page.request.get(
+                urljoin(page.url, draft_gif.first.get_attribute("src")))
+            assert draft_response.ok
+            with Image.open(BytesIO(draft_response.body())) as draft_animation:
+                assert draft_animation.format == "GIF"
+                assert draft_animation.n_frames == 2
+                assert draft_animation.info["duration"] == 260
+            sequence_input.fill("SpeakAlt, Speak")
+            expect(draft_gif).to_have_count(0, timeout=20000)
+            sequence_input.fill("Speak, SpeakAlt")
             page.locator("#native-dialogue-sequence-apply").click()
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Interaktionsablauf geändert und validiert", timeout=20000)

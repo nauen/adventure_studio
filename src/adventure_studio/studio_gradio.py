@@ -42,6 +42,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_speaking_template_choices,
                                dialogue_speaking_template_preview,
                                dialogue_speaking_template_animation_preview,
+                               dialogue_speaking_draft_animation_preview,
                                rename_dialogue_speaking_template,
                                update_dialogue_speaking_template,
                                load_dialogue_speaking_template_for_editing,
@@ -786,6 +787,19 @@ def make_app():
             with gr.Row():
                 native_dialogue_speaking_sequence = gr.Textbox(label="Sprechframes dieser Dialogzeile", elem_id="native-dialogue-speaking-sequence")
                 native_dialogue_sequence_apply = gr.Button("Für alle Richtungen speichern", elem_id="native-dialogue-sequence-apply")
+            with gr.Row():
+                native_dialogue_draft_duration = gr.Number(
+                    label="Sprechentwurf: Millisekunden pro Bild", value=180,
+                    precision=0, elem_id="native-dialogue-draft-duration")
+                native_dialogue_draft_play = gr.Button(
+                    "Ungespeicherte Sprechfolge abspielen",
+                    elem_id="native-dialogue-draft-play")
+            native_dialogue_draft_animation = gr.Image(
+                label="Sprechentwurf · echte Costume-Pixel · nur Editor-GIF",
+                interactive=False, format="gif",
+                elem_id="native-dialogue-draft-animation")
+            native_dialogue_draft_animation_status = gr.Markdown(
+                elem_id="native-dialogue-draft-animation-status")
             with gr.Accordion("Sprechfolge als Vorlage für weitere Dialogzeilen", open=False):
                 gr.Markdown("Benannte Vorlagen werden **im nativen Projekt-JSON** "
                             "gespeichert und sind nach erneutem Laden verfügbar. "
@@ -1812,6 +1826,32 @@ def make_app():
             source.change(lambda: (None, ""),
                           outputs=[native_dialogue_template_animation,
                                    native_dialogue_template_animation_status])
+
+        def play_dialogue_draft(raw, line, frames, duration):
+            if not raw:
+                raise gr.Error("Bitte zuerst ein natives Projekt laden")
+            path = Path(tempfile.mkdtemp(
+                prefix="adventure-studio-draft-preview-")) / "draft.gif"
+            try:
+                rendered = dialogue_speaking_draft_animation_preview(
+                    raw, line, frames, duration, path)
+                return str(rendered), (f"{int(duration)} ms pro Bild · nur Entwurf im Editor; "
+                                       "noch nicht gespeichert. ScummVM bestimmt das native Timing.")
+            except (ValueError, OSError) as error:
+                raise gr.Error(f"Sprechentwurf nicht abspielbar: {error}") from error
+
+        native_dialogue_draft_play.click(
+            play_dialogue_draft,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_speaking_sequence, native_dialogue_draft_duration],
+            [native_dialogue_draft_animation,
+             native_dialogue_draft_animation_status])
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_speaking_sequence,
+                       native_dialogue_draft_duration):
+            source.change(lambda: (None, ""),
+                          outputs=[native_dialogue_draft_animation,
+                                   native_dialogue_draft_animation_status])
 
         native_dialogue_template_apply.click(
             lambda raw, line, name, reset: native_edit(

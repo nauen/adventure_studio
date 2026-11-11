@@ -1601,6 +1601,31 @@ def dialogue_speaking_template_preview(
             f"Frame-Reihenfolge:\n{frames}\n{assessment}"), compatible
 
 
+def dialogue_speaking_draft_animation_preview(
+        raw: str, line_id: str, frame_ids: str,
+        frame_duration_ms: int | float, destination: Path) -> Path:
+    """Preview the unsaved speaking input with native Costume pixels, read-only."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte zuerst eine Sprecher-Dialogzeile auswählen")
+    if not isinstance(frame_ids, str) or not frame_ids.strip():
+        raise ValueError("Bitte zuerst eine Sprechfolge eingeben")
+    actor = next(item for item in document.actors if item.id == target[1])
+    sharing = [item.id for item in document.actors
+               if item.id != actor.id and item.costume == actor.costume]
+    if sharing:
+        raise ValueError("Die Costume wird auch von anderen Figuren verwendet: "
+                         + ", ".join(sharing) + ". Bitte zuerst eine eigene Costume zuweisen")
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    frames = tuple(part.strip() for part in frame_ids.split(","))
+    known = {frame.id for frame in costume.frames}
+    if any(not frame or frame not in known for frame in frames):
+        raise ValueError("Die Sprechfolge darf nur vorhandene PNG-Frames enthalten")
+    return render_costume_frame_sequence_preview(
+        raw, costume.name, frames, frame_duration_ms, destination)
+
+
 def dialogue_speaking_template_animation_preview(
         raw: str, line_id: str, name: str, frame_duration_ms: int | float,
         destination: Path) -> Path:
