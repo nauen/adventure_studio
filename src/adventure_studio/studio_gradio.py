@@ -812,7 +812,7 @@ def make_app():
                 native_walkbox_index = gr.Number(label="Walkbox-Nummer (1–254)", value=1, precision=0, elem_id="native-walkbox-index")
                 native_walkbox_corners = gr.Textbox(label="Eckpunkte UL;UR;LR;LL", value="0,70; 120,70; 120,150; 0,150", elem_id="native-walkbox-corners")
                 native_walkbox_add = gr.Button("Walkbox ins native Projekt übernehmen", elem_id="native-walkbox-add")
-            gr.Markdown("**Native Walkbox-Wege (BOXM):** Nach dem Anlegen von mindestens zwei benachbarten Walkboxen Verbindungen als \`1-2; 2-3\` eingeben. Nur gemeinsame Kanten können verbunden werden. Aus den Verbindungen entstehen native kürzeste Next-Hop-Wege. Leere Eingabe entfernt alle Verbindungen; getrennte Boxen bleiben unerreichbar.")
+            gr.Markdown("**Native Walkbox-Wege (BOXM):** Nach dem Anlegen von mindestens zwei benachbarten Walkboxen Verbindungen als `1-2; 2-3` eingeben. Nur gemeinsame Kanten können verbunden werden. Aus den Verbindungen entstehen native kürzeste Next-Hop-Wege. Leere Eingabe entfernt alle Verbindungen; getrennte Boxen bleiben unerreichbar.")
             with gr.Row():
                 native_box_routes_connections = gr.Textbox(label="Walkbox-Verbindungen", value="1-2", elem_id="native-box-routes-connections")
                 native_box_routes_add = gr.Button("BOXM-Verbindungen übernehmen", elem_id="native-box-routes-add")
