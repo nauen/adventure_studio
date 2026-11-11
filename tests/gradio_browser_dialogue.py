@@ -622,6 +622,10 @@ def main() -> None:
             expect(sprite_status).to_contain_text("8 × 8 Pixel")
             await_batch_gallery_colors(page, [(170, 55, 210), (55, 205, 115)],
                                        "native-dialogue-sprite-preview-tiles")
+            playback_gallery = page.locator("#native-dialogue-sprite-playback-frames")
+            await_batch_gallery_colors(page, [(170, 55, 210), (55, 205, 115)],
+                                       "native-dialogue-sprite-playback-frames")
+            expect(playback_gallery).to_contain_text("1. Bild · Zelle 1")
             expect(page.locator("#native-dialogue-sprite-preview-overlay img")).to_be_visible()
             page.locator("#native-dialogue-sprite-gap-x input").fill("5")
             expect(sprite_status).to_contain_text("teilbar", timeout=20000)
@@ -717,8 +721,18 @@ def main() -> None:
             expect(free_order).to_have_value("2,1,2", timeout=20000)
             expect(sprite_status).to_contain_text("3 Abspielbilder · Freie Abspielsequenz",
                                                    timeout=20000)
+            await_batch_gallery_colors(page, [(55, 205, 115), (170, 55, 210),
+                                              (55, 205, 115)],
+                                       "native-dialogue-sprite-playback-frames")
+            expect(playback_gallery).to_contain_text("3. Bild · Zelle 2")
+            playback_gallery.locator("img").nth(2).click()
+            expect(page.locator("#native-dialogue-sprite-position input")).to_have_value(
+                "3 · nach Bild 3 (Zelle 2)", timeout=20000)
+            page.keyboard.press("Escape")
             page.locator("#native-dialogue-sprite-remove-position").click()
             expect(free_order).to_have_value("2,1", timeout=20000)
+            await_batch_gallery_colors(page, [(55, 205, 115), (170, 55, 210)],
+                                       "native-dialogue-sprite-playback-frames")
             page.locator("#native-dialogue-sprite-insert").click()
             expect(free_order).to_have_value("2,1,2", timeout=20000)
             page.locator("#native-dialogue-sprite-add").click()
