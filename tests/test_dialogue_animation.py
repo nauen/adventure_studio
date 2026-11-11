@@ -391,6 +391,27 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, composed, "copy_block", 2,
                 end_position=3, destination_position=2), "4,1,1,4,4,3")
+            relocated = edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "relocate_block", 2,
+                end_position=3, destination_position=4)
+            self.assertEqual(relocated, "4,3,1,4")
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, relocated, "relocate_block", 3,
+                end_position=4, destination_position=0), "1,4,4,3")
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "relocate_block", 2,
+                end_position=3, destination_position=2), composed)
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "relocate_block", 1,
+                end_position=4, destination_position=4), composed)
+            with self.assertRaisesRegex(ValueError, "Zielposition"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "relocate_block", 2,
+                    end_position=3, destination_position=5)
+            with self.assertRaisesRegex(ValueError, "gültigen Bildblock"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "relocate_block", 3,
+                    end_position=2, destination_position=0)
             removed_block = edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, copied, "remove_block", 5,
                 end_position=6)
