@@ -4,6 +4,25 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein markierter
+Bildblock der Dialog-Sprite-Sheet-Abspielfolge lässt sich direkt an eine
+beliebige Zielgrenze der ursprünglichen Folge verschieben, ohne Kopie
+und ohne mehrfaches Einzelschritt-Klicken. Ziel 0 liegt vor dem ersten
+Bild, Ziel N nach Bild N; eine Grenze innerhalb des Quellblocks ist ein
+No-op. Die Reihenfolge und Bildanzahl bleiben erhalten, und der
+bestehende native COST-Import folgt der neu geordneten Folge.
+Core-/Chromium-CI je zweimal grün; Chromium prüfte den vollständigen
+Editor-Pfad mit Pixeln, fünf nativen Importframes und JSON-Export.
+Stock-ScummVM-CI im zweiten Versuch grün (PR #160,
+Merge `6c5d979e`, Runs `42960294165` / `42960294415` /
+`42960294253`, Attempt 2). Der erste native Versuch scheiterte
+an widersprüchlicher Frame-Abtastung in einer unveränderten
+Richtungs-Sprechszene; erneuter Lauf bestand. Menschliche UI-Abnahme
+offen. **Nächstes Paket:** Einen ausgewählten Bildblock mit frei
+wählbarer positiver Wiederholungsanzahl in einem Schritt in die
+Abspielfolge übernehmen, mit verständlicher Gesamtbild-Vorschau,
+validiertem COST-Import und Schutz gegen übermäßigen Ressourcenverbrauch.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im visuellen
 NPC-Dialog-Sprite-Sheet-Editor lassen sich zusammenhängende Abspielbilder
 über Startbild und einschließlich Blockende in einem Schritt entfernen.
