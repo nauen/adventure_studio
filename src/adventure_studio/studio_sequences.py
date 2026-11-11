@@ -703,6 +703,40 @@ def stage_dialogue_png_sprite_sheet(
     return (*originals, *tiles), indexes
 
 
+def dialogue_png_sprite_sheet_animation_preview(
+        sheet_path: str | None, columns: int | float, rows: int | float,
+        duration_ms: int | float, destination: Path,
+        margin_x: int | float = 0, margin_y: int | float = 0,
+        gap_x: int | float = 0, gap_y: int | float = 0,
+        skipped: list[int] | tuple[int, ...] | None = None,
+        cell_order: list[int] | tuple[int, ...] | None = None) -> Path:
+    """Play only selected sheet rectangles in native import order; no staging writes."""
+    from PIL import Image
+
+    if (type(duration_ms) not in (int, float) or not isfinite(duration_ms) or
+            int(duration_ms) != duration_ms or not 40 <= duration_ms <= 2000):
+        raise ValueError("Vorschau-Framezeit muss zwischen 40 und 2000 Millisekunden liegen")
+    pixels, boxes = _dialogue_png_sprite_sheet_cells(
+        sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
+    excluded = _dialogue_png_sprite_skipped(boxes, skipped)
+    sequence = dialogue_png_sprite_sheet_order(len(boxes), cell_order)
+    included = [index for index in sequence if index not in excluded]
+    if not included:
+        raise ValueError("Bitte mindestens eine Sprite-Sheet-Zelle für die Vorschau auswählen")
+    width, height = boxes[0][2] - boxes[0][0], boxes[0][3] - boxes[0][1]
+    rendered = []
+    for index in included:
+        frame = pixels.crop(boxes[index])
+        canvas = Image.new("RGB", (width, height), (36, 40, 48))
+        canvas.paste(frame, (0, 0), frame)
+        rendered.append(canvas)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    rendered[0].save(destination, format="GIF", save_all=True,
+                     append_images=rendered[1:], duration=int(duration_ms),
+                     loop=0, optimize=False, disposal=2)
+    return destination
+
+
 def replace_dialogue_png_batch_frame(paths: list[str] | tuple[str, ...] | None,
                                      order: list[int] | tuple[int, ...] | None,
                                      selected: int | None,

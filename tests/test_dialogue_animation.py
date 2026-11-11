@@ -45,6 +45,7 @@ from adventure_studio.studio_sequences import (
     dialogue_png_batch_selected_frame_id, dialogue_png_batch_entries,
     suggest_dialogue_png_batch_frame_id, resolve_dialogue_png_batch_frame_ids,
     stage_dialogue_png_sprite_sheet, dialogue_png_sprite_sheet_preview,
+    dialogue_png_sprite_sheet_animation_preview,
     dialogue_png_sprite_sheet_order, move_dialogue_png_sprite_sheet_cell)
 
 
@@ -337,6 +338,39 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertIn("Abspielposition 1", reordered_tiles[3][1])
             self.assertIn("Abspielposition 2", reordered_tiles[0][1])
             self.assertIn("3 von 4", reordered_description)
+            sheet_animation = root / "sheet-before-import.gif"
+            dialogue_png_sprite_sheet_animation_preview(
+                str(spaced_sheet), 2, 2, 240, sheet_animation,
+                2, 3, 4, 2, [1], reordered)
+            with Image.open(sheet_animation) as gif:
+                self.assertEqual(gif.format, "GIF")
+                self.assertEqual(gif.n_frames, 3)
+                self.assertEqual(gif.info["duration"], 240)
+                self.assertEqual(gif.info["loop"], 0)
+                for position, source_index in enumerate((3, 0, 2)):
+                    gif.seek(position)
+                    self.assertEqual(gif.convert("RGB").getpixel((4, 4)),
+                                     sheet_colors[source_index][:3])
+            dialogue_png_sprite_sheet_animation_preview(
+                str(spaced_sheet), 2, 2, 100, sheet_animation,
+                2, 3, 4, 2, [0, 1, 2], reordered)
+            with Image.open(sheet_animation) as single:
+                self.assertEqual(single.n_frames, 1)
+                self.assertEqual(single.convert("RGB").getpixel((4, 4)),
+                                 sheet_colors[3][:3])
+            with self.assertRaisesRegex(ValueError, "mindestens eine Sprite-Sheet-Zelle"):
+                dialogue_png_sprite_sheet_animation_preview(
+                    str(spaced_sheet), 2, 2, 180, sheet_animation,
+                    2, 3, 4, 2, [0, 1, 2, 3], reordered)
+            for invalid_duration in (39, 2001, 80.5, float("nan"), True):
+                with self.assertRaisesRegex(ValueError, "Vorschau-Framezeit"):
+                    dialogue_png_sprite_sheet_animation_preview(
+                        str(spaced_sheet), 2, 2, invalid_duration, sheet_animation,
+                        2, 3, 4, 2, [1], reordered)
+            with self.assertRaisesRegex(ValueError, "Abspielreihenfolge"):
+                dialogue_png_sprite_sheet_animation_preview(
+                    str(spaced_sheet), 2, 2, 180, sheet_animation,
+                    2, 3, 4, 2, [1], (0, 0, 2, 3))
             reordered_paths, reordered_order = stage_dialogue_png_sprite_sheet(
                 paths, (2, 0), str(spaced_sheet), 2, 2, 2, 3, 4, 2, [1], reordered)
             self.assertEqual([Path(path).name for path in reordered_paths[3:]],
