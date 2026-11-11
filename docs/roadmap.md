@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Gewählten Sprechfolgeschritt visuell prüfen (CI-Abnahme bestanden):**
+Der NPC-Dialogeditor zeigt die echte Costume-Pixelpose eines
+nummerierten, noch nicht gespeicherten Sprechschritts vor einer
+Reihenfolge- oder Löschaktion. Die Ansicht folgt den Schrittänderungen
+und verwirft veraltete Bilder bei manueller Texteingabe oder
+Zielwechsel. Nur Editor, keine Änderung am nativen Projekt.
+Core-/Chromium-CI je zweimal und stock-ScummVM-CI grün
+(PR #176, Merge `1aa9a3e4`, Runs `42983378901` /
+`42983378864` / `42983378851`). Menschliche UI-Abnahme offen.
+**Danach:** Einen bestehenden Schritt in derselben Reihenfolge
+gezielt mit einem anderen importierten Frame ersetzen.
+
 **Gewählten Sprechframe vor dem Anhängen ansehen (CI-Abnahme
 bestanden):** Die Frame-Auswahl im NPC-Dialogeditor zeigt die echte
 native Costume-Pixelpose, bevor ein PNG-Frame als Folgenschritt
