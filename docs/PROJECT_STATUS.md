@@ -7,6 +7,23 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Aus der
+Verlustwarnung beim nativen Projektdateiwechsel kann eine betroffene
+ungespeicherte NPC-Sprechfolge direkt im Dialogeditor ausgewählt
+werden. Die Wahl setzt Dialogzeile, Blickrichtung, echte Costume-
+Vorschau und den zugehörigen Entwurf zusammen; der Dateiwechsel
+bleibt bis zur ausdrücklichen Bestätigung ausstehend. Eine
+strukturierte Ziel-ID verhindert die Verwechslung gleichnamiger
+Zeilen, und ungültige bzw. inzwischen gespeicherte Ziele werden
+abgewiesen. Kein Eingriff in Projektformat, COST oder SCUMM-v6-
+Export. Core-, Chromium- und stock-ScummVM-CI je zweimal grün
+(PR #185, Runs `43026977699` / `43026985048` /
+`43026977821` / `43026985072` / `43026977775` /
+`43026986314`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Die Verlustliste nach dem gezielten Speichern
+eines Entwurfs aktualisieren, damit nur tatsächlich noch offene
+Dialogzeilen angezeigt werden.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Beim geplanten
 Wechsel einer nativen Projektdatei zeigt der Studio-Editor alle
 ungespeicherten NPC-Sprechfolgen getrennt nach Dialogzeile und

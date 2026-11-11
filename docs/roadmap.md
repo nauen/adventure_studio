@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Betroffenen Sprechfolgenentwurf direkt öffnen (CI-Abnahme
+bestanden):** Aus der Projektwechselwarnung lässt sich eine
+aufgeführte Dialogzeile/Richtung wählen und samt ihrer gespeicherten
+Costume-Vorschau und sitzungsbezogenen Framefolge in den Editor
+laden. Der gewählte Entwurf wird vor dem Öffnen erneut auf seine
+Gültigkeit geprüft; er wird nicht automatisch persistiert.
+Core-, Chromium- und stock-ScummVM-CI je zweimal grün (PR #185,
+Runs `43026977699`, `43026985048`, `43026977821`,
+`43026985072`, `43026977775`, `43026986314`).
+Menschliche UI-Abnahme offen. **Danach:** Nach gezieltem Speichern
+die Liste im geöffneten Warnbereich auf verbleibende Entwürfe
+aktualisieren.
+
 **Betroffene Sprechfolgen vor Projektwechsel auflisten (CI-Abnahme
 bestanden):** Die bestehende Bestätigung zeigt eine schreibgeschützte
 Liste aller noch abweichenden Dialogzeilen/Richtungen mit stabiler ID,
