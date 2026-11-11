@@ -26,6 +26,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
     dialogue_speaking_template_choices,
     rename_dialogue_speaking_template, delete_dialogue_speaking_template,
     update_dialogue_speaking_template,
+    load_dialogue_speaking_template_for_editing,
                                                 assign_dialogue_direction_speaking_sequence,
                                                 dialogue_speaking_sequence_selection,
                                                 dialogue_speaking_timeline,
@@ -98,6 +99,13 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(dialogue_speaking_template_choices(saved), ["Begrüßung"])
         template = parse_document(saved).speaking_sequence_templates[0]
         self.assertEqual(template.frames, ("Speak", "SpeakAlt", "Speak"))
+        self.assertEqual(
+            load_dialogue_speaking_template_for_editing(
+                saved, second, "Begrüßung"),
+            "Speak, SpeakAlt, Speak")
+        with self.assertRaisesRegex(ValueError, "gespeicherte"):
+            load_dialogue_speaking_template_for_editing(
+                saved, second, "Unbekannt")
         self.assertEqual(parse_document(canonical_json(parse_document(saved))),
                          parse_document(saved))
         with self.assertRaisesRegex(ValueError, "existiert bereits"):
@@ -162,6 +170,9 @@ class DialogueAnimationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "anderen Costume"):
             update_dialogue_speaking_template(
                 different_costume, second, "Begrüßung", "Speak")
+        with self.assertRaisesRegex(ValueError, "anderen Costume"):
+            load_dialogue_speaking_template_for_editing(
+                different_costume, second, "Begrüßung")
         # The optional field does not change the v1 format or legacy files.
         self.assertNotIn('"speaking_sequence_templates"', raw)
         self.assertIn('"format_version":1', saved)
