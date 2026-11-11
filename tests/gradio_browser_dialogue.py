@@ -417,6 +417,10 @@ def main() -> None:
             assert dialogue_speaking_sequence_selection(sequence_data, second[1]) == "SpeakAlt, Speak, SpeakAlt"
             assert dialogue_speaking_template_choices(sequence_data) == ["Begrüßung"]
             select_option(page, "native-dialogue-direction", "Süd")
+            expect(page.locator(
+                "#native-dialogue-direction-status input, "
+                "#native-dialogue-direction-status textarea")).to_have_value(
+                    re.compile(r"· Süd ·"), timeout=20000)
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("SpeakAlt")
             sequence_input.press("Tab")
