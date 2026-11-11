@@ -271,9 +271,16 @@ def main() -> None:
             # callback that can race with the immediately following save.
             await_selection(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            draft_save_status = page.locator("#native-dialogue-draft-save-status")
+            expect(draft_save_status).to_contain_text(
+                "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             sequence_input.fill("SpeakAlt, SpeakAlt")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-dialogue-draft-discard").click()
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             expect(page.locator("#native-dialogue-draft-animation-status")).to_contain_text(
                 "Entwurf verworfen; gespeicherte Folge wiederhergestellt.", timeout=20000)
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
@@ -366,6 +373,8 @@ def main() -> None:
             sequence_input.fill("SpeakAlt, Speak")
             expect(draft_gif).to_have_count(0, timeout=20000)
             sequence_input.fill("Speak, SpeakAlt")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-dialogue-sequence-apply").click()
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Interaktionsablauf geändert und validiert", timeout=20000)
