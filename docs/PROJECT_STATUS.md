@@ -4,6 +4,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die freie
+Dialog-Sprite-Sheet-Abspielfolge besitzt jetzt eine mehrstufige
+Undo-/Redo-Historie mit maximal 20 Bearbeitungsschritten und einer
+sichtbaren Positionsanzeige. Mehrere Änderungen lassen sich der Reihe
+nach zurücknehmen und wiederherstellen; neue Änderungen schneiden den
+Redo-Zweig ab. Ein Wechsel von Sheet, Raster oder Quellzellenauswahl
+setzt die Historie kontextsicher zurück. Core-CI zweimal, Chromium-
+UI-CI zweimal und stock-ScummVM-CI grün (PR #164, Merge `39fa8d07`,
+Runs `42965034647` / `42965029471` / `42965034831` /
+`42965029443` / `42965034645`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Den Verlauf mit verständlichen Änderungsnamen
+versehen und einzelne Historienpositionen gezielt anwählen können,
+damit längere Animationskorrekturen sicher navigierbar werden.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Eine zuletzt
 rückgängig gemachte Änderung der freien Dialog-Sprite-Sheet-
 Abspielfolge kann jetzt mit **Rückgängig gemachte Änderung
