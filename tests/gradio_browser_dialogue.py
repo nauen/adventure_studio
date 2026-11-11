@@ -706,6 +706,21 @@ def main() -> None:
                     freely_ordered.seek(position)
                     assert freely_ordered.info["duration"] == 180
                     assert freely_ordered.convert("RGB").getpixel((4, 4)) == color
+            page.locator("#native-dialogue-sprite-reset-timeline").click()
+            expect(free_order).to_have_value("", timeout=20000)
+            expect(sprite_status).to_contain_text("3 Abspielbilder", timeout=20000)
+            page.locator("#native-dialogue-sprite-repeat-remove").click()
+            expect(sprite_status).to_contain_text("2 Abspielbilder", timeout=20000)
+            select_option(page, "native-dialogue-sprite-position",
+                          "2 · nach Bild 2 (Zelle 1)")
+            page.locator("#native-dialogue-sprite-insert").click()
+            expect(free_order).to_have_value("2,1,2", timeout=20000)
+            expect(sprite_status).to_contain_text("3 Abspielbilder · Freie Abspielsequenz",
+                                                   timeout=20000)
+            page.locator("#native-dialogue-sprite-remove-position").click()
+            expect(free_order).to_have_value("2,1", timeout=20000)
+            page.locator("#native-dialogue-sprite-insert").click()
+            expect(free_order).to_have_value("2,1,2", timeout=20000)
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"

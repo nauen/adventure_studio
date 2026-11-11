@@ -672,6 +672,40 @@ def dialogue_png_sprite_sheet_sequence(count: int,
                  for _ in range(counts.get(index, 1)))
 
 
+def edit_dialogue_png_sprite_sheet_sequence(
+        count: int, skipped: list[int] | tuple[int, ...] | None,
+        cell_order: list[int] | tuple[int, ...] | None,
+        repeats: dict[int, int] | None, timeline: str | None,
+        action: str, position: int | None = None,
+        source_index: int | None = None) -> str:
+    """Compose a free play sequence using source-cell and position selectors."""
+    if action == "reset":
+        return ""
+    sequence = list(dialogue_png_sprite_sheet_sequence(
+        count, skipped, cell_order, repeats, timeline))
+    if type(position) is not int:
+        raise ValueError("Bitte eine Abspielposition auswählen")
+    if action == "insert":
+        if position not in range(len(sequence) + 1):
+            raise ValueError("Die Einfügeposition gehört nicht zur aktuellen Abspielsequenz")
+        excluded = _dialogue_png_sprite_skipped(
+            tuple((0, 0, 1, 1) for _ in range(count)), skipped)
+        if (type(source_index) is not int or source_index not in range(count) or
+                source_index in excluded):
+            raise ValueError("Bitte eine übernommene Sprite-Sheet-Zelle auswählen")
+        sequence.insert(position, source_index)
+    elif action == "remove":
+        if position not in range(1, len(sequence) + 1):
+            raise ValueError("Bitte ein vorhandenes Abspielbild zum Entfernen auswählen")
+        index = sequence[position - 1]
+        if sequence.count(index) <= 1:
+            raise ValueError("Die letzte Kopie einer ausgewählten Zelle muss erhalten bleiben")
+        sequence.pop(position - 1)
+    else:
+        raise ValueError("Unbekannte Bearbeitung der Sprite-Sheet-Abspielsequenz")
+    return ",".join(str(index + 1) for index in sequence)
+
+
 def change_dialogue_png_sprite_sheet_repetition(
         count: int, skipped: list[int] | tuple[int, ...] | None,
         repeats: dict[int, int] | None, selected: int | None, step: int
