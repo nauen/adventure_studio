@@ -26,6 +26,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
     dialogue_speaking_template_choices, dialogue_speaking_template_preview,
     dialogue_speaking_template_animation_preview,
     dialogue_speaking_draft_animation_preview,
+    edit_dialogue_speaking_draft,
     rename_dialogue_speaking_template, delete_dialogue_speaking_template,
     update_dialogue_speaking_template,
     load_dialogue_speaking_template_for_editing,
@@ -95,6 +96,45 @@ class DialogueAnimationTests(unittest.TestCase):
                 path = Path(directory) / (name + ".png")
                 Image.new("RGBA", (8, 8), color).save(path)
                 raw = add_costume_frame(raw, "WitnessCostume", str(path), name)
+        before_draft = parse_document(raw)
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, "", "Hinzufügen", "Speak")
+        self.assertEqual((draft, step), ("Speak", 0))
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Hinzufügen", "SpeakAlt")
+        self.assertEqual((draft, step), ("Speak, SpeakAlt", 1))
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Hinzufügen", "SpeakAlt")
+        self.assertEqual((draft, step), ("Speak, SpeakAlt, SpeakAlt", 2))
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Nach oben", step_index=2)
+        self.assertEqual((draft, step), ("Speak, SpeakAlt, SpeakAlt", 1))
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Entfernen", step_index=1)
+        self.assertEqual((draft, step), ("Speak, SpeakAlt", 1))
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Nach oben", step_index=1)
+        self.assertEqual((draft, step), ("SpeakAlt, Speak", 0))
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Nach unten", step_index=0)
+        self.assertEqual((draft, step), ("Speak, SpeakAlt", 1))
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Entfernen", step_index=1)
+        self.assertEqual((draft, step), ("Speak", 0))
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Entfernen", step_index=0)
+        self.assertEqual((draft, step), ("", None))
+        self.assertEqual(parse_document(raw), before_draft)
+        with self.assertRaisesRegex(ValueError, "vorhandenen PNG-Frame"):
+            edit_dialogue_speaking_draft(raw, first, "", "Hinzufügen", "Missing")
+        with self.assertRaisesRegex(ValueError, "vorhandene PNG-Frames"):
+            edit_dialogue_speaking_draft(raw, first, "Speak, Missing", "Hinzufügen", "Speak")
+        with self.assertRaisesRegex(ValueError, "Sprechschritt"):
+            edit_dialogue_speaking_draft(raw, first, "Speak", "Entfernen", step_index=3)
+        with self.assertRaisesRegex(ValueError, "am Rand"):
+            edit_dialogue_speaking_draft(raw, first, "Speak", "Nach oben", step_index=0)
+        with self.assertRaisesRegex(ValueError, "Sprecher-Dialogzeile"):
+            edit_dialogue_speaking_draft(raw, "unknown", "", "Hinzufügen", "Speak")
         with tempfile.TemporaryDirectory() as directory:
             draft_path = Path(directory) / "unsaved.gif"
             before = parse_document(raw)

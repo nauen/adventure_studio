@@ -1601,6 +1601,48 @@ def dialogue_speaking_template_preview(
             f"Frame-Reihenfolge:\n{frames}\n{assessment}"), compatible
 
 
+def edit_dialogue_speaking_draft(
+        raw: str, line_id: str, frame_ids: str, operation: str,
+        frame_id: str | None = None, step_index: int | float | None = None
+        ) -> tuple[str, int | None]:
+    """Edit only the visible speaking draft; never persist a costume or cue."""
+    document = parse_document(raw)
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte zuerst eine Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    available = {frame.id for frame in costume.frames}
+    if not isinstance(frame_ids, str):
+        raise ValueError("Bitte eine gültige Sprechfolge eingeben")
+    sequence = [part.strip() for part in frame_ids.split(",")] if frame_ids.strip() else []
+    if any(not part or part not in available for part in sequence):
+        raise ValueError("Die Sprechfolge darf nur vorhandene PNG-Frames enthalten")
+    if operation == "Hinzufügen":
+        if frame_id not in available:
+            raise ValueError("Bitte einen vorhandenen PNG-Frame auswählen")
+        sequence.append(frame_id)
+        selected = len(sequence) - 1
+    else:
+        if (type(step_index) not in (int, float) or not isfinite(step_index)
+                or int(step_index) != step_index
+                or not 0 <= int(step_index) < len(sequence)):
+            raise ValueError("Bitte einen vorhandenen Sprechschritt auswählen")
+        selected = int(step_index)
+        if operation == "Entfernen":
+            sequence.pop(selected)
+            selected = min(selected, len(sequence) - 1) if sequence else None
+        elif operation in ("Nach oben", "Nach unten"):
+            other = selected + (-1 if operation == "Nach oben" else 1)
+            if not 0 <= other < len(sequence):
+                raise ValueError("Sprechschritt ist bereits am Rand")
+            sequence[selected], sequence[other] = sequence[other], sequence[selected]
+            selected = other
+        else:
+            raise ValueError("Unbekannte Sprechentwurf-Aktion")
+    return ", ".join(sequence), selected
+
+
 def dialogue_speaking_draft_animation_preview(
         raw: str, line_id: str, frame_ids: str,
         frame_duration_ms: int | float, destination: Path) -> Path:
