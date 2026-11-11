@@ -14,6 +14,13 @@ Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
 `tests/test_scumm_reference_contract.py` prüft den Quellenindex auf
 Vollständigkeit gegenüber den 64 IDs.
 
+**D03 – Editor-Ergänzung (2026-11-11, Abnahme ausstehend):**
+Ungespeicherte NPC-Sprechfolgen können aus der Entwurfsübersicht
+einzeln nach ausdrücklicher Bestätigung verworfen werden. Andere
+Sitzungsentwürfe bleiben erhalten; für das aktive Ziel erscheint
+die gespeicherte Folge. Kein neuer nativer Opcode, keine Änderung
+an COST-/SCUMM-v6-Ausgabe und kein geänderter D03-Capability-Status.
+
 **D03 – Editor-Ergänzung (PR #187, CI-Abnahme bestanden):**
 Die Gradio-6-Oberfläche bindet eine `beforeunload`-Warnung für
 aktive und zwischengespeicherte NPC-Sprechfolgenentwürfe ein.
