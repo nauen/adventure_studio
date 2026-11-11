@@ -1571,6 +1571,33 @@ def save_dialogue_speaking_template(
         SpeakingSequenceTemplate(label, costume.name, sequence))))
 
 
+def update_dialogue_speaking_template(
+        raw: str, line_id: str, name: str, frame_ids: str) -> str:
+    """Replace a persisted template's frames without editing assigned animations."""
+    document = parse_document(raw)
+    current = next((item for item in document.speaking_sequence_templates
+                    if item.name == name), None)
+    if current is None:
+        raise ValueError("Bitte eine vorhandene Sprechfolgenvorlage auswählen")
+    target = _dialogue_animation_targets(document).get(line_id)
+    if target is None:
+        raise ValueError("Bitte zuerst eine Sprecher-Dialogzeile auswählen")
+    actor = next(item for item in document.actors if item.id == target[1])
+    if actor.costume != current.costume:
+        raise ValueError("Die Vorlage gehört zu einer anderen Costume; "
+                         "bitte eine Dialogzeile derselben Costume auswählen")
+    if not isinstance(frame_ids, str) or not frame_ids.strip():
+        raise ValueError("Bitte zuerst eine Sprechfolge eingeben")
+    sequence = tuple(item.strip() for item in frame_ids.split(","))
+    costume = next(item for item in document.costumes if item.name == actor.costume)
+    available = {frame.id for frame in costume.frames}
+    if any(not frame or frame not in available for frame in sequence):
+        raise ValueError("Die Vorlage darf nur vorhandene PNG-Frames enthalten")
+    updated = tuple(replace(item, frames=sequence) if item.name == name else item
+                    for item in document.speaking_sequence_templates)
+    return _checked(replace(document, speaking_sequence_templates=updated))
+
+
 def rename_dialogue_speaking_template(
         raw: str, line_id: str, name: str, new_name: str) -> str:
     """Rename one persisted template without altering any native speaking cues."""
