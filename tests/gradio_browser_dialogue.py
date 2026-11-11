@@ -854,6 +854,24 @@ def main() -> None:
             page.locator("#native-dialogue-sprite-repeat-block").click()
             expect(free_order).to_have_value("2,2,1,2,2,2,2", timeout=20000)
             expect(redo_button).to_be_disabled(timeout=20000)
+            playback_gallery.locator("img").first.click()
+            page.keyboard.press("Escape")
+            expect(page.locator("#native-dialogue-sprite-copy-destination input")).to_have_value(
+                "7 · nach Bild 7 (Zelle 2)", timeout=20000)
+            page.locator("#native-dialogue-sprite-copy-block").click()
+            expect(free_order).to_have_value("2,2,1,2,2,2,2,2", timeout=20000)
+            expect(page.locator("#native-dialogue-sprite-history-status")).to_contain_text(
+                "Schritt", timeout=20000)
+            undo_button.click()
+            expect(free_order).to_have_value("2,2,1,2,2,2,2", timeout=20000)
+            undo_button.click()
+            expect(free_order).to_have_value("2,2,1", timeout=20000)
+            redo_button.click()
+            expect(free_order).to_have_value("2,2,1,2,2,2,2", timeout=20000)
+            redo_button.click()
+            expect(free_order).to_have_value("2,2,1,2,2,2,2,2", timeout=20000)
+            undo_button.click()
+            expect(free_order).to_have_value("2,2,1,2,2,2,2", timeout=20000)
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"
