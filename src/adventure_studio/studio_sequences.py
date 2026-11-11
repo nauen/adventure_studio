@@ -589,7 +589,8 @@ def dialogue_png_sprite_sheet_preview(
         margin_x: int | float = 0, margin_y: int | float = 0,
         gap_x: int | float = 0, gap_y: int | float = 0,
         skipped: list[int] | tuple[int, ...] | None = None,
-        cell_order: list[int] | tuple[int, ...] | None = None
+        cell_order: list[int] | tuple[int, ...] | None = None,
+        repeats: dict[int, int] | None = None
         ) -> tuple[object, list[tuple[object, str]], str]:
     """Show the exact prospective source rectangles without staging any frames."""
     from PIL import ImageDraw
@@ -598,6 +599,8 @@ def dialogue_png_sprite_sheet_preview(
         sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
     excluded = _dialogue_png_sprite_skipped(boxes, skipped)
     sequence = dialogue_png_sprite_sheet_order(len(boxes), cell_order)
+    expanded = dialogue_png_sprite_sheet_sequence(len(boxes), skipped, cell_order, repeats)
+    counts = _dialogue_png_sprite_repeat_counts(len(boxes), repeats)
     positions = {index: number for number, index in enumerate(
         (index for index in sequence if index not in excluded), 1)}
     overlay = pixels.copy()
@@ -609,13 +612,59 @@ def dialogue_png_sprite_sheet_preview(
     thumbnails = [(pixels.crop(box), f"{index}. Zeile {(index - 1) // int(columns) + 1}, "
                     f"Spalte {(index - 1) % int(columns) + 1} · "
                     + ("⛔ Überspringen" if index - 1 in excluded else
-                       f"✓ Abspielposition {positions[index - 1]}"))
+                       f"✓ Abspielposition {positions[index - 1]}" +
+                       (f" · {counts[index - 1]}×" if index - 1 in counts else "")))
                   for index, box in enumerate(boxes, 1)]
     width = boxes[0][2] - boxes[0][0]
     height = boxes[0][3] - boxes[0][1]
     return overlay, thumbnails, (f"{len(boxes) - len(excluded)} von {len(boxes)} "
-                                  "PNG-Frames ausgewählt · Abspielreihenfolge "
+                                  "PNG-Frames ausgewählt · "
+                                  f"{len(expanded)} Abspielbilder · Abspielreihenfolge "
                                   f"· je {width} × {height} Pixel · noch nicht hinzugefügt")
+
+
+def _dialogue_png_sprite_repeat_counts(count: int,
+                                       repeats: dict[int, int] | None) -> dict[int, int]:
+    if repeats is None:
+        return {}
+    if (not isinstance(repeats, dict) or
+            any(type(index) is not int or index not in range(count) or
+                type(amount) is not int or amount < 2
+                for index, amount in repeats.items())):
+        raise ValueError("Die Sprite-Sheet-Wiederholungen passen nicht mehr zum Raster")
+    return repeats
+
+
+def dialogue_png_sprite_sheet_sequence(count: int,
+                                       skipped: list[int] | tuple[int, ...] | None,
+                                       cell_order: list[int] | tuple[int, ...] | None,
+                                       repeats: dict[int, int] | None = None
+                                       ) -> tuple[int, ...]:
+    """One sequence for native staging, visual thumbnails and GIF playback."""
+    order = dialogue_png_sprite_sheet_order(count, cell_order)
+    excluded = _dialogue_png_sprite_skipped(tuple((0, 0, 1, 1) for _ in range(count)), skipped)
+    counts = _dialogue_png_sprite_repeat_counts(count, repeats)
+    return tuple(index for index in order if index not in excluded
+                 for _ in range(counts.get(index, 1)))
+
+
+def change_dialogue_png_sprite_sheet_repetition(
+        count: int, skipped: list[int] | tuple[int, ...] | None,
+        repeats: dict[int, int] | None, selected: int | None, step: int
+        ) -> dict[int, int]:
+    """Change a selected source cell's consecutive play count, minimum one."""
+    excluded = _dialogue_png_sprite_skipped(tuple((0, 0, 1, 1) for _ in range(count)), skipped)
+    counts = dict(_dialogue_png_sprite_repeat_counts(count, repeats))
+    if type(selected) is not int or selected not in range(count) or selected in excluded:
+        raise ValueError("Bitte zuerst eine übernommene Sprite-Sheet-Zelle auswählen")
+    if type(step) is not int or step not in (-1, 1):
+        raise ValueError("Ungültige Sprite-Sheet-Wiederholung")
+    amount = max(1, counts.get(selected, 1) + step)
+    if amount == 1:
+        counts.pop(selected, None)
+    else:
+        counts[selected] = amount
+    return counts
 
 
 def dialogue_png_sprite_sheet_order(count: int,
@@ -674,7 +723,8 @@ def stage_dialogue_png_sprite_sheet(
         margin_x: int | float = 0, margin_y: int | float = 0,
         gap_x: int | float = 0, gap_y: int | float = 0,
         skipped: list[int] | tuple[int, ...] | None = None,
-        cell_order: list[int] | tuple[int, ...] | None = None
+        cell_order: list[int] | tuple[int, ...] | None = None,
+        repeats: dict[int, int] | None = None
         ) -> tuple[tuple[str, ...], tuple[int, ...]]:
     """Append selected tiles in preview order, preserving existing staged exclusions."""
     originals = tuple(paths or ())
@@ -686,17 +736,18 @@ def stage_dialogue_png_sprite_sheet(
     pixels, boxes = _dialogue_png_sprite_sheet_cells(
         sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
     excluded = _dialogue_png_sprite_skipped(boxes, skipped)
-    sequence = dialogue_png_sprite_sheet_order(len(boxes), cell_order)
+    expanded = dialogue_png_sprite_sheet_sequence(len(boxes), skipped, cell_order, repeats)
     if len(excluded) == len(boxes):
         raise ValueError("Bitte mindestens eine Sprite-Sheet-Zelle für den Import auswählen")
     destination = Path(tempfile.mkdtemp(prefix="adventure-studio-sprite-sheet-"))
     tiles = []
-    for index in sequence:
-        if index in excluded:
-            continue
+    seen: dict[int, int] = {}
+    for index in expanded:
         box = boxes[index]
         row, column = divmod(index, int(columns))
-        tile = destination / f"{Path(sheet_path).stem}_r{row + 1}_c{column + 1}.png"
+        seen[index] = seen.get(index, 0) + 1
+        suffix = "" if seen[index] == 1 else f"_repeat{seen[index]}"
+        tile = destination / f"{Path(sheet_path).stem}_r{row + 1}_c{column + 1}{suffix}.png"
         pixels.crop(box).save(tile)
         tiles.append(str(tile))
     indexes = (*included_indexes, *range(len(originals), len(originals) + len(tiles)))
@@ -709,7 +760,8 @@ def dialogue_png_sprite_sheet_animation_preview(
         margin_x: int | float = 0, margin_y: int | float = 0,
         gap_x: int | float = 0, gap_y: int | float = 0,
         skipped: list[int] | tuple[int, ...] | None = None,
-        cell_order: list[int] | tuple[int, ...] | None = None) -> Path:
+        cell_order: list[int] | tuple[int, ...] | None = None,
+        repeats: dict[int, int] | None = None) -> Path:
     """Play only selected sheet rectangles in native import order; no staging writes."""
     from PIL import Image
 
@@ -718,9 +770,7 @@ def dialogue_png_sprite_sheet_animation_preview(
         raise ValueError("Vorschau-Framezeit muss zwischen 40 und 2000 Millisekunden liegen")
     pixels, boxes = _dialogue_png_sprite_sheet_cells(
         sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
-    excluded = _dialogue_png_sprite_skipped(boxes, skipped)
-    sequence = dialogue_png_sprite_sheet_order(len(boxes), cell_order)
-    included = [index for index in sequence if index not in excluded]
+    included = dialogue_png_sprite_sheet_sequence(len(boxes), skipped, cell_order, repeats)
     if not included:
         raise ValueError("Bitte mindestens eine Sprite-Sheet-Zelle für die Vorschau auswählen")
     width, height = boxes[0][2] - boxes[0][0], boxes[0][3] - boxes[0][1]

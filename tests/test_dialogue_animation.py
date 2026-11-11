@@ -47,6 +47,8 @@ from adventure_studio.studio_sequences import (
     stage_dialogue_png_sprite_sheet, dialogue_png_sprite_sheet_preview,
     dialogue_png_sprite_sheet_animation_preview,
     dialogue_png_sprite_sheet_order, move_dialogue_png_sprite_sheet_cell)
+from adventure_studio.studio_sequences import (
+    dialogue_png_sprite_sheet_sequence, change_dialogue_png_sprite_sheet_repetition)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -338,6 +340,53 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertIn("Abspielposition 1", reordered_tiles[3][1])
             self.assertIn("Abspielposition 2", reordered_tiles[0][1])
             self.assertIn("3 von 4", reordered_description)
+            self.assertEqual(dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, {3: 3}), (3, 3, 3, 0, 2))
+            self.assertEqual(change_dialogue_png_sprite_sheet_repetition(
+                4, [1], None, 3, 1), {3: 2})
+            self.assertEqual(change_dialogue_png_sprite_sheet_repetition(
+                4, [1], {3: 2}, 3, 1), {3: 3})
+            self.assertEqual(change_dialogue_png_sprite_sheet_repetition(
+                4, [1], {3: 2}, 3, -1), {})
+            self.assertEqual(change_dialogue_png_sprite_sheet_repetition(
+                4, [1], None, 3, -1), {})
+            with self.assertRaisesRegex(ValueError, "übernommene"):
+                change_dialogue_png_sprite_sheet_repetition(4, [1], None, 1, 1)
+            for invalid_repeats in ({1: 0}, {4: 2}, {False: 2}, {3: 1}, {3: 1.5}):
+                with self.assertRaisesRegex(ValueError, "Wiederholungen"):
+                    dialogue_png_sprite_sheet_sequence(4, [1], reordered, invalid_repeats)
+            hold_overlay, hold_tiles, hold_status = dialogue_png_sprite_sheet_preview(
+                str(spaced_sheet), 2, 2, 2, 3, 4, 2, [1], reordered, {3: 3})
+            self.assertEqual(hold_overlay.size, (24, 24))
+            self.assertIn("3×", hold_tiles[3][1])
+            self.assertIn("5 Abspielbilder", hold_status)
+            hold_paths, hold_order = stage_dialogue_png_sprite_sheet(
+                paths, (2, 0), str(spaced_sheet), 2, 2, 2, 3, 4, 2, [1], reordered, {3: 3})
+            self.assertEqual([Path(path).name for path in hold_paths[3:]], [
+                "SpacedSheet_r2_c2.png", "SpacedSheet_r2_c2_repeat2.png",
+                "SpacedSheet_r2_c2_repeat3.png", "SpacedSheet_r1_c1.png",
+                "SpacedSheet_r2_c1.png"])
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", hold_paths, "Sprechfolge", order=hold_order)[0])
+            native_holds = import_dialogue_png_batch(
+                raw, first, "W", hold_paths, "Sprechfolge", order=hold_order)
+            self.assertIn("SpacedSheet_r2_c2, SpacedSheet_r2_c2_repeat2, "
+                          "SpacedSheet_r2_c2_repeat3",
+                          dialogue_speaking_sequence_selection(native_holds, first, "W"))
+            sheet_holds_gif = root / "sheet-hold.gif"
+            dialogue_png_sprite_sheet_animation_preview(
+                str(spaced_sheet), 2, 2, 120, sheet_holds_gif,
+                2, 3, 4, 2, [1], reordered, {3: 3})
+            with Image.open(sheet_holds_gif) as hold_gif:
+                self.assertEqual(hold_gif.info["loop"], 0)
+                durations = []
+                colors = []
+                for frame_index in range(hold_gif.n_frames):
+                    hold_gif.seek(frame_index)
+                    durations.append(hold_gif.info["duration"])
+                    colors.append(hold_gif.convert("RGB").getpixel((4, 4)))
+                self.assertEqual(sum(durations), 600)
+                self.assertEqual(colors, [sheet_colors[i][:3] for i in (3, 0, 2)])
             sheet_animation = root / "sheet-before-import.gif"
             dialogue_png_sprite_sheet_animation_preview(
                 str(spaced_sheet), 2, 2, 240, sheet_animation,
