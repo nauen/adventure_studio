@@ -694,7 +694,8 @@ def edit_dialogue_png_sprite_sheet_sequence(
         cell_order: list[int] | tuple[int, ...] | None,
         repeats: dict[int, int] | None, timeline: str | None,
         action: str, position: int | None = None,
-        source_index: int | None = None, step: int | None = None) -> str:
+        source_index: int | None = None, step: int | None = None,
+        end_position: int | None = None) -> str:
     """Compose a free play sequence using source-cell and position selectors."""
     if action == "reset":
         return ""
@@ -727,6 +728,24 @@ def edit_dialogue_png_sprite_sheet_sequence(
         if target not in range(len(sequence)) or sequence[target] == sequence[position - 1]:
             return timeline or ""
         sequence[position - 1], sequence[target] = sequence[target], sequence[position - 1]
+    elif action == "move_block":
+        if (position not in range(1, len(sequence) + 1) or
+                type(end_position) is not int or
+                end_position not in range(position, len(sequence) + 1)):
+            raise ValueError("Bitte einen gültigen Abspielblock von Start bis Ende auswählen")
+        if type(step) is not int or step not in (-1, 1):
+            raise ValueError("Ungültige Richtung für das Verschieben des Abspielblocks")
+        if (step == -1 and position == 1) or (step == 1 and end_position == len(sequence)):
+            return timeline or ""
+        previous = tuple(sequence)
+        if step == -1:
+            sequence[position - 2:end_position] = (
+                sequence[position - 1:end_position] + [sequence[position - 2]])
+        else:
+            sequence[position - 1:end_position + 1] = (
+                [sequence[end_position]] + sequence[position - 1:end_position])
+        if tuple(sequence) == previous:
+            return timeline or ""
     else:
         raise ValueError("Unbekannte Bearbeitung der Sprite-Sheet-Abspielsequenz")
     return ",".join(str(index + 1) for index in sequence)
