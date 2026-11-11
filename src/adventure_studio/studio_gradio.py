@@ -1930,7 +1930,8 @@ def make_app():
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status, native_dialogue_draft_session])
+             native_dialogue_direction_status, native_dialogue_draft_session],
+            concurrency_id="npc_speaking_draft_transition", concurrency_limit=1)
         native_dialogue_animation.input(
             dialogue_direction_animation_preview,
             [native_state, native_dialogue_animation_line,
@@ -1951,7 +1952,8 @@ def make_app():
              native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_draft_session, native_file],
             [native_dialogue_direction_preview, native_dialogue_direction_status,
-             native_dialogue_speaking_sequence, native_dialogue_draft_session])
+             native_dialogue_speaking_sequence, native_dialogue_draft_session],
+            concurrency_id="npc_speaking_draft_transition", concurrency_limit=1)
         native_dialogue_speaking_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
@@ -2219,7 +2221,8 @@ def make_app():
              native_dialogue_draft_session],
             [native_dialogue_speaking_sequence, native_dialogue_draft_step,
              native_dialogue_draft_step_preview, native_dialogue_draft_animation,
-             native_dialogue_draft_animation_status, native_dialogue_draft_session])
+             native_dialogue_draft_animation_status, native_dialogue_draft_session],
+            concurrency_id="npc_speaking_draft_transition", concurrency_limit=1)
 
         def play_dialogue_draft(raw, line, frames, duration):
             if not raw:
@@ -2266,7 +2269,8 @@ def make_app():
             lambda *args: native_edit(assign_dialogue_direction_speaking_sequence, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_reset],
-            [native_state, *native_outputs, native_report]).then(
+            [native_state, *native_outputs, native_report],
+            concurrency_id="npc_speaking_draft_transition", concurrency_limit=1).then(
                 refresh_pending_speaking_drafts,
                 pending_draft_refresh_inputs, pending_draft_refresh_outputs)
         def dialogue_timeline_view(raw, line, direction, selected_frame):
