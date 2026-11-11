@@ -2109,12 +2109,14 @@ def make_app():
                 speaking_draft_frame_choices,
                 [native_state, native_dialogue_animation_line],
                 [native_dialogue_draft_frame,
-                 native_dialogue_draft_frame_preview])
+                 native_dialogue_draft_frame_preview],
+                concurrency_id="npc_speaking_frame_preview", concurrency_limit=1)
         native_dialogue_draft_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line,
              native_dialogue_draft_frame],
-            [native_dialogue_draft_frame_preview])
+            [native_dialogue_draft_frame_preview],
+            concurrency_id="npc_speaking_frame_preview", concurrency_limit=1)
 
         def speaking_draft_steps(sequence):
             parts = [item.strip() for item in sequence.split(",")] if sequence and sequence.strip() else []
