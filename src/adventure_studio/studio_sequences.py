@@ -16,6 +16,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
                             DialogueVoiceCue, DialogueAnimationCue,
+                            SpeakingSequenceTemplate,
                             canonical_json, parse_document)
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
@@ -1536,18 +1537,24 @@ def dialogue_speaking_timeline_preview(raw: str, line_id: str,
                                   direction, duration_ms, destination)
 
 
+def dialogue_speaking_template_choices(raw: str | None) -> list[str]:
+    """Read persisted template names, including after a project reimport."""
+    if not raw:
+        return []
+    return [template.name for template in
+            parse_document(raw).speaking_sequence_templates]
+
+
 def save_dialogue_speaking_template(
-        templates: dict[str, tuple[str, tuple[str, ...]]] | None,
-        raw: str, line_id: str, name: str, frame_ids: str
-        ) -> dict[str, tuple[str, tuple[str, ...]]]:
-    """Keep a named, validated speaking sequence for reuse in this UI session."""
+        raw: str, line_id: str, name: str, frame_ids: str) -> str:
+    """Persist a validated named sequence as optional native-project authoring data."""
     label = name.strip() if isinstance(name, str) else ""
     if not label or len(label) > 80:
         raise ValueError("Vorlagenname muss zwischen 1 und 80 Zeichen enthalten")
-    saved = dict(templates or {})
-    if any(existing.casefold() == label.casefold() for existing in saved):
-        raise ValueError("Eine Sprechfolgenvorlage mit diesem Namen existiert bereits")
     document = parse_document(raw)
+    if any(template.name.casefold() == label.casefold()
+           for template in document.speaking_sequence_templates):
+        raise ValueError("Eine Sprechfolgenvorlage mit diesem Namen existiert bereits")
     target = _dialogue_animation_targets(document).get(line_id)
     if target is None:
         raise ValueError("Bitte zuerst eine Sprecher-Dialogzeile auswählen")
@@ -1559,29 +1566,29 @@ def save_dialogue_speaking_template(
     available = {frame.id for frame in costume.frames}
     if any(not item or item not in available for item in sequence):
         raise ValueError("Die Vorlage darf nur vorhandene PNG-Frames enthalten")
-    saved[label] = (costume.name, sequence)
-    return saved
+    return _checked(replace(document, speaking_sequence_templates=(
+        *document.speaking_sequence_templates,
+        SpeakingSequenceTemplate(label, costume.name, sequence))))
 
 
 def apply_dialogue_speaking_template(
-        raw: str, line_id: str,
-        templates: dict[str, tuple[str, tuple[str, ...]]] | None,
-        name: str, reset_to_stand: bool = True) -> str:
-    """Apply a session template through the regular native per-line save path."""
-    saved = templates or {}
-    if not isinstance(name, str) or name not in saved:
-        raise ValueError("Bitte eine gespeicherte Sprechfolgenvorlage auswählen")
-    source_costume, sequence = saved[name]
+        raw: str, line_id: str, name: str,
+        reset_to_stand: bool = True) -> str:
+    """Apply a project template through the ordinary native per-line authoring path."""
     document = parse_document(raw)
+    template = next((entry for entry in document.speaking_sequence_templates
+                     if entry.name == name), None)
+    if template is None:
+        raise ValueError("Bitte eine gespeicherte Sprechfolgenvorlage auswählen")
     target = _dialogue_animation_targets(document).get(line_id)
     if target is None:
         raise ValueError("Bitte eine native Sprecher-Dialogzeile auswählen")
     actor = next(item for item in document.actors if item.id == target[1])
-    if actor.costume != source_costume:
+    if actor.costume != template.costume:
         raise ValueError("Die Vorlage gehört zu einer anderen Costume; "
                          "bitte eine Dialogzeile derselben Costume auswählen")
     return assign_dialogue_speaking_sequence(
-        raw, line_id, ", ".join(sequence), reset_to_stand)
+        raw, line_id, ", ".join(template.frames), reset_to_stand)
 
 
 def assign_dialogue_speaking_sequence(raw: str, line_id: str, frame_ids: str,
