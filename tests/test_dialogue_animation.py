@@ -106,10 +106,15 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(dialogue_speaking_sequence_selection(raw, second), "")
         with self.assertRaisesRegex(ValueError, "gespeicherte"):
             apply_dialogue_speaking_template(raw, second, templates, "Unbekannt")
-        isolated = isolate_dialogue_speaker_costume(raw, second)
+        document = parse_document(raw)
+        different_costume = canonical_json(replace(
+            document, actors=tuple(
+                replace(actor, costume=original.costumes[0].name)
+                if actor.id == "SpeakerWitness" else actor
+                for actor in document.actors)))
         with self.assertRaisesRegex(ValueError, "anderen Costume"):
             apply_dialogue_speaking_template(
-                isolated, second, templates, "Begrüßung")
+                different_costume, second, templates, "Begrüßung")
 
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "PNG-Import benötigt Pillow")
     def test_ordered_png_batch_import_is_atomic_and_native(self):
