@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Anklickbare Sprite-Sheet-Abspielfolge (CI-Abnahme bestanden):**
+Jede tatsächliche Abspielposition erscheint mit dem Quellzellen-Bild
+als eigene Miniatur; wiederholte Zellen sind dadurch sichtbar.
+Ein Klick wählt die Position für das bestehende Einfügen und Entfernen.
+Die Leiste folgt allen Raster- und Sequenzänderungen; ein leeres
+Auswahlergebnis bleibt als leere Leiste zulässig. 334 lokale Tests,
+Core-/Chromium-/stock-ScummVM-CI grün (PR #152, Merge `169e21a`,
+Runs `42954277899` / `42954277816` / `42954277828`). Menschliche
+UI-Abnahme offen. Danach: ein Abspielbild ohne Kopieren/Entfernen um
+eine Position nach vorn oder hinten verschieben.
+
 **Sprite-Sheet-Folge über die Oberfläche zusammenstellen (CI-Abnahme bestanden):**
 Quellzelle und Position werden per Dropdown gewählt; Einfügen,
 Entfernen zusätzlicher Kopien und Zurücksetzen bearbeiten die freie

@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die tatsächliche
+Abspielsequenz eines Dialog-Sprite-Sheets wird vor dem nativen COST-Import
+als Bildleiste mit einer Miniatur je Abspielposition dargestellt, auch
+bei nicht benachbarten Wiederholungen. Ein Klick auf ein Bild wählt die
+Position für die bestehenden Einfüge-/Entfernen-Aktionen. Raster,
+Ausschlüsse, manuelle und freie Reihenfolge aktualisieren die Leiste;
+bei vollständig ausgeschlossenen Zellen bleibt sie korrekt leer.
+334 lokale Tests und Core-/Chromium-/stock-ScummVM-CI grün;
+Chromium prüft die Zellpixel, den Bildklick, das Entfernen und den
+anschließenden nativen Import und JSON-Export (PR #152, Merge
+`169e21a`, Runs `42954277899` / `42954277816` / `42954277828`).
+Menschliche UI-Abnahme offen. **Nächstes Paket:** Eine ausgewählte
+Abspielposition direkt vorwärts oder rückwärts innerhalb der freien
+Folge verschieben, ohne die Zelle zu duplizieren oder zu entfernen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Freie
 Sprite-Sheet-Abspielfolgen lassen sich jetzt direkt über Quellzellen- und
 Positionsauswahl zusammenstellen, ohne Zellnummern einzugeben. Eine
