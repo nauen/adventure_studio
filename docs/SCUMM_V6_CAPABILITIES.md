@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #164, CI-Abnahme bestanden):**
+Im visuellen Dialog-Sprite-Sheet-Editor sind jetzt bis zu 20
+aufeinanderfolgende Änderungen der Abspielfolge rückgängig machbar
+und wiederherstellbar. Die sichtbare Verlaufsposition und der
+Sheet-/Raster-/Zell-Kontextschutz betreffen ausschließlich den Editor;
+die native COST-/SCUMM-v6-Abdeckung und ihr Status bleiben unverändert.
+Core-CI zweimal, Chromium-CI zweimal, stock-ScummVM-CI grün
+(Merge `39fa8d07`; Runs `42965034647`, `42965029471`,
+`42965034831`, `42965029443`, `42965034645`). Menschliche
+UI-Abnahme offen. Nächste Editor-Ergänzung: Historieneinträge
+benennen und gezielt anspringen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #163, CI-Abnahme bestanden):**
 Die letzte rückgängig gemachte Sprite-Sheet-Folgenänderung kann
 per Redo wiederhergestellt werden. Eine neue Bearbeitung löscht den
