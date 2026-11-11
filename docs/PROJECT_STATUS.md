@@ -4,6 +4,26 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im vorbereiteten
+nativen Dialog-PNG-Stapelimport lässt sich jetzt die Frame-ID eines
+gewählten Bilds direkt im Studio überschreiben, ohne die Datei
+umzubenennen. Die Zuordnung bleibt bei Sortierung, Ausschluss und
+Wiederaufnahme stabil; Einzelbild, Galerie, GIF-Validierung, atomare
+Vorprüfung und COST-Import verwenden dieselbe ID. Ungültige native IDs
+werden zurückgewiesen, auch mehrere ursprüngliche Namensduplikate
+können schrittweise aufgelöst werden; bis dahin bleibt der Import
+gesperrt. Ein neuer Mehrfach-Upload setzt individuelle IDs zurück,
+der gezielte Bildersatz setzt nur die ID des ersetzten Bilds zurück.
+334 lokale Python-Tests und alle drei CI-Workflows grün. Chromium
+bestätigt die native ID ohne Dateiumbenennung einschließlich
+JSON-Export im unveränderten zweiten Lauf (der erste scheiterte bei
+einer vorherigen Farb-Vorschauprobe); stock ScummVM bestätigte die
+Dialog-/Rezept-Regression (PR #128, Merge `d96954d`, Runs
+`42936785066` / `42936784836` / `42936784961`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Eine eindeutige freie native
+Frame-ID bei Importkonflikten im Studio vorschlagen und mit einem
+Klick übernehmen können.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im NPC-Dialogeditor
 kann ein einzelnes bereits vorbereitetes PNG durch einen eigenen
 Einzelupload ersetzt werden. Seine Position und die manuelle Reihenfolge
