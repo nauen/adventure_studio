@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Offene Sprechfolgen nach Speichern aktualisieren (CI-Abnahme
+bestanden):** Bei ausstehendem Projektwechsel werden nach einer
+erfolgreichen Sprechfolgen-Speichern-Aktion die betroffenen
+Dialogzeilen und Richtungen erneut mit dem Projektstand verglichen.
+Nur noch offene Entwürfe bleiben in Warnung und Auswahlliste;
+bei null offenen Entwürfen informiert der Editor darüber, ohne
+den Projektwechsel automatisch auszuführen. Core-/Chromium-CI
+je zweimal grün (PR #186, Runs `43029799583`, `43029813622`,
+`43029799611`, `43029813958`). Native ScummVM-Ausgabe bleibt
+unverändert; kein neues Gameplay-Gate notwendig. Menschliche
+UI-Abnahme offen. **Danach:** Vor Tab-Neuladen oder Schließen
+bei offenem Sprechfolgenentwurf warnen.
+
 **Betroffenen Sprechfolgenentwurf direkt öffnen (CI-Abnahme
 bestanden):** Aus der Projektwechselwarnung lässt sich eine
 aufgeführte Dialogzeile/Richtung wählen und samt ihrer gespeicherten

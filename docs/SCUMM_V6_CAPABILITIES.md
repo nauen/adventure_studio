@@ -14,6 +14,18 @@ Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
 `tests/test_scumm_reference_contract.py` prüft den Quellenindex auf
 Vollständigkeit gegenüber den 64 IDs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #186, CI-Abnahme bestanden):**
+Nach dem Speichern einer NPC-Sprechfolge während einer offenen
+Projektwechselwarnung zeigt der Editor nur die verbleibenden
+ungespeicherten Zeilen/Richtungen; bei vollständigem Speichern
+wird dies ausdrücklich bestätigt. Kein automatischer Projektwechsel,
+keine Änderung an Projektformat, COST-/Opcode-Ausgabe oder
+Capability-Status. Core-/Chromium-CI je zweimal grün (Runs
+`43029799583`, `43029813622`, `43029799611`, `43029813958`).
+Native stock-ScummVM-Abnahme von PR #185 bleibt gültig.
+Menschliche UI-Abnahme offen. Nächstes Editorpaket: Beim
+Browser-Tab-Verlassen vor ungespeicherten Entwürfen warnen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #185, CI-Abnahme bestanden):**
 Die Projektwechselwarnung kann eine betroffene ungespeicherte
 Sprechfolge mit Zeilen-ID und Blickrichtung direkt im bestehenden
