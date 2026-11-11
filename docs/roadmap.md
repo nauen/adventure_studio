@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Zusammenhängende Sprite-Sheet-Abspielbilder entfernen
+(CI-Abnahme bestanden):** Der Nutzer wählt in der visuellen Bildleiste
+Start- und einschließlich Endbild und entfernt den Block in einer
+Aktion. Die verbleibende Sequenz muss weiterhin jede übernommene
+Quellzelle enthalten; ansonsten erfolgt keine Änderung. Der
+Chromium-Nutzerpfad prüfte die Restpixel und den nativen COST-Import
+sowie JSON-Export, Core-/Chromium-CI je zweimal, stock-ScummVM-CI
+einmal grün (PR #159, Merge `d1e810fa`, Runs `42959011539` /
+`42959011637` / `42959011475`). Menschliche UI-Abnahme offen.
+Danach: ausgewählte Bildblöcke ohne Kopie direkt an eine beliebige
+Position versetzen, einschließlich Beginn und Ende der freien Folge.
+
 **Bildblöcke frei in der Sprite-Sheet-Abspielfolge kopieren
 (CI-Abnahme bestanden):** Der Editor übernimmt einen aus Start- und
 Endbild gewählten zusammenhängenden Bereich als zusätzliche Kopie an
