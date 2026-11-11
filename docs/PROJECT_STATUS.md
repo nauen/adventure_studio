@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der PNG-Sprite-Sheet-
+Import im NPC-Dialogeditor unterstützt getrennte horizontale/vertikale
+Außenränder (je Seite) und Zellabstände in ganzzahligen Pixeln. Die
+verbleibenden Zellen werden exakt ohne Skalierung oder Randpixel
+geschnitten; ungültige bzw. nicht teilbare Raster werden sichtbar
+abgelehnt. Die Standardwerte `0` erhalten den bisherigen dicht
+gekachelten Import. 334 lokale Python-Tests und alle drei CI-Gates grün.
+Chromium bestätigt farbige Sprite-Frames aus einem Bogen mit 2 px Rand
+und 4 px Zwischenraum sowie nativen Import und JSON-Export; die
+vollständige stock-ScummVM-Regression bestand auf Anhieb (PR #136,
+Merge `396b9e8`, Runs `42942425436` / `42942425274` /
+`42942425281`). Menschliche UI-Abnahme offen. **Nächstes Paket:**
+Eine visuelle Raster-/Schnittvorschau vor dem Hinzufügen der
+Sprite-Sheet-Frames, damit Ränder und Abstände geprüft werden können.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der NPC-Dialogeditor
 kann ein PNG-Sprite-Sheet über frei wählbare Spalten und Zeilen in
 einzelne RGBA-PNG-Frames zerteilen. Die Bilder werden zeilenweise an
