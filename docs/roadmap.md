@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Letzte rückgängig gemachte Sprite-Sheet-Änderung wiederherstellen
+(CI-Abnahme bestanden):** Redo setzt nach Undo den letzten
+Abspielsequenz-Zustand wieder ein. Eine neue Bearbeitung verwirft
+Redo; die Wiederherstellung ist an den unveränderten Sheet- und
+Rasterkontext gebunden. Core-/Chromium-CI je zweimal,
+stock-ScummVM-CI einmal grün (PR #163, Merge `0744476c`,
+Runs `42963555709` / `42963555662` / `42963555655`).
+Menschliche UI-Abnahme offen. Danach: mehrere aufeinanderfolgende
+Sequenzänderungen in einer begrenzten Undo-/Redo-Historie
+durchlaufen, mit sichtbarer Verfügbarkeit und Kontextschutz.
+
 **Letzte Sprite-Sheet-Abspielfolgen-Änderung rückgängig machen
 (CI-Abnahme bestanden):** Der Nutzer kann eine letzte Änderung der
 freien Folge mit einem Knopf zurücknehmen, ohne das Raster,
