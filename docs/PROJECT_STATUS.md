@@ -12,8 +12,8 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
 - **Jetzt:** Genau R09 – Verbindungen zwischen mehreren Walkboxen und native BOXM-Next-Hop-Routen im Studio authorieren ([PR #196](https://github.com/nauen/adventure_studio/pull/196), in Prüfung). R08.1 ist mit #194 in `main` gemergt (`7acc7fb3`); NPC-Komfort nach #190 beendet.
-- **Abnahme:** R09: echte Studio-Eingabe von Box-Verbindungen → RoomAsset/JSON einschließlich Story-Verknüpfung → BOXM → sichtbarer Unterschied zwischen verbundenen und getrennten Actor-Klickrouten in stock ScummVM. Aktuell Modell-/Export-Core-Tests grün; Browser-/ScummVM-Evidenz noch ausstehend. R08.1-Nachweis: [native CI 43081496152](https://github.com/nauen/adventure_studio/actions/runs/43081496152).
-- **Blocker:** R09-ScummVM-Routingvergleich und Chromium-Abnahme auf dem finalen PR-Head ausstehend; erst danach Merge. Allgemeine Mehrboxen-/SCAL-Varianten und #80/#187 bleiben getrennt offen.
+- **Abnahme:** R09: echte Studio-Eingabe von Box-Verbindungen → RoomAsset/JSON einschließlich Story-Verknüpfung → BOXM → sichtbarer Unterschied zwischen verbundenen und getrennten Actor-Klickrouten in stock ScummVM. Modell-/Export-Core-Tests grün; [native BOXM-CI 43086709064](https://github.com/nauen/adventure_studio/actions/runs/43086709064) hat den verbundenen/unverbundenen Actor-Vergleich in stock ScummVM bestanden, [Artefakt](https://github.com/nauen/adventure_studio/actions/runs/43086709064/artifacts/13887995755). Abschließende Browser- und Gesamt-CI noch offen. R08.1-Nachweis: [native CI 43081496152](https://github.com/nauen/adventure_studio/actions/runs/43081496152).
+- **Blocker:** R09-ScummVM-Routingvergleich bestanden; abschließende Chromium-/Gesamt-CI auf dem finalen PR-Head und Merge noch ausstehend. Allgemeine Mehrboxen-/SCAL-Varianten und #80/#187 bleiben getrennt offen.
 - **Danach:** Nach vollständigem R09-Nachweis und Merge genau R10 – Perspektivskalierung (SCAL) im nativen Spiel. Kein paralleles R10-/NPC-Paket.
 
 ## Zuletzt tatsächlich geliefert
