@@ -40,6 +40,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 dialogue_speaking_timeline_preview)
 from adventure_studio.studio_sequences import (
     switch_dialogue_speaking_draft,
+    record_dialogue_speaking_draft,
     dialogue_animation_phase_selection, edit_dialogue_animation_phases,
     dialogue_ending_animation_selection, edit_dialogue_ending_animation,
     dialogue_ending_timeline, assign_dialogue_ending_sequence,
@@ -147,12 +148,15 @@ class DialogueAnimationTests(unittest.TestCase):
             "Ungespeicherte Änderungen an der Sprechfolge")
         initial, session = switch_dialogue_speaking_draft(raw, first, "S", "", None)
         self.assertEqual(initial, dialogue_speaking_sequence_selection(raw, first, "S"))
+        session = record_dialogue_speaking_draft(
+            raw, first, "S", "SpeakAlt, SpeakAlt", session)
         other, session = switch_dialogue_speaking_draft(
             raw, second, "S", "SpeakAlt, SpeakAlt", session)
         self.assertEqual(other, dialogue_speaking_sequence_selection(raw, second, "S"))
         restored, session = switch_dialogue_speaking_draft(
             raw, first, "S", other, session)
         self.assertEqual(restored, "SpeakAlt, SpeakAlt")
+        session = record_dialogue_speaking_draft(raw, first, "S", restored, session)
         north, session = switch_dialogue_speaking_draft(
             raw, first, "N", restored, session)
         self.assertEqual(north, dialogue_speaking_sequence_selection(raw, first, "N"))

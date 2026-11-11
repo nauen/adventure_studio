@@ -1480,21 +1480,9 @@ def dialogue_speaking_draft_save_status(
 def switch_dialogue_speaking_draft(
         raw: str | None, line_id: str | None, direction: str,
         current_sequence: str | None, session: dict | None) -> tuple[str, dict]:
-    """Remember unsaved per-line/facing edits in the editor session only."""
+    """Select the target's session draft without assigning another line's text."""
     previous = dict(session or {})
     drafts = dict(previous.get("drafts", {}))
-    old_target = previous.get("target")
-    if old_target and raw and old_target[0] == parse_document(raw).id:
-        saved = dialogue_speaking_sequence_selection(raw, old_target[1], old_target[2])
-        value = current_sequence or ""
-        if tuple(part.strip() for part in value.split(",")) != tuple(
-                part.strip() for part in saved.split(",")):
-            drafts[old_target] = value
-        else:
-            drafts.pop(old_target, None)
-    elif old_target:
-        drafts.pop(old_target, None)
-
     target = (parse_document(raw).id, line_id, direction) if raw and line_id else None
     saved_next = (dialogue_speaking_sequence_selection(raw, line_id, direction)
                   if target else "")
@@ -1502,7 +1490,27 @@ def switch_dialogue_speaking_draft(
     if target in drafts and tuple(part.strip() for part in drafts[target].split(",")) == tuple(
             part.strip() for part in saved_next.split(",")):
         drafts.pop(target)
-    return drafts.get(target, saved_next), {"target": target, "drafts": drafts}
+    return drafts.get(target, saved_next), {**previous, "target": target, "drafts": drafts}
+
+
+def record_dialogue_speaking_draft(
+        raw: str | None, line_id: str | None, direction: str,
+        sequence: str | None, session: dict | None) -> dict:
+    """Store an explicit editor edit under its current target, never a prior one."""
+    updated = dict(session or {})
+    drafts = dict(updated.get("drafts", {}))
+    if raw and line_id:
+        target = (parse_document(raw).id, line_id, direction)
+        saved = dialogue_speaking_sequence_selection(raw, line_id, direction)
+        value = sequence or ""
+        if tuple(part.strip() for part in value.split(",")) == tuple(
+                part.strip() for part in saved.split(",")):
+            drafts.pop(target, None)
+        else:
+            drafts[target] = value
+        updated["target"] = target
+    updated["drafts"] = drafts
+    return updated
 
 
 def discard_dialogue_speaking_draft(raw: str, line_id: str, direction: str) -> str:
