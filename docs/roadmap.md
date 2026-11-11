@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Browser-Tab mit ungespeicherten NPC-Sprechfolgen schützen
+(PR #187, CI-Abnahme bestanden):** Der Gradio-6-Browserpfad warnt
+vor aktivem oder sitzungsgebundenem ungespeichertem Sprechentwurf.
+Ohne Abweichungen gibt es keine Warnbedingung. Keine Änderung an
+Projekt-JSON oder nativen Ressourcen; Gradio-6-Launch integriert
+`head` und `css` zuverlässig. Core-/Chromium-CI je zweimal
+grün (Runs `43046439156`, `43046446969`, `43046439114`,
+`43046447015`). Menschliche UI-Abnahme offen.
+**Danach:** Browser-Verlassen abbrechen und erhaltene Entwürfe
+in der echten Oberfläche überprüfen.
+
 **Offene Sprechfolgen nach Speichern aktualisieren (CI-Abnahme
 bestanden):** Bei ausstehendem Projektwechsel werden nach einer
 erfolgreichen Sprechfolgen-Speichern-Aktion die betroffenen

@@ -49,6 +49,11 @@ def displayed_value(page, elem_id: str) -> str:
     return dropdown.inner_text()
 
 
+def warns_before_tab_unload(page) -> bool:
+    """Query the predicate used by Chromium's beforeunload handler."""
+    return page.evaluate("window.adventureStudioHasUnsavedSpeakingDrafts()")
+
+
 def await_selection(page, elem_id: str, label: str) -> None:
     page.wait_for_function(
         """({id, label}) => {
@@ -86,6 +91,23 @@ def await_preview_color(page, rgb: tuple[int, int, int]) -> None:
             return count >= 24;
         }""", arg={"color": list(rgb)}, timeout=20000,
     )
+
+
+def await_draft_frame_pixel(page, red: bool) -> None:
+    """Wait for the selected Costume image pixels, not only a changed URL."""
+    page.wait_for_function(
+        """({red}) => {
+            const img = document.querySelector('#native-dialogue-draft-frame-preview img');
+            if (!img || !img.complete || img.naturalWidth <= 128 || img.naturalHeight <= 128)
+                return false;
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const pixel = ctx.getImageData(128, 128, 1, 1).data;
+            return red ? pixel[0] > 180 : pixel[1] > 180;
+        }""", arg={"red": red}, timeout=20000)
 
 
 def await_direction_preview_color(page, rgb: tuple[int, int, int]) -> None:
@@ -276,11 +298,22 @@ def main() -> None:
             draft_save_status = page.locator("#native-dialogue-draft-save-status")
             expect(draft_save_status).to_contain_text(
                 "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
+            expect(page.locator(
+                "#native-dialogue-session-unsaved input, "
+                "#native-dialogue-session-unsaved textarea")).to_have_value(
+                    "0", timeout=20000)
+            assert not warns_before_tab_unload(page)
             sequence_input.fill("SpeakAlt, SpeakAlt")
+            assert warns_before_tab_unload(page)
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            expect(page.locator(
+                "#native-dialogue-session-unsaved input, "
+                "#native-dialogue-session-unsaved textarea")).to_have_value(
+                    "1", timeout=20000)
+            assert warns_before_tab_unload(page)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
             expect(draft_save_status).to_contain_text(
@@ -289,20 +322,32 @@ def main() -> None:
             expect(sequence_input).to_have_value("Speak", timeout=20000)
             expect(draft_save_status).to_contain_text(
                 "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
+            expect(page.locator(
+                "#native-dialogue-session-unsaved input, "
+                "#native-dialogue-session-unsaved textarea")).to_have_value(
+                    "0", timeout=20000)
+            assert not warns_before_tab_unload(page)
             # The persistent saved-state indicator confirms discard; preview
             # feedback is cleared because no GIF belongs to the restored draft.
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
             expect(picker_image.first).to_be_visible(timeout=20000)
-            initial_src = picker_image.first.get_attribute("src")
+            # Force a real selection change even when Speak was already
+            # selected; selecting the same option fires no Gradio input event.
+            select_option(page, "native-dialogue-draft-frame", "SpeakAlt")
+            expect(picker_image.first).to_be_visible(timeout=20000)
+            alternate_src = picker_image.first.get_attribute("src")
             select_option(page, "native-dialogue-draft-frame", "Speak")
+            expect(picker_image.first).to_be_visible(timeout=20000)
+            await_draft_frame_pixel(page, red=True)
             expect(picker_image.first).not_to_have_attribute(
-                "src", initial_src, timeout=20000)
+                "src", alternate_src, timeout=20000)
             red_src = picker_image.first.get_attribute("src")
             red_response = page.request.get(urljoin(page.url, red_src))
             assert red_response.ok
             with Image.open(BytesIO(red_response.body())) as red_picture:
                 assert red_picture.convert("RGB").getpixel((128, 128))[0] > 180
             select_option(page, "native-dialogue-draft-frame", "SpeakAlt")
+            await_draft_frame_pixel(page, red=False)
             expect(picker_image.first).not_to_have_attribute(
                 "src", red_src, timeout=20000)
             green_response = page.request.get(
@@ -1199,7 +1244,8 @@ def main() -> None:
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
-            page.screenshot(path=str(evidence / "failure.png"), full_page=True)
+            if not page.is_closed():
+                page.screenshot(path=str(evidence / "failure.png"), full_page=True)
             for elem_id in ("native-project-file", "native-dialogue-line",
                             "native-dialogue-pose", "native-dialogue-animation",
                             "native-project-export-file"):

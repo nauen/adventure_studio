@@ -7,6 +7,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, PR #187, CI-Abnahme bestanden):**
+Die Gradio-6-Studiooberfläche warnt beim Browser-Tab-Verlassen bzw.
+Neuladen vor aktiven oder zwischengespeicherten NPC-Sprechfolgenentwürfen.
+Nach Speichern oder Verwerfen aller Entwürfe bleibt der Warnindikator
+aus. Der `beforeunload`-Handler wird über die Gradio-6-Launch-API
+eingebunden; das Studio ist auf Gradio 6 begrenzt. Projektformat,
+COST und SCUMM-v6-Export bleiben unverändert. 335 lokale Core-Tests,
+Core-CI zweimal und vollständige Chromium-CI zweimal grün
+(Runs `43046439156` / `43046446969` / `43046439114` /
+`43046447015`). Menschliche UI-Abnahme der tatsächlichen
+Bestätigungs-/Abbruchentscheidung offen. **Nächstes Paket:**
+Abbruch des Tab-Verlassens im echten Browser als Nutzerpfad
+abnehmen und dabei erhaltene Sprechfolgenentwürfe prüfen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ist beim
 Projektdateiwechsel die Verlustwarnung offen, aktualisiert der
 NPC-Dialogeditor nach dem expliziten Speichern einer Sprechfolge
