@@ -1519,8 +1519,16 @@ def make_app():
                 [native_dialogue_png_batch_frame_image,
                  native_dialogue_png_batch_frame_status])
 
+        def png_batch_choose_tile(evt: gr.SelectData):
+            if evt is None or type(evt.index) is not int:
+                raise gr.Error("Bitte ein Bild in der aktuellen Importgalerie auswählen")
+            return evt.index
+
+        # With postponed annotations, Gradio's event injection needs the
+        # actual SelectData class rather than the string "gr.SelectData".
+        png_batch_choose_tile.__annotations__["evt"] = gr.SelectData
         native_dialogue_png_batch_gallery.select(
-            select_timeline_step, outputs=[native_dialogue_png_batch_selected])
+            png_batch_choose_tile, outputs=[native_dialogue_png_batch_selected])
 
         for button, step in ((native_dialogue_png_batch_previous, -1),
                              (native_dialogue_png_batch_next, 1)):
