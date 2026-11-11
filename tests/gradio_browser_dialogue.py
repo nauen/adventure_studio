@@ -275,9 +275,17 @@ def main() -> None:
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Interaktionsablauf geändert und validiert", timeout=20000)
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            page.get_by_text("Sprechfolge als Vorlage für weitere Dialogzeilen",
+                             exact=True).click()
+            page.locator("#native-dialogue-template-name input").fill("Begrüßung")
+            page.locator("#native-dialogue-template-save").click()
+            expect(page.locator("#native-dialogue-template-status")).to_contain_text(
+                "Begrüßung", timeout=20000)
             sequence_input.fill("pending line selection")
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            page.locator("#native-dialogue-template-apply").click()
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("SpeakAlt, Speak, SpeakAlt")
             page.locator("#native-dialogue-sequence-apply").click()
             expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
