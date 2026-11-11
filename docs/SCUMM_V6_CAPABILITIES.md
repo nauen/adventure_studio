@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #177, CI-Abnahme bestanden):**
+Ein nummerierter NPC-Sprechfolgeschritt kann im Editor durch einen
+anderen vorhandenen Costume-Frame ersetzt werden. Index und übrige
+Folge bleiben erhalten; die Aktion schreibt keine Modell-/COST-
+oder SCUMM-v6-Projektdaten. Kein neuer Opcode und keine Änderung
+des Capability-Status. Core-/Chromium-CI je zweimal grün,
+stock-ScummVM-CI nach gezielter Wiederholung des bekannten
+Frame-Abtast-Timingfehlers grün (Merge `ec865541`, Runs
+`42985182737`, `42985183040`, `42985182780`). Menschliche
+UI-Abnahme offen. Nächstes Paket: Frame vor/nach gewähltem
+Sprechschritt einfügen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #176, CI-Abnahme bestanden):**
 Die nummerierte NPC-Sprechfolgenauswahl rendert die tatsächliche
 Costume-Pixelpose des ausgewählten Entwurfsschritts. Auch beim
