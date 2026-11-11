@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Persistente Sprechfolgenvorlage vor Anwendung prüfen
+(CI-Abnahme bestanden):** Der Editor stellt die Costume-Bindung,
+Frameanzahl, vollständige Reihenfolge und Eignung für die gewählte
+NPC-Dialogzeile dar. Unpassende oder fehlende Zielzuordnungen
+deaktivieren die Anwendung; die Vorschau ist rein lesend.
+Core-/Chromium-CI je zweimal, stock-ScummVM-CI grün (PR #171,
+Merge `68d0d207`, Runs `42974596952` / `42974618351` /
+`42974597034` / `42974618382` / `42974618367`). Menschliche
+UI-Abnahme offen. **Danach:** Vorlagenframes vor Anwendung mit
+echten Costume-Pixeln als Editoranimation betrachten.
+
 **Persistente Vorlage zur Bearbeitung laden (CI-Abnahme
 bestanden):** Der NPC-Dialogeditor kann die Frame-Liste einer
 gewählten Vorlage in das Sprechframes-Feld übernehmen. Die Aktion
