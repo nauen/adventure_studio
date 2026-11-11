@@ -109,13 +109,14 @@ def await_direction_preview_color(page, rgb: tuple[int, int, int]) -> None:
     )
 
 
-def await_batch_gallery_colors(page, colors: list[tuple[int, int, int]]) -> None:
+def await_batch_gallery_colors(page, colors: list[tuple[int, int, int]],
+                               gallery_id="native-dialogue-png-batch-gallery") -> None:
     """Read rendered thumbnail pixels in the exact import order in Chromium."""
-    gallery = page.locator("#native-dialogue-png-batch-gallery")
+    gallery = page.locator("#" + gallery_id)
     gallery.scroll_into_view_if_needed()
     page.wait_for_function(
-        """({colors}) => {
-            const images = [...document.querySelectorAll('#native-dialogue-png-batch-gallery img')];
+        """({colors, galleryId}) => {
+            const images = [...document.querySelectorAll('#' + galleryId + ' img')];
             if (images.length !== colors.length) return false;
             return images.every((img, i) => {
                 if (!img.complete || !img.naturalWidth || !img.naturalHeight) return false;
@@ -128,7 +129,8 @@ def await_batch_gallery_colors(page, colors: list[tuple[int, int, int]]) -> None
                 return colors[i].every((expected, channel) =>
                     Math.abs(pixel[channel] - expected) <= 18);
             });
-        }""", arg={"colors": [list(color) for color in colors]}, timeout=20000)
+        }""", arg={"colors": [list(color) for color in colors],
+                   "galleryId": gallery_id}, timeout=20000)
 
 
 def await_batch_frame_color(page, color: tuple[int, int, int]) -> None:
@@ -613,6 +615,16 @@ def main() -> None:
             page.locator("#native-dialogue-sprite-margin-x input").fill("2")
             page.locator("#native-dialogue-sprite-margin-y input").fill("2")
             page.locator("#native-dialogue-sprite-gap-x input").fill("4")
+            sprite_status = page.locator("#native-dialogue-sprite-preview-status")
+            expect(sprite_status).to_contain_text("2 PNG-Frames in Zeilenreihenfolge", timeout=20000)
+            expect(sprite_status).to_contain_text("8 × 8 Pixel")
+            await_batch_gallery_colors(page, [(170, 55, 210), (55, 205, 115)],
+                                       "native-dialogue-sprite-preview-tiles")
+            expect(page.locator("#native-dialogue-sprite-preview-overlay img")).to_be_visible()
+            page.locator("#native-dialogue-sprite-gap-x input").fill("5")
+            expect(sprite_status).to_contain_text("teilbar", timeout=20000)
+            page.locator("#native-dialogue-sprite-gap-x input").fill("4")
+            expect(sprite_status).to_contain_text("8 × 8 Pixel", timeout=20000)
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"
@@ -662,6 +674,7 @@ def main() -> None:
                 "suggested_conflict_free_native_frame_ids": True,
                 "resolved_all_staged_native_frame_id_conflicts": True,
                 "imported_sprite_sheet_as_native_costume_frames": True,
+                "previewed_sprite_sheet_cuts_before_staging": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

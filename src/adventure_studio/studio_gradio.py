@@ -61,6 +61,7 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                suggest_dialogue_png_batch_frame_id,
                                resolve_dialogue_png_batch_frame_ids,
                                stage_dialogue_png_sprite_sheet,
+                               dialogue_png_sprite_sheet_preview,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
@@ -791,7 +792,7 @@ def make_app():
                         elem_id="native-dialogue-png-target")
                 native_dialogue_png_import = gr.Button(
                     "PNG importieren und Frame anhängen", elem_id="native-dialogue-png-import")
-                gr.Markdown("**Mehrere PNGs in einem Schritt:** Dateien auswählen, sortieren, ausschließen, wieder aufnehmen, ein Bild ersetzen oder dessen native Frame-ID ändern. **Sprite-Sheet-Frames hinzufügen** zerlegt ein PNG-Raster zeilenweise; optionale Außenränder (je Seite) und Zellabstände in Pixeln werden exakt berücksichtigt. **Freie Frame-ID vergeben** löst den Konflikt des gewählten Bilds; **Alle Frame-ID-Konflikte beheben** repariert den gesamten vorbereiteten Stapel, ohne bereits freie IDs zu verändern. Die ursprünglichen Upload-Dateikarten bleiben unverändert; verbindlich sind die **Importauswahl und Bildvorschau** unten. Nur eine neue Mehrfach-Dateiauswahl setzt die Bearbeitung zurück. Ungültige PNGs, doppelte IDs oder eine volle Palette verhindern den gesamten Import ohne Teiländerungen.")
+                gr.Markdown("**Mehrere PNGs in einem Schritt:** Dateien auswählen, sortieren, ausschließen, wieder aufnehmen, ein Bild ersetzen oder dessen native Frame-ID ändern. **Sprite-Sheet-Frames hinzufügen** zerlegt ein PNG-Raster zeilenweise; die Schnittvorschau zeigt vorher exakt die Rastergrenzen und Einzelbilder. Außenränder (je Seite) und Zellabstände in Pixeln werden berücksichtigt. **Freie Frame-ID vergeben** löst den Konflikt des gewählten Bilds; **Alle Frame-ID-Konflikte beheben** repariert den gesamten vorbereiteten Stapel, ohne bereits freie IDs zu verändern. Die ursprünglichen Upload-Dateikarten bleiben unverändert; verbindlich sind die **Importauswahl und Bildvorschau** unten. Nur eine neue Mehrfach-Dateiauswahl setzt die Bearbeitung zurück. Ungültige PNGs, doppelte IDs oder eine volle Palette verhindern den gesamten Import ohne Teiländerungen.")
                 native_dialogue_png_batch_files = gr.File(
                     label="Mehrere PNG-Dateien in Abspielreihenfolge", file_types=[".png"],
                     file_count="multiple", type="filepath", elem_id="native-dialogue-png-batch-files")
@@ -822,6 +823,18 @@ def make_app():
                     native_dialogue_sprite_gap_y = gr.Number(
                         label="Vertikaler Zellabstand (px)", value=0, precision=0,
                         elem_id="native-dialogue-sprite-gap-y")
+                native_dialogue_sprite_preview_status = gr.Markdown(
+                    "Bitte ein PNG-Sprite-Sheet auswählen",
+                    elem_id="native-dialogue-sprite-preview-status")
+                with gr.Row():
+                    native_dialogue_sprite_preview_overlay = gr.Image(
+                        label="Schnittvorschau: Raster auf dem Original-PNG",
+                        interactive=False, height=220,
+                        elem_id="native-dialogue-sprite-preview-overlay")
+                    native_dialogue_sprite_preview_tiles = gr.Gallery(
+                        label="Geplante Einzelbilder (noch nicht hinzugefügt)",
+                        columns=4, object_fit="contain", height=220,
+                        elem_id="native-dialogue-sprite-preview-tiles")
                 native_dialogue_png_batch_order = gr.State(None)
                 native_dialogue_png_batch_paths = gr.State(None)
                 native_dialogue_png_batch_frame_ids = gr.State({})
@@ -1571,6 +1584,30 @@ def make_app():
              native_dialogue_png_batch_selected,
              native_dialogue_png_batch_excluded,
              native_dialogue_png_batch_plan])
+
+        def png_sheet_preview(sheet, columns, rows, margin_x, margin_y, gap_x, gap_y):
+            if not sheet:
+                return None, [], "Bitte ein PNG-Sprite-Sheet auswählen"
+            try:
+                overlay, tiles, description = dialogue_png_sprite_sheet_preview(
+                    sheet, columns, rows, margin_x, margin_y, gap_x, gap_y)
+            except (ValueError, OSError) as error:
+                return None, [], f"⚠️ Sprite-Sheet-Raster: {error}"
+            return overlay, tiles, f"✅ {description}"
+
+        for source in (native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+                       native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+                       native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+                       native_dialogue_sprite_gap_y):
+            source.change(
+                png_sheet_preview,
+                [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+                 native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+                 native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+                 native_dialogue_sprite_gap_y],
+                [native_dialogue_sprite_preview_overlay,
+                 native_dialogue_sprite_preview_tiles,
+                 native_dialogue_sprite_preview_status])
 
         def png_batch_add_sprite_sheet(raw, line, paths, order, frame_ids,
                                        sheet, columns, rows, margin_x, margin_y, gap_x, gap_y):

@@ -539,14 +539,12 @@ def dialogue_png_batch_order(paths: list[str] | tuple[str, ...] | None,
     return tuple(paths[index] for index in indexes)
 
 
-def stage_dialogue_png_sprite_sheet(
-        paths: list[str] | tuple[str, ...] | None,
-        order: list[int] | tuple[int, ...] | None,
+def _dialogue_png_sprite_sheet_cells(
         sheet_path: str | None, columns: int | float, rows: int | float,
         margin_x: int | float = 0, margin_y: int | float = 0,
         gap_x: int | float = 0, gap_y: int | float = 0
-        ) -> tuple[tuple[str, ...], tuple[int, ...]]:
-    """Append row-major PNG tiles to the staged native batch, preserving exclusions."""
+        ) -> tuple[object, tuple[tuple[int, int, int, int], ...]]:
+    """The single pixel-exact grid contract for both preview and native staging."""
     from PIL import Image
 
     if (not isinstance(sheet_path, str) or not sheet_path or
@@ -564,12 +562,6 @@ def stage_dialogue_png_sprite_sheet(
     columns, rows = int(columns), int(rows)
     margin_x, margin_y, gap_x, gap_y = (int(value) for value in
                                       (margin_x, margin_y, gap_x, gap_y))
-    originals = tuple(paths or ())
-    included_indexes = (tuple(range(len(originals))) if order is None else tuple(order))
-    if originals:
-        dialogue_png_batch_order(originals, order)
-    elif included_indexes:
-        raise ValueError("Die PNG-Reihenfolge passt nicht mehr zur Dateiauswahl")
     with Image.open(sheet_path) as source:
         if source.format != "PNG" or getattr(source, "n_frames", 1) != 1:
             raise ValueError("Das Sprite-Sheet muss ein einzelnes PNG-Bild sein")
@@ -583,15 +575,62 @@ def stage_dialogue_png_sprite_sheet(
                              "müssen durch Spalten und Zeilen teilbar sein")
         cell_width, cell_height = usable_width // columns, usable_height // rows
         pixels = source.convert("RGBA")
-    destination = Path(tempfile.mkdtemp(prefix="adventure-studio-sprite-sheet-"))
-    tiles = []
+    boxes = []
     for row in range(rows):
         for column in range(columns):
-            tile = destination / f"{Path(sheet_path).stem}_r{row + 1}_c{column + 1}.png"
             left = margin_x + column * (cell_width + gap_x)
             top = margin_y + row * (cell_height + gap_y)
-            pixels.crop((left, top, left + cell_width, top + cell_height)).save(tile)
-            tiles.append(str(tile))
+            boxes.append((left, top, left + cell_width, top + cell_height))
+    return pixels, tuple(boxes)
+
+
+def dialogue_png_sprite_sheet_preview(
+        sheet_path: str | None, columns: int | float, rows: int | float,
+        margin_x: int | float = 0, margin_y: int | float = 0,
+        gap_x: int | float = 0, gap_y: int | float = 0
+        ) -> tuple[object, list[tuple[object, str]], str]:
+    """Show the exact prospective source rectangles without staging any frames."""
+    from PIL import ImageDraw
+
+    pixels, boxes = _dialogue_png_sprite_sheet_cells(
+        sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
+    overlay = pixels.copy()
+    draw = ImageDraw.Draw(overlay)
+    for left, top, right, bottom in boxes:
+        draw.rectangle((left, top, right - 1, bottom - 1),
+                       outline=(255, 75, 35, 255), width=1)
+    thumbnails = [(pixels.crop(box), f"{index}. Zeile {(index - 1) // int(columns) + 1}, "
+                    f"Spalte {(index - 1) % int(columns) + 1}")
+                  for index, box in enumerate(boxes, 1)]
+    width = boxes[0][2] - boxes[0][0]
+    height = boxes[0][3] - boxes[0][1]
+    return overlay, thumbnails, (f"{len(boxes)} PNG-Frames in Zeilenreihenfolge "
+                                  f"· je {width} × {height} Pixel · noch nicht hinzugefügt")
+
+
+def stage_dialogue_png_sprite_sheet(
+        paths: list[str] | tuple[str, ...] | None,
+        order: list[int] | tuple[int, ...] | None,
+        sheet_path: str | None, columns: int | float, rows: int | float,
+        margin_x: int | float = 0, margin_y: int | float = 0,
+        gap_x: int | float = 0, gap_y: int | float = 0
+        ) -> tuple[tuple[str, ...], tuple[int, ...]]:
+    """Append row-major PNG tiles to the staged native batch, preserving exclusions."""
+    originals = tuple(paths or ())
+    included_indexes = (tuple(range(len(originals))) if order is None else tuple(order))
+    if originals:
+        dialogue_png_batch_order(originals, order)
+    elif included_indexes:
+        raise ValueError("Die PNG-Reihenfolge passt nicht mehr zur Dateiauswahl")
+    pixels, boxes = _dialogue_png_sprite_sheet_cells(
+        sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
+    destination = Path(tempfile.mkdtemp(prefix="adventure-studio-sprite-sheet-"))
+    tiles = []
+    for index, box in enumerate(boxes):
+        row, column = divmod(index, int(columns))
+        tile = destination / f"{Path(sheet_path).stem}_r{row + 1}_c{column + 1}.png"
+        pixels.crop(box).save(tile)
+        tiles.append(str(tile))
     indexes = (*included_indexes, *range(len(originals), len(originals) + len(tiles)))
     return (*originals, *tiles), indexes
 
