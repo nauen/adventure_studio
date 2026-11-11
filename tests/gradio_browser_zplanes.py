@@ -48,6 +48,11 @@ def main() -> None:
                 expect(report).to_have_value("Natives Projekt geladen und validiert",
                                              timeout=30000)
                 for index, image in ((1, first), (2, second)):
+                    if index > 1:
+                        # Gradio replaces the dropzone with a file row after the first upload.
+                        # Clear the first selection before opening the second file chooser.
+                        page.locator("#native-zplane-file").locator("button").last.click()
+                        expect(page.locator("#native-zplane-file")).to_contain_text("Click to Upload")
                     page.locator("#native-zplane-index input").fill(str(index))
                     with page.expect_file_chooser() as file_chooser:
                         page.locator("#native-zplane-file").click()
