@@ -44,7 +44,8 @@ from adventure_studio.studio_sequences import (
     replace_dialogue_png_batch_frame, set_dialogue_png_batch_frame_id,
     dialogue_png_batch_selected_frame_id, dialogue_png_batch_entries,
     suggest_dialogue_png_batch_frame_id, resolve_dialogue_png_batch_frame_ids,
-    stage_dialogue_png_sprite_sheet, dialogue_png_sprite_sheet_preview)
+    stage_dialogue_png_sprite_sheet, dialogue_png_sprite_sheet_preview,
+    dialogue_png_sprite_sheet_order, move_dialogue_png_sprite_sheet_cell)
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -302,8 +303,8 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual(overlay.getpixel((2, 3)), (255, 75, 35, 255))
             self.assertEqual(overlay.getpixel((0, 0)), (245, 10, 245, 255))
             self.assertEqual(len(planned), 4)
-            self.assertEqual(planned[0][1], "1. Zeile 1, Spalte 1 · ✓ Übernehmen")
-            self.assertEqual(planned[-1][1], "4. Zeile 2, Spalte 2 · ✓ Übernehmen")
+            self.assertEqual(planned[0][1], "1. Zeile 1, Spalte 1 · ✓ Abspielposition 1")
+            self.assertEqual(planned[-1][1], "4. Zeile 2, Spalte 2 · ✓ Abspielposition 4")
             self.assertIn("4 von 4 PNG-Frames ausgewählt", description)
             self.assertIn("8 × 8 Pixel", description)
             selected_overlay, selected_planned, selected_description = (
@@ -322,6 +323,42 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertTrue(dialogue_png_batch_preflight(
                 raw, first, "W", filtered_sheet, "Sprechfolge",
                 order=filtered_order)[0])
+            self.assertEqual(dialogue_png_sprite_sheet_order(4, None), (0, 1, 2, 3))
+            reordered = move_dialogue_png_sprite_sheet_cell(4, None, [1], 3, -1)
+            self.assertEqual(reordered, (0, 1, 3, 2))
+            reordered = move_dialogue_png_sprite_sheet_cell(4, reordered, [1], 3, -1)
+            self.assertEqual(reordered, (3, 1, 0, 2))
+            self.assertEqual(move_dialogue_png_sprite_sheet_cell(
+                4, reordered, [1], 3, -1), reordered)
+            reordered_overlay, reordered_tiles, reordered_description = (
+                dialogue_png_sprite_sheet_preview(
+                    str(spaced_sheet), 2, 2, 2, 3, 4, 2, [1], reordered))
+            self.assertEqual(reordered_overlay.getpixel((14, 3)), (130, 130, 130, 255))
+            self.assertIn("Abspielposition 1", reordered_tiles[3][1])
+            self.assertIn("Abspielposition 2", reordered_tiles[0][1])
+            self.assertIn("3 von 4", reordered_description)
+            reordered_paths, reordered_order = stage_dialogue_png_sprite_sheet(
+                paths, (2, 0), str(spaced_sheet), 2, 2, 2, 3, 4, 2, [1], reordered)
+            self.assertEqual([Path(path).name for path in reordered_paths[3:]],
+                             ["SpacedSheet_r2_c2.png", "SpacedSheet_r1_c1.png",
+                              "SpacedSheet_r2_c1.png"])
+            self.assertEqual(reordered_order, (2, 0, 3, 4, 5))
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", reordered_paths, "Sprechfolge",
+                order=reordered_order)[0])
+            imported_reordered = import_dialogue_png_batch(
+                raw, first, "W", reordered_paths, "Sprechfolge", order=reordered_order)
+            self.assertIn("SpacedSheet_r2_c2, SpacedSheet_r1_c1, SpacedSheet_r2_c1",
+                          dialogue_speaking_sequence_selection(imported_reordered, first, "W"))
+            self.assertEqual(move_dialogue_png_sprite_sheet_cell(
+                4, reordered, [1], 0, 1), (3, 1, 2, 0))
+            with self.assertRaisesRegex(ValueError, "übernommene"):
+                move_dialogue_png_sprite_sheet_cell(4, reordered, [1], 1, -1)
+            for invalid in ([0, 0, 2, 3], [0, 2], [0, 1, 2, 4], [True, 1, 2, 3]):
+                with self.assertRaisesRegex(ValueError, "Abspielreihenfolge"):
+                    stage_dialogue_png_sprite_sheet(
+                        None, None, str(spaced_sheet), 2, 2, 2, 3, 4, 2,
+                        None, invalid)
             with self.assertRaisesRegex(ValueError, "mindestens eine Sprite-Sheet-Zelle"):
                 stage_dialogue_png_sprite_sheet(None, None, str(spaced_sheet),
                                                2, 2, 2, 3, 4, 2, [0, 1, 2, 3])
