@@ -1646,7 +1646,11 @@ def edit_dialogue_speaking_draft(
                 or not 0 <= int(step_index) < len(sequence)):
             raise ValueError("Bitte einen vorhandenen Sprechschritt auswählen")
         selected = int(step_index)
-        if operation == "Entfernen":
+        if operation == "Ersetzen":
+            if frame_id not in available:
+                raise ValueError("Bitte einen vorhandenen PNG-Frame auswählen")
+            sequence[selected] = frame_id
+        elif operation == "Entfernen":
             sequence.pop(selected)
             selected = min(selected, len(sequence) - 1) if sequence else None
         elif operation in ("Nach oben", "Nach unten"):

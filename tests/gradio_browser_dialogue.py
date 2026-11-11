@@ -311,12 +311,19 @@ def main() -> None:
             assert red_step_response.ok
             with Image.open(BytesIO(red_step_response.body())) as red_step:
                 assert red_step.convert("RGB").getpixel((128, 128))[0] > 180
+            select_option(page, "native-dialogue-draft-frame", "SpeakAlt")
+            page.locator("#native-dialogue-draft-replace").click()
+            expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-draft-frame", "Speak")
+            page.locator("#native-dialogue-draft-replace").click()
+            expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
             select_option(page, "native-dialogue-draft-step", "1. SpeakAlt")
             page.locator("#native-dialogue-draft-down").click()
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-draft-step", "2. SpeakAlt")
             page.locator("#native-dialogue-draft-remove").click()
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            select_option(page, "native-dialogue-draft-frame", "SpeakAlt")
             page.locator("#native-dialogue-draft-add").click()
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             page.locator("#native-dialogue-draft-duration input").fill("260")
