@@ -10,10 +10,10 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Genau R09 – authorierbare Verbindungen zwischen benachbarten Walkboxen mit nativer BOXM-Next-Hop-Ausgabe ([PR #196](https://github.com/nauen/adventure_studio/pull/196)). R08.1 ist in `main` gemergt (`7acc7fb3`); keine neuen NPC-Komfortpakete nach #190.
-- **Abnahme:** Echter Studio-Klickpfad → RoomAsset/JSON inklusive Story-Verknüpfung → BOXM → Actor erreicht im unveränderten ScummVM den entfernten Raumteil nur mit korrekt verbundener Boxroute. Core-Tests grün; [native CI 43086709064](https://github.com/nauen/adventure_studio/actions/runs/43086709064) bestätigt verbundenes gegenüber getrenntem Actor-Routing in stock ScummVM ([Artefakt](https://github.com/nauen/adventure_studio/actions/runs/43086709064/artifacts/13887995755)); abschließende Chromium-/Gesamt-CI ausstehend.
-- **Blocker:** Stock-ScummVM-Routenvergleich ist erfolgreich; endgültige Chromium- und Gesamt-CI auf dem finalen PR-Head offen. Kein Merge vor Freigabe. Beliebige Polygonformen und alle R10-/SCAL-Varianten bleiben getrennt offen.
-- **Danach:** Genau R10 – native Perspektivskalierung im Studio authorieren und in stock ScummVM nachweisen; erst nach R09-Abnahme und Merge.
+- **Jetzt:** Genau R10 – native SCAL-Perspektivkurven im Studio anlegen, mit Walkboxen verknüpfen und in stock ScummVM nachweisen. R09/BOXM mit [PR #196](https://github.com/nauen/adventure_studio/pull/196) erfolgreich gemergt (`d917ead4`); keine NPC-Komfortpakete nach #190.
+- **Abnahme:** Reale Studio-Eingabe mit Slot 1–4, zwei Y-/Skalierungs-Endpunkten und Walkbox-Auswahl → RoomAsset/JSON/Story → native SCAL-Bytes und Box-Slots → in stock ScummVM sichtbar unterschiedliche Actor-Silhouetten bei mindestens drei Y-Positionen. Eigener R10-Chromium-/ScummVM-Lauf noch ausstehend; R09-Boxrouting final bestanden ([CI 43087563847](https://github.com/nauen/adventure_studio/actions/runs/43087563847)).
+- **Blocker:** R10-Core-, Chromium-, Dialog- und ScummVM-Gates auf finalem Head müssen grün sein; bis dahin kein R10-Merge. Noch nicht abgedeckte Mehrboxen-/Perspektivvarianten explizit offen.
+- **Danach:** Genau das nächste aus der Capability-Matrix priorisierte native Raum-/Walkbox-Paket, erst nach R10-Abnahme und Merge.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 

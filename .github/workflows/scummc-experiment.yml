@@ -15,6 +15,7 @@ on:
       - 'src/adventure_studio/scumm_launch.py'
       - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
+      - 'src/adventure_studio/scumm_authored_scal_probe.py'
   push:
     paths:
       - '.github/workflows/scummc-experiment.yml'
@@ -24,6 +25,7 @@ on:
       - 'src/adventure_studio/scumm_room_visual_probe.py'
       - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
+      - 'src/adventure_studio/scumm_authored_scal_probe.py'
       - 'src/adventure_studio/scumm_scal_probe.py'
       - 'src/adventure_studio/scumm_camera_probe.py'
       - 'src/adventure_studio/scumm_costume.py'
@@ -190,6 +192,22 @@ jobs:
             /tmp/native-boxm-routing/native-boxm-routing-report.json
             /tmp/native-boxm-routing/*-screenshots/scummvm-end.png
             /tmp/native-boxm-routing/*-screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
+      - name: Verify Studio-authored SCAL perspective in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_authored_scal_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-authored-scal
+      - name: Retain Studio-authored SCAL gameplay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-authored-scal
+          path: |
+            /tmp/native-authored-scal/native-authored-scal-report.json
+            /tmp/native-authored-scal/authored-scal-project.json
+            /tmp/native-authored-scal/*-screenshots/scummvm-end.png
+            /tmp/native-authored-scal/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Link Studio COST actor and render in stock ScummVM
         env:

@@ -30,6 +30,7 @@ on:
       - 'tests/test_dialogue_animation.py'
       - 'tests/gradio_browser_dialogue.py'
       - 'tests/gradio_browser_boxm.py'
+      - 'tests/gradio_browser_scal.py'
   pull_request:
     paths:
       - '.github/workflows/studio.yml'
@@ -58,6 +59,7 @@ on:
       - 'tests/test_dialogue_animation.py'
       - 'tests/gradio_browser_dialogue.py'
       - 'tests/gradio_browser_boxm.py'
+      - 'tests/gradio_browser_scal.py'
 
 jobs:
   smoke:
@@ -122,6 +124,20 @@ jobs:
           path: |
             /tmp/studio-boxm-evidence/*.png
             /tmp/studio-boxm-evidence/*.json
+          if-no-files-found: ignore
+      - name: Click through authored SCAL perspective in real Chrome
+        env:
+          ADVENTURE_STUDIO_SCAL_EVIDENCE: /tmp/studio-scal-evidence
+        run: |
+          python tests/gradio_browser_scal.py
+      - name: Retain authored SCAL browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-gradio-scal-browser
+          path: |
+            /tmp/studio-scal-evidence/*.png
+            /tmp/studio-scal-evidence/*.json
           if-no-files-found: ignore
       - name: Click through native NPC dialogue pose editing in real Chrome
         env:
