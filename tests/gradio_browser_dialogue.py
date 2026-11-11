@@ -271,9 +271,12 @@ def main() -> None:
             # callback that can race with the immediately following save.
             await_selection(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
-            select_option(page, "native-dialogue-draft-frame", "Speak")
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
             expect(picker_image.first).to_be_visible(timeout=20000)
+            initial_src = picker_image.first.get_attribute("src")
+            select_option(page, "native-dialogue-draft-frame", "Speak")
+            expect(picker_image.first).not_to_have_attribute(
+                "src", initial_src, timeout=20000)
             red_src = picker_image.first.get_attribute("src")
             red_response = page.request.get(urljoin(page.url, red_src))
             assert red_response.ok
