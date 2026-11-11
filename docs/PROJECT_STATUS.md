@@ -4,6 +4,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Persistente
+NPC-Sprechfolgenvorlagen zeigen vor der Anwendung eine lesbare
+Vorschau mit Vorlagenname, Costume, Anzahl und vollständiger
+Reihenfolge der nativen PNG-Frame-IDs. Die gewählte Dialogzeile wird
+auf Costume-Kompatibilität geprüft; bei fehlendem oder unpassendem
+Ziel ist **Vorlage anwenden** deaktiviert. Die Anzeige ist rein
+lesend und ändert weder Projekt-JSON noch native COST-Animationen.
+Core- und Chromium-CI je zweimal und stock-ScummVM-CI grün
+(PR #171, Merge `68d0d207`, Runs `42974596952` / `42974618351` /
+`42974597034` / `42974618382` / `42974618367`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Die gespeicherte Frame-Folge
+einer Sprechvorlage zusätzlich visuell mit echten Costume-Pixeln
+als Animation vorführen, bevor sie einer Dialogzeile zugewiesen wird.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Eine
 persistente NPC-Sprechfolgenvorlage lässt sich jetzt über **Zum
 Bearbeiten laden** direkt in das Sprechframes-Eingabefeld übernehmen.
