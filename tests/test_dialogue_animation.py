@@ -302,10 +302,32 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual(overlay.getpixel((2, 3)), (255, 75, 35, 255))
             self.assertEqual(overlay.getpixel((0, 0)), (245, 10, 245, 255))
             self.assertEqual(len(planned), 4)
-            self.assertEqual(planned[0][1], "1. Zeile 1, Spalte 1")
-            self.assertEqual(planned[-1][1], "4. Zeile 2, Spalte 2")
-            self.assertIn("4 PNG-Frames", description)
+            self.assertEqual(planned[0][1], "1. Zeile 1, Spalte 1 · ✓ Übernehmen")
+            self.assertEqual(planned[-1][1], "4. Zeile 2, Spalte 2 · ✓ Übernehmen")
+            self.assertIn("4 von 4 PNG-Frames ausgewählt", description)
             self.assertIn("8 × 8 Pixel", description)
+            selected_overlay, selected_planned, selected_description = (
+                dialogue_png_sprite_sheet_preview(
+                    str(spaced_sheet), 2, 2, 2, 3, 4, 2, [1, 3]))
+            self.assertEqual(selected_overlay.getpixel((14, 3)), (130, 130, 130, 255))
+            self.assertIn("⛔ Überspringen", selected_planned[1][1])
+            self.assertIn("2 von 4 PNG-Frames ausgewählt", selected_description)
+            filtered_sheet, filtered_order = stage_dialogue_png_sprite_sheet(
+                paths, (2, 0), str(spaced_sheet), 2, 2, 2, 3, 4, 2, [1, 3])
+            self.assertEqual(filtered_order, (2, 0, 3, 4))
+            self.assertEqual([Path(path).name for path in filtered_sheet[3:]],
+                             ["SpacedSheet_r1_c1.png", "SpacedSheet_r2_c1.png"])
+            self.assertEqual(dialogue_png_batch_excluded(filtered_sheet, filtered_order),
+                             (("2. 02-green.png", 1),))
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", filtered_sheet, "Sprechfolge",
+                order=filtered_order)[0])
+            with self.assertRaisesRegex(ValueError, "mindestens eine Sprite-Sheet-Zelle"):
+                stage_dialogue_png_sprite_sheet(None, None, str(spaced_sheet),
+                                               2, 2, 2, 3, 4, 2, [0, 1, 2, 3])
+            with self.assertRaisesRegex(ValueError, "passen nicht mehr"):
+                stage_dialogue_png_sprite_sheet(None, None, str(spaced_sheet),
+                                               2, 2, 2, 3, 4, 2, [4])
             spaced_paths, spaced_order = stage_dialogue_png_sprite_sheet(
                 paths, (2, 0), str(spaced_sheet), 2, 2, 2, 3, 4, 2)
             self.assertEqual(spaced_order, (2, 0, 3, 4, 5, 6))
