@@ -288,6 +288,13 @@ def main() -> None:
             assert not warns_before_tab_unload(page)
             sequence_input.fill("SpeakAlt, SpeakAlt")
             assert warns_before_tab_unload(page)
+            # Verify the actual Chromium browser dialog, not only the
+            # JavaScript predicate. Dismissing must preserve the draft.
+            with page.expect_event("dialog", timeout=10000) as unload_dialog:
+                page.evaluate("setTimeout(() => location.reload(), 0)")
+            assert unload_dialog.value.type == "beforeunload"
+            unload_dialog.value.dismiss()
+            expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
