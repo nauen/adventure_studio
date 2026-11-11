@@ -651,7 +651,7 @@ def main() -> None:
             sheet_gif = page.locator("#native-dialogue-sprite-animation img")
             expect(sheet_gif.first).to_be_visible(timeout=20000)
             expect(page.locator("#native-dialogue-sprite-animation-status")).to_contain_text(
-                "2 ausgewählte Sheet-Zelle(n) · 240 ms pro Bild", timeout=20000)
+                "2 Sheet-Abspielbilder · 240 ms pro Bild", timeout=20000)
             gif_response = page.request.get(urljoin(page.url, sheet_gif.first.get_attribute("src")))
             assert gif_response.ok
             with Image.open(BytesIO(gif_response.body())) as sheet_preview:
