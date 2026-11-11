@@ -1227,7 +1227,8 @@ def main() -> None:
             # The draft overview discards only the selected active edit.
             select_option(page, "native-dialogue-line", first[0])
             select_option(page, "native-dialogue-direction", "Süd")
-            saved_before_discard = sequence_input.input_value()
+            saved_before_discard = dialogue_speaking_sequence_selection(
+                sprite_raw, first[1], "S")
             sequence_input.fill(saved_before_discard + ", Speak")
             sequence_input.press("Tab")
             expect(sequence_input).to_have_value(
