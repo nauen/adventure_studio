@@ -24,6 +24,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 assign_dialogue_speaking_sequence,
     save_dialogue_speaking_template, apply_dialogue_speaking_template,
     dialogue_speaking_template_choices, dialogue_speaking_template_preview,
+    dialogue_speaking_template_animation_preview,
     rename_dialogue_speaking_template, delete_dialogue_speaking_template,
     update_dialogue_speaking_template,
     load_dialogue_speaking_template_for_editing,
@@ -105,6 +106,27 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertIn("Costume: WitnessCostume", summary)
         self.assertIn("Abspielbilder: 3", summary)
         self.assertIn("1. Speak\n2. SpeakAlt\n3. Speak", summary)
+        with tempfile.TemporaryDirectory() as directory:
+            gif = Path(directory) / "template.gif"
+            before = parse_document(saved)
+            rendered = dialogue_speaking_template_animation_preview(
+                saved, second, "Begrüßung", 240, gif)
+            self.assertEqual(rendered, gif)
+            with Image.open(gif) as animation:
+                self.assertEqual(animation.format, "GIF")
+                self.assertEqual(animation.n_frames, 3)
+                self.assertEqual(animation.info["duration"], 240)
+                for index, channel in enumerate((0, 1, 0)):
+                    animation.seek(index)
+                    color = animation.convert("RGB").getpixel((128, 128))
+                    self.assertGreater(color[channel], 180)
+            self.assertEqual(parse_document(saved), before)
+            with self.assertRaisesRegex(ValueError, "Millisekunden"):
+                dialogue_speaking_template_animation_preview(
+                    saved, second, "Begrüßung", 20, gif)
+            with self.assertRaisesRegex(ValueError, "gespeicherte"):
+                dialogue_speaking_template_animation_preview(
+                    saved, second, "Unbekannt", 240, gif)
         self.assertEqual(dialogue_speaking_template_preview(
             saved, second, "Unbekannt")[1], False)
         self.assertEqual(dialogue_speaking_template_preview(

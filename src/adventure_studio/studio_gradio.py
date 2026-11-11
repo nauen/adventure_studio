@@ -41,6 +41,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                save_dialogue_speaking_template,
                                dialogue_speaking_template_choices,
                                dialogue_speaking_template_preview,
+                               dialogue_speaking_template_animation_preview,
                                rename_dialogue_speaking_template,
                                update_dialogue_speaking_template,
                                load_dialogue_speaking_template_for_editing,
@@ -825,6 +826,20 @@ def make_app():
                     value="Bitte eine gespeicherte Vorlage auswählen",
                     lines=6, interactive=False,
                     elem_id="native-dialogue-template-preview")
+                with gr.Row():
+                    native_dialogue_template_duration = gr.Number(
+                        label="Vorlagenvorschau: Millisekunden pro Bild",
+                        value=180, precision=0,
+                        elem_id="native-dialogue-template-duration")
+                    native_dialogue_template_play = gr.Button(
+                        "Vorlage als Animation abspielen",
+                        elem_id="native-dialogue-template-play")
+                native_dialogue_template_animation = gr.Image(
+                    label="Gespeicherte Frame-Folge · echte Costume-Pixel · Editor-GIF",
+                    interactive=False, format="gif",
+                    elem_id="native-dialogue-template-animation")
+                native_dialogue_template_animation_status = gr.Markdown(
+                    elem_id="native-dialogue-template-animation-status")
                 with gr.Row():
                     native_dialogue_template_load = gr.Button(
                         "Ausgewählte Vorlage zum Bearbeiten laden",
@@ -1771,6 +1786,32 @@ def make_app():
                  native_dialogue_template_select],
                 [native_dialogue_template_preview,
                  native_dialogue_template_apply])
+
+        def play_dialogue_template(raw, line, name, duration):
+            if not raw:
+                raise gr.Error("Bitte zuerst ein natives Projekt laden")
+            path = Path(tempfile.mkdtemp(
+                prefix="adventure-studio-template-preview-")) / "template.gif"
+            try:
+                rendered = dialogue_speaking_template_animation_preview(
+                    raw, line, name, duration, path)
+                return str(rendered), (f"{int(duration)} ms pro Bild nur im Editor; "
+                                       "ScummVM bestimmt die tatsächliche COST-Abspielrate.")
+            except (ValueError, OSError) as error:
+                raise gr.Error(f"Vorlagenanimation nicht möglich: {error}") from error
+
+        native_dialogue_template_play.click(
+            play_dialogue_template,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_template_select, native_dialogue_template_duration],
+            [native_dialogue_template_animation,
+             native_dialogue_template_animation_status])
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_template_select,
+                       native_dialogue_template_duration):
+            source.change(lambda: (None, ""),
+                          outputs=[native_dialogue_template_animation,
+                                   native_dialogue_template_animation_status])
 
         native_dialogue_template_apply.click(
             lambda raw, line, name, reset: native_edit(

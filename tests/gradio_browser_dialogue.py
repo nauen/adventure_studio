@@ -318,6 +318,19 @@ def main() -> None:
                            r"Ziel: kompatibel", re.S), timeout=20000)
             expect(page.locator("#native-dialogue-template-apply")).to_be_enabled(
                 timeout=20000)
+            page.locator("#native-dialogue-template-duration input").fill("240")
+            page.locator("#native-dialogue-template-play").click()
+            template_gif = page.locator("#native-dialogue-template-animation img")
+            expect(template_gif.first).to_be_visible(timeout=20000)
+            expect(page.locator("#native-dialogue-template-animation-status")).to_contain_text(
+                "240 ms pro Bild nur im Editor", timeout=20000)
+            template_response = page.request.get(
+                urljoin(page.url, template_gif.first.get_attribute("src")))
+            assert template_response.ok
+            with Image.open(BytesIO(template_response.body())) as template_animation:
+                assert template_animation.format == "GIF"
+                assert template_animation.n_frames == 2
+                assert template_animation.info["duration"] == 240
             await_selection(page, "native-dialogue-line", first[0])
             sequence_input.fill("unfertiger Entwurf")
             page.locator("#native-dialogue-template-load").click()

@@ -21,7 +21,8 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActo
 from .story_document import parse_story_document
 from .story_to_scumm import compile_story_to_scumm
 from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render_costume_frame,
-                            costume_timeline_images, render_costume_preview)
+                            costume_timeline_images, render_costume_preview,
+                            render_costume_frame_sequence_preview)
 from .scumm_costume import CostumeAnimation, CostumeDirection
 
 
@@ -1598,6 +1599,20 @@ def dialogue_speaking_template_preview(
     return (f"Vorlage: {template.name}\nCostume: {template.costume}\n"
             f"Abspielbilder: {len(template.frames)}\n"
             f"Frame-Reihenfolge:\n{frames}\n{assessment}"), compatible
+
+
+def dialogue_speaking_template_animation_preview(
+        raw: str, line_id: str, name: str, frame_duration_ms: int | float,
+        destination: Path) -> Path:
+    """Play the saved template's real costume pixels, without assigning it."""
+    # Use the same target/Costume guard as the editable-template and apply flows.
+    load_dialogue_speaking_template_for_editing(raw, line_id, name)
+    document = parse_document(raw)
+    template = next(item for item in document.speaking_sequence_templates
+                    if item.name == name)
+    return render_costume_frame_sequence_preview(
+        raw, template.costume, template.frames, frame_duration_ms,
+        destination)
 
 
 def load_dialogue_speaking_template_for_editing(
