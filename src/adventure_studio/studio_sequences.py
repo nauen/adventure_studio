@@ -1571,6 +1571,36 @@ def save_dialogue_speaking_template(
         SpeakingSequenceTemplate(label, costume.name, sequence))))
 
 
+def rename_dialogue_speaking_template(
+        raw: str, line_id: str, name: str, new_name: str) -> str:
+    """Rename one persisted template without altering any native speaking cues."""
+    document = parse_document(raw)
+    current = next((item for item in document.speaking_sequence_templates
+                    if item.name == name), None)
+    if current is None:
+        raise ValueError("Bitte eine vorhandene Sprechfolgenvorlage auswählen")
+    label = new_name.strip() if isinstance(new_name, str) else ""
+    if not 1 <= len(label) <= 80:
+        raise ValueError("Vorlagenname muss zwischen 1 und 80 Zeichen enthalten")
+    if any(item.name.casefold() == label.casefold() and item.name != name
+           for item in document.speaking_sequence_templates):
+        raise ValueError("Eine Sprechfolgenvorlage mit diesem Namen existiert bereits")
+    updated = tuple(replace(item, name=label) if item.name == name else item
+                    for item in document.speaking_sequence_templates)
+    return _checked(replace(document, speaking_sequence_templates=updated))
+
+
+def delete_dialogue_speaking_template(
+        raw: str, line_id: str, name: str) -> str:
+    """Remove only the named authoring preset; keep assigned COST animations."""
+    document = parse_document(raw)
+    if name not in {item.name for item in document.speaking_sequence_templates}:
+        raise ValueError("Bitte eine vorhandene Sprechfolgenvorlage auswählen")
+    updated = tuple(item for item in document.speaking_sequence_templates
+                    if item.name != name)
+    return _checked(replace(document, speaking_sequence_templates=updated))
+
+
 def apply_dialogue_speaking_template(
         raw: str, line_id: str, name: str,
         reset_to_stand: bool = True) -> str:
