@@ -3,6 +3,7 @@
 import struct
 import tempfile
 import unittest
+from importlib.util import find_spec
 from dataclasses import replace
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from adventure_studio.studio_sequences import import_room_zplane
 
 
 class RoomNativePrimitiveTests(unittest.TestCase):
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
     def test_authored_png_mask_roundtrips_to_native_room_assets(self):
         from PIL import Image
 
