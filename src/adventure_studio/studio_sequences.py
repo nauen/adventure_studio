@@ -2244,8 +2244,16 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
         return canonical_json(project)
     native = parse_document(native_raw)
     music_by_room = {room.name: room.music_id for room in native.rooms}
-    composed = replace(project, rooms=tuple(replace(room, music_id=music_by_room.get(room.name))
-                                            for room in project.rooms),
+    native_by_room = {room.name: room for room in native.rooms}
+    rooms = []
+    for room in project.rooms:
+        previous = native_by_room.get(room.name)
+        zplanes = previous.zplanes if previous is not None else ()
+        if zplanes and (room.geometry.room_width != previous.geometry.room_width or
+                        room.geometry.room_height != previous.geometry.room_height):
+            raise ValueError(f"Raum-Z-Maske für {room.name} passt nicht mehr zur Story-Raumgröße")
+        rooms.append(replace(room, music_id=music_by_room.get(room.name), zplanes=zplanes))
+    composed = replace(project, rooms=tuple(rooms),
                        costumes=native.costumes, actors=native.actors,
                        animation_rules=native.animation_rules,
                        animation_input_rules=native.animation_input_rules,
