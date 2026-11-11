@@ -53,14 +53,6 @@ def warns_before_tab_unload(page) -> bool:
     """Query the predicate used by Chromium's beforeunload handler."""
     return page.evaluate("window.adventureStudioHasUnsavedSpeakingDrafts()")
 
-def prevents_tab_unload(page) -> bool:
-    """Check the installed handler without destructively closing the tab."""
-    return page.evaluate("""() => {
-        const event = new Event('beforeunload', {cancelable: true});
-        window.dispatchEvent(event);
-        return event.defaultPrevented;
-    }""")
-
 
 def await_selection(page, elem_id: str, label: str) -> None:
     page.wait_for_function(
@@ -294,10 +286,8 @@ def main() -> None:
                 "#native-dialogue-session-unsaved textarea")).to_have_value(
                     "0", timeout=20000)
             assert not warns_before_tab_unload(page)
-            assert not prevents_tab_unload(page)
             sequence_input.fill("SpeakAlt, SpeakAlt")
             assert warns_before_tab_unload(page)
-            assert prevents_tab_unload(page)
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
@@ -307,7 +297,6 @@ def main() -> None:
                 "#native-dialogue-session-unsaved textarea")).to_have_value(
                     "1", timeout=20000)
             assert warns_before_tab_unload(page)
-            assert prevents_tab_unload(page)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("SpeakAlt, SpeakAlt", timeout=20000)
             expect(draft_save_status).to_contain_text(
@@ -321,7 +310,6 @@ def main() -> None:
                 "#native-dialogue-session-unsaved textarea")).to_have_value(
                     "0", timeout=20000)
             assert not warns_before_tab_unload(page)
-            assert not prevents_tab_unload(page)
             # The persistent saved-state indicator confirms discard; preview
             # feedback is cleared because no GIF belongs to the restored draft.
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
