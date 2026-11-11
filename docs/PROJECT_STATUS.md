@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Beim
+Auswählen eines verfügbaren PNG-Sprechframes zeigt der NPC-Dialogeditor
+jetzt direkt die echte Costume-Pixelpose vor dem Anhängen. Der Projekt-
+oder Sprecherwechsel aktualisiert Auswahl und Bild gemeinsam oder leert
+sie bei fehlender Auswahl. Die Vorschau ist rein lesend; native
+COST-/SCUMM-v6-Ausgabe bleibt unverändert. Core-/Chromium-CI je
+zweimal grün (PR #175, Merge `b41ae487`, Runs `42981767588` /
+`42981767768`). Der frühere erste Browserlauf scheiterte an einer
+zu frühen Test-Pixelabfrage, die korrigiert und erneut grün geprüft
+wurde. Für diesen UI-Diff wurde kein ScummVM-Run ausgelöst; letzter
+unveränderter nativer Durchlauf: `42979576719` (PR #174).
+Menschliche UI-Abnahme offen. **Nächstes Paket:** Auch den
+gewählten nummerierten Schritt der vorhandenen Sprechfolge als
+Costume-Pixelbild zeigen, um ihn vor dem Verschieben zu beurteilen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die
 NPC-Sprechframe-Folge kann jetzt ohne manuelle Komma-IDs aus
 vorhandenen Costume-PNG-Frames zusammengestellt werden. Ein
