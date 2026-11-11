@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Einzelne
+Abspielpositionen einer Dialog-Sprite-Sheet-Sequenz lassen sich nach
+Anklicken der Miniatur mit **Abspielbild nach vorne/hinten** um genau
+einen Platz verschieben. Auch nicht benachbarte Kopien derselben Zelle
+werden unabhängig bewegt. Die Operation erhält alle Bilder, weist
+ungültige Positionen zurück und verändert an Sequenzgrenzen oder bei
+identischen Nachbarzellen nichts. Vorschau und nativer COST-Import
+benutzen weiterhin die gemeinsame validierte Folge. 334 lokale Tests,
+Core-/Chromium-/stock-ScummVM-CI grün; Chromium prüft beide
+Verschieberichtungen, Bildpixel, nativen Import und JSON-Export
+(PR #154, Merge `eb28062`, Runs `42955411899` / `42955411892` /
+`42955412129`). Menschliche UI-Abnahme offen. **Nächstes Paket:**
+Mehrere aufeinanderfolgende Abspielbilder als Block innerhalb der
+freien Sequenz verschieben können.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die tatsächliche
 Abspielsequenz eines Dialog-Sprite-Sheets wird vor dem nativen COST-Import
 als Bildleiste mit einer Miniatur je Abspielposition dargestellt, auch
