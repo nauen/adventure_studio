@@ -7,6 +7,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, PR #187 in Abnahme):** Der Browser erhält
+eine native `beforeunload`-Warnung, wenn eine NPC-Sprechfolge im aktiven
+Eingabefeld oder als Entwurf einer anderen Zeile/Richtung ungespeichert
+ist. Nach Speichern bzw. Verwerfen aller Folgen bleibt das Verlassen
+warnungsfrei. Projektformat, COST und SCUMM-v6-Export bleiben unverändert.
+39 gezielte lokale Dialogtests grün; Core-CI zweimal grün. Chromium-CI
+noch nicht vollständig grün (ein Lauf scheiterte vor der neuen Prüfung
+an einer bestehenden Frame-Bildvorschau; zweiter Lauf ausstehend).
+Menschliche UI-Abnahme offen; **kein Merge vor grünen Gates**.
+**Nächstes Paket nach Abnahme:** Browser-Verlustwarnung mit echter
+Bestätigungs-/Abbruchentscheidung im Nutzerpfad prüfen und bei Bedarf
+die Wiederaufnahme nach abgebrochenem Verlassen absichern.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ist beim
 Projektdateiwechsel die Verlustwarnung offen, aktualisiert der
 NPC-Dialogeditor nach dem expliziten Speichern einer Sprechfolge
