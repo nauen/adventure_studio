@@ -64,6 +64,8 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                dialogue_png_sprite_sheet_preview,
                                dialogue_png_sprite_sheet_animation_preview,
                                dialogue_png_sprite_sheet_order,
+                               dialogue_png_sprite_sheet_sequence,
+                               change_dialogue_png_sprite_sheet_repetition,
                                move_dialogue_png_sprite_sheet_cell,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
@@ -795,7 +797,7 @@ def make_app():
                         elem_id="native-dialogue-png-target")
                 native_dialogue_png_import = gr.Button(
                     "PNG importieren und Frame anhängen", elem_id="native-dialogue-png-import")
-                gr.Markdown("**Mehrere PNGs in einem Schritt:** Dateien auswählen, sortieren, ausschließen, wieder aufnehmen, ein Bild ersetzen oder dessen native Frame-ID ändern. **Sprite-Sheet-Frames hinzufügen** zerlegt ein PNG-Raster; die Schnittvorschau zeigt vorher exakt die Rastergrenzen und Einzelbilder. **Klick auf ein Vorschaubild** wechselt zwischen Übernehmen und Überspringen. Mit **Zelle nach vorne/hinten** bestimmst du die Abspielreihenfolge vor der Übernahme; **Sheet-Folge abspielen** zeigt sie als Editor-GIF. Außenränder (je Seite) und Zellabstände in Pixeln werden berücksichtigt. **Freie Frame-ID vergeben** löst den Konflikt des gewählten Bilds; **Alle Frame-ID-Konflikte beheben** repariert den gesamten vorbereiteten Stapel, ohne bereits freie IDs zu verändern. Die ursprünglichen Upload-Dateikarten bleiben unverändert; verbindlich sind die **Importauswahl und Bildvorschau** unten. Nur eine neue Mehrfach-Dateiauswahl setzt die Bearbeitung zurück. Ungültige PNGs, doppelte IDs oder eine volle Palette verhindern den gesamten Import ohne Teiländerungen.")
+                gr.Markdown("**Mehrere PNGs in einem Schritt:** Dateien auswählen, sortieren, ausschließen, wieder aufnehmen, ein Bild ersetzen oder dessen native Frame-ID ändern. **Sprite-Sheet-Frames hinzufügen** zerlegt ein PNG-Raster; die Schnittvorschau zeigt vorher exakt die Rastergrenzen und Einzelbilder. **Klick auf ein Vorschaubild** wechselt zwischen Übernehmen und Überspringen. Mit **Zelle nach vorne/hinten** bestimmst du die Abspielreihenfolge. **Zelle nochmals abspielen** fügt ein weiteres Abspielbild der gewählten Zelle hinzu; **Wiederholung entfernen** nimmt eine Kopie zurück. **Sheet-Folge abspielen** zeigt die fertige Sequenz vor dem Import als Editor-GIF. Außenränder (je Seite) und Zellabstände in Pixeln werden berücksichtigt. **Freie Frame-ID vergeben** löst den Konflikt des gewählten Bilds; **Alle Frame-ID-Konflikte beheben** repariert den gesamten vorbereiteten Stapel, ohne bereits freie IDs zu verändern. Die ursprünglichen Upload-Dateikarten bleiben unverändert; verbindlich sind die **Importauswahl und Bildvorschau** unten. Nur eine neue Mehrfach-Dateiauswahl setzt die Bearbeitung zurück. Ungültige PNGs, doppelte IDs oder eine volle Palette verhindern den gesamten Import ohne Teiländerungen.")
                 native_dialogue_png_batch_files = gr.File(
                     label="Mehrere PNG-Dateien in Abspielreihenfolge", file_types=[".png"],
                     file_count="multiple", type="filepath", elem_id="native-dialogue-png-batch-files")
@@ -831,6 +833,7 @@ def make_app():
                     elem_id="native-dialogue-sprite-preview-status")
                 native_dialogue_sprite_skipped = gr.State([])
                 native_dialogue_sprite_order = gr.State([])
+                native_dialogue_sprite_repeats = gr.State({})
                 with gr.Row():
                     native_dialogue_sprite_preview_overlay = gr.Image(
                         label="Schnittvorschau: Raster auf dem Original-PNG",
@@ -848,6 +851,11 @@ def make_app():
                         "Zelle nach vorne", elem_id="native-dialogue-sprite-move-up")
                     native_dialogue_sprite_move_down = gr.Button(
                         "Zelle nach hinten", elem_id="native-dialogue-sprite-move-down")
+                with gr.Row():
+                    native_dialogue_sprite_repeat_add = gr.Button(
+                        "Zelle nochmals abspielen", elem_id="native-dialogue-sprite-repeat-add")
+                    native_dialogue_sprite_repeat_remove = gr.Button(
+                        "Wiederholung entfernen", elem_id="native-dialogue-sprite-repeat-remove")
                 with gr.Row():
                     native_dialogue_sprite_duration = gr.Number(
                         label="Sheet-Vorschau: Millisekunden pro Bild", value=180,
@@ -1611,23 +1619,23 @@ def make_app():
              native_dialogue_png_batch_plan])
 
         def png_sheet_preview(sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
-                              skipped, cell_order):
+                              skipped, cell_order, repeats):
             if not sheet:
                 return None, [], "Bitte ein PNG-Sprite-Sheet auswählen"
             try:
                 overlay, tiles, description = dialogue_png_sprite_sheet_preview(
                     sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
-                    skipped, cell_order)
+                    skipped, cell_order, repeats)
             except (ValueError, OSError) as error:
                 return None, [], f"⚠️ Sprite-Sheet-Raster: {error}"
             return overlay, tiles, f"✅ {description}"
 
         def png_sheet_new_grid(sheet, columns, rows, margin_x, margin_y, gap_x, gap_y):
             overlay, tiles, status = png_sheet_preview(
-                sheet, columns, rows, margin_x, margin_y, gap_x, gap_y, [], [])
+                sheet, columns, rows, margin_x, margin_y, gap_x, gap_y, [], [], {})
             choices = [(f"Position {index + 1}: Zelle {index + 1}", str(index))
                        for index in range(len(tiles))]
-            return (overlay, tiles, status, [], [],
+            return (overlay, tiles, status, [], [], {},
                     gr.update(choices=choices, value="0" if choices else None))
 
         for source in (native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
@@ -1644,6 +1652,7 @@ def make_app():
                  native_dialogue_sprite_preview_tiles,
                  native_dialogue_sprite_preview_status,
                  native_dialogue_sprite_skipped, native_dialogue_sprite_order,
+                 native_dialogue_sprite_repeats,
                  native_dialogue_sprite_selected])
 
         def png_sheet_cell_choices(sheet, columns, rows, margin_x, margin_y, gap_x,
@@ -1696,7 +1705,7 @@ def make_app():
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
              native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
              native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
-             native_dialogue_sprite_order],
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats],
             [native_dialogue_sprite_preview_overlay,
              native_dialogue_sprite_preview_tiles,
              native_dialogue_sprite_preview_status])
@@ -1707,7 +1716,18 @@ def make_app():
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
              native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
              native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
-             native_dialogue_sprite_order],
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats],
+            [native_dialogue_sprite_preview_overlay,
+             native_dialogue_sprite_preview_tiles,
+             native_dialogue_sprite_preview_status])
+
+        native_dialogue_sprite_repeats.change(
+            png_sheet_preview,
+            [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+             native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+             native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+             native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats],
             [native_dialogue_sprite_preview_overlay,
              native_dialogue_sprite_preview_tiles,
              native_dialogue_sprite_preview_status])
@@ -1749,17 +1769,43 @@ def make_app():
                  native_dialogue_sprite_order, native_dialogue_sprite_selected],
                 [native_dialogue_sprite_order])
 
+        def png_sheet_change_repeat(sheet, columns, rows, margin_x, margin_y,
+                                    gap_x, gap_y, skipped, repeats, selected, step):
+            try:
+                _overlay, tiles, _description = dialogue_png_sprite_sheet_preview(
+                    sheet, columns, rows, margin_x, margin_y, gap_x, gap_y, skipped)
+                return change_dialogue_png_sprite_sheet_repetition(
+                    len(tiles), skipped, repeats,
+                    int(selected) if isinstance(selected, str) and selected.isdecimal() else None,
+                    step)
+            except (ValueError, OSError) as error:
+                raise gr.Error(str(error)) from error
+
+        for button, step in ((native_dialogue_sprite_repeat_add, 1),
+                             (native_dialogue_sprite_repeat_remove, -1)):
+            button.click(
+                lambda sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                       skipped, repeats, selected, step=step: png_sheet_change_repeat(
+                           sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                           skipped, repeats, selected, step),
+                [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+                 native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+                 native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+                 native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+                 native_dialogue_sprite_repeats, native_dialogue_sprite_selected],
+                [native_dialogue_sprite_repeats])
+
         def png_sheet_play(sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
-                           skipped, cell_order, duration):
+                           skipped, cell_order, repeats, duration):
             destination = (Path(tempfile.mkdtemp(prefix="adventure-studio-sprite-preview-"))
                            / "sheet.gif")
             try:
                 result = dialogue_png_sprite_sheet_animation_preview(
                     sheet, columns, rows, duration, destination, margin_x, margin_y,
-                    gap_x, gap_y, skipped, cell_order)
-                count = len(dialogue_png_sprite_sheet_order(
-                    int(columns) * int(rows), cell_order)) - len(skipped or [])
-                return str(result), (f"{count} ausgewählte Sheet-Zelle(n) · "
+                    gap_x, gap_y, skipped, cell_order, repeats)
+                count = len(dialogue_png_sprite_sheet_sequence(
+                    int(columns) * int(rows), skipped, cell_order, repeats))
+                return str(result), (f"{count} Sheet-Abspielbilder · "
                                      f"{int(duration)} ms pro Bild · nur Editor-Vorschau; "
                                      "das native Timing bestimmt ScummVM.")
             except (ValueError, OSError) as error:
@@ -1771,26 +1817,28 @@ def make_app():
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
              native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
              native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
-             native_dialogue_sprite_order, native_dialogue_sprite_duration],
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+             native_dialogue_sprite_duration],
             [native_dialogue_sprite_animation, native_dialogue_sprite_animation_status])
         # Never show an older GIF as if it reflected the current grid or selection.
         for source in (native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
                        native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
                        native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
                        native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
-                       native_dialogue_sprite_order, native_dialogue_sprite_duration):
+                       native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+                       native_dialogue_sprite_duration):
             source.change(lambda: (None, ""),
                           outputs=[native_dialogue_sprite_animation,
                                    native_dialogue_sprite_animation_status])
 
         def png_batch_add_sprite_sheet(raw, line, paths, order, frame_ids,
                                        sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
-                                       skipped, cell_order):
+                                       skipped, cell_order, repeats):
             try:
                 selected = len(dialogue_png_batch_order(paths, order)) if paths else 0
                 updated, new_order = stage_dialogue_png_sprite_sheet(
                     paths, order, sheet, columns, rows,
-                    margin_x, margin_y, gap_x, gap_y, skipped, cell_order)
+                    margin_x, margin_y, gap_x, gap_y, skipped, cell_order, repeats)
             except (ValueError, OSError) as error:
                 raise gr.Error(f"Sprite-Sheet kann nicht hinzugefügt werden: {error}") from error
             return (updated, new_order, png_batch_selection(updated, new_order, selected),
@@ -1805,7 +1853,8 @@ def make_app():
              native_dialogue_sprite_columns, native_dialogue_sprite_rows,
              native_dialogue_sprite_margin_x, native_dialogue_sprite_margin_y,
              native_dialogue_sprite_gap_x, native_dialogue_sprite_gap_y,
-             native_dialogue_sprite_skipped, native_dialogue_sprite_order],
+             native_dialogue_sprite_skipped, native_dialogue_sprite_order,
+             native_dialogue_sprite_repeats],
             [native_dialogue_png_batch_paths, native_dialogue_png_batch_order,
              native_dialogue_png_batch_selected, native_dialogue_png_batch_excluded,
              native_dialogue_png_batch_plan])
