@@ -4,6 +4,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der
+NPC-Sprechfolgeneditor zeigt jetzt auch die echte Costume-Pixelpose
+des ausgewählten **nummerierten Entwurfsschritts**. Die Vorschau
+folgt der Schrittauswahl und wird nach Anhängen, Umsortieren oder
+Entfernen synchronisiert; bei freier Eingabe oder Ziel-/Projektwechsel
+werden veraltete Bilder entfernt. Ungültige Schrittpositionen
+werden abgewiesen. Das Projekt und der native COST-/SCUMM-v6-Export
+bleiben unverändert. Core-/Chromium-CI je zweimal und stock-ScummVM-CI
+grün (PR #176, Merge `1aa9a3e4`, Runs `42983378901` /
+`42983378864` / `42983378851`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Einen ausgewählten Sprechfolgeschritt direkt
+durch einen anderen vorhandenen PNG-Frame ersetzen, ohne ihn erst
+zu entfernen und erneut anzuhängen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Beim
 Auswählen eines verfügbaren PNG-Sprechframes zeigt der NPC-Dialogeditor
 jetzt direkt die echte Costume-Pixelpose vor dem Anhängen. Der Projekt-
