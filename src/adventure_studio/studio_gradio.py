@@ -1912,9 +1912,13 @@ def make_app():
             [native_dialogue_draft_step])
         native_dialogue_speaking_sequence.input(
             lambda: None, outputs=[native_dialogue_draft_step_preview])
-        for source in (native_state, native_dialogue_animation_line,
-                       native_dialogue_direction, native_dialogue_speaking_sequence):
-            source.change(
+        native_dialogue_speaking_sequence.change(
+            dialogue_speaking_draft_save_status,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_direction, native_dialogue_speaking_sequence],
+            [native_dialogue_draft_save_status])
+        for source in (native_dialogue_animation_line, native_dialogue_direction):
+            source.input(
                 dialogue_speaking_draft_save_status,
                 [native_state, native_dialogue_animation_line,
                  native_dialogue_direction, native_dialogue_speaking_sequence],
