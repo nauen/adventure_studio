@@ -289,6 +289,25 @@ class DialogueAnimationTests(unittest.TestCase):
                                  if actor.id == "SpeakerHarborKeeper")
             self.assertIn("MouthSheet_r1_c1, MouthSheet_r1_c2, MouthSheet_r2_c1",
                           (root / "sheet-native" / f"{sheet_costume}.scost").read_text())
+            spaced_sheet = root / "SpacedSheet.png"
+            spaced = Image.new("RGBA", (24, 24), (245, 10, 245, 255))
+            for position, color in enumerate(sheet_colors):
+                col, row = position % 2, position // 2
+                left, top = 2 + col * 12, 3 + row * 10
+                spaced.paste(color, (left, top, left + 8, top + 8))
+            spaced.save(spaced_sheet)
+            spaced_paths, spaced_order = stage_dialogue_png_sprite_sheet(
+                paths, (2, 0), str(spaced_sheet), 2, 2, 2, 3, 4, 2)
+            self.assertEqual(spaced_order, (2, 0, 3, 4, 5, 6))
+            for tile, color in zip(spaced_paths[3:], sheet_colors):
+                with Image.open(tile) as image:
+                    self.assertEqual(image.size, (8, 8))
+                    self.assertEqual(image.convert("RGBA").getpixel((0, 0)), color)
+                    self.assertEqual(image.convert("RGBA").getpixel((7, 7)), color)
+            imported_spaced = import_dialogue_png_batch(
+                raw, first, "W", spaced_paths, "Sprechfolge", order=spaced_order)
+            self.assertIn("SpacedSheet_r2_c1, SpacedSheet_r2_c2",
+                          dialogue_speaking_sequence_selection(imported_spaced, first, "W"))
             only_sheet, only_order = stage_dialogue_png_sprite_sheet(
                 None, None, str(sheet), 1, 1)
             self.assertEqual(len(only_sheet), 1)
@@ -297,6 +316,12 @@ class DialogueAnimationTests(unittest.TestCase):
                 stage_dialogue_png_sprite_sheet(None, None, str(sheet), 3, 2)
             with self.assertRaisesRegex(ValueError, "positive ganze Zahlen"):
                 stage_dialogue_png_sprite_sheet(None, None, str(sheet), 0, 2)
+            with self.assertRaisesRegex(ValueError, "nichtnegative ganze Pixelzahl"):
+                stage_dialogue_png_sprite_sheet(None, None, str(sheet), 2, 2, -1)
+            with self.assertRaisesRegex(ValueError, "keinen Platz"):
+                stage_dialogue_png_sprite_sheet(None, None, str(sheet), 2, 2, 8, 0)
+            with self.assertRaisesRegex(ValueError, "teilbar"):
+                stage_dialogue_png_sprite_sheet(None, None, str(sheet), 2, 2, 0, 0, 1, 0)
             with self.assertRaisesRegex(ValueError, "zuerst eine native Sprecher"):
                 suggest_dialogue_png_batch_frame_id(None, first, paths, None, 0)
             with self.assertRaisesRegex(ValueError, "zuerst ein PNG"):
