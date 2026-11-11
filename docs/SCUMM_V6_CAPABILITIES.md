@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #148, CI-Abnahme bestanden):**
+Eine frei angegebene Sequenz aus PNG-Sprite-Sheet-Zellnummern erlaubt
+wiederholte Frames an beliebigen Abspielpositionen. Die gleiche
+validierte Zellfolge steuert Editor-GIF und native COST-Frame-IDs;
+Editoraktionen schreiben weiterhin nicht selbst ins Projektmodell.
+334 lokale Tests, realer Chromium-Korrektur-/Pixel-/Import-/JSON-Export-
+Nachweis (Run `42951315398`) und vollständige stock-ScummVM-
+Regression (Run `42951315529`, Merge `36cb68a`) bestanden.
+D03 bleibt eine Teilfähigkeit; menschliche UI-Abnahme und
+vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #146, CI-Abnahme bestanden):**
 Ausgewählte PNG-Sprite-Sheet-Zellen können mehrfach direkt hintereinander
 in die vorbereitete native Dialoganimation übernommen werden. Jede

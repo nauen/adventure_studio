@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Freie Sprite-Sheet-Abspielsequenz (CI-Abnahme bestanden):**
+Ein optionales Sequenzfeld nimmt die gewünschte Folge von Rasterzellen
+als Zellnummern entgegen, einschließlich nicht benachbarter Wiederholungen
+wie `2,1,2`. Vorschau, GIF und nativer COST-Import nutzen denselben
+validierten Ablauf und erhalten eindeutige IDs für zusätzliche Kopien.
+Jede eingeschlossene Zelle muss vorkommen; ausgeschlossene, falsche
+oder fehlende Zellnummern erzeugen klare Fehler. 334 lokale Tests,
+Core-/Chromium-/stock-ScummVM-CI grün. Chromium überprüft Korrektur,
+Frame-Pixel und native Exportreihenfolge (PR #148, Merge `36cb68a`,
+Runs `42951315432` / `42951315398` / `42951315529`). Menschliche
+UI-Abnahme offen. Danach: freie Folge über direkte UI-Interaktion
+mit den Sheet-Zellen zusammenstellen.
+
 **Sprite-Sheet-Zellen vor dem Import wiederholen (CI-Abnahme bestanden):**
 Für jede eingeschlossene Rasterzelle lässt sich ihre direkte Abspiel-
 wiederholung erhöhen oder entfernen. Editor-GIF, Zellenanzeige und
