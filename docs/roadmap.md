@@ -10,10 +10,10 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Nach NPC-Abschluss #190, Konsolidierung #191/#192 und PNG-Z-Maske #193 liefert [PR #194](https://github.com/nauen/adventure_studio/pull/194) genau **R08.1 – eine frei gezeichnete konvexe Vierpunkt-Walkbox** durch Studio → Projekt-JSON → natives BOXD. Kein neues NPC-Komfortpaket.
-- **Abnahme:** Echter Chromium-Editorlauf mit Authoring und JSON-Roundtrip; native [CI 43079024249](https://github.com/nauen/adventure_studio/actions/runs/43079024249) grün: dieselbe Actor-Zielkoordinate wird mit der raumweiten Walkbox erreicht (Scroll in die entfernte Raumhälfte), mit der begrenzten Walkbox nicht; Actor bleibt links sichtbar (1.612 gemessene Actor-Pixel), `native_walkbox_boundary_passed=true`. [Native Evidenz](https://github.com/nauen/adventure_studio/actions/runs/43079024249/artifacts/13884270940).
-- **Blocker:** R08.1 belegt **eine** authorierte konvexe Walkbox mit realer nativer Laufgrenze, nicht beliebige Polygone, Mehrboxennetze oder R09-Routing. #187 (menschlicher Tab-Abbruch) und #80 (Mehrsprecher-Animation) bleiben getrennt. PR #194 bleibt bis grüner Gesamt-CI und Merge offen.
-- **Danach:** Erst nach R08.1-Abnahme/Merge genau **R09 – mehrere Walkboxen, Verbindungen und native Actor-Routen via BOXM** auswählen; R10/SCAL und O03 folgen später.
+- **Jetzt:** R08.1 – konvexe Vierpunkt-Walkboxen im Studio frei authorierbar, über RoomAsset/JSON und BOXD nativ exportiert; [PR #194](https://github.com/nauen/adventure_studio/pull/194) in `main` gemergt (`7acc7fb3`). NPC-Komfort nach #190 beendet, Konsolidierung #191/#192 und PNG-Z-Masken #193 vorausgegangen.
+- **Abnahme:** Realer Editor-/Chromium-Pfad, JSON-/Story-Roundtrip, BOXD und Actor-Laufgrenze im unveränderten ScummVM. [Native Run 43081496152](https://github.com/nauen/adventure_studio/actions/runs/43081496152) und [Chromium Run 43081496021](https://github.com/nauen/adventure_studio/actions/runs/43081496021) grün; Core/Dialog ebenfalls grün.
+- **Blocker:** Kein offenes R08.1-Gate. Universelle Polygone/Mehrboxennetze, BOXM-Routing und SCAL-Varianten nicht als fertig markieren. Menschliche #187-Prüfung und #80 getrennt offen.
+- **Danach:** Genau R09 – frei authorierbare Verbindungen eines Mehrboxennetzes mit nativer BOXM-Ausgabe und belegtem Actor-Klickweg in stock ScummVM. R10/O03 nachgeordnet.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
