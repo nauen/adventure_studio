@@ -747,6 +747,16 @@ def edit_dialogue_png_sprite_sheet_sequence(
                 [sequence[end_position]] + sequence[position - 1:end_position])
         if tuple(sequence) == previous:
             return timeline or ""
+    elif action == "remove_block":
+        if (position not in range(1, len(sequence) + 1) or
+                type(end_position) is not int or
+                end_position not in range(position, len(sequence) + 1)):
+            raise ValueError("Bitte einen gültigen Bildblock von Start bis Ende auswählen")
+        block = sequence[position - 1:end_position]
+        if any(sequence.count(index) == block.count(index) for index in set(block)):
+            raise ValueError(
+                "Die letzte Kopie jeder ausgewählten Zelle muss erhalten bleiben")
+        del sequence[position - 1:end_position]
     elif action == "copy_block":
         if (position not in range(1, len(sequence) + 1) or
                 type(end_position) is not int or
