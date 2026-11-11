@@ -96,6 +96,15 @@ class DialogueAnimationTests(unittest.TestCase):
                 path = Path(directory) / (name + ".png")
                 Image.new("RGBA", (8, 8), color).save(path)
                 raw = add_costume_frame(raw, "WitnessCostume", str(path), name)
+        # The picker shows the exact same native pixel poses before a step is added.
+        before_picker = parse_document(raw)
+        red_pose = dialogue_speaking_frame_preview(raw, first, "Speak")
+        green_pose = dialogue_speaking_frame_preview(raw, first, "SpeakAlt")
+        self.assertIsNotNone(red_pose)
+        self.assertIsNotNone(green_pose)
+        self.assertGreater(red_pose.convert("RGB").getpixel((128, 128))[0], 180)
+        self.assertGreater(green_pose.convert("RGB").getpixel((128, 128))[1], 180)
+        self.assertEqual(parse_document(raw), before_picker)
         before_draft = parse_document(raw)
         draft, step = edit_dialogue_speaking_draft(
             raw, first, "", "Hinzufügen", "Speak")
