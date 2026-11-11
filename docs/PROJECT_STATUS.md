@@ -4,6 +4,23 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Benannte
+NPC-Sprechfolgenvorlagen werden jetzt dauerhaft im nativen Projekt-JSON
+als optionales Feld `speaking_sequence_templates` mit Costume-Name
+und importierten PNG-Frame-IDs gespeichert. Beim Projektimport
+erscheinen sie erneut im Dialogeditor; ältere `format_version: 1`-
+Dateien ohne das Feld bleiben lesbar. Der Ziel-Dialog nutzt weiter
+den validierten nativen COST-Pfad, Vorlagen erzeugen keine eigenen
+Engine-Ressourcen. Core-/Chromium-CI je zweimal und Inventar-
+ScummVM-CI grün; Dialog-ScummVM-CI nach einem zeitabhängigen
+Fehlversuch im gezielten Wiederholungslauf grün (PR #167,
+Merge `1584c606`, Runs `42969447126` / `42969455639` /
+`42969447250` / `42969455636` / `42969455797` /
+`42969455654`, Versuch 2). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Gespeicherte Sprechfolgenvorlagen im Editor
+umbenennen und löschen können, damit veraltete oder falsch benannte
+Vorlagen ohne JSON-Handarbeit verwaltet werden können.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Native
 NPC-Sprechfolgen aus importierten PNG-Frame-IDs lassen sich jetzt
 innerhalb der Studio-Sitzung als benannte Vorlagen merken und per
