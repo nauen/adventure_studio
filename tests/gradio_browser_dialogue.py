@@ -326,10 +326,15 @@ def main() -> None:
             # feedback is cleared because no GIF belongs to the restored draft.
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
             expect(picker_image.first).to_be_visible(timeout=20000)
-            initial_src = picker_image.first.get_attribute("src")
+            # Force a real selection change even when Speak was already
+            # selected; selecting the same option fires no Gradio input event.
+            select_option(page, "native-dialogue-draft-frame", "SpeakAlt")
+            expect(picker_image.first).to_be_visible(timeout=20000)
+            alternate_src = picker_image.first.get_attribute("src")
             select_option(page, "native-dialogue-draft-frame", "Speak")
+            expect(picker_image.first).to_be_visible(timeout=20000)
             expect(picker_image.first).not_to_have_attribute(
-                "src", initial_src, timeout=20000)
+                "src", alternate_src, timeout=20000)
             red_src = picker_image.first.get_attribute("src")
             red_response = page.request.get(urljoin(page.url, red_src))
             assert red_response.ok
