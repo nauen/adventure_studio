@@ -4,6 +4,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Persistente
+NPC-Sprechfolgenvorlagen lassen sich direkt im Studio umbenennen oder
+löschen. Umbenennen prüft Namen und case-insensitive Duplikate;
+Löschen entfernt ausschließlich den Vorlageneintrag aus dem
+Projekt-JSON. Bereits zugewiesene native COST-Dialoganimationen
+bleiben erhalten. Kein neues Schema und kein Export-Eingriff.
+Core- und Chromium-CI je zweimal, stock-ScummVM-CI grün
+(PR #168, Merge `9bd627c7`, Runs `42971106128` / `42971131395` /
+`42971106080` / `42971131510` / `42971131455`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Eine vorhandene benannte
+Vorlage mit einer neu bearbeiteten Sprechfolge aktualisieren können,
+ohne sie zunächst löschen und neu anlegen zu müssen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Benannte
 NPC-Sprechfolgenvorlagen werden jetzt dauerhaft im nativen Projekt-JSON
 als optionales Feld `speaking_sequence_templates` mit Costume-Name
