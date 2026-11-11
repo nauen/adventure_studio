@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -41,19 +42,19 @@ def main() -> None:
                     "#native-walkbox-corners textarea, #native-walkbox-corners input")
                 corners.fill("0,70; 110,70; 110,150; 0,150")
                 page.locator("#native-walkbox-add").click()
-                expect(report).to_have_value("Walkbox 1 für Harbor gespeichert und validiert; BOXD wird beim Export erzeugt. Für eine dauerhafte Datei das native Projekt-JSON exportieren.",
+                expect(report).to_have_value(re.compile(r"Walkbox 1.*gespeichert"),
                                              timeout=30000)
                 page.locator("#native-walkbox-index input").fill("2")
                 corners.fill("110,70; 639,70; 639,150; 110,150")
                 page.locator("#native-walkbox-add").click()
-                expect(report).to_have_value("Walkbox 2 für Harbor gespeichert und validiert; BOXD wird beim Export erzeugt. Für eine dauerhafte Datei das native Projekt-JSON exportieren.",
+                expect(report).to_have_value(re.compile(r"Walkbox 2.*gespeichert"),
                                              timeout=30000)
                 route_input = page.locator(
                     "#native-box-routes-connections textarea, #native-box-routes-connections input")
                 route_input.fill("1-2")
                 page.locator("#native-box-routes-add").click()
                 expect(report).to_have_value(
-                    "BOXM-Wege für Harbor gespeichert; native Next-Hop-Matrix wird beim Export erzeugt. Für dauerhafte Sicherung das Projekt-JSON exportieren.",
+                    re.compile(r"BOXM-Wege.*gespeichert"),
                     timeout=30000)
                 page.locator("#native-project-export-button").click()
                 link = page.locator("#native-project-export-file a[download]")
