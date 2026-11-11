@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Benannte native NPC-Sprechfolgen wiederverwenden (CI-Abnahme
+bestanden):** Aus bereits importierten Costume-PNG-Frames können
+Autoren eine Folge als Sitzungsvorlage benennen und sie mit einem
+Klick auf eine andere Dialogzeile derselben Costume übertragen.
+Die Zielzuweisung wird validiert und im nativen Projekt gespeichert;
+die benannte Vorlage selbst bleibt vorerst sitzungsgebunden.
+Core-/Chromium-CI je zweimal, stock-ScummVM-CI grün (PR #166,
+Merge `075f76e9`, Runs `42967973393` / `42967981930` /
+`42967973479` / `42967981911` / `42967981973`). Menschliche
+UI-Abnahme offen. **Danach:** Vorlagen dauerhaft und versioniert
+in Projekt-JSON speichern und beim Projektladen wiederherstellen.
+
 **Benannte Sprite-Sheet-Historienschritte gezielt ansteuern
 (CI-Abnahme bestanden):** Der NPC-Dialogeditor zeigt für jeden
 verfügbaren Undo-/Redo-Stand eine verständliche Beschreibung der
