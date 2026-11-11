@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprechframes vor/nach einem Schritt einfügen (CI-Abnahme
+bestanden):** Vorhandene PNG-Pixelposen können an beiden Seiten
+eines gewählten nummerierten NPC-Sprechschritts eingefügt werden.
+Die bestehende Folge wird ohne Umnummerierung anderer Schritte
+weiterbearbeitet, auch mit Frame-Duplikaten. Nur Entwurf, keine
+Persistenzänderung vor explizitem Speichern. Core-CI zweimal,
+Chromium im ersten/dritten Lauf und stock-ScummVM-CI grün
+(PR #178, Merge `21ceb449`, Runs `42986776661` /
+`42986776696` / `42986776677`). Der zweite Chromium-Lauf
+hatte einen unabhängigen späten Sprite-Redo-Testflaker.
+Menschliche UI-Abnahme offen. **Danach:** Gewählten Schritt per
+Klick duplizieren, ohne denselben Frame erneut suchen zu müssen.
+
 **Sprechfolgeschritt direkt ersetzen (CI-Abnahme bestanden):**
 Der Editor tauscht einen ausgewählten nummerierten Schritt gegen
 einen anderen bereits importierten Costume-PNG-Frame aus, ohne
