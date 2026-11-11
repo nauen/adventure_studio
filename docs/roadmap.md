@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Alle nativen Frame-ID-Konflikte eines PNG-Stapels beheben (CI-Abnahme bestanden):**
+Ein Knopf löst alle Kollisionen mit bestehenden Costume-Frames und
+innerhalb der aktuellen Auswahl. Vorhandene freie IDs einschließlich
+manueller Namen werden geschützt; nur Konfliktbilder bekommen
+deterministische freie Suffixe. Ausgeschlossene Uploads und native
+Projektressourcen bleiben unverändert, bis ein eigener atomarer Import
+erfolgt. 334 lokale Tests und Core-/Chromium-/stock-ScummVM-CI grün;
+Browser-Nachweis mit einem Reparaturklick, zweitem Import und JSON-Export
+(PR #132, Merge `c3ee855`, Runs `42939456745` / `42939456742` /
+`42939456814`). Menschliche UI-Abnahme offen. Danach: Animationsframes
+aus einem PNG-Sprite-Sheet als geordnete native COST-Folge importieren.
+
 **Freie Frame-ID für ein vorbereitetes PNG vergeben (CI-Abnahme bestanden):**
 Ein Klick weist dem gewählten Uploadbild eine native ID zu, die weder
 in der betroffenen Sprecher-Costume noch bei den anderen eingeschlossenen

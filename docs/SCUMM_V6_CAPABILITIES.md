@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #132, CI-Abnahme bestanden):**
+Alle Konflikte der nativen Frame-IDs im vorbereiteten Dialog-PNG-Stapel
+lassen sich jetzt in einem Schritt auflösen; bereits freie IDs,
+Auswahlreihenfolge und ausgeschlossene Uploads bleiben erhalten. Die
+atomare COST-Importgrenze und der exportierte SCUMM-v6-Pfad sind
+unverändert. 334 lokale Tests, echter Chromium-Bedien-/JSON-Exportpfad
+(Run `42939456742`) und vollständige stock-ScummVM-Regression
+(Run `42939456814`, Merge `c3ee855`) bestanden. D03 bleibt eine
+Teilfähigkeit; menschliche UI-Abnahme und vollständiger Lippensync
+bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #130, CI-Abnahme bestanden):**
 Für vorbereitete Dialog-PNGs können freie native Frame-IDs jetzt
 direkt vergeben werden. Der Vorschlag berücksichtigt bestehende
