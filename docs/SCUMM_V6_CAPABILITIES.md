@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #138, CI-Abnahme bestanden):**
+Die Sprite-Sheet-Raster-/Schnittvorschau zeigt vor dem Hinzufügen
+die exakten Bildzellen und eingezeichneten Grenzen. Sie verwendet
+dasselbe Raster wie die später nativ importierten COST-Frames;
+fehlerhafte Parameter werden ohne Projektänderung angezeigt.
+334 lokale Tests, Chromium-Vorschau-/Pixel-/Import-/JSON-Export-
+Nachweis (Run `42943608437`) und vollständige stock-ScummVM-
+Regression (Run `42943608322`, Merge `5f3fc04`) bestanden.
+D03 bleibt eine Teilfähigkeit; menschliche UI-Abnahme und
+vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #136, CI-Abnahme bestanden):**
 Für den vorbereiteten Sprite-Sheet-Import können horizontale und
 vertikale Außenränder und Zellabstände unabhängig festgelegt werden;

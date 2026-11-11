@@ -9,6 +9,20 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Visuelle Sprite-Sheet-Raster-/Schnittvorschau (CI-Abnahme bestanden):**
+Vor der Übernahme zeigt der NPC-Dialogeditor das originale PNG mit
+Schnittgrenzen und die daraus entstehenden Einzelbilder samt Anzahl,
+Zellgröße und Reihenfolge. Die Bildvorschau wird bei jeder Änderung
+der Rasterparameter aktualisiert; ungültige Raster werden konkret
+angezeigt, ohne die Importauswahl zu ändern. Die exakt selben
+Schnittkoordinaten gelten für den nativen COST-Import. 334 lokale
+Tests, Core-/Chromium-/stock-ScummVM-CI grün; Chromium prüft die
+Miniaturpixel, ungültiges und korrigiertes Raster sowie native
+Import-/JSON-Exportfolge (PR #138, Merge `5f3fc04`, Runs
+`42943608415` / `42943608437` / `42943608322`). Menschliche
+UI-Abnahme offen. Danach: einzelne Sheet-Zellen schon vor dem
+Hinzufügen ein- oder ausschließen.
+
 **Sprite-Sheets mit Außenrändern und Zellabständen (CI-Abnahme bestanden):**
 Der Studio-Import akzeptiert separate X/Y-Außenränder und X/Y-
 Zellabstände als Pixelparameter. Ein exaktes Raster ohne Skalierung
