@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #162, CI-Abnahme bestanden):**
+Die letzte Bearbeitung der freien Dialog-Sprite-Sheet-Abspielfolge
+lässt sich im Editor per Undo zurücknehmen. Die Rücknahme verwendet
+kontextgebundenen Editor-State und verändert keine schon importierten
+nativen COST-Frames. Ein zweites Undo ohne neue Änderung und ein
+veralteter Raster-/Auswahlkontext werden abgewiesen. Core-/Chromium-CI
+zweimal grün (Browser-Run `42962623007` mit Undo, erneuter
+Bearbeitung, neun nativen Importframes und JSON-Export); stock-
+ScummVM-Regression grün (Run `42962623016`, Merge `f9c78dd5`).
+D03 bleibt eine Teilfähigkeit; menschliche UI-Abnahme und
+vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #161, CI-Abnahme bestanden):**
 Ein markierter Sprite-Sheet-Bildblock kann mit beliebiger positiver
 Anzahl zusätzlicher Kopien an der gewünschten Position in die
