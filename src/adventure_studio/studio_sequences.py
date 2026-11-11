@@ -1534,6 +1534,15 @@ def unsaved_dialogue_speaking_draft_targets(
         raw: str | None, line_id: str | None, direction: str,
         sequence: str | None, session: dict | None) -> tuple[str, ...]:
     """Name the actual unsaved line/direction pairs in a stable author order."""
+    return tuple(label for label, _line, _direction in
+                 unsaved_dialogue_speaking_draft_entries(
+                     raw, line_id, direction, sequence, session))
+
+
+def unsaved_dialogue_speaking_draft_entries(
+        raw: str | None, line_id: str | None, direction: str,
+        sequence: str | None, session: dict | None) -> tuple[tuple[str, str, str], ...]:
+    """Return labelled unsaved destinations without parsing UI display text."""
     if not raw:
         return ()
     document_id = parse_document(raw).id
@@ -1551,7 +1560,8 @@ def unsaved_dialogue_speaking_draft_targets(
             changed = tuple(part.strip() for part in drafts[target].split(","))
             persisted = tuple(part.strip() for part in saved.split(","))
             if changed != persisted:
-                result.append(f"{label} · {facing_name} ({target_id})")
+                result.append((f"{label} · {facing_name} ({target_id})",
+                               target_id, facing))
     return tuple(result)
 
 

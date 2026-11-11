@@ -43,6 +43,7 @@ from adventure_studio.studio_sequences import (
     record_dialogue_speaking_draft,
     has_unsaved_dialogue_speaking_drafts,
     unsaved_dialogue_speaking_draft_targets,
+    unsaved_dialogue_speaking_draft_entries,
     dialogue_animation_phase_selection, edit_dialogue_animation_phases,
     dialogue_ending_animation_selection, edit_dialogue_ending_animation,
     dialogue_ending_timeline, assign_dialogue_ending_sequence,
@@ -179,6 +180,11 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(len(affected), 2)
         self.assertTrue(any(first in entry and "Süd" in entry for entry in affected))
         self.assertTrue(any(second in entry and "Nord" in entry for entry in affected))
+        entries = unsaved_dialogue_speaking_draft_entries(
+            raw, second, "N", "SpeakAlt", other_session)
+        self.assertEqual(tuple(entry[0] for entry in entries), affected)
+        self.assertEqual({(line, facing) for _, line, facing in entries},
+                         {(first, "S"), (second, "N")})
         self.assertFalse(has_unsaved_dialogue_speaking_drafts(
             raw, first, "S", dialogue_speaking_sequence_selection(raw, first, "S"),
             {"drafts": {}}))
