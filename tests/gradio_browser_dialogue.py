@@ -419,7 +419,9 @@ def main() -> None:
             select_option(page, "native-dialogue-direction", "Süd")
             sequence_input.fill("SpeakAlt")
             select_option(page, "native-dialogue-line", second[0])
-            sequence_input.fill("Speak")
+            sequence_input.fill("Speak, Speak, Speak")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator('#native-project-file button[aria-label="Clear"]').click()
             page.locator("#native-project-file input[type=file]").set_input_files(str(sequence_file))
             expect(page.locator("#native-file-switch-status")).to_contain_text(
@@ -429,7 +431,7 @@ def main() -> None:
                 re.compile(re.escape(first[0]) + r".*" + re.escape(second[0]), re.S),
                 timeout=20000)
             expect(draft_list).to_have_value(re.compile("Süd"), timeout=20000)
-            expect(sequence_input).to_have_value("Speak", timeout=20000)
+            expect(sequence_input).to_have_value("Speak, Speak, Speak", timeout=20000)
             page.locator("#native-file-switch-cancel").click()
             expect(page.locator("#native-file-switch-status")).to_contain_text(
                 "Projektwechsel abgebrochen", timeout=20000)
