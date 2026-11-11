@@ -1229,6 +1229,10 @@ def main() -> None:
             select_option(page, "native-dialogue-direction", "Süd")
             saved_before_discard = dialogue_speaking_sequence_selection(
                 sprite_raw, first[1], "S")
+            expect(page.locator(
+                "#native-dialogue-direction-status input, "
+                "#native-dialogue-direction-status textarea"
+            )).to_have_value(re.compile(r"· Süd(?::| ·)"), timeout=20000)
             sequence_input.fill(saved_before_discard + ", Speak")
             sequence_input.press("Tab")
             expect(sequence_input).to_have_value(
@@ -1257,6 +1261,10 @@ def main() -> None:
             select_option(page, "native-dialogue-direction", "Süd")
             second_bulk = dialogue_speaking_sequence_selection(
                 sprite_raw, second[1], "S") + ", Speak"
+            expect(page.locator(
+                "#native-dialogue-direction-status input, "
+                "#native-dialogue-direction-status textarea"
+            )).to_have_value(re.compile(r"· Süd(?::| ·)"), timeout=20000)
             sequence_input.fill(second_bulk)
             sequence_input.press("Tab")
             expect(draft_save_status).to_contain_text(
