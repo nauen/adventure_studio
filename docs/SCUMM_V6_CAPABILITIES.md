@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #167, CI-Abnahme bestanden):**
+Benannte NPC-Sprechfolgenvorlagen bleiben nun über Studio-Sitzungen
+erhalten: optionales, validiertes Projekt-JSON-Feld mit Costume und
+nativen PNG-Frame-IDs, beim Reimport wieder in der UI auswählbar.
+Bestehende v1-Dateien ohne Vorlagen bleiben lesbar; native COST-
+Ressourcen und SCUMM-v6-Capability-Status unverändert. Core-/Chromium-
+CI je zweimal, stock-ScummVM-Inventar-CI grün, stock-ScummVM-Dialog-
+CI im Wiederholungslauf nach Timing-Fehler grün (Merge `1584c606`,
+Runs `42969447126`, `42969455639`, `42969447250`, `42969455636`,
+`42969455797`, `42969455654` Versuch 2). Menschliche UI-Abnahme
+offen. Nächstes Editorpaket: Vorlagen umbenennen und entfernen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #166, CI-Abnahme bestanden):**
 Benannte Sprechfolgenvorlagen können innerhalb einer Studio-Sitzung
 zwischen NPC-Dialogzeilen derselben Costume angewendet werden.
