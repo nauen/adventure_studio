@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** In der visuellen
+Dialog-Sprite-Sheet-Abspielfolge kann ein zusammenhängender Bereich
+aus Startbild (Klick in die Bildleiste) und einschließlich Blockende
+(Dropdown) gewählt und mit **Bildblock nach vorne/hinten** gemeinsam um
+einen Platz verschoben werden. Die Reihenfolge innerhalb des Blocks,
+alle Wiederholungen und die native COST-Framefolge bleiben konsistent;
+ungültige Bereiche werden abgewiesen, Bewegungen über die Grenzen
+ändern nichts. Raster-/Folgeänderungen setzen die Blockende-Auswahl
+zurück. 334 lokale Tests, Core-/Chromium-/stock-ScummVM-CI grün;
+Chromium prüft Auswahl, beide Bewegungsrichtungen, Pixel, nativen
+Import und JSON-Export (PR #156, Merge `18fa208`, Runs
+`42956671714` / `42956671612` / `42956671615`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Einen ausgewählten Bildblock
+an beliebiger Position erneut in die freie Abspielfolge einfügen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Einzelne
 Abspielpositionen einer Dialog-Sprite-Sheet-Sequenz lassen sich nach
 Anklicken der Miniatur mit **Abspielbild nach vorne/hinten** um genau

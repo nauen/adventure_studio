@@ -30,6 +30,16 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #156, CI-Abnahme bestanden):**
+Ein zusammenhängender Abschnitt der visuellen Sprite-Sheet-Folge lässt
+sich über Startbild und Blockende markieren und gemeinsam nach vorne
+oder hinten verschieben. Die interne Abspielreihenfolge bleibt erhalten;
+die native COST-Sequenz nutzt dieselbe validierte Zellfolge. 334 lokale
+Tests, Chromium-Blockauswahl-/Pixel-/Import-/Export-Nachweis (Run
+`42956671612`) und stock-ScummVM-Regression (Run `42956671615`,
+Merge `18fa208`) bestanden. D03 bleibt eine Teilfähigkeit;
+menschliche UI-Abnahme und vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #154, CI-Abnahme bestanden):**
 Abspielbilder einer frei zusammengestellten Dialog-Sprite-Sheet-Folge
 lassen sich direkt aus der visuellen Leiste einzeln vor- oder

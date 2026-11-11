@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Zusammenhängende Abspielbild-Blöcke verschieben (CI-Abnahme bestanden):**
+Das erste Bild wird per Bildleistenklick und das letzte per Dropdown
+gewählt. Beide Blockknöpfe verschieben alle enthaltenen Abspielbilder
+gemeinsam um genau einen Platz, ohne ihre Reihenfolge oder Anzahl zu
+verändern. Leere bzw. ungültige Bereiche werden abgelehnt, Grenzen
+bleiben stabil. 334 lokale Tests, Core-/Chromium-/stock-ScummVM-CI
+grün; der Browser prüft die Blockverschiebung bis zum nativen Import
+und JSON-Export (PR #156, Merge `18fa208`, Runs `42956671714` /
+`42956671612` / `42956671615`). Menschliche UI-Abnahme offen.
+Danach: einen ganzen Bildblock an beliebiger Stelle wiederholen.
+
 **Einzelne Sprite-Sheet-Abspielbilder verschieben (CI-Abnahme bestanden):**
 Über die anklickbare Bildleiste gewählte Positionen lassen sich ohne
 Kopieren oder Löschen um einen Platz nach vorne oder hinten setzen.
