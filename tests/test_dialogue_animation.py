@@ -39,7 +39,6 @@ from adventure_studio.studio_sequences import (
     dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
     dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview,
     dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame)
-from adventure_studio.studio_sequences import choose_dialogue_png_batch_frame
 
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "mini_story.json"
@@ -72,11 +71,6 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual(step_dialogue_png_batch_frame(paths, (2, 0), 0, 1), 1)
             self.assertEqual(dialogue_png_batch_frame_preview(paths, (2, 0), 1)[0], paths[0])
             self.assertEqual(step_dialogue_png_batch_frame(paths, (2, 0), 1, 1), 1)
-            self.assertEqual(choose_dialogue_png_batch_frame(paths, (2, 0), 1), 1)
-            with self.assertRaisesRegex(ValueError, "aktuellen Importauswahl"):
-                choose_dialogue_png_batch_frame(paths, (2, 0), 2)
-            with self.assertRaisesRegex(ValueError, "aktuellen Importauswahl"):
-                choose_dialogue_png_batch_frame(paths, (), 0)
             self.assertEqual(dialogue_png_batch_frame_preview(paths, (), None)[0], None)
             with self.assertRaisesRegex(ValueError, "zuerst ein PNG"):
                 step_dialogue_png_batch_frame(paths, (), None, 1)

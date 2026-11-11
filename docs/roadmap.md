@@ -13,8 +13,8 @@
 Ein beliebiges Bild der vorbereiteten Importfolge lässt sich durch
 Klick auf seine Galerie-Karte direkt auswählen. Die bestehende
 Einzelbildansicht zeigt die echten PNG-Pixel, Position und geplante
-native ID. Keine Änderung am Importformat; ungültige Galerie-Indizes
-werden sichtbar abgelehnt. 334 lokale Tests grün, Browser-/CI-Gates
+native ID. Keine Änderung am Importformat; die Auswahl bleibt an
+die aktuellen Galerie-/Dropdown-Einträge gebunden. 334 lokale Tests grün, Browser-/CI-Gates
 ausstehend. Anschließend: präventive Importfehleranzeige für die
 vorbereitete Sequenz.
 

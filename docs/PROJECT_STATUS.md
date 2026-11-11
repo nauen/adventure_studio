@@ -7,8 +7,9 @@ Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 **Produktpaket in Prüfung (2026-11-11):** Ein Klick auf ein Miniaturbild
 in der vorbereiteten PNG-Importgalerie wählt unmittelbar genau dieses
 Frame. Einzelbildvorschau, Positions-/Frame-ID-Anzeige, Dropdown und
-Vorwärts-/Rückwärtsnavigation verwenden dieselbe Auswahl. Stale oder
-ausgeschlossene Indizes werden abgelehnt; Projekt-JSON und COST-Export
+Vorwärts-/Rückwärtsnavigation verwenden dieselbe Auswahl. Der
+Auswahlwert bleibt an die aktuellen Dropdown-Optionen gebunden;
+Projekt-JSON und COST-Export
 bleiben unverändert. 334 lokale Tests grün; Chromium- und native
 CI-Abnahme sowie menschliche Bedienabnahme offen. **Nächstes Paket:**
 Importhindernisse (insbesondere doppelte Frame-IDs und Palette) bereits
