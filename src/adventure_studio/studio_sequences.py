@@ -696,7 +696,8 @@ def edit_dialogue_png_sprite_sheet_sequence(
         action: str, position: int | None = None,
         source_index: int | None = None, step: int | None = None,
         end_position: int | None = None,
-        destination_position: int | None = None) -> str:
+        destination_position: int | None = None,
+        repetitions: int | None = None) -> str:
     """Compose a free play sequence using source-cell and position selectors."""
     if action == "reset":
         return ""
@@ -774,6 +775,24 @@ def edit_dialogue_png_sprite_sheet_sequence(
             raise ValueError(
                 "Die letzte Kopie jeder ausgewählten Zelle muss erhalten bleiben")
         del sequence[position - 1:end_position]
+    elif action == "repeat_block":
+        if (position not in range(1, len(sequence) + 1) or
+                type(end_position) is not int or
+                end_position not in range(position, len(sequence) + 1)):
+            raise ValueError("Bitte einen gültigen Bildblock von Start bis Ende auswählen")
+        if (type(destination_position) is not int or
+                destination_position not in range(len(sequence) + 1)):
+            raise ValueError("Bitte eine gültige Einfügeposition für den Bildblock auswählen")
+        if type(repetitions) is not int or repetitions < 1:
+            raise ValueError("Bitte mindestens eine zusätzliche Blockkopie angeben")
+        block = sequence[position - 1:end_position]
+        # Temporary PNG staging and the pixel gallery are deliberately bounded;
+        # this is an editor-resource guard, not a native SCUMM-v6 frame limit.
+        if len(block) * repetitions > 2048 - len(sequence):
+            raise ValueError(
+                "Maximal 2048 Abspielbilder je Sprite-Sheet-Import im Editor "
+                "(temporäres Staging-Limit, keine SCUMM-v6-Grenze)")
+        sequence[destination_position:destination_position] = block * repetitions
     elif action == "copy_block":
         if (position not in range(1, len(sequence) + 1) or
                 type(end_position) is not int or

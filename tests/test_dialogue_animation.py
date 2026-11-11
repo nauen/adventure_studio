@@ -412,6 +412,27 @@ class DialogueAnimationTests(unittest.TestCase):
                 edit_dialogue_png_sprite_sheet_sequence(
                     4, [1], reordered, None, composed, "relocate_block", 3,
                     end_position=2, destination_position=0)
+            repeated_block = edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "repeat_block", 2,
+                end_position=3, destination_position=4, repetitions=2)
+            self.assertEqual(repeated_block, "4,1,4,3,1,4,1,4")
+            self.assertEqual(dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, repeated_block), (3, 0, 3, 2, 0, 3, 0, 3))
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "repeat_block", 2,
+                end_position=3, destination_position=0, repetitions=1), "1,4,4,1,4,3")
+            with self.assertRaisesRegex(ValueError, "mindestens eine"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "repeat_block", 2,
+                    end_position=3, destination_position=4, repetitions=0)
+            with self.assertRaisesRegex(ValueError, "temporäres Staging-Limit"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "repeat_block", 2,
+                    end_position=3, destination_position=4, repetitions=1023)
+            with self.assertRaisesRegex(ValueError, "gültigen Bildblock"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "repeat_block", 3,
+                    end_position=2, destination_position=4, repetitions=2)
             removed_block = edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, copied, "remove_block", 5,
                 end_position=6)

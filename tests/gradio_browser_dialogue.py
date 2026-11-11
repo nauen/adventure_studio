@@ -808,22 +808,44 @@ def main() -> None:
             await_batch_gallery_colors(page, [(55, 205, 115), (55, 205, 115),
                                               (170, 55, 210)],
                                        "native-dialogue-sprite-playback-frames")
+            playback_gallery.locator("img").first.click()
+            page.keyboard.press("Escape")
+            select_option(page, "native-dialogue-sprite-block-end",
+                          "2 · nach Bild 2 (Zelle 2)")
+            expect(page.locator("#native-dialogue-sprite-copy-destination input")).to_have_value(
+                "3 · nach Bild 3 (Zelle 1)", timeout=20000)
+            page.keyboard.press("Escape")
+            page.locator("#native-dialogue-sprite-block-repetitions input").fill("2")
+            page.locator("#native-dialogue-sprite-repeat-block").click()
+            expect(free_order).to_have_value("2,2,1,2,2,2,2", timeout=20000)
+            expect(sprite_status).to_contain_text("7 Abspielbilder", timeout=20000)
+            await_batch_gallery_colors(page, [(55, 205, 115), (55, 205, 115),
+                                              (170, 55, 210), (55, 205, 115),
+                                              (55, 205, 115), (55, 205, 115),
+                                              (55, 205, 115)],
+                                       "native-dialogue-sprite-playback-frames")
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"
                            r"2\. Batch-Repaired\.png → CustomEnding_2.*"
                            r"3\. Mouth-Strip_r1_c2\.png → Mouth_Strip_r1_c2.*"
                            r"4\. Mouth-Strip_r1_c2_repeat2\.png → Mouth_Strip_r1_c2_repeat2.*"
-                           r"5\. Mouth-Strip_r1_c1\.png → Mouth_Strip_r1_c1\s*$", re.S),
+                           r"5\. Mouth-Strip_r1_c1\.png → Mouth_Strip_r1_c1.*"
+                           r"6\. Mouth-Strip_r1_c2_repeat3\.png → Mouth_Strip_r1_c2_repeat3.*"
+                           r"7\. Mouth-Strip_r1_c2_repeat4\.png → Mouth_Strip_r1_c2_repeat4.*"
+                           r"8\. Mouth-Strip_r1_c2_repeat5\.png → Mouth_Strip_r1_c2_repeat5.*"
+                           r"9\. Mouth-Strip_r1_c2_repeat6\.png → Mouth_Strip_r1_c2_repeat6\s*$", re.S),
                 timeout=20000)
             await_batch_gallery_colors(page, [(225, 110, 40), (35, 205, 165),
                                               (55, 205, 115), (55, 205, 115),
-                                              (170, 55, 210)])
+                                              (170, 55, 210), (55, 205, 115),
+                                              (55, 205, 115), (55, 205, 115),
+                                              (55, 205, 115)])
             expect(readiness).to_contain_text("Import blockiert:", timeout=20000)
             page.locator("#native-dialogue-png-batch-resolve-ids").click()
-            expect(readiness).to_contain_text("Importbereit: 5 PNG-Frame(s)", timeout=20000)
+            expect(readiness).to_contain_text("Importbereit: 9 PNG-Frame(s)", timeout=20000)
             batch_import.click()
-            expect(ending_gallery.locator("img")).to_have_count(13, timeout=20000)
+            expect(ending_gallery.locator("img")).to_have_count(17, timeout=20000)
             page.locator("#native-project-export-button").click()
             expect(sequence_link.first).to_be_visible(timeout=20000)
             with page.expect_download() as sprite_info:
@@ -831,11 +853,15 @@ def main() -> None:
             sprite_file = evidence / "sprite-sheet-project.json"
             sprite_info.value.save_as(str(sprite_file))
             sprite_raw = sprite_file.read_text(encoding="utf-8")
-            assert dialogue_ending_timeline(sprite_raw, first[1], "N")[1][-5:] == (
+            assert dialogue_ending_timeline(sprite_raw, first[1], "N")[1][-9:] == (
                 ("9. Batch_B_2_2", 8), ("10. CustomEnding_2_2", 9),
                 ("11. Mouth_Strip_r1_c2", 10),
                 ("12. Mouth_Strip_r1_c2_repeat2", 11),
-                ("13. Mouth_Strip_r1_c1", 12))
+                ("13. Mouth_Strip_r1_c1", 12),
+                ("14. Mouth_Strip_r1_c2_repeat3", 13),
+                ("15. Mouth_Strip_r1_c2_repeat4", 14),
+                ("16. Mouth_Strip_r1_c2_repeat5", 15),
+                ("17. Mouth_Strip_r1_c2_repeat6", 16))
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
