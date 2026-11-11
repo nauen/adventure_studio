@@ -9,6 +9,15 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Vorabprüfung der nativen PNG-Importfähigkeit (in Prüfung):**
+Die Studio-Oberfläche simuliert den atomaren Stapelimport mit aktueller
+Dialogzeile, Richtung, Ziel und PNG-Reihenfolge ohne Projektänderung.
+Konkrete Fehler werden vor dem Klick angezeigt und der Importknopf
+bleibt in diesem Zustand deaktiviert. Gleiche Prüfung für 0/1/N-Bilder,
+Dateiformat, Frame-ID- und Palettenkonflikte. Lokale Tests grün;
+Chromium-/CI-Abnahme noch offen. Anschließend: Fehler an konkreten
+Miniaturkarten markieren.
+
 **Miniaturklick als direkte Frame-Navigation (CI-Abnahme bestanden):**
 Ein beliebiges Bild der vorbereiteten Importfolge lässt sich durch
 Klick auf seine Galerie-Karte direkt auswählen. Die bestehende

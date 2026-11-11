@@ -53,6 +53,7 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                remove_dialogue_png_batch_frame,
                                dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
                                dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview,
+                               dialogue_png_batch_preflight,
                                dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
@@ -832,9 +833,12 @@ def make_app():
                     label="Noch nicht importierte PNG-Folge · nur Editor-GIF",
                     interactive=False, format="gif", elem_id="native-dialogue-png-batch-animation")
                 native_dialogue_png_batch_animation_status = gr.Markdown()
+                native_dialogue_png_batch_readiness = gr.Markdown(
+                    "Bitte PNGs und eine native Dialogzeile auswählen",
+                    elem_id="native-dialogue-png-batch-readiness")
                 native_dialogue_png_batch_import = gr.Button(
                     "Alle PNGs als geordnete Folge importieren",
-                    elem_id="native-dialogue-png-batch-import")
+                    interactive=False, elem_id="native-dialogue-png-batch-import")
             native_dialogue_direction_sequence_apply = gr.Button(
                 "Nur Sprechfolge dieser Blickrichtung speichern",
                 elem_id="native-dialogue-direction-sequence-apply")
@@ -1509,6 +1513,23 @@ def make_app():
             [native_dialogue_png_batch_order, native_dialogue_png_batch_selected,
              native_dialogue_png_batch_excluded,
              native_dialogue_png_batch_plan, native_dialogue_png_batch_gallery])
+
+        def png_batch_readiness(raw, line, direction, paths, target, ticks, reset, order):
+            ready, description = dialogue_png_batch_preflight(
+                raw, line, direction, paths, target, ticks, reset, order)
+            return ("✅ " if ready else "⚠️ ") + description, gr.update(interactive=ready)
+
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_direction, native_dialogue_png_batch_files,
+                       native_dialogue_png_target, native_dialogue_ending_ticks,
+                       native_dialogue_reset, native_dialogue_png_batch_order):
+            source.change(
+                png_batch_readiness,
+                [native_state, native_dialogue_animation_line,
+                 native_dialogue_direction, native_dialogue_png_batch_files,
+                 native_dialogue_png_target, native_dialogue_ending_ticks,
+                 native_dialogue_reset, native_dialogue_png_batch_order],
+                [native_dialogue_png_batch_readiness, native_dialogue_png_batch_import])
 
         for source in (native_dialogue_png_batch_files, native_dialogue_png_batch_order,
                        native_dialogue_png_batch_selected):

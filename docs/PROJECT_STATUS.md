@@ -4,6 +4,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket in Prüfung (2026-11-11):** Der NPC-Dialogeditor zeigt vor
+dem PNG-Stapelimport, ob die vorbereitete Reihenfolge wirklich als native
+Sprech-/Abschlussfolge speicherbar ist. Dieselbe atomare Importfunktion
+wird ohne Änderung am Projekt-JSON zur Prüfung ausgeführt. Der Button
+ist bei leerer Auswahl, doppelt vergebener Frame-ID, fehlerhaftem PNG,
+voller Costume-Palette oder anderem Importfehler deaktiviert; beim
+Fehler wird die Ursache einschließlich betroffenem Dateinamen angezeigt,
+soweit der Fehler zu einer einzelnen PNG-Datei gehört. Jede Änderung an
+Auswahl, Richtung, Dialogzeile oder Ziel aktualisiert die Prüfung.
+Lokale Tests grün; Chromium- und CI-Abnahme sowie menschliche Bedien-
+abnahme offen. **Nächstes Paket:** Beim Importvorgang Konflikte an
+einzelnen Miniaturkarten sichtbar markieren.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein Klick auf ein Miniaturbild
 in der vorbereiteten PNG-Importgalerie wählt unmittelbar genau dieses
 Frame. Einzelbildvorschau, Positions-/Frame-ID-Anzeige, Dropdown und
