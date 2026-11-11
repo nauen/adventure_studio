@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #173, CI-Abnahme bestanden):**
+Der NPC-Dialogeditor kann jetzt auch die noch ungespeicherte
+Sprechframe-Folge mit echten COST-Pixeln und einstellbarer Bilddauer
+animieren. Die Vorschau validiert Frame-IDs, Ziel und Costume wie
+der Speichervorgang, ändert aber keinerlei Projektdaten. Kein neuer
+SCUMM-v6-Opcode; die Engine-Abspielrate wird nicht nachgestellt
+und der Capability-Status bleibt unverändert. Core-/Chromium-CI
+je zweimal, stock-ScummVM-CI grün (Merge `c6204ef8`, Runs
+`42977464651`, `42977464576`, `42977464512`). Menschliche
+UI-Abnahme offen. Als Nächstes die Framefolge klickbar erstellen
+und umsortieren.
+
 **D03 – aktuelle Editor-Ergänzung (PR #172, CI-Abnahme bestanden):**
 Gespeicherte NPC-Sprechfolgenvorlagen zeigen vor ihrer Anwendung
 zusätzlich eine echte COST-Pixelanimation mit nativen Frame-Versätzen,
