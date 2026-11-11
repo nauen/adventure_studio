@@ -135,6 +135,12 @@ class DialogueAnimationTests(unittest.TestCase):
             raw, first, draft, "Entfernen", step_index=1)
         self.assertEqual((draft, step), ("Speak, SpeakAlt", 1))
         draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Ersetzen", "Speak", step_index=1)
+        self.assertEqual((draft, step), ("Speak, Speak", 1))
+        draft, step = edit_dialogue_speaking_draft(
+            raw, first, draft, "Ersetzen", "SpeakAlt", step_index=1)
+        self.assertEqual((draft, step), ("Speak, SpeakAlt", 1))
+        draft, step = edit_dialogue_speaking_draft(
             raw, first, draft, "Nach oben", step_index=1)
         self.assertEqual((draft, step), ("SpeakAlt, Speak", 0))
         draft, step = edit_dialogue_speaking_draft(
@@ -149,6 +155,10 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(parse_document(raw), before_draft)
         with self.assertRaisesRegex(ValueError, "vorhandenen PNG-Frame"):
             edit_dialogue_speaking_draft(raw, first, "", "Hinzufügen", "Missing")
+        with self.assertRaisesRegex(ValueError, "vorhandenen PNG-Frame"):
+            edit_dialogue_speaking_draft(raw, first, "Speak", "Ersetzen", "Missing", 0)
+        with self.assertRaisesRegex(ValueError, "Sprechschritt"):
+            edit_dialogue_speaking_draft(raw, first, "Speak", "Ersetzen", "SpeakAlt", 4)
         with self.assertRaisesRegex(ValueError, "vorhandene PNG-Frames"):
             edit_dialogue_speaking_draft(raw, first, "Speak, Missing", "Hinzufügen", "Speak")
         with self.assertRaisesRegex(ValueError, "Sprechschritt"):
