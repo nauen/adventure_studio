@@ -40,6 +40,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                assign_dialogue_speaking_sequence,
                                save_dialogue_speaking_template,
                                dialogue_speaking_template_choices,
+                               dialogue_speaking_template_preview,
                                rename_dialogue_speaking_template,
                                update_dialogue_speaking_template,
                                load_dialogue_speaking_template_for_editing,
@@ -802,7 +803,9 @@ def make_app():
                             "ausgewählte Vorlage, ohne bestehende "
                             "Dialoganimationen zu verändern. **Zum Bearbeiten "
                             "laden** setzt nur das Sprechframes-Feld und "
-                            "speichert noch nichts im Projekt.")
+                            "speichert noch nichts im Projekt. Die "
+                            "Vorlagenvorschau zeigt Costume, Frame-Reihenfolge "
+                            "und Kompatibilität vor der Anwendung.")
                 with gr.Row():
                     native_dialogue_template_name = gr.Textbox(
                         label="Name der Sprechfolgenvorlage",
@@ -816,7 +819,12 @@ def make_app():
                         elem_id="native-dialogue-template-select")
                     native_dialogue_template_apply = gr.Button(
                         "Vorlage auf gewählte Dialogzeile anwenden",
-                        elem_id="native-dialogue-template-apply")
+                        interactive=False, elem_id="native-dialogue-template-apply")
+                native_dialogue_template_preview = gr.Textbox(
+                    label="Vorlagenvorschau · Costume, Frames und Zielprüfung",
+                    value="Bitte eine gespeicherte Vorlage auswählen",
+                    lines=6, interactive=False,
+                    elem_id="native-dialogue-template-preview")
                 with gr.Row():
                     native_dialogue_template_load = gr.Button(
                         "Ausgewählte Vorlage zum Bearbeiten laden",
@@ -1746,6 +1754,23 @@ def make_app():
             refresh_dialogue_templates,
             [native_state, native_dialogue_template_select],
             [native_dialogue_template_select])
+
+        def preview_dialogue_template(raw, line, selected):
+            try:
+                description, compatible = dialogue_speaking_template_preview(
+                    raw, line, selected)
+            except ValueError as error:
+                return str(error), gr.update(interactive=False)
+            return description, gr.update(interactive=compatible)
+
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_template_select):
+            source.change(
+                preview_dialogue_template,
+                [native_state, native_dialogue_animation_line,
+                 native_dialogue_template_select],
+                [native_dialogue_template_preview,
+                 native_dialogue_template_apply])
 
         native_dialogue_template_apply.click(
             lambda raw, line, name, reset: native_edit(
