@@ -14,6 +14,12 @@ Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
 `tests/test_scumm_reference_contract.py` prüft den Quellenindex auf
 Vollständigkeit gegenüber den 64 IDs.
 
+**D03 – Editor-Ergänzung (PR #187, Abnahme offen):** Eine browserseitige
+Warnung schützt aktive und zwischengespeicherte NPC-Sprechfolgenentwürfe
+vor versehentlichem Tab-Neuladen bzw. Verlassen. Der D03-Capability-Status
+und der native COST-/SCUMM-v6-Export bleiben unverändert. Lokale
+Dialogtests und Core-CI grün; Chromium-Abnahme noch offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #186, CI-Abnahme bestanden):**
 Nach dem Speichern einer NPC-Sprechfolge während einer offenen
 Projektwechselwarnung zeigt der Editor nur die verbleibenden
