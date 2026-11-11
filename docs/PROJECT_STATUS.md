@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein ausgewählter
+Bildblock der visuellen Dialog-Sprite-Sheet-Abspielfolge lässt sich über
+Startbild, einschließlich Blockende und eine frei wählbare Zielposition
+erneut einfügen. Originalbilder bleiben erhalten; die Kopie funktioniert
+auch am Anfang und innerhalb des ursprünglichen Blocks. Ungültige
+Bereiche oder Einfügepositionen werden abgewiesen. Die resultierende
+Folge steuert dieselbe GIF-Vorschau, native COST-Frames und den JSON-
+Export. 334 lokale Tests laut PR, Core-/Chromium-/stock-ScummVM-CI
+jeweils zweimal grün; Chromium prüft fünf kopierte/ursprüngliche
+Sprite-Bilder, sieben native Importframes und JSON-Export (PR #158,
+Merge `fea8d462`, Runs `42958027740` / `42958026815` /
+`42958026806`). Menschliche UI-Abnahme offen. **Nächstes Paket:**
+Einen zusammenhängenden Abspielbild-Block in einem Schritt entfernen,
+ohne die letzte Kopie einer ausgewählten Quellzelle zu verlieren.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** In der visuellen
 Dialog-Sprite-Sheet-Abspielfolge kann ein zusammenhängender Bereich
 aus Startbild (Klick in die Bildleiste) und einschließlich Blockende
