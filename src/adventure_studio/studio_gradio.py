@@ -61,7 +61,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
 from .studio_sequences import (dialogue_ending_animation_selection,
                                switch_dialogue_speaking_draft,
                                record_dialogue_speaking_draft,
-                               has_unsaved_dialogue_speaking_drafts,
+                               unsaved_dialogue_speaking_draft_targets,
                                edit_dialogue_ending_animation,
                                dialogue_ending_timeline,
                                edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
@@ -652,6 +652,10 @@ def make_app():
             native_file = gr.File(label="Native Projekt-JSON öffnen", file_types=[".json"], type="filepath", elem_id="native-project-file")
             native_pending_file = gr.State(None)
             native_file_switch_status = gr.Markdown("", elem_id="native-file-switch-status")
+            native_file_switch_drafts = gr.Textbox(
+                label="Betroffene Dialogzeilen und Blickrichtungen",
+                interactive=False, lines=4, visible=False,
+                elem_id="native-file-switch-drafts")
             with gr.Row():
                 native_file_switch_confirm = gr.Button(
                     "Anderes Projekt laden · Entwürfe verwerfen",
@@ -1408,22 +1412,26 @@ def make_app():
                           native_actor_initial]
         def native_load_with_drafts(path):
             return (*native_load(path), {"target": None, "drafts": {}, "file": path},
-                    None, "", gr.update(visible=False), gr.update(visible=False))
+                    None, "", gr.update(value="", visible=False),
+                    gr.update(visible=False), gr.update(visible=False))
 
         native_file_outputs = [native_state, native_linked, *native_outputs,
                                native_report, native_dialogue_draft_session,
                                native_pending_file, native_file_switch_status,
+                               native_file_switch_drafts,
                                native_file_switch_confirm, native_file_switch_cancel]
 
         def request_native_file_load(path, raw, line, direction, sequence, session):
-            if raw and path and path != (session or {}).get("file") and \
-                    has_unsaved_dialogue_speaking_drafts(
-                        raw, line, direction, sequence, session):
-                return ((gr.skip(),) * (len(native_file_outputs) - 4) +
+            affected = (unsaved_dialogue_speaking_draft_targets(
+                raw, line, direction, sequence, session)
+                if raw and path and path != (session or {}).get("file") else ())
+            if affected:
+                return ((gr.skip(),) * (len(native_file_outputs) - 5) +
                         (path,
                          "⚠️ **Ungespeicherte NPC-Sprechfolgen:** Das neue Projekt ist "
                          "noch nicht geladen. Bestätigen verwirft die Entwürfe; "
                          "Abbrechen behält das bisherige Projekt.",
+                         gr.update(value="\n".join(affected), visible=True),
                          gr.update(visible=True), gr.update(visible=True)))
             return native_load_with_drafts(path)
 
@@ -1437,11 +1445,13 @@ def make_app():
 
         def cancel_native_file_load():
             return None, "Projektwechsel abgebrochen; bisherige Entwürfe bleiben erhalten.", \
+                gr.update(value="", visible=False), \
                 gr.update(visible=False), gr.update(visible=False)
 
         native_file_switch_cancel.click(
             cancel_native_file_load,
             outputs=[native_pending_file, native_file_switch_status,
+                     native_file_switch_drafts,
                      native_file_switch_confirm, native_file_switch_cancel])
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])
@@ -1985,12 +1995,9 @@ def make_app():
             [native_dialogue_draft_step])
         native_dialogue_speaking_sequence.input(
             lambda: None, outputs=[native_dialogue_draft_step_preview])
-        native_dialogue_speaking_sequence.input(
-            record_dialogue_speaking_draft,
-            [native_state, native_dialogue_animation_line,
-             native_dialogue_direction, native_dialogue_speaking_sequence,
-             native_dialogue_draft_session],
-            [native_dialogue_draft_session], show_progress="hidden")
+        # The line/direction switch records the outgoing textbox atomically.
+        # A separate textbox.input writer races with that switch and can
+        # overwrite the session's new target with a stale event result.
         def speaking_draft_session_status(raw, line, direction, sequence):
             status = dialogue_speaking_draft_save_status(raw, line, direction, sequence)
             if status == "Ungespeicherte Änderungen an der Sprechfolge":

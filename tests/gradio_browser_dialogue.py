@@ -416,15 +416,41 @@ def main() -> None:
             assert dialogue_speaking_sequence_selection(sequence_data, first[1]) == "Speak, SpeakAlt"
             assert dialogue_speaking_sequence_selection(sequence_data, second[1]) == "SpeakAlt, Speak, SpeakAlt"
             assert dialogue_speaking_template_choices(sequence_data) == ["Begrüßung"]
+            select_option(page, "native-dialogue-direction", "Süd")
+            expect(page.locator(
+                "#native-dialogue-direction-status input, "
+                "#native-dialogue-direction-status textarea")).to_have_value(
+                    re.compile(r"· Süd(?::| ·)"), timeout=20000)
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("SpeakAlt")
+            sequence_input.press("Tab")
+            expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-line", second[0])
+            expect(sequence_input).to_have_value(
+                dialogue_speaking_sequence_selection(sequence_data, second[1], "S"),
+                timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
+            sequence_input.fill("Speak, Speak, Speak")
+            sequence_input.press("Tab")
+            expect(sequence_input).to_have_value("Speak, Speak, Speak", timeout=20000)
+            select_option(page, "native-dialogue-line", first[0])
+            expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
             page.locator('#native-project-file button[aria-label="Clear"]').click()
             page.locator("#native-project-file input[type=file]").set_input_files(str(sequence_file))
             expect(page.locator("#native-file-switch-status")).to_contain_text(
                 "Ungespeicherte NPC-Sprechfolgen", timeout=20000)
+            draft_list = page.locator("#native-file-switch-drafts textarea, #native-file-switch-drafts input")
+            expect(draft_list).to_have_value(
+                re.compile(re.escape(first[0]) + r".*" + re.escape(second[0]), re.S),
+                timeout=20000)
+            expect(draft_list).to_have_value(re.compile("Süd"), timeout=20000)
             expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
             page.locator("#native-file-switch-cancel").click()
             expect(page.locator("#native-file-switch-status")).to_contain_text(
                 "Projektwechsel abgebrochen", timeout=20000)
+            expect(draft_list).not_to_be_visible(timeout=20000)
+            select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
             page.locator('#native-project-file button[aria-label="Clear"]').click()
             page.locator("#native-project-file input[type=file]").set_input_files(str(sequence_file))

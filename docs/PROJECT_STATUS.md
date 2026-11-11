@@ -7,6 +7,23 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Beim geplanten
+Wechsel einer nativen Projektdatei zeigt der Studio-Editor alle
+ungespeicherten NPC-Sprechfolgen getrennt nach Dialogzeile und
+Blickrichtung mit stabiler Zeilen-ID. Auch die noch aktive Eingabe
+wird berücksichtigt; mehrere Ziele lassen sich vor Bestätigen
+oder Abbrechen nachvollziehen. Die Liste verschwindet nach der
+Entscheidung. Ein zusätzlicher konkurrierender Sitzungsschreiber
+entfällt; die ausgehende Folge wird beim Zielwechsel aufgenommen.
+Keine Änderung am Projektformat oder nativen COST-/SCUMM-v6-Export.
+Core-CI zweimal und echte Chromium-CI zweimal grün (PR #184,
+Runs `43024142670` / `43024150087` / `43024142817` /
+`43024150372`); stock-ScummVM-CI nach gezielter Wiederholung
+einer unveränderten Frame-Timingprobe grün (Run `43024149992`).
+Menschliche UI-Abnahme offen. **Nächstes Paket:** Aus der
+Verlustwarnung eine betroffene Dialogzeile und Richtung direkt
+im Editor öffnen, um sie vor dem Wechsel gezielt zu speichern.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Beim Öffnen
 einer anderen nativen Projektdatei prüft der Studio-Editor, ob
 ungespeicherte NPC-Sprechfolgenentwürfe existieren – einschließlich

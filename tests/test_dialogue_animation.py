@@ -42,6 +42,7 @@ from adventure_studio.studio_sequences import (
     switch_dialogue_speaking_draft,
     record_dialogue_speaking_draft,
     has_unsaved_dialogue_speaking_drafts,
+    unsaved_dialogue_speaking_draft_targets,
     dialogue_animation_phase_selection, edit_dialogue_animation_phases,
     dialogue_ending_animation_selection, edit_dialogue_ending_animation,
     dialogue_ending_timeline, assign_dialogue_ending_sequence,
@@ -166,6 +167,18 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(south, "SpeakAlt, SpeakAlt")
         self.assertTrue(has_unsaved_dialogue_speaking_drafts(
             raw, first, "S", "SpeakAlt, SpeakAlt", session))
+        targets = unsaved_dialogue_speaking_draft_targets(
+            raw, first, "S", "SpeakAlt, SpeakAlt", session)
+        self.assertEqual(len(targets), 1)
+        self.assertIn("Süd", targets[0])
+        self.assertIn(first, targets[0])
+        other_session = record_dialogue_speaking_draft(
+            raw, second, "N", "SpeakAlt", session)
+        affected = unsaved_dialogue_speaking_draft_targets(
+            raw, second, "N", "SpeakAlt", other_session)
+        self.assertEqual(len(affected), 2)
+        self.assertTrue(any(first in entry and "Süd" in entry for entry in affected))
+        self.assertTrue(any(second in entry and "Nord" in entry for entry in affected))
         self.assertFalse(has_unsaved_dialogue_speaking_drafts(
             raw, first, "S", dialogue_speaking_sequence_selection(raw, first, "S"),
             {"drafts": {}}))
