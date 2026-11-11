@@ -30,6 +30,16 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #152, CI-Abnahme bestanden):**
+Eine anklickbare Bildleiste bildet die exakte Sequenz der nativen
+Dialog-Sprite-Sheet-Frames ab, einschließlich wiederholter Zellen.
+Der Bildklick wählt die Abspielposition für die bestehenden Aktionen;
+bei null ausgewählten Zellen bleibt die Leiste leer. 334 lokale Tests,
+Chromium-Pixel-/Positions-/Import-/Export-Nachweis (Run `42954277816`)
+und stock-ScummVM-Regression (Run `42954277828`, Merge `169e21a`)
+bestanden. D03 bleibt eine Teilfähigkeit; menschliche UI-Abnahme und
+vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #150, CI-Abnahme bestanden):**
 Die frei konfigurierbare Sprite-Sheet-Sequenz lässt sich über eine
 Quellzellen- und Positionsauswahl einfügen, bearbeiten und zurücksetzen.
