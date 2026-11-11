@@ -31,7 +31,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
-                               import_room_sound, import_room_zplane, room_sound_ids,
+                               import_room_sound, import_room_zplane, author_room_walkbox,
+                               room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
                                dialogue_animation_lines, dialogue_animation_choices,
@@ -491,6 +492,19 @@ def make_app():
         except (ValueError, OSError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
+    def native_walkbox_author(raw, room, index, corners):
+        if raw is None:
+            raise gr.Error("Bitte zuerst ein natives Projekt laden")
+        try:
+            if type(index) not in (int, float) or not isfinite(index) or index != int(index):
+                raise ValueError("Walkbox-Nummer muss eine ganze Zahl sein")
+            updated = author_room_walkbox(raw, room, int(index), corners)
+            return (updated, *native_selectors(updated, selected_room=room),
+                    f"Walkbox {int(index)} für {room} gespeichert und validiert; BOXD wird beim Export erzeugt. "
+                    "Für eine dauerhafte Datei das native Projekt-JSON exportieren.")
+        except (ValueError, TypeError) as error:
+            raise gr.Error(str(error)) from error
+
     def native_download(raw, linked, story_raw):
         if raw is None:
             raise gr.Error("Bitte zuerst eine native Projektdatei laden")
@@ -782,6 +796,11 @@ def make_app():
                 native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-zplane-file")
                 native_zplane_index = gr.Number(label="Z-Ebene (1–9)", value=1, precision=0, elem_id="native-zplane-index")
                 native_zplane_add = gr.Button("Z-Maske ins native Projekt übernehmen", elem_id="native-zplane-add")
+            gr.Markdown("**Native Laufbereiche (BOXD):** Vier Eckpunkte im Uhrzeigersinn als UL;UR;LR;LL eingeben, z. B. `0,70; 120,70; 120,150; 0,150`. Vorhandene Walkboxen bleiben inklusive ihrer Wege/Skalierung erhalten; neue Boxen benötigen später eine gesonderte BOXM-Verbindung, wenn bereits Routen existieren.")
+            with gr.Row():
+                native_walkbox_index = gr.Number(label="Walkbox-Nummer (1–254)", value=1, precision=0, elem_id="native-walkbox-index")
+                native_walkbox_corners = gr.Textbox(label="Eckpunkte UL;UR;LR;LL", value="0,70; 120,70; 120,150; 0,150", elem_id="native-walkbox-corners")
+                native_walkbox_add = gr.Button("Walkbox ins native Projekt übernehmen", elem_id="native-walkbox-add")
             with gr.Row():
                 native_music_file = gr.File(label="Raummusik als MIDI importieren", file_types=[".mid", ".midi"], type="filepath")
                 native_music_id = gr.Textbox(label="Musik-ID", value="RoomTheme")
@@ -1713,6 +1732,9 @@ def make_app():
         native_zplane_add.click(native_zplane_import,
                                 [native_state, native_room, native_zplane_index, native_zplane_file],
                                 [native_state, *native_outputs, native_report])
+        native_walkbox_add.click(native_walkbox_author,
+                                 [native_state, native_room, native_walkbox_index, native_walkbox_corners],
+                                 [native_state, *native_outputs, native_report])
         native_costume_button.click(lambda *args: native_asset_edit(create_costume, *args),
                                     [native_state, native_costume_file, native_costume_name],
                                     [native_state, *native_outputs, native_report])

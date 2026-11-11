@@ -12,10 +12,52 @@ from adventure_studio.scumm_assets import (ScaleCurve, ZPlane, _native_box_file,
                                           scummc_room_source, write_room_sources)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room, perspective_room
+from adventure_studio.studio_sequences import author_room_walkbox, compose_story_project
 from adventure_studio.studio_sequences import import_room_zplane
 
 
 class RoomNativePrimitiveTests(unittest.TestCase):
+    def test_free_walkbox_polygon_authors_json_and_boxd(self):
+        room = scrolling_fixture()
+        raw = canonical_json(GameDocument("walkbox", (room, destination_fixture())))
+        updated = author_room_walkbox(raw, "Harbor", 1,
+                                      "20,75; 130,70; 145,145; 10,150")
+        authored = parse_document(updated).rooms[0]
+        self.assertEqual(authored.walkboxes[0].corners,
+                         ((20, 75), (130, 70), (145, 145), (10, 150)))
+        with tempfile.TemporaryDirectory() as directory:
+            write_room_sources(authored, Path(directory))
+            data = (Path(directory) / "Harbor.box").read_bytes()
+            self.assertEqual(struct.unpack_from("<8h", data, 9),
+                             (20, 75, 130, 70, 145, 145, 10, 150))
+        with self.assertRaisesRegex(ValueError, "lückenlos"):
+            author_room_walkbox(updated, "Harbor", 3,
+                                "20,75; 130,70; 145,145; 10,150")
+        with self.assertRaisesRegex(ValueError, "konvex"):
+            author_room_walkbox(updated, "Harbor", 1,
+                                "20,75; 130,70; 30,90; 10,150")
+        with self.assertRaisesRegex(ValueError, "innerhalb"):
+            author_room_walkbox(updated, "Harbor", 1,
+                                "20,75; 700,70; 145,145; 10,150")
+
+    def test_replace_walkbox_preserves_routes_and_story_composition(self):
+        room = native_room()
+        raw = canonical_json(GameDocument("walkbox", (room, destination_fixture())))
+        updated = author_room_walkbox(raw, "Harbor", 1,
+                                      "0,70; 110,70; 110,150; 0,150")
+        authored = parse_document(updated).rooms[0]
+        self.assertEqual(authored.box_routes, room.box_routes)
+        self.assertEqual(authored.scale_slots, room.scale_slots)
+        with self.assertRaisesRegex(ValueError, "BOXM"):
+            author_room_walkbox(updated, "Harbor", 3,
+                                "120,70; 200,70; 200,150; 120,150")
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        composed = parse_document(compose_story_project(story, updated))
+        harbor = next(item for item in composed.rooms if item.name == "Harbor")
+        self.assertEqual(harbor.walkboxes, authored.walkboxes)
+        self.assertEqual(harbor.box_routes, authored.box_routes)
+
     @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
     def test_authored_png_mask_roundtrips_to_native_room_assets(self):
         from PIL import Image
