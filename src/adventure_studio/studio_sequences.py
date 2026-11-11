@@ -1601,6 +1601,23 @@ def dialogue_speaking_template_preview(
             f"Frame-Reihenfolge:\n{frames}\n{assessment}"), compatible
 
 
+def dialogue_speaking_draft_step_preview(
+        raw: str | None, line_id: str | None, frame_ids: str | None,
+        step_index: int | float | None):
+    """Preview the actual Costume pixels of one unsaved numbered step."""
+    if not raw or not line_id or step_index is None:
+        return None
+    if not isinstance(frame_ids, str) or not frame_ids.strip():
+        return None
+    sequence = tuple(item.strip() for item in frame_ids.split(","))
+    if (type(step_index) not in (int, float) or not isfinite(step_index)
+            or int(step_index) != step_index or not 0 <= int(step_index) < len(sequence)):
+        raise ValueError("Bitte einen gültigen Sprechschritt auswählen")
+    if not sequence[int(step_index)]:
+        raise ValueError("Der gewählte Sprechschritt hat keine Frame-ID")
+    return dialogue_speaking_frame_preview(raw, line_id, sequence[int(step_index)])
+
+
 def edit_dialogue_speaking_draft(
         raw: str, line_id: str, frame_ids: str, operation: str,
         frame_id: str | None = None, step_index: int | float | None = None

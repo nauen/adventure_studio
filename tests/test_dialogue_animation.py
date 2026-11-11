@@ -27,6 +27,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
     dialogue_speaking_template_animation_preview,
     dialogue_speaking_draft_animation_preview,
     edit_dialogue_speaking_draft,
+    dialogue_speaking_draft_step_preview,
     rename_dialogue_speaking_template, delete_dialogue_speaking_template,
     update_dialogue_speaking_template,
     load_dialogue_speaking_template_for_editing,
@@ -105,6 +106,18 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertGreater(red_pose.convert("RGB").getpixel((128, 128))[0], 180)
         self.assertGreater(green_pose.convert("RGB").getpixel((128, 128))[1], 180)
         self.assertEqual(parse_document(raw), before_picker)
+        # Inspect any numbered draft step without changing its target animation.
+        step_image = dialogue_speaking_draft_step_preview(
+            raw, first, "Speak, SpeakAlt, Speak", 1)
+        self.assertGreater(step_image.getpixel((128, 128))[1], 180)
+        self.assertGreater(dialogue_speaking_draft_step_preview(
+            raw, first, "Speak, SpeakAlt, Speak", 2).getpixel((128, 128))[0], 180)
+        self.assertIsNone(dialogue_speaking_draft_step_preview(
+            raw, first, "Speak", None))
+        with self.assertRaisesRegex(ValueError, "gültigen Sprechschritt"):
+            dialogue_speaking_draft_step_preview(raw, first, "Speak", 2)
+        with self.assertRaisesRegex(ValueError, "Frame-ID"):
+            dialogue_speaking_draft_step_preview(raw, first, "Speak, ", 1)
         before_draft = parse_document(raw)
         draft, step = edit_dialogue_speaking_draft(
             raw, first, "", "Hinzufügen", "Speak")
