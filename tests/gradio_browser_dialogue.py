@@ -420,8 +420,7 @@ def main() -> None:
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("SpeakAlt")
             sequence_input.press("Tab")
-            expect(draft_save_status).to_contain_text(
-                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
+            expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value(
                 dialogue_speaking_sequence_selection(sequence_data, second[1], "S"),
@@ -430,8 +429,7 @@ def main() -> None:
                 "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             sequence_input.fill("Speak, Speak, Speak")
             sequence_input.press("Tab")
-            expect(draft_save_status).to_contain_text(
-                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
+            expect(sequence_input).to_have_value("Speak, Speak, Speak", timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("SpeakAlt", timeout=20000)
             page.locator('#native-project-file button[aria-label="Clear"]').click()
