@@ -30,6 +30,16 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #154, CI-Abnahme bestanden):**
+Abspielbilder einer frei zusammengestellten Dialog-Sprite-Sheet-Folge
+lassen sich direkt aus der visuellen Leiste einzeln vor- oder
+zurücksetzen. Die Aktion erhält Zellanzahlen und native Frame-Zuordnung;
+ungültige Positionen werden abgelehnt. 334 lokale Tests,
+Chromium-Verschieben-/Pixel-/Import-/Export-Nachweis (Run `42955411892`)
+und stock-ScummVM-Regression (Run `42955412129`, Merge `eb28062`)
+bestanden. D03 bleibt eine Teilfähigkeit; menschliche UI-Abnahme und
+vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #152, CI-Abnahme bestanden):**
 Eine anklickbare Bildleiste bildet die exakte Sequenz der nativen
 Dialog-Sprite-Sheet-Frames ab, einschließlich wiederholter Zellen.

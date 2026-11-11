@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Einzelne Sprite-Sheet-Abspielbilder verschieben (CI-Abnahme bestanden):**
+Über die anklickbare Bildleiste gewählte Positionen lassen sich ohne
+Kopieren oder Löschen um einen Platz nach vorne oder hinten setzen.
+Auch einzelne Wiederholungen bleiben unterscheidbar; Grenzen und
+identische Nachbarn verändern die bisherige Konfiguration nicht.
+334 lokale Tests, Core-/Chromium-/stock-ScummVM-CI grün; der Browser
+prüfte beide Richtungen bis zum nativen Import und JSON-Export
+(PR #154, Merge `eb28062`, Runs `42955411899` / `42955411892` /
+`42955412129`). Menschliche UI-Abnahme offen. Danach: mehrere
+aufeinanderfolgende Bilder gemeinsam als Block verschieben.
+
 **Anklickbare Sprite-Sheet-Abspielfolge (CI-Abnahme bestanden):**
 Jede tatsächliche Abspielposition erscheint mit dem Quellzellen-Bild
 als eigene Miniatur; wiederholte Zellen sind dadurch sichtbar.
