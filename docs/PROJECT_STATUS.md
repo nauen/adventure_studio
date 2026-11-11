@@ -4,6 +4,20 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein
+nummerierter NPC-Sprechfolgeschritt lässt sich nun direkt durch
+einen anderen vorhandenen Costume-PNG-Frame ersetzen. Der Schritt
+behält seine Position, alle anderen Frames bleiben unverändert.
+Die vorhandenen Pixel-/GIF-Vorschauen und separaten Speichern-/
+Vorlagenaktionen bleiben verwendbar; der Austausch ändert nur den
+Entwurf, nicht das native Projekt. Core-/Chromium-CI je zweimal
+grün, stock-ScummVM-CI nach gezielter Wiederholung eines bekannten
+Frame-Sampling-Timingfehlers grün (PR #177, Merge `ec865541`,
+Runs `42985182737` / `42985183040` / `42985182780`).
+Menschliche UI-Abnahme offen. **Nächstes Paket:** Einen neuen
+Sprechframe direkt vor oder hinter einem ausgewählten Schritt
+einfügen, statt nur ans Ende der Folge anzuhängen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der
 NPC-Sprechfolgeneditor zeigt jetzt auch die echte Costume-Pixelpose
 des ausgewählten **nummerierten Entwurfsschritts**. Die Vorschau
