@@ -1459,6 +1459,24 @@ def dialogue_speaking_sequence_selection(raw: str, line_id: str | None,
     return ", ".join(sequence) if all(command in frames for command in sequence) else ""
 
 
+def dialogue_speaking_draft_save_status(
+        raw: str | None, line_id: str | None, direction: str,
+        frame_ids: str | None) -> str:
+    """Compare unsaved editor frames to this line's persisted native direction."""
+    if not raw or not line_id:
+        return "Bitte eine Sprecher-Dialogzeile auswählen"
+    document = parse_document(raw)
+    if _dialogue_animation_targets(document).get(line_id) is None:
+        return "Bitte eine Sprecher-Dialogzeile auswählen"
+    persisted = dialogue_speaking_sequence_selection(raw, line_id, direction)
+    saved_frames = tuple(item.strip() for item in persisted.split(",")) if persisted else ()
+    draft_frames = (tuple(item.strip() for item in frame_ids.split(","))
+                    if isinstance(frame_ids, str) and frame_ids.strip() else ())
+    if draft_frames == saved_frames:
+        return "Sprechfolge entspricht dem gespeicherten Stand"
+    return "Ungespeicherte Änderungen an der Sprechfolge"
+
+
 def discard_dialogue_speaking_draft(raw: str, line_id: str, direction: str) -> str:
     """Return the persisted line/direction frames, discarding only UI edits."""
     document = parse_document(raw)
