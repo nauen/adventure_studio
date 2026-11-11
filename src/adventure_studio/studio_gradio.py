@@ -840,6 +840,18 @@ def make_app():
                 "Bitte eine Sprecher-Dialogzeile auswählen",
                 elem_id="native-dialogue-draft-save-status")
             native_dialogue_draft_session = gr.State({"target": None, "drafts": {}, "file": None})
+            with gr.Accordion("Offene Sprechfolgenentwürfe wieder öffnen", open=False):
+                gr.Markdown("Zeigt ungespeicherte Dialogzeilen und Blickrichtungen dieser Sitzung. "
+                            "**Liste aktualisieren** berücksichtigt auch die gerade bearbeitete Folge. "
+                            "Das Öffnen speichert nichts im Projekt.")
+                native_drafts_refresh = gr.Button(
+                    "Offene Entwürfe anzeigen", elem_id="native-drafts-refresh")
+                native_drafts_target = gr.Dropdown(
+                    label="Ungespeicherte Sprechfolge", choices=[],
+                    elem_id="native-drafts-target")
+                native_drafts_open = gr.Button(
+                    "Ausgewählten Entwurf öffnen", elem_id="native-drafts-open")
+                native_drafts_status = gr.Markdown("", elem_id="native-drafts-status")
             native_dialogue_session_unsaved = gr.Textbox(
                 value="0", interactive=False, show_label=False,
                 elem_id="native-dialogue-session-unsaved")
@@ -1513,6 +1525,42 @@ def make_app():
              native_dialogue_direction_preview, native_dialogue_speaking_sequence,
              native_dialogue_direction_status, native_dialogue_draft_session,
              native_file_switch_status])
+
+        def list_unsaved_speaking_targets(raw, line, direction, sequence, session):
+            entries = unsaved_dialogue_speaking_draft_entries(
+                raw, line, direction, sequence, session)
+            choices = [(label, json.dumps([target_id, facing]))
+                       for label, target_id, facing in entries]
+            return (gr.update(choices=choices,
+                              value=choices[0][1] if choices else None),
+                    f"**{len(entries)} offene Sprechfolgenentwürfe.** "
+                    "Zum Speichern einen Entwurf öffnen und die Speicheraktion im Editor ausführen."
+                    if entries else "Keine ungespeicherten Sprechfolgenentwürfe.")
+
+        native_drafts_refresh.click(
+            list_unsaved_speaking_targets,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session],
+            [native_drafts_target, native_drafts_status])
+
+        def open_listed_speaking_target(raw, line, direction, sequence, session, selected):
+            selected_view = open_unsaved_speaking_target(
+                raw, line, direction, sequence, session, selected)
+            return (*selected_view[:-1],
+                    "**Entwurf geöffnet.** Die Sprechfolge ist weiterhin ungespeichert; "
+                    "bitte im Dialogeditor ausdrücklich speichern.")
+
+        native_drafts_open.click(
+            open_listed_speaking_target,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session,
+             native_drafts_target],
+            [native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_animation, native_dialogue_reset,
+             native_dialogue_speaking_frame, native_dialogue_speaking_preview,
+             native_dialogue_direction_preview, native_dialogue_speaking_sequence,
+             native_dialogue_direction_status, native_dialogue_draft_session,
+             native_drafts_status])
 
         def cancel_native_file_load():
             return None, "Projektwechsel abgebrochen; bisherige Entwürfe bleiben erhalten.", \
