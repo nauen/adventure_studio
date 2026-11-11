@@ -5,6 +5,18 @@ Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein
+gewählter nummerierter NPC-Sprechfolgeschritt lässt sich jetzt mit
+einem Klick duplizieren. Die Kopie entsteht unmittelbar danach
+und ist ausgewählt; der bisherige Frame muss nicht erneut gesucht
+werden. Alle übrigen Schritte bleiben erhalten und die Aktion
+ändert nur den Entwurf, nicht das native Projekt. Core-/Chromium-CI
+je zweimal und stock-ScummVM-CI grün (PR #179, Merge `bdf03581`,
+Runs `42989783006` / `42989782942` / `42989783195`).
+Menschliche UI-Abnahme offen. **Nächstes Paket:** Den noch nicht
+gespeicherten Sprechfolgenentwurf mit einem Klick verwerfen und
+die gespeicherte Folge der gewählten Dialogzeile wiederherstellen.
+
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein
 vorhandener Costume-PNG-Frame lässt sich jetzt direkt **vor oder
 nach** einem ausgewählten nummerierten NPC-Sprechfolgeschritt
 einfügen. Damit können auch mittlere Positionen ohne manuelle
