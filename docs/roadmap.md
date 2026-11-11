@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Letzte Sprite-Sheet-Abspielfolgen-Änderung rückgängig machen
+(CI-Abnahme bestanden):** Der Nutzer kann eine letzte Änderung der
+freien Folge mit einem Knopf zurücknehmen, ohne das Raster,
+vorbereitete native Frames oder das Projektmodell zurückzusetzen.
+Der Undo-Stand ist an Sheet, Raster und Zellauswahl gebunden und
+nach erfolgreicher Rücknahme verbraucht. Core-/Chromium-CI jeweils
+zweimal und stock-ScummVM-CI einmal grün (PR #162, Merge
+`f9c78dd5`, Runs `42962623022` / `42962623007` /
+`42962623016`). Menschliche UI-Abnahme offen. Danach:
+eine rückgängig gemachte Bearbeitung mit Redo wiederherstellen,
+solange keine neue Folgeänderung oder Kontextänderung vorliegt.
+
 **Bildblöcke in der Sprite-Sheet-Folge mehrfach wiederholen
 (CI-Abnahme bestanden):** Eine positive Anzahl zusätzlicher Kopien
 eines frei gewählten zusammenhängenden Blocks wird in einer Aktion
