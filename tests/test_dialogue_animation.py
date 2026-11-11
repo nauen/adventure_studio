@@ -342,6 +342,49 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertIn("3 von 4", reordered_description)
             self.assertEqual(dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, {3: 3}), (3, 3, 3, 0, 2))
+            free_timeline = "4,1,4,3"
+            self.assertEqual(dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, {3: 3}, free_timeline), (3, 0, 3, 2))
+            self.assertEqual(dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, {3: 3}, "  "), (3, 3, 3, 0, 2))
+            for value, message in (("4,1,3", ""), ("4,1,,3", "mit Kommas"),
+                                   ("4,1,5,3", "außerhalb"),
+                                   ("4,1,2,3", "ausgeschlossene"),
+                                   ("4,1,4", "fehlen")):
+                if not message:
+                    self.assertEqual(dialogue_png_sprite_sheet_sequence(
+                        4, [1], reordered, None, value), (3, 0, 2))
+                else:
+                    with self.assertRaisesRegex(ValueError, message):
+                        dialogue_png_sprite_sheet_sequence(4, [1], reordered, None, value)
+            free_overlay, free_planned, free_status = dialogue_png_sprite_sheet_preview(
+                str(spaced_sheet), 2, 2, 2, 3, 4, 2, [1], reordered, {3: 3}, free_timeline)
+            self.assertEqual(free_overlay.size, (24, 24))
+            self.assertIn("Abspielpositionen 1, 3", free_planned[3][1])
+            self.assertIn("4 Abspielbilder · Freie Abspielsequenz", free_status)
+            free_paths, free_order = stage_dialogue_png_sprite_sheet(
+                paths, (2, 0), str(spaced_sheet), 2, 2, 2, 3, 4, 2,
+                [1], reordered, {3: 3}, free_timeline)
+            self.assertEqual([Path(path).name for path in free_paths[3:]], [
+                "SpacedSheet_r2_c2.png", "SpacedSheet_r1_c1.png",
+                "SpacedSheet_r2_c2_repeat2.png", "SpacedSheet_r2_c1.png"])
+            self.assertTrue(dialogue_png_batch_preflight(
+                raw, first, "W", free_paths, "Sprechfolge", order=free_order)[0])
+            free_native = import_dialogue_png_batch(
+                raw, first, "W", free_paths, "Sprechfolge", order=free_order)
+            self.assertIn("SpacedSheet_r2_c2, SpacedSheet_r1_c1, "
+                          "SpacedSheet_r2_c2_repeat2, SpacedSheet_r2_c1",
+                          dialogue_speaking_sequence_selection(free_native, first, "W"))
+            free_gif_path = root / "sheet-free-order.gif"
+            dialogue_png_sprite_sheet_animation_preview(
+                str(spaced_sheet), 2, 2, 130, free_gif_path,
+                2, 3, 4, 2, [1], reordered, {3: 3}, free_timeline)
+            with Image.open(free_gif_path) as free_gif:
+                self.assertEqual(free_gif.n_frames, 4)
+                for position, index in enumerate((3, 0, 3, 2)):
+                    free_gif.seek(position)
+                    self.assertEqual(free_gif.convert("RGB").getpixel((4, 4)),
+                                     sheet_colors[index][:3])
             self.assertEqual(change_dialogue_png_sprite_sheet_repetition(
                 4, [1], None, 3, 1), {3: 2})
             self.assertEqual(change_dialogue_png_sprite_sheet_repetition(
