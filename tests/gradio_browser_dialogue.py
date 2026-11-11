@@ -9,8 +9,10 @@ from __future__ import annotations
 import json
 import os
 import re
+from io import BytesIO
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import urljoin
 
 from PIL import Image
 from playwright.sync_api import expect, sync_playwright
@@ -644,6 +646,23 @@ def main() -> None:
             expect(preview_gallery).to_contain_text("Abspielposition 1", timeout=20000)
             expect(page.locator("#native-dialogue-sprite-selected input")).to_have_value(
                 "Position 1: Zelle 2", timeout=20000)
+            page.locator("#native-dialogue-sprite-duration input").fill("240")
+            page.locator("#native-dialogue-sprite-play").click()
+            sheet_gif = page.locator("#native-dialogue-sprite-animation img")
+            expect(sheet_gif.first).to_be_visible(timeout=20000)
+            expect(page.locator("#native-dialogue-sprite-animation-status")).to_contain_text(
+                "2 ausgewählte Sheet-Zelle(n) · 240 ms pro Bild", timeout=20000)
+            gif_response = page.request.get(urljoin(page.url, sheet_gif.first.get_attribute("src")))
+            assert gif_response.ok
+            with Image.open(BytesIO(gif_response.body())) as sheet_preview:
+                assert sheet_preview.format == "GIF"
+                assert sheet_preview.n_frames == 2
+                assert sheet_preview.info["duration"] == 240
+                for position, color in enumerate(((55, 205, 115), (170, 55, 210))):
+                    sheet_preview.seek(position)
+                    assert sheet_preview.convert("RGB").getpixel((4, 4)) == color
+            page.locator("#native-dialogue-sprite-duration input").fill("180")
+            expect(sheet_gif).to_have_count(0, timeout=20000)
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"
@@ -696,6 +715,7 @@ def main() -> None:
                 "previewed_sprite_sheet_cuts_before_staging": True,
                 "selected_sprite_sheet_cells_before_staging": True,
                 "reordered_sprite_sheet_cells_before_staging": True,
+                "animated_selected_sprite_sheet_before_staging": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:
