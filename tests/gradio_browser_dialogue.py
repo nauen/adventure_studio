@@ -20,7 +20,8 @@ from playwright.sync_api import expect, sync_playwright
 from adventure_studio.scumm_project import canonical_json, parse_document
 from adventure_studio.studio_sequences import (
     dialogue_animation_lines, dialogue_speaking_frame_selection,
-    dialogue_speaking_sequence_selection, dialogue_ending_timeline,
+    dialogue_speaking_sequence_selection, dialogue_speaking_template_choices,
+    dialogue_ending_timeline,
     dialogue_ending_animation_selection,
 )
 from adventure_studio.studio_actors import costume_direction_speaking_frame
@@ -254,6 +255,7 @@ def main() -> None:
                 str(saved))
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
+            select_option(page, "native-dialogue-template-select", "Begrüßung")
             select_option(page, "native-dialogue-line", second[0])
             await_selection(page, "native-dialogue-animation", "gesture")
             select_option(page, "native-dialogue-line", first[0])
@@ -302,6 +304,7 @@ def main() -> None:
             sequence_data = sequence_file.read_text(encoding="utf-8")
             assert dialogue_speaking_sequence_selection(sequence_data, first[1]) == "Speak, SpeakAlt"
             assert dialogue_speaking_sequence_selection(sequence_data, second[1]) == "SpeakAlt, Speak, SpeakAlt"
+            assert dialogue_speaking_template_choices(sequence_data) == ["Begrüßung"]
             page.locator('#native-project-file button[aria-label="Clear"]').click()
             page.locator("#native-project-file input[type=file]").set_input_files(str(sequence_file))
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
