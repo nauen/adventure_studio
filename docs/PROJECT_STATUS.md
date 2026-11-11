@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der NPC-Dialogeditor
+zeigt vor dem Sprite-Sheet-Import das Original-PNG mit eingezeichneten
+Zellgrenzen und die tatsächlich geplanten PNG-Einzelbilder in
+Zeilenreihenfolge. Spalten, Zeilen, Außenränder und Zellabstände
+aktualisieren die Vorschau; ungültige Raster erklären den Fehler,
+ohne bereits vorbereitete Frames zu verändern. Vorschau und nativer
+Import nutzen denselben Pixel-/Rastervertrag. 334 lokale Tests und
+alle drei CI-Gates grün. Der Chromium-Browser prüfte Vorschau-Pixel,
+fehlerhaftes Raster, Korrektur, anschließenden COST-Import und
+JSON-Export; stock ScummVM bestand die vollständige Dialog-/Rezept-
+Regression (PR #138, Merge `5f3fc04`, Runs `42943608415` /
+`42943608437` / `42943608322`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Einzelne Sprite-Sheet-Zellen bereits in der
+Schnittvorschau für den Import auswählen oder ausschließen können.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der PNG-Sprite-Sheet-
 Import im NPC-Dialogeditor unterstützt getrennte horizontale/vertikale
 Außenränder (je Seite) und Zellabstände in ganzzahligen Pixeln. Die
