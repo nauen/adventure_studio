@@ -300,6 +300,19 @@ def main() -> None:
             assert green_step_response.ok
             with Image.open(BytesIO(green_step_response.body())) as green_step:
                 assert green_step.convert("RGB").getpixel((128, 128))[1] > 180
+            select_option(page, "native-dialogue-draft-frame", "Speak")
+            page.locator("#native-dialogue-draft-insert-before").click()
+            expect(sequence_input).to_have_value("Speak, Speak, SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-draft-step", "2. Speak")
+            page.locator("#native-dialogue-draft-remove").click()
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-draft-step", "2. SpeakAlt")
+            page.locator("#native-dialogue-draft-insert-after").click()
+            expect(sequence_input).to_have_value("Speak, SpeakAlt, Speak", timeout=20000)
+            select_option(page, "native-dialogue-draft-step", "3. Speak")
+            page.locator("#native-dialogue-draft-remove").click()
+            expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            select_option(page, "native-dialogue-draft-step", "2. SpeakAlt")
             page.locator("#native-dialogue-draft-up").click()
             expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
             green_step_src = step_picture.first.get_attribute("src")
