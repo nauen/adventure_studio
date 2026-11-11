@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from hashlib import sha1
+from math import isfinite
 from pathlib import Path
 import re
 import tempfile
@@ -541,7 +542,9 @@ def dialogue_png_batch_order(paths: list[str] | tuple[str, ...] | None,
 def stage_dialogue_png_sprite_sheet(
         paths: list[str] | tuple[str, ...] | None,
         order: list[int] | tuple[int, ...] | None,
-        sheet_path: str | None, columns: int | float, rows: int | float
+        sheet_path: str | None, columns: int | float, rows: int | float,
+        margin_x: int | float = 0, margin_y: int | float = 0,
+        gap_x: int | float = 0, gap_y: int | float = 0
         ) -> tuple[tuple[str, ...], tuple[int, ...]]:
     """Append row-major PNG tiles to the staged native batch, preserving exclusions."""
     from PIL import Image
@@ -550,10 +553,17 @@ def stage_dialogue_png_sprite_sheet(
             Path(sheet_path).suffix.lower() != ".png"):
         raise ValueError("Bitte ein PNG-Sprite-Sheet auswählen")
     for label, count in (("Spalten", columns), ("Zeilen", rows)):
-        if (type(count) not in (int, float) or count < 1 or
+        if (type(count) not in (int, float) or not isfinite(count) or count < 1 or
                 int(count) != count):
             raise ValueError(f"Sprite-Sheet-{label} müssen positive ganze Zahlen sein")
+    for label, count in (("Außenrand X", margin_x), ("Außenrand Y", margin_y),
+                         ("Zellabstand X", gap_x), ("Zellabstand Y", gap_y)):
+        if (type(count) not in (int, float) or not isfinite(count) or count < 0 or
+                int(count) != count):
+            raise ValueError(f"Sprite-Sheet-{label} muss eine nichtnegative ganze Pixelzahl sein")
     columns, rows = int(columns), int(rows)
+    margin_x, margin_y, gap_x, gap_y = (int(value) for value in
+                                      (margin_x, margin_y, gap_x, gap_y))
     originals = tuple(paths or ())
     included_indexes = (tuple(range(len(originals))) if order is None else tuple(order))
     if originals:
@@ -564,19 +574,23 @@ def stage_dialogue_png_sprite_sheet(
         if source.format != "PNG" or getattr(source, "n_frames", 1) != 1:
             raise ValueError("Das Sprite-Sheet muss ein einzelnes PNG-Bild sein")
         width, height = source.size
-        if width % columns or height % rows:
-            raise ValueError("Sprite-Sheet-Abmessungen müssen durch Spalten und Zeilen teilbar sein")
-        if width < columns or height < rows:
-            raise ValueError("Die Sprite-Sheet-Zellen müssen mindestens ein Pixel groß sein")
-        cell_width, cell_height = width // columns, height // rows
+        usable_width = width - 2 * margin_x - (columns - 1) * gap_x
+        usable_height = height - 2 * margin_y - (rows - 1) * gap_y
+        if usable_width < columns or usable_height < rows:
+            raise ValueError("Außenränder/Zellabstände lassen keinen Platz für gültige Sprite-Zellen")
+        if usable_width % columns or usable_height % rows:
+            raise ValueError("Sprite-Sheet-Abmessungen nach Außenrändern und Zellabständen "
+                             "müssen durch Spalten und Zeilen teilbar sein")
+        cell_width, cell_height = usable_width // columns, usable_height // rows
         pixels = source.convert("RGBA")
     destination = Path(tempfile.mkdtemp(prefix="adventure-studio-sprite-sheet-"))
     tiles = []
     for row in range(rows):
         for column in range(columns):
             tile = destination / f"{Path(sheet_path).stem}_r{row + 1}_c{column + 1}.png"
-            pixels.crop((column * cell_width, row * cell_height,
-                         (column + 1) * cell_width, (row + 1) * cell_height)).save(tile)
+            left = margin_x + column * (cell_width + gap_x)
+            top = margin_y + row * (cell_height + gap_y)
+            pixels.crop((left, top, left + cell_width, top + cell_height)).save(tile)
             tiles.append(str(tile))
     indexes = (*included_indexes, *range(len(originals), len(originals) + len(tiles)))
     return (*originals, *tiles), indexes

@@ -604,12 +604,15 @@ def main() -> None:
             # Append two actual Sprite-Sheet tiles to the edited staged
             # selection, then import/export all four native COST frames.
             sprite_sheet = evidence / "Mouth-Strip.png"
-            strip = Image.new("RGBA", (16, 8))
-            strip.paste((170, 55, 210, 255), (0, 0, 8, 8))
-            strip.paste((55, 205, 115, 255), (8, 0, 16, 8))
+            strip = Image.new("RGBA", (24, 12), (240, 10, 230, 255))
+            strip.paste((170, 55, 210, 255), (2, 2, 10, 10))
+            strip.paste((55, 205, 115, 255), (14, 2, 22, 10))
             strip.save(sprite_sheet)
             page.locator("#native-dialogue-sprite-sheet input[type=file]").set_input_files(
                 str(sprite_sheet))
+            page.locator("#native-dialogue-sprite-margin-x input").fill("2")
+            page.locator("#native-dialogue-sprite-margin-y input").fill("2")
+            page.locator("#native-dialogue-sprite-gap-x input").fill("4")
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"
