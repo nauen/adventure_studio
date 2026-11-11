@@ -5,6 +5,20 @@ Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein
+ungespeicherter NPC-Sprechfolgenentwurf kann mit einem eigenen
+Editor-Knopf verworfen werden. Die tatsächlich persistierten
+Frames der gewählten Dialogzeile und Blickrichtung werden in die
+Eingabe zurückgeladen; Schrittauswahl, Schrittbild und bisheriges
+GIF werden geleert. Der Vorgang bestätigt die Wiederherstellung,
+ändert aber weder Projektdatei noch COST-Animationen.
+Core-/Chromium-CI je zweimal und stock-ScummVM-CI grün (PR #180,
+Merge `2ecc5143`, Runs `42991905022` / `42991905238` /
+`42991905095`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Im Sprechfolgeneditor klar anzeigen, ob die
+aktuelle Frame-Folge vom gespeicherten Stand abweicht, damit
+ungespeicherte Änderungen vor Verwerfen/Speichern erkennbar sind.
+
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ein
 gewählter nummerierter NPC-Sprechfolgeschritt lässt sich jetzt mit
 einem Klick duplizieren. Die Kopie entsteht unmittelbar danach
 und ist ausgewählt; der bisherige Frame muss nicht erneut gesucht
