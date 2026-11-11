@@ -271,6 +271,11 @@ def main() -> None:
             # callback that can race with the immediately following save.
             await_selection(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            sequence_input.fill("SpeakAlt, SpeakAlt")
+            page.locator("#native-dialogue-draft-discard").click()
+            expect(sequence_input).to_have_value("Speak", timeout=20000)
+            expect(page.locator("#native-dialogue-draft-animation-status")).to_contain_text(
+                "Entwurf verworfen; gespeicherte Folge wiederhergestellt.", timeout=20000)
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
             expect(picker_image.first).to_be_visible(timeout=20000)
             initial_src = picker_image.first.get_attribute("src")
