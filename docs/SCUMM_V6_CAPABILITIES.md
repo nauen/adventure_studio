@@ -30,6 +30,16 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #169, CI-Abnahme bestanden):**
+Der Inhalt persistenter NPC-Sprechfolgenvorlagen kann über das
+Studio mit validierten Frame-IDs ersetzt werden. Die Bearbeitung
+verändert keine bereits zugewiesenen COST-Animationen und fügt
+keine nativen Ressourcen hinzu. Core-/Chromium-CI jeweils zweimal,
+stock-ScummVM-CI grün (Merge `9dfc6676`, Runs `42972075904`,
+`42972095162`, `42972075837`, `42972095157`, `42972095201`).
+Menschliche UI-Abnahme offen. Nächste Editorfunktion: Vorlageninhalt
+zum Bearbeiten in das Eingabefeld laden.
+
 **D03 – aktuelle Editor-Ergänzung (PR #168, CI-Abnahme bestanden):**
 Persistente NPC-Sprechfolgenvorlagen können im Gradio-Editor
 umbenannt und gelöscht werden. Namen werden auf Duplikate geprüft;
