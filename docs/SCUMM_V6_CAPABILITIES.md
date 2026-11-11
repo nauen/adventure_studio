@@ -582,11 +582,11 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | R03 | 8-Pixel-Breitenvalidierung | A | I | T | – | Zu Opcode/Masken-Gates erweitern |
 | R04 | Mehrere Räume und Entry-/Exit-Scripts | A | I (Teil) | T | V (Teil) | Script-Lifetime bei Wechsel |
 | R05 | Objektbilder mit mehreren States | A | I (Teil) | T | V (Teil) | N Zustände/Parent-States |
-| R06 | ZPxx-Masken der Raumgrafik | A | – | – | – | P0.2, sichtbare Actor-Verdeckung |
+| R06 | ZPxx-Masken der Raumgrafik | A | I (Teil: RoomAsset/JSON, ScummC-BMP/ZPxx) | T (Teil: Raum-/Binärtests) | V (Teil: native Masken-Gegenprobe im Room-Visual-Workflow) | Frei authorierte Mehr-Ebenen-Masken und Varianten/Grenzen |
 | R07 | Objektbilder mit Z-Masken | A | – | – | – | Writer/Decoder-Fixture |
-| R08 | Walkbox-Polygone und Maskennummern | A (Teil) | – | – | – | P0.3, BOXD-Export |
-| R09 | Walkbox-Verbindungen/Wege | A (Teil) | – | – | – | P0.3, BOXM und Laufroute |
-| R10 | Perspektive/SCAL und Box-Skalierung | A | – | – | – | P0.3, reale Actor-Skalierung |
+| R08 | Walkbox-Polygone und Maskennummern | A (Teil) | I (Teil: RoomAsset/JSON, BOXD) | T (Teil: Box-Writer) | V (Teil: native Fixture) | Frei authorierte Polygone und allgemeine Laufgrenzen |
+| R09 | Walkbox-Verbindungen/Wege | A (Teil) | I (Teil: BOXM, Routendaten) | T (Teil: Binär-/Validierungstest) | V (Teil: native Fixture) | Allgemeines Boxennetz mit Spieler-Klickrouten |
+| R10 | Perspektive/SCAL und Box-Skalierung | A | I (Teil: SCAL-Slots und Kurven) | T (Teil: Skalierungs-Probe) | V (Teil: native Vergleichsprobe) | Allgemeine Kurven/Actor-Skalierung und Spielvarianten |
 | R11 | Actor-zu-Actor-Tiefe / Sam-&-Max-Sortierung | A | – | – | – | Sichtreihenfolge in v6 |
 | R12 | Palette-Cycling/Wasser-Effekte | A | I (Teil) | T | V (Teil) | Andere Effektprofile |
 | R13 | Raum-/Actor-Paletten, Shadow, Tint | A (Teil) | – | – | – | Native Operationen/Paletten |
