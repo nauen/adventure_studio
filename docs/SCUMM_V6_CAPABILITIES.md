@@ -30,6 +30,19 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #163, CI-Abnahme bestanden):**
+Die letzte rückgängig gemachte Sprite-Sheet-Folgenänderung kann
+per Redo wiederhergestellt werden. Eine neue Bearbeitung löscht den
+Redo-Eintrag, Undo nach Redo bleibt möglich; Sheet-, Raster- und
+Auswahlwechsel sind durch den kontextgebundenen Editor-State
+abgesichert. Keine Änderung am Projektmodell oder nativen
+COST-Export. Core-/Chromium-CI je zweimal grün (Browser-Run
+`42963555662` mit Undo/Redo/Undo, erneuter Bearbeitung,
+Import und JSON-Export); stock-ScummVM-Regression grün
+(Run `42963555655`, Merge `0744476c`). D03 bleibt
+Teilfähigkeit; menschliche UI-Abnahme und vollständiger
+Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #162, CI-Abnahme bestanden):**
 Die letzte Bearbeitung der freien Dialog-Sprite-Sheet-Abspielfolge
 lässt sich im Editor per Undo zurücknehmen. Die Rücknahme verwendet
