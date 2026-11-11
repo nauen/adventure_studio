@@ -4,6 +4,23 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Native
+NPC-Sprechfolgen aus importierten PNG-Frame-IDs lassen sich jetzt
+innerhalb der Studio-Sitzung als benannte Vorlagen merken und per
+Knopfdruck auf weitere Dialogzeilen derselben Costume übertragen.
+Dabei läuft die Zuweisung durch die vorhandene native Validierung;
+fehlende Frames, doppelte Vorlagennamen und andere Costumes werden
+abgelehnt. Andere Dialogzeilen bleiben unverändert. Die Vorlagen
+selbst sind **nur Sitzungsspeicher**, kein neues Projekt-JSON-Feld;
+die angewendeten Sprechfolgen werden dagegen wie bisher nativ
+gespeichert. Core-/Chromium-CI je zweimal, stock-ScummVM-CI grün
+(PR #166, Merge `075f76e9`, Runs `42967973393` / `42967981930` /
+`42967973479` / `42967981911` / `42967981973`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Benannte Sprechfolgenvorlagen
+im Projekt speichern, beim Laden wieder bereitstellen und für
+spätere Studio-Sitzungen nutzbar machen – ohne bestehende
+Projekt-JSON-Versionen zu brechen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die bis zu
 20 Schritte umfassende Undo-/Redo-Historie der freien NPC-Dialog-
 Sprite-Sheet-Abspielfolge zeigt jetzt verständliche Änderungsnamen
