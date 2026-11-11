@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Mehrstufige Sprite-Sheet-Undo-/Redo-Historie (CI-Abnahme
+bestanden):** Bis zu 20 Änderungen der freien NPC-Dialog-Abspielfolge
+können mit sichtbarer Verlaufsposition zurückgenommen oder erneut
+angewendet werden. Neue Änderungen verwerfen zukünftige Schritte;
+Sheet-, Raster- und Zellwechsel trennen die Historien. Core- und
+Chromium-CI je zweimal sowie stock-ScummVM-CI grün (PR #164,
+Merge `39fa8d07`, Runs `42965034647` / `42965029471` /
+`42965034831` / `42965029443` / `42965034645`). Menschliche
+UI-Abnahme offen. **Danach:** Verständliche Änderungsnamen im Verlauf
+anzeigen und eine Historienposition gezielt auswählen können.
+
 **Letzte rückgängig gemachte Sprite-Sheet-Änderung wiederherstellen
 (CI-Abnahme bestanden):** Redo setzt nach Undo den letzten
 Abspielsequenz-Zustand wieder ein. Eine neue Bearbeitung verwirft
