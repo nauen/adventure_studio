@@ -883,8 +883,19 @@ def make_app():
                     native_dialogue_sprite_move_position_down = gr.Button(
                         "Abspielbild nach hinten",
                         elem_id="native-dialogue-sprite-move-position-down")
+                with gr.Row():
+                    native_dialogue_sprite_block_end = gr.Dropdown(
+                        label="Blockende (einschließlich)", choices=[],
+                        elem_id="native-dialogue-sprite-block-end")
+                    native_dialogue_sprite_move_block_up = gr.Button(
+                        "Bildblock nach vorne",
+                        elem_id="native-dialogue-sprite-move-block-up")
+                    native_dialogue_sprite_move_block_down = gr.Button(
+                        "Bildblock nach hinten",
+                        elem_id="native-dialogue-sprite-move-block-down")
                 gr.Markdown("**Ohne Zellnummern:** Oben eine Quellzelle auswählen, hier die gewünschte Position wählen und einfügen. Position 0 setzt vor das erste Bild; eine Position ab 1 setzt dahinter ein. Entfernen löscht nur zusätzliche Kopien, nicht das letzte Bild einer ausgewählten Zelle.")
                 gr.Markdown("**Abspielfolge umordnen:** Ein Bild in der Leiste anklicken und mit den beiden Abspielbild-Knöpfen um genau eine Position verschieben. Auch wiederholte Zellen lassen sich einzeln bewegen.")
+                gr.Markdown("**Bildblock verschieben:** Erstes Bild in der Leiste anklicken, dann das letzte Bild im Feld *Blockende* auswählen. Die beiden Bildblock-Knöpfe verschieben alle Bilder dazwischen gemeinsam um einen Platz.")
                 native_dialogue_sprite_playback_frames = gr.Gallery(
                     label="Tatsächliche Abspielfolge · Bild anklicken, um Position zu wählen",
                     columns=6, object_fit="contain", height=190,
@@ -1655,7 +1666,8 @@ def make_app():
                               skipped, cell_order, repeats, timeline):
             if not sheet:
                 return (None, [], "Bitte ein PNG-Sprite-Sheet auswählen",
-                        gr.update(choices=[], value=None), [])
+                        gr.update(choices=[], value=None), [],
+                        gr.update(choices=[], value=None))
             try:
                 overlay, tiles, description = dialogue_png_sprite_sheet_preview(
                     sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
@@ -1667,19 +1679,21 @@ def make_app():
                     skipped, cell_order, repeats, timeline)
             except (ValueError, OSError) as error:
                 return (None, [], f"⚠️ Sprite-Sheet-Raster: {error}",
-                        gr.update(choices=[], value=None), [])
+                        gr.update(choices=[], value=None), [],
+                        gr.update(choices=[], value=None))
             positions = [("0 · vor dem ersten Bild", "0")]
             positions.extend((f"{index} · nach Bild {index} (Zelle {source + 1})", str(index))
                              for index, source in enumerate(sequence, 1))
             return (overlay, tiles, f"✅ {description}",
-                    gr.update(choices=positions, value=str(len(sequence))), playback)
+                    gr.update(choices=positions, value=str(len(sequence))), playback,
+                    gr.update(choices=positions[1:], value=None))
 
         def png_sheet_new_grid(sheet, columns, rows, margin_x, margin_y, gap_x, gap_y):
-            overlay, tiles, status, positions, playback = png_sheet_preview(
+            overlay, tiles, status, positions, playback, block_end = png_sheet_preview(
                 sheet, columns, rows, margin_x, margin_y, gap_x, gap_y, [], [], {}, "")
             choices = [(f"Position {index + 1}: Zelle {index + 1}", str(index))
                        for index in range(len(tiles))]
-            return (overlay, tiles, status, positions, playback, [], [], {}, "",
+            return (overlay, tiles, status, positions, playback, block_end, [], [], {}, "",
                     gr.update(choices=choices, value="0" if choices else None))
 
         for source in (native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
@@ -1697,6 +1711,7 @@ def make_app():
                  native_dialogue_sprite_preview_status,
                  native_dialogue_sprite_position,
                  native_dialogue_sprite_playback_frames,
+                 native_dialogue_sprite_block_end,
                  native_dialogue_sprite_skipped, native_dialogue_sprite_order,
                  native_dialogue_sprite_repeats, native_dialogue_sprite_timeline,
                  native_dialogue_sprite_selected])
@@ -1757,7 +1772,8 @@ def make_app():
              native_dialogue_sprite_preview_tiles,
              native_dialogue_sprite_preview_status,
              native_dialogue_sprite_position,
-             native_dialogue_sprite_playback_frames])
+             native_dialogue_sprite_playback_frames,
+             native_dialogue_sprite_block_end])
 
         native_dialogue_sprite_order.change(
             png_sheet_preview,
@@ -1771,7 +1787,8 @@ def make_app():
              native_dialogue_sprite_preview_tiles,
              native_dialogue_sprite_preview_status,
              native_dialogue_sprite_position,
-             native_dialogue_sprite_playback_frames])
+             native_dialogue_sprite_playback_frames,
+             native_dialogue_sprite_block_end])
 
         native_dialogue_sprite_repeats.change(
             png_sheet_preview,
@@ -1785,7 +1802,8 @@ def make_app():
              native_dialogue_sprite_preview_tiles,
              native_dialogue_sprite_preview_status,
              native_dialogue_sprite_position,
-             native_dialogue_sprite_playback_frames])
+             native_dialogue_sprite_playback_frames,
+             native_dialogue_sprite_block_end])
 
         native_dialogue_sprite_timeline.change(
             png_sheet_preview,
@@ -1799,16 +1817,18 @@ def make_app():
              native_dialogue_sprite_preview_tiles,
              native_dialogue_sprite_preview_status,
              native_dialogue_sprite_position,
-             native_dialogue_sprite_playback_frames])
+             native_dialogue_sprite_playback_frames,
+             native_dialogue_sprite_block_end])
 
         def png_sheet_select_playback(evt: gr.SelectData):
             if evt is None or type(evt.index) is not int:
                 raise gr.Error("Bitte ein Abspielbild in der Bildfolge auswählen")
-            return str(evt.index + 1)
+            return str(evt.index + 1), str(evt.index + 1)
 
         png_sheet_select_playback.__annotations__["evt"] = gr.SelectData
         native_dialogue_sprite_playback_frames.select(
-            png_sheet_select_playback, outputs=[native_dialogue_sprite_position])
+            png_sheet_select_playback,
+            outputs=[native_dialogue_sprite_position, native_dialogue_sprite_block_end])
 
         for source in (native_dialogue_sprite_skipped, native_dialogue_sprite_order):
             source.change(
@@ -1937,6 +1957,41 @@ def make_app():
                  native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
                  native_dialogue_sprite_order, native_dialogue_sprite_repeats,
                  native_dialogue_sprite_timeline, native_dialogue_sprite_position],
+                [native_dialogue_sprite_timeline])
+
+        def png_sheet_move_block(sheet, columns, rows, margin_x, margin_y,
+                                 gap_x, gap_y, skipped, cell_order, repeats,
+                                 timeline, position, block_end, step):
+            try:
+                _overlay, tiles, _description = dialogue_png_sprite_sheet_preview(
+                    sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                    skipped, cell_order, repeats, timeline)
+                return edit_dialogue_png_sprite_sheet_sequence(
+                    len(tiles), skipped, cell_order, repeats, timeline,
+                    "move_block",
+                    int(position) if isinstance(position, str) and position.isdecimal() else None,
+                    step=step,
+                    end_position=(int(block_end) if isinstance(block_end, str)
+                                  and block_end.isdecimal() else None))
+            except (ValueError, OSError) as error:
+                raise gr.Error(str(error)) from error
+
+        for button, step in ((native_dialogue_sprite_move_block_up, -1),
+                             (native_dialogue_sprite_move_block_down, 1)):
+            button.click(
+                lambda sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                       skipped, cell_order, repeats, timeline, position,
+                       block_end, step=step: png_sheet_move_block(
+                           sheet, columns, rows, margin_x, margin_y, gap_x,
+                           gap_y, skipped, cell_order, repeats, timeline,
+                           position, block_end, step),
+                [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+                 native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+                 native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+                 native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+                 native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+                 native_dialogue_sprite_timeline, native_dialogue_sprite_position,
+                 native_dialogue_sprite_block_end],
                 [native_dialogue_sprite_timeline])
 
         def png_sheet_play(sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,

@@ -753,6 +753,26 @@ def main() -> None:
             await_batch_gallery_colors(page, [(55, 205, 115), (170, 55, 210),
                                               (55, 205, 115)],
                                        "native-dialogue-sprite-playback-frames")
+            playback_gallery.locator("img").nth(1).click()
+            expect(page.locator("#native-dialogue-sprite-block-end input")).to_have_value(
+                "2 · nach Bild 2 (Zelle 1)", timeout=20000)
+            page.keyboard.press("Escape")
+            select_option(page, "native-dialogue-sprite-block-end",
+                          "3 · nach Bild 3 (Zelle 2)")
+            page.locator("#native-dialogue-sprite-move-block-up").click()
+            expect(free_order).to_have_value("1,2,2", timeout=20000)
+            await_batch_gallery_colors(page, [(170, 55, 210), (55, 205, 115),
+                                              (55, 205, 115)],
+                                       "native-dialogue-sprite-playback-frames")
+            playback_gallery.locator("img").first.click()
+            page.keyboard.press("Escape")
+            select_option(page, "native-dialogue-sprite-block-end",
+                          "2 · nach Bild 2 (Zelle 2)")
+            page.locator("#native-dialogue-sprite-move-block-down").click()
+            expect(free_order).to_have_value("2,1,2", timeout=20000)
+            await_batch_gallery_colors(page, [(55, 205, 115), (170, 55, 210),
+                                              (55, 205, 115)],
+                                       "native-dialogue-sprite-playback-frames")
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"

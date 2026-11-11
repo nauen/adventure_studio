@@ -366,6 +366,27 @@ class DialogueAnimationTests(unittest.TestCase):
             moved = edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, composed, "move", 3, step=-1)
             self.assertEqual(moved, "4,4,1,3")
+            block_moved = edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "move_block", 2,
+                step=1, end_position=3)
+            self.assertEqual(block_moved, "4,3,1,4")
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, block_moved, "move_block", 3,
+                step=-1, end_position=4), composed)
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "move_block", 1,
+                step=-1, end_position=2), composed)
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "move_block", 2,
+                step=1, end_position=4), composed)
+            with self.assertRaisesRegex(ValueError, "gültigen Abspielblock"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "move_block", 3,
+                    step=-1, end_position=2)
+            with self.assertRaisesRegex(ValueError, "Ungültige Richtung"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "move_block", 2,
+                    step=0, end_position=3)
             self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, moved, "move", 2, step=1), composed)
             self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
