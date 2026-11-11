@@ -41,6 +41,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                save_dialogue_speaking_template,
                                dialogue_speaking_template_choices,
                                rename_dialogue_speaking_template,
+                               update_dialogue_speaking_template,
                                delete_dialogue_speaking_template,
                                apply_dialogue_speaking_template,
                                assign_dialogue_direction_speaking_sequence,
@@ -795,7 +796,10 @@ def make_app():
                             "den Namen links als neuen Namen der ausgewählten "
                             "Vorlage. **Löschen** entfernt nur die Vorlage; "
                             "bereits zugewiesene Dialoganimationen bleiben "
-                            "unverändert.")
+                            "unverändert. **Vorlage aktualisieren** übernimmt "
+                            "die Sprechframes aus dem Feld oben in die "
+                            "ausgewählte Vorlage, ohne bestehende "
+                            "Dialoganimationen zu verändern.")
                 with gr.Row():
                     native_dialogue_template_name = gr.Textbox(
                         label="Name der Sprechfolgenvorlage",
@@ -810,6 +814,9 @@ def make_app():
                     native_dialogue_template_apply = gr.Button(
                         "Vorlage auf gewählte Dialogzeile anwenden",
                         elem_id="native-dialogue-template-apply")
+                native_dialogue_template_update = gr.Button(
+                    "Ausgewählte Vorlage mit Sprechframes aktualisieren",
+                    elem_id="native-dialogue-template-update")
                 with gr.Row():
                     native_dialogue_template_rename = gr.Button(
                         "Ausgewählte Vorlage umbenennen",
@@ -1657,6 +1664,21 @@ def make_app():
              native_dialogue_template_name, native_dialogue_speaking_sequence],
             [native_state, *native_outputs, native_report,
              native_dialogue_template_select, native_dialogue_template_status])
+
+        def refresh_dialogue_template_frames(raw, line, selected, sequence):
+            outcome = native_edit(
+                update_dialogue_speaking_template,
+                raw, line, selected, sequence)
+            return (*outcome,
+                    f"Vorlage **{selected}** mit neuen Frames aktualisiert; "
+                    "gespeicherte Dialoganimationen unverändert")
+
+        native_dialogue_template_update.click(
+            refresh_dialogue_template_frames,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_template_select, native_dialogue_speaking_sequence],
+            [native_state, *native_outputs, native_report,
+             native_dialogue_template_status])
 
         def rename_dialogue_template(raw, line, selected, name):
             outcome = native_edit(

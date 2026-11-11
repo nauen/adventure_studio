@@ -25,6 +25,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
     save_dialogue_speaking_template, apply_dialogue_speaking_template,
     dialogue_speaking_template_choices,
     rename_dialogue_speaking_template, delete_dialogue_speaking_template,
+    update_dialogue_speaking_template,
                                                 assign_dialogue_direction_speaking_sequence,
                                                 dialogue_speaking_sequence_selection,
                                                 dialogue_speaking_timeline,
@@ -128,6 +129,25 @@ class DialogueAnimationTests(unittest.TestCase):
                          "Speak, SpeakAlt, Speak")
         with self.assertRaisesRegex(ValueError, "vorhandene"):
             delete_dialogue_speaking_template(deleted, second, "Antwort")
+        revised = update_dialogue_speaking_template(
+            saved, first, "Begrüßung", "SpeakAlt, Speak")
+        self.assertEqual(
+            parse_document(revised).speaking_sequence_templates[0].frames,
+            ("SpeakAlt", "Speak"))
+        self.assertEqual(dialogue_speaking_sequence_selection(revised, second), "")
+        reapplied = apply_dialogue_speaking_template(
+            revised, second, "Begrüßung")
+        self.assertEqual(dialogue_speaking_sequence_selection(reapplied, second),
+                         "SpeakAlt, Speak")
+        with self.assertRaisesRegex(ValueError, "vorhandene PNG-Frames"):
+            update_dialogue_speaking_template(
+                revised, first, "Begrüßung", "NotAFrame")
+        with self.assertRaisesRegex(ValueError, "Sprechfolge eingeben"):
+            update_dialogue_speaking_template(
+                revised, first, "Begrüßung", "")
+        with self.assertRaisesRegex(ValueError, "vorhandene"):
+            update_dialogue_speaking_template(
+                revised, first, "Unbekannt", "Speak")
         with self.assertRaisesRegex(ValueError, "gespeicherte"):
             apply_dialogue_speaking_template(saved, second, "Unbekannt")
         document = parse_document(saved)
@@ -139,6 +159,9 @@ class DialogueAnimationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "anderen Costume"):
             apply_dialogue_speaking_template(
                 different_costume, second, "Begrüßung")
+        with self.assertRaisesRegex(ValueError, "anderen Costume"):
+            update_dialogue_speaking_template(
+                different_costume, second, "Begrüßung", "Speak")
         # The optional field does not change the v1 format or legacy files.
         self.assertNotIn('"speaking_sequence_templates"', raw)
         self.assertIn('"format_version":1', saved)
