@@ -7,6 +7,17 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Neues Produktpaket (2026-11-11, Abnahme ausstehend):** Der native
+NPC-Dialogeditor bietet eine eigenständige Liste offener
+Sprechfolgenentwürfe. Autoren können sie ohne Projektdateiwechsel
+aktualisieren, nach Dialogzeile und Blickrichtung auswählen und mit
+zugehörigem Sitzungstext sowie Costume-Vorschau wieder öffnen.
+Das Öffnen speichert nicht. Die vorhandene Prüfung verhindert, dass
+inzwischen gespeicherte Ziele irrtümlich geöffnet werden. Projektformat,
+COST und SCUMM-v6-Export bleiben unverändert. **Offen:** Chromium-Abnahme
+des neuen Nutzerpfads, menschliche Prüfung des Tab-Verlassen-Abbruchs
+aus PR #187; danach nächstes nutzbares Produktpaket wählen.
+
 **Produktpaket (2026-11-11, PR #187, CI-Abnahme bestanden):**
 Die Gradio-6-Studiooberfläche warnt beim Browser-Tab-Verlassen bzw.
 Neuladen vor aktiven oder zwischengespeicherten NPC-Sprechfolgenentwürfen.

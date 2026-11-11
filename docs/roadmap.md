@@ -9,6 +9,15 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Ungespeicherte Sprechfolgen ohne Projektwechsel wiederfinden
+(Abnahme ausstehend):** Im NPC-Dialogeditor lässt sich die Liste
+offener Sitzungsentwürfe bei Bedarf aktualisieren. Einträge sind
+über Dialogzeile, stabile ID und Blickrichtung unterscheidbar;
+die Auswahl öffnet die jeweilige Folge mit Vorschau, ohne sie
+zu speichern oder einen Dateiwechsel einzuleiten. Native Daten und
+Export bleiben unverändert. **Danach:** Chromium-Nutzerpfad prüfen;
+die manuelle Browser-Tab-Abbruchabnahme von PR #187 bleibt offen.
+
 **Browser-Tab mit ungespeicherten NPC-Sprechfolgen schützen
 (PR #187, CI-Abnahme bestanden):** Der Gradio-6-Browserpfad warnt
 vor aktivem oder sitzungsgebundenem ungespeichertem Sprechentwurf.
