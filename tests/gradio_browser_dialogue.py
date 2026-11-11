@@ -1229,6 +1229,11 @@ def main() -> None:
             select_option(page, "native-dialogue-direction", "Süd")
             saved_before_discard = sequence_input.input_value()
             sequence_input.fill(saved_before_discard + ", Speak")
+            sequence_input.press("Tab")
+            expect(sequence_input).to_have_value(
+                saved_before_discard + ", Speak", timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-drafts-refresh").click()
             expect(page.locator("#native-drafts-status")).to_contain_text(
                 "offene Sprechfolgenentwürfe", timeout=20000)
