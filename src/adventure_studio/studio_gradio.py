@@ -40,6 +40,8 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                assign_dialogue_speaking_sequence,
                                save_dialogue_speaking_template,
                                dialogue_speaking_template_choices,
+                               rename_dialogue_speaking_template,
+                               delete_dialogue_speaking_template,
                                apply_dialogue_speaking_template,
                                assign_dialogue_direction_speaking_sequence,
                                dialogue_speaking_sequence_selection,
@@ -789,7 +791,11 @@ def make_app():
                             "Die Übernahme speichert die Folge für **alle "
                             "Richtungen** der Zielzeile; andere Zeilen bleiben "
                             "unverändert. Ältere Projekte ohne Vorlagen "
-                            "lassen sich weiterhin laden.")
+                            "lassen sich weiterhin laden. **Umbenennen** nutzt "
+                            "den Namen links als neuen Namen der ausgewählten "
+                            "Vorlage. **Löschen** entfernt nur die Vorlage; "
+                            "bereits zugewiesene Dialoganimationen bleiben "
+                            "unverändert.")
                 with gr.Row():
                     native_dialogue_template_name = gr.Textbox(
                         label="Name der Sprechfolgenvorlage",
@@ -804,6 +810,13 @@ def make_app():
                     native_dialogue_template_apply = gr.Button(
                         "Vorlage auf gewählte Dialogzeile anwenden",
                         elem_id="native-dialogue-template-apply")
+                with gr.Row():
+                    native_dialogue_template_rename = gr.Button(
+                        "Ausgewählte Vorlage umbenennen",
+                        elem_id="native-dialogue-template-rename")
+                    native_dialogue_template_delete = gr.Button(
+                        "Ausgewählte Vorlage löschen",
+                        elem_id="native-dialogue-template-delete")
                 native_dialogue_template_status = gr.Markdown(
                     "Noch keine Sprechfolgenvorlage im Projekt",
                     elem_id="native-dialogue-template-status")
@@ -1642,6 +1655,38 @@ def make_app():
             remember_dialogue_template,
             [native_state, native_dialogue_animation_line,
              native_dialogue_template_name, native_dialogue_speaking_sequence],
+            [native_state, *native_outputs, native_report,
+             native_dialogue_template_select, native_dialogue_template_status])
+
+        def rename_dialogue_template(raw, line, selected, name):
+            outcome = native_edit(
+                rename_dialogue_speaking_template, raw, line, selected, name)
+            updated = outcome[0]
+            return (*outcome,
+                    gr.update(choices=dialogue_speaking_template_choices(updated),
+                              value=name.strip()),
+                    f"Vorlage **{selected}** in **{name.strip()}** umbenannt")
+
+        native_dialogue_template_rename.click(
+            rename_dialogue_template,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_template_select, native_dialogue_template_name],
+            [native_state, *native_outputs, native_report,
+             native_dialogue_template_select, native_dialogue_template_status])
+
+        def remove_dialogue_template(raw, line, selected):
+            outcome = native_edit(
+                delete_dialogue_speaking_template, raw, line, selected)
+            updated = outcome[0]
+            return (*outcome,
+                    gr.update(choices=dialogue_speaking_template_choices(updated),
+                              value=None),
+                    f"Vorlage **{selected}** gelöscht; Dialoganimationen unverändert")
+
+        native_dialogue_template_delete.click(
+            remove_dialogue_template,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_template_select],
             [native_state, *native_outputs, native_report,
              native_dialogue_template_select, native_dialogue_template_status])
 
