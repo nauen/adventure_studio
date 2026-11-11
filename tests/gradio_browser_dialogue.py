@@ -639,13 +639,11 @@ def main() -> None:
             preview_gallery.locator("img").nth(1).click()
             expect(sprite_status).to_contain_text("2 von 2 PNG-Frames ausgewählt", timeout=20000)
             page.keyboard.press("Escape")
-            page.locator("#native-dialogue-sprite-selected").click()
-            page.get_by_role("option", name="Position 2: Zelle 2").click()
+            select_option(page, "native-dialogue-sprite-selected", "Position 2: Zelle 2")
             page.locator("#native-dialogue-sprite-move-up").click()
             expect(preview_gallery).to_contain_text("Abspielposition 1", timeout=20000)
-            page.locator("#native-dialogue-sprite-selected").click()
-            expect(page.get_by_role("option", name="Position 1: Zelle 2")).to_be_visible()
-            page.keyboard.press("Escape")
+            expect(page.locator("#native-dialogue-sprite-selected input")).to_have_value(
+                "Position 1: Zelle 2", timeout=20000)
             page.locator("#native-dialogue-sprite-add").click()
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-B\.png → Batch_B_2.*"
