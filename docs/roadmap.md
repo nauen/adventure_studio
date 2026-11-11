@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Persistente Sprechfolgenvorlagen aktualisieren (CI-Abnahme
+bestanden):** Eine vorhandene Vorlage kann nach Bearbeitung der
+PNG-Frame-Reihenfolge unter gleichem Namen gespeichert werden.
+Frame-IDs und Costume müssen gültig sein; bereits angewendete
+Dialoganimationen bleiben bis zu einer expliziten erneuten
+Zuweisung unverändert. Kein neues Schema oder nativer Exportcode.
+Core-/Chromium-CI je zweimal, stock-ScummVM-CI grün (PR #169,
+Merge `9dfc6676`, Runs `42972075904` / `42972095162` /
+`42972075837` / `42972095157` / `42972095201`). Menschliche
+UI-Abnahme offen. **Danach:** Ausgewählte Vorlage ins editierbare
+Sprechframes-Feld laden, anschließend mit Änderungen aktualisieren.
+
 **Persistente Sprechfolgenvorlagen verwalten (CI-Abnahme
 bestanden):** Der NPC-Dialogeditor kann gespeicherte Vorlagen
 umbenennen und löschen. Bereits den Dialogzeilen zugewiesene native
