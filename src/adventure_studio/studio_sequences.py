@@ -690,30 +690,41 @@ def dialogue_png_sprite_sheet_sequence(count: int,
 
 
 def track_dialogue_png_sprite_sheet_undo(
-        history: tuple[tuple[object, ...], str, str] | None,
+        history: tuple[tuple[object, ...], str, str, str | None] | None,
         timeline: str, context: tuple[object, ...]
-        ) -> tuple[tuple[object, ...], str, str]:
-    """Remember one previous edit only within the same sheet/grid configuration."""
+        ) -> tuple[tuple[object, ...], str, str, str | None]:
+    """Keep one undo/redo pair only within the same sheet/grid configuration."""
     if not isinstance(timeline, str):
         raise ValueError("Die Abspielsequenz muss eine Zellnummernliste sein")
     if history is None:
-        return context, "", timeline
+        return context, "", timeline, None
     if history[0] != context:
-        return context, timeline, timeline
-    _, previous, current = history
-    return (context, current, timeline) if current != timeline else history
+        return context, timeline, timeline, None
+    _, previous, current, redo = history
+    return (context, current, timeline, None) if current != timeline else history
 
 
 def undo_dialogue_png_sprite_sheet_edit(
-        history: tuple[tuple[object, ...], str, str] | None,
+        history: tuple[tuple[object, ...], str, str, str | None] | None,
         timeline: str, context: tuple[object, ...]
-        ) -> tuple[str, tuple[tuple[object, ...], str, str]]:
-    """Undo a single matching change; a second click cannot undo the undo."""
+        ) -> tuple[str, tuple[tuple[object, ...], str, str, str | None]]:
+    """Undo one matching change; retain exactly one redo opportunity."""
     if (history is None or history[0] != context or history[2] != timeline or
             history[1] == history[2]):
         raise ValueError("Keine rückgängig machbare Änderung der aktuellen Bildfolge")
     previous = history[1]
-    return previous, (context, previous, previous)
+    return previous, (context, previous, previous, history[2])
+
+
+def redo_dialogue_png_sprite_sheet_edit(
+        history: tuple[tuple[object, ...], str, str, str | None] | None,
+        timeline: str, context: tuple[object, ...]
+        ) -> tuple[str, tuple[tuple[object, ...], str, str, str | None]]:
+    """Restore a single undone edit, unless another edit/context replaced it."""
+    if (history is None or history[0] != context or history[2] != timeline or
+            history[3] is None):
+        raise ValueError("Keine wiederherstellbare Änderung der aktuellen Bildfolge")
+    return history[3], (context, history[2], history[3], None)
 
 
 def edit_dialogue_png_sprite_sheet_sequence(
