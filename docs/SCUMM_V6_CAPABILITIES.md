@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #176, CI-Abnahme bestanden):**
+Die nummerierte NPC-Sprechfolgenauswahl rendert die tatsächliche
+Costume-Pixelpose des ausgewählten Entwurfsschritts. Auch beim
+Ändern der Folge bleiben Schritt und Bild gekoppelt; es wird
+nichts gespeichert oder an der nativen Engine geändert.
+Kein neuer Opcode, keine Änderung des Capability-Status.
+Core-/Chromium-CI je zweimal und stock-ScummVM-CI grün
+(Merge `1aa9a3e4`, Runs `42983378901`, `42983378864`,
+`42983378851`). Menschliche UI-Abnahme offen. Nächstes Paket:
+einen vorhandenen nummerierten Schritt direkt durch einen anderen
+Costume-Frame ersetzen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #175, CI-Abnahme bestanden):**
 Die PNG-Frame-Auswahl des NPC-Sprechfolgeneditors zeigt die
 gewählte Pose vor dem Anhängen mit echten Costume-Pixeln. Auswahl
