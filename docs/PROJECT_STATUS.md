@@ -4,6 +4,19 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket in Prüfung (2026-11-11):** Die vorbereitete native
+PNG-Importgalerie kennzeichnet jetzt einzelne Bilder mit `⚠️`, wenn
+deren Import in der aktuellen Reihenfolge scheitert. Direkt darunter
+stehen Position, Dateiname und konkreter Fehler (z. B. doppelte
+Frame-ID, PNG-Defekt, Costume-Palette). Die Vorschau simuliert dafür
+den tatsächlichen Frame-Import im verworfenen JSON-Zwischenstand und
+unterscheidet sichere Bilder von Konfliktbildern; die verbindliche
+Gesamtprüfung und der gesperrte Importknopf bleiben unverändert.
+Kein neues Projektfeld oder SCUMM-Opcode. Lokale Tests grün;
+Chromium-/CI-Abnahme und menschliche Bedienabnahme offen.
+**Nächstes Paket:** Ein einzelnes fehlerhaftes Upload-PNG gezielt durch
+eine neue Datei ersetzen, ohne die übrige geordnete Auswahl zu verlieren.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der NPC-Dialogeditor zeigt vor
 dem PNG-Stapelimport, ob die vorbereitete Reihenfolge wirklich als native
 Sprech-/Abschlussfolge speicherbar ist. Dieselbe atomare Importfunktion

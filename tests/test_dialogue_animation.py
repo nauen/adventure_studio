@@ -38,7 +38,7 @@ from adventure_studio.studio_sequences import (
     move_dialogue_png_batch_frame, remove_dialogue_png_batch_frame,
     dialogue_png_batch_excluded, restore_dialogue_png_batch_frame,
     dialogue_png_batch_thumbnails, dialogue_png_batch_animation_preview,
-    dialogue_png_batch_preflight,
+    dialogue_png_batch_preflight, dialogue_png_batch_image_diagnostics,
     dialogue_png_batch_frame_preview, step_dialogue_png_batch_frame)
 
 
@@ -64,12 +64,26 @@ class DialogueAnimationTests(unittest.TestCase):
                 raw, first, "W", paths, "Sprechfolge")
             self.assertTrue(ready, status)
             self.assertIn("Importbereit: 3 PNG-Frame(s)", status)
+            gallery, issues = dialogue_png_batch_image_diagnostics(
+                raw, first, "W", paths, "Sprechfolge")
+            self.assertEqual([path for path, _caption in gallery], paths)
+            self.assertEqual(issues, "Keine bildbezogenen Konflikte erkannt")
+            self.assertFalse(any("⚠️" in caption for _path, caption in gallery))
+            duplicated, issues = dialogue_png_batch_image_diagnostics(
+                raw, first, "W", [paths[0], paths[0]], "Sprechfolge")
+            self.assertNotIn("⚠️", duplicated[0][1])
+            self.assertIn("⚠️", duplicated[1][1])
+            self.assertIn("2. 01-red.png", issues)
             self.assertEqual(dialogue_png_batch_preflight(
                 raw, first, "W", paths, "Sprechfolge", order=())[0], False)
             bad = root / "broken.png"
             bad.write_bytes(b"not a png")
             self.assertIn("broken.png", dialogue_png_batch_preflight(
                 raw, first, "W", [str(bad)], "Sprechfolge")[1])
+            gallery, issues = dialogue_png_batch_image_diagnostics(
+                raw, first, "W", [str(bad)], "Sprechfolge")
+            self.assertIn("⚠️", gallery[0][1])
+            self.assertIn("broken.png", issues)
             crowded = root / "crowded.png"
             image = Image.new("RGBA", (31, 1))
             image.putdata([((index * 7 + 3) % 256, (index * 5 + 2) % 256,
@@ -80,6 +94,10 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertFalse(ready)
             self.assertIn("crowded.png", status)
             self.assertIn("Palette", status)
+            gallery, issues = dialogue_png_batch_image_diagnostics(
+                raw, first, "W", [str(crowded)], "Sprechfolge")
+            self.assertIn("⚠️", gallery[0][1])
+            self.assertIn("Palette", issues)
             plan = dialogue_png_batch_preview(raw, first, paths)
             self.assertIn("1. 01-red.png → Frame_01_red", plan)
             self.assertIn("3. 03-magenta.png → Frame_03_magenta", plan)
@@ -193,6 +211,12 @@ class DialogueAnimationTests(unittest.TestCase):
                 first_import, first, "W", paths, "Sprechfolge")
             self.assertFalse(ready)
             self.assertIn("existiert bereits", status)
+            gallery, issues = dialogue_png_batch_image_diagnostics(
+                first_import, first, "W", paths, "Sprechfolge")
+            self.assertIn("⚠️", gallery[0][1])
+            self.assertIn("⚠️", gallery[1][1])
+            self.assertNotIn("⚠️", gallery[2][1])
+            self.assertIn("01-red.png", issues)
             self.assertEqual(dialogue_speaking_sequence_selection(first_import, first, "W"),
                              "Pose, Frame_01_red, Frame_02_green")
             ending = import_dialogue_png_batch(

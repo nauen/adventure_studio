@@ -9,6 +9,15 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**PNG-Konflikte an einzelnen Importminiaturen anzeigen (in Prüfung):**
+Bei der vorbereiteten 1..N-PNG-Folge werden native Frameimporte
+sequenziell auf einer nur temporären Projektkopie geprüft. Die Galerie
+kennzeichnet konfliktbehaftete Positionen und zeigt den Fehler je
+Datei darunter; valide Frames und bestehende Reihenfolge bleiben
+sichtbar. Die vollständige Importfreigabe nutzt weiter die atomare
+Gesamtprüfung. Lokale Tests grün, Browser-/CI-Gates ausstehend.
+Danach: einzelne PNG-Datei in der Upload-Reihenfolge ersetzen.
+
 **Vorabprüfung der nativen PNG-Importfähigkeit (CI-Abnahme bestanden):**
 Die Studio-Oberfläche simuliert den atomaren Stapelimport mit aktueller
 Dialogzeile, Richtung, Ziel und PNG-Reihenfolge ohne Projektänderung.
