@@ -43,6 +43,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_speaking_template_preview,
                                dialogue_speaking_template_animation_preview,
                                dialogue_speaking_draft_animation_preview,
+                               edit_dialogue_speaking_draft,
                                rename_dialogue_speaking_template,
                                update_dialogue_speaking_template,
                                load_dialogue_speaking_template_for_editing,
@@ -787,6 +788,26 @@ def make_app():
             with gr.Row():
                 native_dialogue_speaking_sequence = gr.Textbox(label="Sprechframes dieser Dialogzeile", elem_id="native-dialogue-speaking-sequence")
                 native_dialogue_sequence_apply = gr.Button("Für alle Richtungen speichern", elem_id="native-dialogue-sequence-apply")
+            gr.Markdown("**Sprechfolge per Klick bearbeiten:** PNG-Frame auswählen, "
+                        "hinzufügen und einen nummerierten Schritt zum Verschieben "
+                        "oder Entfernen auswählen. Wiederholte Frames sind erlaubt. "
+                        "Erst **Speichern** oder **Vorlage merken** übernimmt den Entwurf.")
+            with gr.Row():
+                native_dialogue_draft_frame = gr.Dropdown(
+                    label="Verfügbarer PNG-Sprechframe", choices=[],
+                    elem_id="native-dialogue-draft-frame")
+                native_dialogue_draft_add = gr.Button(
+                    "Frame anhängen", elem_id="native-dialogue-draft-add")
+            with gr.Row():
+                native_dialogue_draft_step = gr.Dropdown(
+                    label="Schritt der aktuellen Sprechfolge", choices=[],
+                    elem_id="native-dialogue-draft-step")
+                native_dialogue_draft_up = gr.Button(
+                    "Schritt nach oben", elem_id="native-dialogue-draft-up")
+                native_dialogue_draft_down = gr.Button(
+                    "Schritt nach unten", elem_id="native-dialogue-draft-down")
+                native_dialogue_draft_remove = gr.Button(
+                    "Schritt entfernen", elem_id="native-dialogue-draft-remove")
             with gr.Row():
                 native_dialogue_draft_duration = gr.Number(
                     label="Sprechentwurf: Millisekunden pro Bild", value=180,
@@ -1826,6 +1847,53 @@ def make_app():
             source.change(lambda: (None, ""),
                           outputs=[native_dialogue_template_animation,
                                    native_dialogue_template_animation_status])
+
+        def speaking_draft_frame_choices(raw, line):
+            if not raw or not line:
+                return gr.update(choices=[], value=None)
+            choices, _selected = dialogue_speaking_frame_selection(raw, line)
+            return gr.update(choices=list(choices),
+                             value=choices[0] if choices else None)
+
+        for source in (native_state, native_dialogue_animation_line):
+            source.change(
+                speaking_draft_frame_choices,
+                [native_state, native_dialogue_animation_line],
+                [native_dialogue_draft_frame])
+
+        def speaking_draft_steps(sequence):
+            parts = [item.strip() for item in sequence.split(",")] if sequence and sequence.strip() else []
+            return [(f"{index + 1}. {frame}", index)
+                    for index, frame in enumerate(parts)]
+
+        native_dialogue_speaking_sequence.change(
+            lambda sequence, selected: gr.update(
+                choices=speaking_draft_steps(sequence),
+                value=selected if type(selected) is int
+                and 0 <= selected < len(speaking_draft_steps(sequence)) else None),
+            [native_dialogue_speaking_sequence, native_dialogue_draft_step],
+            [native_dialogue_draft_step])
+
+        def change_speaking_draft(raw, line, sequence, frame, step, operation):
+            try:
+                updated, selected = edit_dialogue_speaking_draft(
+                    raw, line, sequence, operation, frame, step)
+                return updated, gr.update(choices=speaking_draft_steps(updated),
+                                          value=selected)
+            except ValueError as error:
+                raise gr.Error(f"Sprechfolge nicht bearbeitbar: {error}") from error
+
+        for button, operation in ((native_dialogue_draft_add, "Hinzufügen"),
+                                  (native_dialogue_draft_up, "Nach oben"),
+                                  (native_dialogue_draft_down, "Nach unten"),
+                                  (native_dialogue_draft_remove, "Entfernen")):
+            button.click(
+                lambda raw, line, sequence, frame, step, op=operation:
+                    change_speaking_draft(raw, line, sequence, frame, step, op),
+                [native_state, native_dialogue_animation_line,
+                 native_dialogue_speaking_sequence, native_dialogue_draft_frame,
+                 native_dialogue_draft_step],
+                [native_dialogue_speaking_sequence, native_dialogue_draft_step])
 
         def play_dialogue_draft(raw, line, frames, duration):
             if not raw:
