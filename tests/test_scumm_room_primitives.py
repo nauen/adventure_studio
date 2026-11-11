@@ -13,7 +13,7 @@ from adventure_studio.scumm_assets import (ScaleCurve, ZPlane, _native_box_file,
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room, perspective_room
 from adventure_studio.studio_sequences import author_room_walkbox, author_room_box_connections, author_room_scale_curve, compose_story_project
-from adventure_studio.studio_sequences import import_room_zplane
+from adventure_studio.studio_sequences import import_room_zplane, author_room_walkbox_zplane
 
 
 class RoomNativePrimitiveTests(unittest.TestCase):
@@ -167,6 +167,48 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             mask.resize((width // 2, height)).save(png)
             with self.assertRaisesRegex(ValueError, "exakt"):
                 import_room_zplane(updated, room.name, 2, str(png))
+
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
+    def test_two_png_zplanes_can_be_selected_per_walkbox_without_losing_routes(self):
+        from PIL import Image
+
+        base = native_room(occlusion=False)
+        raw = canonical_json(GameDocument("multi_z", (base, destination_fixture())))
+        width, height = base.geometry.room_width, base.geometry.room_height
+        with tempfile.TemporaryDirectory() as directory:
+            first = Path(directory) / "first.png"
+            second = Path(directory) / "second.png"
+            Image.new("L", (width, height), color=0).save(first)
+            mask = Image.new("L", (width, height), color=0)
+            mask.putpixel((540, 90), 255)
+            mask.save(second)
+            raw = import_room_zplane(raw, "Harbor", 1, str(first))
+            raw = import_room_zplane(raw, "Harbor", 2, str(second))
+            raw = author_room_walkbox_zplane(raw, "Harbor", 2, 2)
+            room = parse_document(raw).rooms[0]
+            self.assertEqual(len(room.zplanes), 2)
+            self.assertEqual(tuple(box.mask for box in room.walkboxes), (0, 2))
+            self.assertEqual(room.zplanes[1].pixels[90 * width + 540], 1)
+            self.assertEqual(room.box_routes, base.box_routes)
+            write_room_sources(room, Path(directory))
+            source = (Path(directory) / "Harbor.scc").read_text()
+            self.assertIn('"HarborZ01.bmp", "HarborZ02.bmp"', source)
+            self.assertTrue((Path(directory) / "HarborZ02.bmp").exists())
+            binary = (Path(directory) / "Harbor.box").read_bytes()
+            # 21-byte native box records: box 0 is reserved, box 2 starts at byte 30.
+            self.assertEqual(binary[30 + 16], 2)
+            story = (Path(__file__).resolve().parents[1] / "examples" /
+                     "mini_story_chain.json").read_text(encoding="utf-8")
+            composed = parse_document(compose_story_project(story, raw))
+            self.assertEqual(next(r for r in composed.rooms if r.name == "Harbor").zplanes,
+                             room.zplanes)
+            self.assertEqual(next(r for r in composed.rooms if r.name == "Harbor").walkboxes,
+                             room.walkboxes)
+            with self.assertRaisesRegex(ValueError, "vorhandene PNG"):
+                author_room_walkbox_zplane(raw, "Harbor", 2, 3)
+            with self.assertRaisesRegex(ValueError, "vorhandene Walkbox"):
+                author_room_walkbox_zplane(raw, "Harbor", 3, 2)
+            self.assertEqual(author_room_walkbox_zplane(raw, "Harbor", 2, 2), raw)
 
     def test_project_json_roundtrip_preserves_native_assets(self):
         document = GameDocument("native", (native_room(), destination_fixture()))
