@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprechfolgeschritt per Klick duplizieren (CI-Abnahme bestanden):**
+Ein vorhandener nummerierter Frame kann ohne erneute Auswahl des
+PNGs unmittelbar hinter sich kopiert werden. Die Kopie wird
+vorausgewählt, andere Schritte bleiben erhalten; die Änderung
+ist rein editorseitig bis zum Speichern. Core-/Chromium-CI je
+zweimal und stock-ScummVM-CI grün (PR #179, Merge `bdf03581`,
+Runs `42989783006` / `42989782942` / `42989783195`).
+Menschliche UI-Abnahme offen. **Danach:** Einen noch nicht
+gespeicherten Framefolgenentwurf verwerfen und die aktuell
+persistierte Dialogzeilenfolge zurückladen.
+
 **Sprechframes vor/nach einem Schritt einfügen (CI-Abnahme
 bestanden):** Vorhandene PNG-Pixelposen können an beiden Seiten
 eines gewählten nummerierten NPC-Sprechschritts eingefügt werden.
