@@ -5,6 +5,21 @@ Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im vorbereiteten
+Dialog-PNG-Import vergibt **Freie Frame-ID vergeben** eine native ID
+für das ausgewählte Bild, ohne dessen Datei umzubenennen. Der Vorschlag
+reserviert alle bereits existierenden Frames der Sprecher-Costume und
+alle anderen eingeschlossenen Bilder; bei Konflikten werden freie
+Suffixe `_2`, `_3` usw. deterministisch gefunden. Die bestehende
+atomare Vorprüfung bleibt verbindlich. 334 lokale Python-Tests und
+alle drei CI-Workflows grün. Chromium bestätigt nach erstem Import
+zwei Konfliktlösungen per Klick, erneuten nativen Import und den
+JSON-Export; stock ScummVM bestätigte die vollständige Dialog-/Rezept-
+Regression (PR #130, Merge `854ca84`, Runs `42938168129` /
+`42938168138` / `42938168094`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Alle nativen Frame-ID-Konflikte einer vorbereiteten
+PNG-Importfolge auf Wunsch in einem Schritt eindeutig auflösen.
+
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im vorbereiteten
 nativen Dialog-PNG-Stapelimport lässt sich jetzt die Frame-ID eines
 gewählten Bilds direkt im Studio überschreiben, ohne die Datei
 umzubenennen. Die Zuordnung bleibt bei Sortierung, Ausschluss und

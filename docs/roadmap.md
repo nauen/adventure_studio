@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Freie Frame-ID für ein vorbereitetes PNG vergeben (CI-Abnahme bestanden):**
+Ein Klick weist dem gewählten Uploadbild eine native ID zu, die weder
+in der betroffenen Sprecher-Costume noch bei den anderen eingeschlossenen
+Importbildern belegt ist. Der Algorithmus erweitert bei Bedarf den
+bisherigen Namen deterministisch um `_2`, `_3` usw.; die verbindliche
+atomare Importprüfung bleibt unverändert. 334 lokale Tests,
+Core-/Chromium-CI und vollständige stock-ScummVM-Regression grün.
+Der Browser prüft zwei aufeinanderfolgende Konfliktlösungen, erneuten
+Import und exportierte native Frame-IDs (PR #130, Merge `854ca84`,
+Runs `42938168129` / `42938168138` / `42938168094`). Menschliche
+UI-Abnahme offen. Danach: alle Konflikte eines Stapels mit einem
+Klick beheben.
+
 **Native Frame-ID eines vorbereiteten PNGs bearbeiten (CI-Abnahme bestanden):**
 Im Dialogeditor kann ein ausgewähltes Upload-PNG eine individuelle
 native ID erhalten. Die Zuordnung überlebt Umsortieren, Ausschließen
