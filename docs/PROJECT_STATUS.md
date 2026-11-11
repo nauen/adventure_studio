@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die
+NPC-Sprechframe-Folge kann jetzt ohne manuelle Komma-IDs aus
+vorhandenen Costume-PNG-Frames zusammengestellt werden. Ein
+Frame-Dropdown fügt auch wiederholte Bilder an; nummerierte
+Schritte lassen sich nach oben/unten bewegen oder entfernen.
+Die Eingabe bleibt mit Editor-GIF, Vorlagen und dem separaten
+Speichervorgang synchron. Alle Klickaktionen sind zunächst nur
+Entwurfsänderungen; keine Änderung an Projekt-JSON oder COST-Export.
+Core-/Chromium-CI je zweimal und stock-ScummVM-CI grün (PR #174,
+Merge `94a83464`, Runs `42979576693` / `42979576683` /
+`42979576719`). Menschliche UI-Abnahme offen. **Nächstes Paket:**
+Den zum Hinzufügen gewählten Sprechframe direkt als echtes
+Costume-Pixelbild anzeigen, damit eine Pose vor der Auswahl optisch
+beurteilt werden kann.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Auch eine noch
 nicht gespeicherte NPC-Sprechframe-Folge lässt sich jetzt direkt aus
 dem Eingabefeld als Editor-GIF aus echten Costume-Pixeln abspielen.
