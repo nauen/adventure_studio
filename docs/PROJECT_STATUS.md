@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die ausgewählten
+PNG-Sprite-Sheet-Zellen lassen sich vor dem nativen Dialog-COST-Import
+als Editor-GIF in der tatsächlichen Abspielreihenfolge betrachten.
+Ausgeschlossene Zellen fehlen in der Vorschau; Außenränder, Abstände,
+Transparenz und manuelle Reihenfolge werden wie beim nativen Import
+berücksichtigt. Die Vorschau-Framezeit ist 40–2000 ms einstellbar;
+Änderungen an Quelle, Raster, Auswahl, Reihenfolge oder Tempo löschen
+ein veraltetes GIF. Kein Projektzustand wird dadurch verändert.
+334 lokale Tests und Core-/Chromium-/stock-ScummVM-CI grün;
+Chromium kontrolliert die beiden animierten Frame-Pixel und das Timing
+vor COST-Import und JSON-Export (PR #144, Merge `648b856`, Runs
+`42948204879` / `42948204777` / `42948204871`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Einzelne Sprite-Sheet-Zellen
+mehrfach in eine vorbereitete Animationsfolge übernehmen können.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die für den
 nativen Dialog-COST-Import gewählten Sprite-Sheet-Zellen können bereits
 in der Schnittvorschau über **Zelle nach vorne/hinten** in eine eigene

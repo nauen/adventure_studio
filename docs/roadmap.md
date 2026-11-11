@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Animierte Sprite-Sheet-Schnittvorschau (CI-Abnahme bestanden):**
+Das Studio zeigt vor dem Hinzufügen ein wiederholbares Editor-GIF aus
+genau den gewählten Rasterzellen in ihrer konfigurierten Abspielreihenfolge.
+Es verwendet dieselben Pixelkoordinaten, Ränder, Abstände und Ausschlüsse
+wie der native COST-Stapelimport. Die Vorschaugeschwindigkeit ist unabhängig
+vom nativen Timing; eine veraltete Animation wird bei Änderungen entfernt.
+334 lokale Tests, Core-/Chromium-/stock-ScummVM-CI grün. Chromium prüft
+GIF-Frame-Pixel, Dauer und anschließenden Import/Export (PR #144,
+Merge `648b856`, Runs `42948204879` / `42948204777` /
+`42948204871`). Menschliche UI-Abnahme offen. Danach: dieselbe
+Sprite-Sheet-Zelle mehrfach in einer geplanten Sequenz verwenden.
+
 **Sprite-Sheet-Zellen vor dem Import umordnen (CI-Abnahme bestanden):**
 Über eine Zellenauswahl und Vor-/Zurück-Knöpfe lässt sich die native
 Abspielreihenfolge der gewählten Rasterbilder ändern. Ausgeschlossene
