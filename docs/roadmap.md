@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Ein vorbereitetes PNG gezielt ersetzen (CI-Abnahme bestanden):**
+Eine separate Einzeldatei-Auswahl ersetzt das gewählte Importbild,
+ohne weitere Uploads, die editierte Reihenfolge oder Ausschlüsse
+zurückzusetzen. Die native Frame-ID wird aus dem neuen Dateinamen
+abgeleitet; Galerie, GIF, Vorprüfung und atomarer COST-Import lesen
+denselben geänderten Stapel. 334 lokale Tests sowie Core-/Chromium-CI
+grün, einschließlich Browser-Pixel-, Import- und JSON-Export-Nachweis;
+stock-ScummVM-Regression im unveränderten zweiten Joblauf bestanden
+(PR #126, Merge `eca2568`, Runs `42934763597` / `42934763618` /
+`42934763594`). Menschliche UI-Abnahme offen. Danach: native Frame-ID einzelner vorbereiteter PNGs direkt
+im Studio ändern können.
+
 **PNG-Konflikte an einzelnen Importminiaturen anzeigen (CI-Abnahme bestanden):**
 Bei der vorbereiteten 1..N-PNG-Folge werden native Frameimporte
 sequenziell auf einer nur temporären Projektkopie geprüft. Die Galerie

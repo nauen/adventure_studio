@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #126, CI-Abnahme bestanden):**
+Die vorbereitete native 1..N-Dialog-PNG-Folge unterstützt jetzt den
+gezielten Austausch eines ausgewählten Bilds per Einzelupload, ohne
+Sortierung, Ausschlüsse oder andere Uploads zu verlieren. Unit-Tests
+prüfen den direkten Pfad bis zum nativen Stapelimport; Chromium
+bestätigt Austausch, Pixelvorschau und JSON-Export (Run `42934763618`),
+stock ScummVM die unveränderte Dialog-/Rezept-Regression im zweiten
+Lauf (Run `42934763594`, Merge `eca2568`). Die D03-Teilstatus und
+die offenen menschlichen UI-/vollständigen Lippensync-Abnahmen bleiben
+unverändert.
+
 Die folgenden Nachweise stammen aus den früheren
 [Source-Audits](scumm-v6-source-audit.md),
 [Ressourcen-Audits](scumm-v6-export-gap-analysis.md),

@@ -4,6 +4,22 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Im NPC-Dialogeditor
+kann ein einzelnes bereits vorbereitetes PNG durch einen eigenen
+Einzelupload ersetzt werden. Seine Position und die manuelle Reihenfolge
+bleiben stabil; andere hochgeladene oder ausgeschlossene Dateien
+werden nicht angerührt. Galerie, Einzelframe, GIF, Vorprüfung und
+atomarer nativer COST-Import verwenden die geänderte Auswahl, während
+eine vollständig neue Mehrfach-Dateiauswahl weiter neu beginnt.
+334 lokale Python-Tests und alle drei CI-Workflows grün. Chromium
+prüfte den Einzelersatz, echte Pixel, nativen Import und JSON-Export;
+stock ScummVM bestand die Dialog-/Rezept-Regression im unveränderten
+zweiten Lauf nach einer zeitabhängigen Richtungs-Sichtprobe im ersten
+Lauf (PR #126, Merge `eca2568`, Runs `42934763597` /
+`42934763618` / `42934763594`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Eine native Frame-ID pro vorbereitetem Importbild
+im Studio gezielt ändern können, ohne dessen PNG-Datei extern umzubenennen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die vorbereitete native
 PNG-Importgalerie kennzeichnet jetzt einzelne Bilder mit `⚠️`, wenn
 deren Import in der aktuellen Reihenfolge scheitert. Direkt darunter
