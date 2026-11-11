@@ -34,6 +34,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 assign_dialogue_direction_speaking_sequence,
                                                 dialogue_speaking_sequence_selection,
     discard_dialogue_speaking_draft,
+    dialogue_speaking_draft_save_status,
                                                 dialogue_speaking_timeline,
                                                 edit_dialogue_speaking_timeline,
                                                 dialogue_speaking_timeline_preview)
@@ -137,6 +138,17 @@ class DialogueAnimationTests(unittest.TestCase):
             edit_dialogue_speaking_draft(raw, first, "", "Davor einfügen", "Speak", 0)
         with self.assertRaisesRegex(ValueError, "vorhandenen PNG-Frame"):
             edit_dialogue_speaking_draft(raw, first, "Speak", "Danach einfügen", "Missing", 0)
+        self.assertEqual(dialogue_speaking_draft_save_status(
+            raw, first, "S", dialogue_speaking_sequence_selection(raw, first, "S")),
+            "Sprechfolge entspricht dem gespeicherten Stand")
+        self.assertEqual(dialogue_speaking_draft_save_status(
+            raw, first, "S", "SpeakAlt"),
+            "Ungespeicherte Änderungen an der Sprechfolge")
+        self.assertEqual(dialogue_speaking_draft_save_status(
+            raw, first, "S", "Speak, "),
+            "Ungespeicherte Änderungen an der Sprechfolge")
+        self.assertIn("Sprecher-Dialogzeile", dialogue_speaking_draft_save_status(
+            raw, "unknown", "S", "Speak"))
         saved_before_discard = dialogue_speaking_sequence_selection(raw, first, "S")
         self.assertEqual(discard_dialogue_speaking_draft(raw, first, "S"),
                          saved_before_discard)

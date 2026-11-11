@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Ungespeicherte Sprechfolgen sichtbar kennzeichnen (CI-Abnahme
+bestanden):** Der Editor vergleicht den Entwurf der aktuellen
+NPC-Dialogzeile/Blickrichtung mit den gespeicherten Frames und zeigt
+einen eindeutigen Status. Auch nach Verwerfen, Speichern oder
+Zielwechsel wird der Status erneuert; keine Änderung an nativen
+Projektdaten oder COST-Animationen durch die Anzeige. Core-CI
+zweimal, Chromium-CI zweimal und stock-ScummVM-CI grün (PR #181,
+Runs `42997451056` / `42997457816` / `42997454461` /
+`42997457721` / `42997457852`). Menschliche UI-Abnahme offen.
+**Danach:** Ungespeicherte Bearbeitung bei Dialogzeilen- oder
+Blickrichtungswechsel gegen versehentliches Verwerfen schützen.
+
 **Ungespeicherten Sprechfolgenentwurf verwerfen (CI-Abnahme
 bestanden):** Der Dialogeditor kann die noch nicht persistierte
 Framefolge ausdrücklich zurücksetzen und die gespeicherte

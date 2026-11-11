@@ -65,7 +65,8 @@ def await_selection(page, elem_id: str, label: str) -> None:
 def await_preview_color(page, rgb: tuple[int, int, int]) -> None:
     """Require real pixel colors from the Gradio image in Chromium."""
     image = page.locator("#native-dialogue-pose-preview img")
-    expect(image.first).to_be_visible(timeout=20000)
+    expect(image.first).to_have_attribute("src", re.compile(r"/gradio_api/file="), timeout=20000)
+    image.first.evaluate("(img) => { img.loading = 'eager'; }")
     page.wait_for_function(
         """({color}) => {
             const img = document.querySelector('#native-dialogue-pose-preview img');
@@ -90,7 +91,8 @@ def await_preview_color(page, rgb: tuple[int, int, int]) -> None:
 def await_direction_preview_color(page, rgb: tuple[int, int, int]) -> None:
     """Inspect native direction-specific frame pixels, not only the dropdown."""
     image = page.locator("#native-dialogue-direction-preview img")
-    expect(image.first).to_be_visible(timeout=20000)
+    expect(image.first).to_have_attribute("src", re.compile(r"/gradio_api/file="), timeout=20000)
+    image.first.evaluate("(img) => { img.loading = 'eager'; }")
     page.wait_for_function(
         """({color}) => {
             const img = document.querySelector('#native-dialogue-direction-preview img');
@@ -271,9 +273,16 @@ def main() -> None:
             # callback that can race with the immediately following save.
             await_selection(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            draft_save_status = page.locator("#native-dialogue-draft-save-status")
+            expect(draft_save_status).to_contain_text(
+                "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             sequence_input.fill("SpeakAlt, SpeakAlt")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-dialogue-draft-discard").click()
             expect(sequence_input).to_have_value("Speak", timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             expect(page.locator("#native-dialogue-draft-animation-status")).to_contain_text(
                 "Entwurf verworfen; gespeicherte Folge wiederhergestellt.", timeout=20000)
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
@@ -366,10 +375,14 @@ def main() -> None:
             sequence_input.fill("SpeakAlt, Speak")
             expect(draft_gif).to_have_count(0, timeout=20000)
             sequence_input.fill("Speak, SpeakAlt")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-dialogue-sequence-apply").click()
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Interaktionsablauf geändert und validiert", timeout=20000)
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             page.get_by_text("Sprechfolge als Vorlage für weitere Dialogzeilen",
                              exact=True).click()
             page.locator("#native-dialogue-template-name input, #native-dialogue-template-name textarea").fill("Begrüßung")

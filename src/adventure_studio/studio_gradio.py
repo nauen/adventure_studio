@@ -53,6 +53,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                assign_dialogue_direction_speaking_sequence,
                                dialogue_speaking_sequence_selection,
                                discard_dialogue_speaking_draft,
+                               dialogue_speaking_draft_save_status,
                                dialogue_speaking_timeline, edit_dialogue_speaking_timeline,
                                dialogue_speaking_timeline_preview,
                                dialogue_animation_phase_selection,
@@ -793,6 +794,9 @@ def make_app():
                 native_dialogue_draft_discard = gr.Button(
                     "Entwurf verwerfen · gespeicherte Folge laden",
                     elem_id="native-dialogue-draft-discard")
+            native_dialogue_draft_save_status = gr.Markdown(
+                "Bitte eine Sprecher-Dialogzeile auswählen",
+                elem_id="native-dialogue-draft-save-status")
             gr.Markdown("**Sprechfolge per Klick bearbeiten:** PNG-Frame auswählen, "
                         "hinzufügen und einen nummerierten Schritt zum Verschieben "
                         "oder Entfernen auswählen. Wiederholte Frames sind erlaubt. "
@@ -1908,6 +1912,19 @@ def make_app():
             [native_dialogue_draft_step])
         native_dialogue_speaking_sequence.input(
             lambda: None, outputs=[native_dialogue_draft_step_preview])
+        native_dialogue_speaking_sequence.change(
+            dialogue_speaking_draft_save_status,
+            [native_state, native_dialogue_animation_line,
+             native_dialogue_direction, native_dialogue_speaking_sequence],
+            [native_dialogue_draft_save_status])
+        for source in (native_state, native_dialogue_animation_line,
+                       native_dialogue_direction):
+            source.change(
+                dialogue_speaking_draft_save_status,
+                [native_state, native_dialogue_animation_line,
+                 native_dialogue_direction, native_dialogue_speaking_sequence],
+                [native_dialogue_draft_save_status])
+
         native_dialogue_draft_step.change(
             dialogue_speaking_draft_step_preview,
             [native_state, native_dialogue_animation_line,
@@ -1922,7 +1939,7 @@ def make_app():
                     raw, line, sequence, operation, frame, step)
                 return (updated,
                         gr.update(choices=speaking_draft_steps(updated), value=selected),
-                        dialogue_speaking_draft_step_preview(raw, line, updated, selected))
+                        dialogue_speaking_draft_step_preview(raw, line, updated, selected), "")
             except ValueError as error:
                 raise gr.Error(f"Sprechfolge nicht bearbeitbar: {error}") from error
 
@@ -1941,7 +1958,8 @@ def make_app():
                  native_dialogue_speaking_sequence, native_dialogue_draft_frame,
                  native_dialogue_draft_step],
                 [native_dialogue_speaking_sequence, native_dialogue_draft_step,
-                 native_dialogue_draft_step_preview])
+                 native_dialogue_draft_step_preview,
+                 native_dialogue_draft_animation_status])
 
         def discard_speaking_draft(raw, line, direction):
             if not raw:
@@ -1980,11 +1998,16 @@ def make_app():
             [native_dialogue_draft_animation,
              native_dialogue_draft_animation_status])
         for source in (native_state, native_dialogue_animation_line,
-                       native_dialogue_speaking_sequence,
                        native_dialogue_draft_duration):
             source.change(lambda: (None, ""),
                           outputs=[native_dialogue_draft_animation,
                                    native_dialogue_draft_animation_status])
+        # Programmatic updates (notably discard) already set their own status.
+        # Clearing it again on the sequence's change event races that feedback.
+        native_dialogue_speaking_sequence.change(
+            lambda: None, outputs=[native_dialogue_draft_animation])
+        native_dialogue_speaking_sequence.input(
+            lambda: "", outputs=[native_dialogue_draft_animation_status])
 
         native_dialogue_template_apply.click(
             lambda raw, line, name, reset: native_edit(
