@@ -11,8 +11,8 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
 - **Jetzt:** Genau R09 – authorierbare Verbindungen zwischen benachbarten Walkboxen mit nativer BOXM-Next-Hop-Ausgabe ([PR #196](https://github.com/nauen/adventure_studio/pull/196)). R08.1 ist in `main` gemergt (`7acc7fb3`); keine neuen NPC-Komfortpakete nach #190.
-- **Abnahme:** Echter Studio-Klickpfad → RoomAsset/JSON inklusive Story-Verknüpfung → BOXM → Actor erreicht im unveränderten ScummVM den entfernten Raumteil nur mit korrekt verbundener Boxroute. Core-Tests grün; gezielte Browser- und ScummVM-Proben auf dem finalen PR-Head ausstehend.
-- **Blocker:** Aktive GitHub-CI für Chromium und den stock-ScummVM-Routenvergleich; R09 nicht als nativ verifiziert oder mergefähig freigeben, bevor der Nachweis gelingt. Beliebige Polygonformen und alle R10-/SCAL-Varianten bleiben getrennt offen.
+- **Abnahme:** Echter Studio-Klickpfad → RoomAsset/JSON inklusive Story-Verknüpfung → BOXM → Actor erreicht im unveränderten ScummVM den entfernten Raumteil nur mit korrekt verbundener Boxroute. Core-Tests grün; [native CI 43086709064](https://github.com/nauen/adventure_studio/actions/runs/43086709064) bestätigt verbundenes gegenüber getrenntem Actor-Routing in stock ScummVM ([Artefakt](https://github.com/nauen/adventure_studio/actions/runs/43086709064/artifacts/13887995755)); abschließende Chromium-/Gesamt-CI ausstehend.
+- **Blocker:** Stock-ScummVM-Routenvergleich ist erfolgreich; endgültige Chromium- und Gesamt-CI auf dem finalen PR-Head offen. Kein Merge vor Freigabe. Beliebige Polygonformen und alle R10-/SCAL-Varianten bleiben getrennt offen.
 - **Danach:** Genau R10 – native Perspektivskalierung im Studio authorieren und in stock ScummVM nachweisen; erst nach R09-Abnahme und Merge.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
