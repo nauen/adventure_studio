@@ -1646,7 +1646,12 @@ def edit_dialogue_speaking_draft(
                 or not 0 <= int(step_index) < len(sequence)):
             raise ValueError("Bitte einen vorhandenen Sprechschritt auswählen")
         selected = int(step_index)
-        if operation == "Ersetzen":
+        if operation in ("Davor einfügen", "Danach einfügen"):
+            if frame_id not in available:
+                raise ValueError("Bitte einen vorhandenen PNG-Frame auswählen")
+            selected += int(operation == "Danach einfügen")
+            sequence.insert(selected, frame_id)
+        elif operation == "Ersetzen":
             if frame_id not in available:
                 raise ValueError("Bitte einen vorhandenen PNG-Frame auswählen")
             sequence[selected] = frame_id
