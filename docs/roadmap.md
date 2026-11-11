@@ -9,6 +9,20 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprite-Sheet-Bildblock frei positionieren (CI-Abnahme bestanden):**
+Ein markierter Block kann ohne Kopieren direkt an jede Zielgrenze
+der ursprünglichen Abspielsequenz verschoben werden (0 vor dem ersten
+Bild, N nach Bild N). Selbstziele sind wirkungslos; Bildanzahl,
+Reihenfolge im Block und native COST-Sequenz bleiben konsistent.
+Core-/Chromium-CI zweimal grün und stock-ScummVM-CI im zweiten
+Versuch grün (PR #160, Merge `6c5d979e`, Runs `42960294165` /
+`42960294415` / `42960294253`, Attempt 2). Der erste native
+Versuch hatte eine nicht reproduzierte Frame-Abtastungsabweichung
+in einer unveränderten Sprechprobe. Menschliche UI-Abnahme offen.
+Danach: einen gewählten Bildblock mit frei wählbarer positiver
+Wiederholungsanzahl gesammelt einfügen; die Anzahl vor Übernahme
+sichtbar machen und native Ressourcenfolgen sicher validieren.
+
 **Zusammenhängende Sprite-Sheet-Abspielbilder entfernen
 (CI-Abnahme bestanden):** Der Nutzer wählt in der visuellen Bildleiste
 Start- und einschließlich Endbild und entfernt den Block in einer
