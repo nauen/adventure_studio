@@ -483,12 +483,20 @@ def main() -> None:
             expect(page.locator("#native-dialogue-direction input")).to_be_enabled(timeout=20000)
             select_option(page, "native-dialogue-direction", "Nord")
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            page.locator(
+                "#native-dialogue-speaking-sequence [data-testid='status-tracker']"
+            ).wait_for(state="hidden", timeout=20000)
+            page.locator(
+                "#native-dialogue-direction [data-testid='status-tracker']"
+            ).wait_for(state="hidden", timeout=20000)
             expect(draft_save_status).to_contain_text(
                 "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             sequence_input.fill("SpeakAlt, Speak")
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-dialogue-direction-sequence-apply").click()
+            expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
+                "Interaktionsablauf geändert und validiert", timeout=20000)
             expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
             select_option(page, "native-dialogue-direction", "Süd")
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
