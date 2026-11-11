@@ -695,7 +695,8 @@ def edit_dialogue_png_sprite_sheet_sequence(
         repeats: dict[int, int] | None, timeline: str | None,
         action: str, position: int | None = None,
         source_index: int | None = None, step: int | None = None,
-        end_position: int | None = None) -> str:
+        end_position: int | None = None,
+        destination_position: int | None = None) -> str:
     """Compose a free play sequence using source-cell and position selectors."""
     if action == "reset":
         return ""
@@ -746,6 +747,16 @@ def edit_dialogue_png_sprite_sheet_sequence(
                 [sequence[end_position]] + sequence[position - 1:end_position])
         if tuple(sequence) == previous:
             return timeline or ""
+    elif action == "copy_block":
+        if (position not in range(1, len(sequence) + 1) or
+                type(end_position) is not int or
+                end_position not in range(position, len(sequence) + 1)):
+            raise ValueError("Bitte einen gültigen Bildblock von Start bis Ende auswählen")
+        if (type(destination_position) is not int or
+                destination_position not in range(len(sequence) + 1)):
+            raise ValueError("Bitte eine gültige Einfügeposition für den Bildblock auswählen")
+        block = sequence[position - 1:end_position]
+        sequence[destination_position:destination_position] = block
     else:
         raise ValueError("Unbekannte Bearbeitung der Sprite-Sheet-Abspielsequenz")
     return ",".join(str(index + 1) for index in sequence)

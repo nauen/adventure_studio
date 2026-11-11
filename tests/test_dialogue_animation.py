@@ -379,6 +379,26 @@ class DialogueAnimationTests(unittest.TestCase):
             self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
                 4, [1], reordered, None, composed, "move_block", 2,
                 step=1, end_position=4), composed)
+            copied = edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "copy_block", 2,
+                end_position=3, destination_position=4)
+            self.assertEqual(copied, "4,1,4,3,1,4")
+            self.assertEqual(dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, copied), (3, 0, 3, 2, 0, 3))
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "copy_block", 2,
+                end_position=3, destination_position=0), "1,4,4,1,4,3")
+            self.assertEqual(edit_dialogue_png_sprite_sheet_sequence(
+                4, [1], reordered, None, composed, "copy_block", 2,
+                end_position=3, destination_position=2), "4,1,1,4,4,3")
+            with self.assertRaisesRegex(ValueError, "gültigen Bildblock"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "copy_block", 3,
+                    end_position=2, destination_position=4)
+            with self.assertRaisesRegex(ValueError, "Einfügeposition für den Bildblock"):
+                edit_dialogue_png_sprite_sheet_sequence(
+                    4, [1], reordered, None, composed, "copy_block", 2,
+                    end_position=3, destination_position=9)
             with self.assertRaisesRegex(ValueError, "gültigen Abspielblock"):
                 edit_dialogue_png_sprite_sheet_sequence(
                     4, [1], reordered, None, composed, "move_block", 3,
