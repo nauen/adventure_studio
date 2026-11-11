@@ -2012,7 +2012,7 @@ def make_app():
             try:
                 saved = discard_dialogue_speaking_draft(raw, line, direction)
                 return (saved, gr.update(choices=speaking_draft_steps(saved), value=None),
-                        None, None, "Entwurf verworfen; gespeicherte Folge wiederhergestellt.",
+                        None, None, "",
                         record_dialogue_speaking_draft(raw, line, direction, saved, session))
             except ValueError as error:
                 raise gr.Error(f"Entwurf nicht wiederherstellbar: {error}") from error

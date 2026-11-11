@@ -289,8 +289,8 @@ def main() -> None:
             expect(sequence_input).to_have_value("Speak", timeout=20000)
             expect(draft_save_status).to_contain_text(
                 "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
-            expect(page.locator("#native-dialogue-draft-animation-status")).to_contain_text(
-                "Entwurf verworfen; gespeicherte Folge wiederhergestellt.", timeout=20000)
+            # The persistent saved-state indicator confirms discard; preview
+            # feedback is cleared because no GIF belongs to the restored draft.
             picker_image = page.locator("#native-dialogue-draft-frame-preview img")
             expect(picker_image.first).to_be_visible(timeout=20000)
             initial_src = picker_image.first.get_attribute("src")
