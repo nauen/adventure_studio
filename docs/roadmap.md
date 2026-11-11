@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Auswahl einzelner Sprite-Sheet-Zellen (CI-Abnahme bestanden):**
+In der PNG-Schnittvorschau lassen sich Einzelzellen durch einen Klick
+ein- oder ausschließen. Grafik-Overlay, Miniaturtexte und Zählung
+zeigen den aktuellen Übernahmestatus. Der COST-Stapel erhält nur die
+ausgewählten Zellen in Zeilenreihenfolge, ohne die vorhandenen
+vorbereiteten Uploads zu ändern. Leere Auswahl und ungültige
+Zellindizes werden abgefangen. 334 lokale Tests, Core-/Chromium-/
+stock-ScummVM-CI grün; Chromium prüft das Umschalten und den
+exportierten Import (PR #140, Merge `61d4484`, Runs
+`42944948323` / `42944948283` / `42944948354`). Menschliche
+UI-Abnahme offen. Danach: Zellreihenfolge vor der Übernahme
+direkt in der Vorschau festlegen.
+
 **Visuelle Sprite-Sheet-Raster-/Schnittvorschau (CI-Abnahme bestanden):**
 Vor der Übernahme zeigt der NPC-Dialogeditor das originale PNG mit
 Schnittgrenzen und die daraus entstehenden Einzelbilder samt Anzahl,

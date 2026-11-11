@@ -5,6 +5,21 @@ Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der NPC-Dialogeditor
+erlaubt, einzelne Zellen eines PNG-Sprite-Sheets schon in der visuellen
+Schnittvorschau per Klick auszuschließen oder wieder auszuwählen. Das
+Overlay kennzeichnet ausgeschlossene Zellen, die Galerie zeigt den
+Übernahmestatus und zählt die verbleibenden Frames. Nur ausgewählte
+Zellen werden zeilenweise der vorbereiteten nativen COST-Importfolge
+hinzugefügt; eine leere Auswahl oder veraltete Zellindizes werden
+abgelehnt. Bestehende vorbereitete Frames bleiben unangetastet.
+334 lokale Tests sowie Core-, Chromium- und stock-ScummVM-CI grün;
+Chromium prüft die Auswahl bis zum JSON-Export (PR #140,
+Merge `61d4484`, Runs `42944948323` / `42944948283` /
+`42944948354`). Menschliche UI-Abnahme offen. **Nächstes Paket:**
+Die Reihenfolge ausgewählter Sprite-Sheet-Zellen direkt vor dem
+Hinzufügen der nativen Animationsframes ändern können.
+
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Der NPC-Dialogeditor
 zeigt vor dem Sprite-Sheet-Import das Original-PNG mit eingezeichneten
 Zellgrenzen und die tatsächlich geplanten PNG-Einzelbilder in
 Zeilenreihenfolge. Spalten, Zeilen, Außenränder und Zellabstände
