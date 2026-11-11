@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**PNG-Sprite-Sheet als native Animationsfolge (CI-Abnahme bestanden):**
+Der NPC-Dialogeditor teilt ein Raster-PNG ohne Änderung der Pixelgröße
+und Transparenz zeilenweise in mehrere separate Importbilder auf und
+hängt diese an die bestehende Auswahl an. Manuelle Reihenfolge,
+ausgeschlossene Bilder und eigene native Frame-IDs bleiben erhalten;
+Rasterfehler werden konkret abgelehnt. 334 lokale Tests, Core-CI,
+Chromium-Sprite-Sheet-Pixelprobe und vierfacher COST-Import mit
+JSON-Export grün. Die stock-ScummVM-Regression bestand im unveränderten
+zweiten Lauf nach einer zeitabhängigen Richtungs-Sichtprobe im ersten
+(PR #134, Merge `7972b25`, Runs `42940798608` / `42940798599` /
+`42940798619`). Menschliche UI-Abnahme offen. Danach:
+Zellabstände/Außenränder für Sprite-Sheets unterstützen.
+
 **Alle nativen Frame-ID-Konflikte eines PNG-Stapels beheben (CI-Abnahme bestanden):**
 Ein Knopf löst alle Kollisionen mit bestehenden Costume-Frames und
 innerhalb der aktuellen Auswahl. Vorhandene freie IDs einschließlich

@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #134, CI-Abnahme bestanden):**
+Ein PNG-Sprite-Sheet mit frei angegebenem Spalten-/Zeilenraster lässt
+sich im NPC-Dialogeditor in separate native Animationsframes zerlegen,
+die zeilenweise an eine bestehende Importauswahl angehängt werden.
+Der etablierte PNG-zu-COST-Pfad und die atomare Vorprüfung bleiben
+unverändert. 334 lokale Tests, Chromium-Pixel-/Import-/JSON-Export-
+Nachweis (Run `42940798599`) und vollständige stock-ScummVM-
+Regression im unveränderten zweiten Lauf (Run `42940798619`,
+Merge `7972b25`) bestanden. D03 bleibt
+eine Teilfähigkeit, menschliche UI-Abnahme und vollständiger Lippensync
+offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #132, CI-Abnahme bestanden):**
 Alle Konflikte der nativen Frame-IDs im vorbereiteten Dialog-PNG-Stapel
 lassen sich jetzt in einem Schritt auflösen; bereits freie IDs,
