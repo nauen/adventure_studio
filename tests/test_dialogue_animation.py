@@ -45,6 +45,7 @@ from adventure_studio.studio_sequences import (
     unsaved_dialogue_speaking_draft_targets,
     unsaved_dialogue_speaking_draft_entries,
     discard_selected_dialogue_speaking_draft,
+    save_all_dialogue_speaking_drafts,
     dialogue_animation_phase_selection, edit_dialogue_animation_phases,
     dialogue_ending_animation_selection, edit_dialogue_ending_animation,
     dialogue_ending_timeline, assign_dialogue_ending_sequence,
@@ -186,6 +187,24 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(tuple(entry[0] for entry in entries), affected)
         self.assertEqual({(line, facing) for _, line, facing in entries},
                          {(first, "S"), (second, "N")})
+        bulk_raw, active, bulk_session, count = save_all_dialogue_speaking_drafts(
+            raw, second, "N", "SpeakAlt", other_session)
+        self.assertEqual(count, 2)
+        self.assertEqual(active, "SpeakAlt")
+        self.assertEqual(dialogue_speaking_sequence_selection(bulk_raw, first, "S"),
+                         "SpeakAlt, SpeakAlt")
+        self.assertEqual(dialogue_speaking_sequence_selection(bulk_raw, second, "N"),
+                         "SpeakAlt")
+        self.assertFalse(unsaved_dialogue_speaking_draft_entries(
+            bulk_raw, second, "N", active, bulk_session))
+        with self.assertRaisesRegex(ValueError, "Keine ungespeicherten"):
+            save_all_dialogue_speaking_drafts(
+                bulk_raw, second, "N", active, bulk_session)
+        bad_session = record_dialogue_speaking_draft(
+            raw, second, "N", "MissingPNG", other_session)
+        with self.assertRaisesRegex(ValueError, "nicht gespeichert.*PNG-Frames"):
+            save_all_dialogue_speaking_drafts(
+                raw, second, "N", "MissingPNG", bad_session)
         retained, one_left = discard_selected_dialogue_speaking_draft(
             raw, second, "N", "SpeakAlt", other_session, first, "S")
         self.assertEqual(retained, "SpeakAlt")
