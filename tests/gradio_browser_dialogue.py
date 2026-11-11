@@ -93,6 +93,23 @@ def await_preview_color(page, rgb: tuple[int, int, int]) -> None:
     )
 
 
+def await_draft_frame_pixel(page, red: bool) -> None:
+    """Wait for the selected Costume image pixels, not only a changed URL."""
+    page.wait_for_function(
+        """({red}) => {
+            const img = document.querySelector('#native-dialogue-draft-frame-preview img');
+            if (!img || !img.complete || img.naturalWidth <= 128 || img.naturalHeight <= 128)
+                return false;
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const pixel = ctx.getImageData(128, 128, 1, 1).data;
+            return red ? pixel[0] > 180 : pixel[1] > 180;
+        }""", arg={"red": red}, timeout=20000)
+
+
 def await_direction_preview_color(page, rgb: tuple[int, int, int]) -> None:
     """Inspect native direction-specific frame pixels, not only the dropdown."""
     image = page.locator("#native-dialogue-direction-preview img")
@@ -321,6 +338,7 @@ def main() -> None:
             alternate_src = picker_image.first.get_attribute("src")
             select_option(page, "native-dialogue-draft-frame", "Speak")
             expect(picker_image.first).to_be_visible(timeout=20000)
+            await_draft_frame_pixel(page, red=True)
             expect(picker_image.first).not_to_have_attribute(
                 "src", alternate_src, timeout=20000)
             red_src = picker_image.first.get_attribute("src")
@@ -329,6 +347,7 @@ def main() -> None:
             with Image.open(BytesIO(red_response.body())) as red_picture:
                 assert red_picture.convert("RGB").getpixel((128, 128))[0] > 180
             select_option(page, "native-dialogue-draft-frame", "SpeakAlt")
+            await_draft_frame_pixel(page, red=False)
             expect(picker_image.first).not_to_have_attribute(
                 "src", red_src, timeout=20000)
             green_response = page.request.get(
