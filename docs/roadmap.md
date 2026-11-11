@@ -9,6 +9,16 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Gespeicherte Sprechvorlage animiert prüfen (CI-Abnahme bestanden):**
+Die echte Frame-Folge einer NPC-Vorlage kann vor der Zuweisung als
+Editor-GIF aus vorhandenen Costume-Pixeln abgespielt werden; native
+Positionen, Reihenfolge und einstellbare Vorschauzeit sind sichtbar.
+Die Ausgabe ist rein lesend und ersetzt kein ScummVM-Timing.
+Core-/Chromium-CI je zweimal und stock-ScummVM-CI grün (PR #172,
+Merge `a155af14`, Runs `42975787067` / `42975787111` /
+`42975787000`). Menschliche UI-Abnahme offen. **Danach:** Die
+ungespeicherte Frame-Folge beim Bearbeiten ebenso vorab abspielen.
+
 **Persistente Sprechfolgenvorlage vor Anwendung prüfen
 (CI-Abnahme bestanden):** Der Editor stellt die Costume-Bindung,
 Frameanzahl, vollständige Reihenfolge und Eignung für die gewählte
