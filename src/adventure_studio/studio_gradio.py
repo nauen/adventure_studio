@@ -68,6 +68,8 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                dialogue_png_sprite_sheet_sequence,
                                dialogue_png_sprite_sheet_playback_frames,
                                edit_dialogue_png_sprite_sheet_sequence,
+                               track_dialogue_png_sprite_sheet_undo,
+                               undo_dialogue_png_sprite_sheet_edit,
                                change_dialogue_png_sprite_sheet_repetition,
                                move_dialogue_png_sprite_sheet_cell,
                                dialogue_costume_isolation_preview,
@@ -863,7 +865,12 @@ def make_app():
                     label="Freie Abspielsequenz (Zellnummern mit Komma, z. B. 1,2,1)",
                     placeholder="Leer: Knöpfe für Reihenfolge und Wiederholung verwenden",
                     elem_id="native-dialogue-sprite-timeline")
-                gr.Markdown("Eine eingetragene **freie Abspielsequenz** gilt für Vorschau und Import anstelle der Knopf-Reihenfolge. Jede übernommene Zelle muss mindestens einmal vorkommen; ausgeschlossene Zellen sind nicht erlaubt. Feld leeren, um zur Knopf-Reihenfolge zurückzukehren. Ein neues Raster setzt das Feld zurück.")
+                with gr.Row():
+                    native_dialogue_sprite_undo = gr.Button(
+                        "Letzte Bildfolgen-Änderung rückgängig machen",
+                        interactive=False, elem_id="native-dialogue-sprite-undo")
+                    native_dialogue_sprite_undo_history = gr.State(None)
+                gr.Markdown("Eine eingetragene **freie Abspielsequenz** gilt für Vorschau und Import anstelle der Knopf-Reihenfolge. Jede übernommene Zelle muss mindestens einmal vorkommen; ausgeschlossene Zellen sind nicht erlaubt. Feld leeren, um zur Knopf-Reihenfolge zurückzukehren. Ein neues Raster setzt das Feld zurück. **Rückgängig** nimmt genau die letzte Änderung der freien Folge zurück; bei geändertem Raster oder geänderter Zellauswahl ist ein alter Undo-Stand nicht nutzbar.")
                 with gr.Row():
                     native_dialogue_sprite_position = gr.Dropdown(
                         label="Position in der Abspielsequenz (0 = Anfang)", choices=[],
@@ -1854,6 +1861,54 @@ def make_app():
              native_dialogue_sprite_playback_frames,
              native_dialogue_sprite_block_end,
              native_dialogue_sprite_copy_destination])
+
+        def png_sheet_undo_context(sheet, columns, rows, margin_x, margin_y,
+                                   gap_x, gap_y, skipped, cell_order, repeats):
+            return (sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                    tuple(skipped or ()), tuple(cell_order or ()),
+                    tuple(sorted((repeats or {}).items())))
+
+        def png_sheet_track_undo(sheet, columns, rows, margin_x, margin_y,
+                                 gap_x, gap_y, skipped, cell_order, repeats,
+                                 timeline, history):
+            context = png_sheet_undo_context(
+                sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                skipped, cell_order, repeats)
+            updated = track_dialogue_png_sprite_sheet_undo(history, timeline, context)
+            return updated, gr.update(interactive=updated[1] != updated[2])
+
+        native_dialogue_sprite_timeline.change(
+            png_sheet_track_undo,
+            [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+             native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+             native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+             native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+             native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
+            [native_dialogue_sprite_undo_history, native_dialogue_sprite_undo])
+
+        def png_sheet_undo(sheet, columns, rows, margin_x, margin_y, gap_x,
+                           gap_y, skipped, cell_order, repeats, timeline, history):
+            context = png_sheet_undo_context(
+                sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                skipped, cell_order, repeats)
+            try:
+                previous, updated = undo_dialogue_png_sprite_sheet_edit(
+                    history, timeline, context)
+                return previous, updated, gr.update(interactive=False)
+            except ValueError as error:
+                raise gr.Error(str(error)) from error
+
+        native_dialogue_sprite_undo.click(
+            png_sheet_undo,
+            [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+             native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+             native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+             native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+             native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
+            [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
+             native_dialogue_sprite_undo])
 
         def png_sheet_select_playback(evt: gr.SelectData):
             if evt is None or type(evt.index) is not int:
