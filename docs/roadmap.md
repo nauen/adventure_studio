@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Benannte NPC-Sprechfolgen dauerhaft im Projekt speichern
+(CI-Abnahme bestanden):** Vorlagen enthalten Name, Costume und native
+PNG-Frame-IDs im optionalen `speaking_sequence_templates`-Feld des
+v1-Projekt-JSON. Der Editor stellt sie beim Projektladen wieder her;
+alte Dateien bleiben lesbar. Die Anwendung einer Vorlage aktualisiert
+nur die ausgewählte Dialogzeile über den bestehenden COST-Pfad.
+Core-/Chromium-CI je zweimal, Inventar-ScummVM grün, Dialog-ScummVM
+nach Timing-Fluktuation im Wiederholungslauf grün (PR #167,
+Merge `1584c606`, Runs `42969447126` / `42969455639` /
+`42969447250` / `42969455636` / `42969455797` /
+`42969455654` Versuch 2). Menschliche UI-Abnahme offen.
+**Danach:** Persistente Vorlagen im Editor umbenennen und löschen.
+
 **Benannte native NPC-Sprechfolgen wiederverwenden (CI-Abnahme
 bestanden):** Aus bereits importierten Costume-PNG-Frames können
 Autoren eine Folge als Sitzungsvorlage benennen und sie mit einem
