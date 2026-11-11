@@ -31,7 +31,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
-                               import_room_sound, import_room_zplane, author_room_walkbox, author_room_box_connections, author_room_scale_curve,
+                               import_room_sound, import_room_zplane, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_scale_curve,
                                room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
@@ -505,6 +505,21 @@ def make_app():
         except (ValueError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
+    def native_walkbox_zplane_author(raw, room, box_index, zplane_index):
+        if raw is None:
+            raise gr.Error("Bitte zuerst ein natives Projekt laden")
+        try:
+            values = (box_index, zplane_index)
+            if any(type(v) not in (int, float) or not isfinite(v) or v != int(v)
+                   for v in values):
+                raise ValueError("Walkbox und Z-Ebene müssen ganze Zahlen sein")
+            updated = author_room_walkbox_zplane(raw, room, *map(int, values))
+            return (updated, *native_selectors(updated, selected_room=room),
+                    f"Walkbox {int(box_index)} verwendet Z-Ebene {int(zplane_index)}; "
+                    "BOXD-Maske wird beim nativen Export erzeugt.")
+        except (ValueError, TypeError) as error:
+            raise gr.Error(str(error)) from error
+
     def native_box_routes_author(raw, room, connections):
         if raw is None:
             raise gr.Error("Bitte zuerst ein natives Projekt laden")
@@ -827,6 +842,16 @@ def make_app():
                 native_walkbox_index = gr.Number(label="Walkbox-Nummer (1–254)", value=1, precision=0, elem_id="native-walkbox-index")
                 native_walkbox_corners = gr.Textbox(label="Eckpunkte UL;UR;LR;LL", value="0,70; 120,70; 120,150; 0,150", elem_id="native-walkbox-corners")
                 native_walkbox_add = gr.Button("Walkbox ins native Projekt übernehmen", elem_id="native-walkbox-add")
+            gr.Markdown("**Z-Ebene pro Walkbox:** Nach dem PNG-Import eine vorhandene Z-Ebene "
+                        "1–9 einer Walkbox zuweisen. Wert 0 deaktiviert die Verdeckung für "
+                        "diese Box. Mehrere Masken werden als native ZP01/ZP02/... ausgegeben.")
+            with gr.Row():
+                native_zplane_box_index = gr.Number(label="Walkbox für Z-Ebene", value=1,
+                                                     precision=0, elem_id="native-zplane-box-index")
+                native_zplane_box_layer = gr.Number(label="Z-Ebene (0 = ohne)", value=1,
+                                                     precision=0, elem_id="native-zplane-box-layer")
+                native_zplane_box_add = gr.Button("Z-Ebene der Walkbox zuweisen",
+                                                  elem_id="native-zplane-box-add")
             gr.Markdown("**Native Walkbox-Wege (BOXM):** Nach dem Anlegen von mindestens zwei benachbarten Walkboxen Verbindungen als `1-2; 2-3` eingeben. Nur gemeinsame Kanten können verbunden werden. Aus den Verbindungen entstehen native kürzeste Next-Hop-Wege. Leere Eingabe entfernt alle Verbindungen; getrennte Boxen bleiben unerreichbar.")
             with gr.Row():
                 native_box_routes_connections = gr.Textbox(label="Walkbox-Verbindungen", value="1-2", elem_id="native-box-routes-connections")
@@ -1783,6 +1808,10 @@ def make_app():
         native_walkbox_add.click(native_walkbox_author,
                                  [native_state, native_room, native_walkbox_index, native_walkbox_corners],
                                  [native_state, *native_outputs, native_report])
+        native_zplane_box_add.click(native_walkbox_zplane_author,
+                                    [native_state, native_room, native_zplane_box_index,
+                                     native_zplane_box_layer],
+                                    [native_state, *native_outputs, native_report])
         native_box_routes_add.click(native_box_routes_author,
                                     [native_state, native_room, native_box_routes_connections],
                                     [native_state, *native_outputs, native_report])
