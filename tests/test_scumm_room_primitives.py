@@ -12,7 +12,7 @@ from adventure_studio.scumm_assets import (ScaleCurve, ZPlane, _native_box_file,
                                           scummc_room_source, write_room_sources)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room, perspective_room
-from adventure_studio.studio_sequences import author_room_walkbox, compose_story_project
+from adventure_studio.studio_sequences import author_room_walkbox, author_room_box_connections, compose_story_project
 from adventure_studio.studio_sequences import import_room_zplane
 
 
@@ -57,6 +57,44 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         harbor = next(item for item in composed.rooms if item.name == "Harbor")
         self.assertEqual(harbor.walkboxes, authored.walkboxes)
         self.assertEqual(harbor.box_routes, authored.box_routes)
+
+    def test_boxm_connections_author_next_hops_and_export(self):
+        raw = canonical_json(GameDocument("boxm_routes",
+                                          (scrolling_fixture(), destination_fixture())))
+        for index, corners in ((1, "0,70; 110,70; 110,150; 0,150"),
+                               (2, "110,70; 240,70; 240,150; 110,150"),
+                               (3, "240,70; 639,70; 639,150; 240,150")):
+            raw = author_room_walkbox(raw, "Harbor", index, corners)
+        updated = author_room_box_connections(raw, "Harbor", "1-2; 2-3")
+        room = parse_document(updated).rooms[0]
+        self.assertEqual(room.box_routes[1][3], 2)
+        self.assertEqual(room.box_routes[3][1], 2)
+        self.assertEqual(room.box_routes[2][1], 1)
+        self.assertEqual(room.box_routes[1][0], None)
+        self.assertEqual(room.box_routes[0][0], 0)
+        self.assertEqual(author_room_box_connections(updated, "Harbor", "2-3; 1-2"), updated)
+        with tempfile.TemporaryDirectory() as directory:
+            write_room_sources(room, Path(directory))
+            binary = (Path(directory) / "Harbor.box").read_bytes()
+            boxd_size = struct.unpack_from(">I", binary, 4)[0]
+            self.assertEqual(binary[boxd_size:boxd_size + 4], b"BOXM")
+            self.assertIn(bytes((2, 3, 2)), binary[boxd_size:])
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        composed = parse_document(compose_story_project(story, updated))
+        self.assertEqual(next(r for r in composed.rooms if r.name == "Harbor").box_routes,
+                         room.box_routes)
+
+        disconnected = parse_document(author_room_box_connections(updated, "Harbor", "")).rooms[0]
+        self.assertIsNone(disconnected.box_routes[1][2])
+        self.assertEqual(disconnected.box_routes[1][1], 1)
+        with self.assertRaisesRegex(ValueError, "gemeinsame Kante"):
+            author_room_box_connections(updated, "Harbor", "1-3")
+        with self.assertRaisesRegex(ValueError, "Ungültige"):
+            author_room_box_connections(updated, "Harbor", "1-4")
+        with self.assertRaisesRegex(ValueError, "ohne Selbstverbindung"):
+            author_room_box_connections(updated, "Harbor", "2-2")
+        self.assertEqual(parse_document(updated).rooms[0].walkboxes, room.walkboxes)
 
     @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
     def test_authored_png_mask_roundtrips_to_native_room_assets(self):

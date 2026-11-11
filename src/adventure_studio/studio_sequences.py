@@ -71,6 +71,77 @@ def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str)
     return _checked(replace(document, rooms=rooms))
 
 
+
+def author_room_box_connections(raw: str, room_name: str, connections: str) -> str:
+    """Author touching box links and deterministic shortest-hop native BOXM routes.
+
+    A link '1-2' is bidirectional. Empty input explicitly disconnects all
+    boxes. The reserved native box zero remains inaccessible. Each route
+    destination stores the immediate next box, not the final destination.
+    """
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    count = len(room.walkboxes)
+    if count < 2:
+        raise ValueError("BOXM-Verbindungen benötigen mindestens zwei Walkboxen")
+
+    def shared_border(first: Walkbox, second: Walkbox) -> bool:
+        """Require a positive-length shared edge, not merely one common corner."""
+        for polygon_a, polygon_b in ((first.corners, second.corners),):
+            for i in range(4):
+                ax, ay = polygon_a[i]
+                bx, by = polygon_a[(i + 1) % 4]
+                vx, vy = bx - ax, by - ay
+                for j in range(4):
+                    cx, cy = polygon_b[j]
+                    dx, dy = polygon_b[(j + 1) % 4]
+                    if vx * (cy - ay) - vy * (cx - ax):
+                        continue
+                    if vx * (dy - ay) - vy * (dx - ax):
+                        continue
+                    if (vx and min(max(ax, bx), max(cx, dx)) >
+                            max(min(ax, bx), min(cx, dx))) or (
+                            not vx and min(max(ay, by), max(cy, dy)) >
+                            max(min(ay, by), min(cy, dy))):
+                        return True
+        return False
+
+    graph = {index: set() for index in range(1, count + 1)}
+    tokens = [part.strip() for part in connections.split(";") if part.strip()]
+    for token in tokens:
+        match = re.fullmatch(r"(\d+)\s*-\s*(\d+)", token)
+        if match is None:
+            raise ValueError("BOXM-Verbindungen als 1-2; 2-3 eingeben")
+        first, second = map(int, match.groups())
+        if not 1 <= first <= count or not 1 <= second <= count or first == second:
+            raise ValueError(f"Ungültige BOXM-Verbindung {token}: Boxen 1 bis {count}, ohne Selbstverbindung")
+        if not shared_border(room.walkboxes[first - 1], room.walkboxes[second - 1]):
+            raise ValueError(f"Walkboxen {first} und {second} haben keine gemeinsame Kante")
+        graph[first].add(second)
+        graph[second].add(first)
+
+    matrix = [[None] * (count + 1) for _ in range(count + 1)]
+    matrix[0][0] = 0
+    for start in range(1, count + 1):
+        matrix[start][start] = start
+        queue = [start]
+        first_hop = {start: start}
+        for current in queue:
+            for neighbor in sorted(graph[current]):
+                if neighbor not in first_hop:
+                    first_hop[neighbor] = neighbor if current == start else first_hop[current]
+                    queue.append(neighbor)
+        for destination, next_box in first_hop.items():
+            matrix[start][destination] = next_box
+
+    routes = tuple(tuple(row) for row in matrix)
+    rooms = tuple(replace(item, box_routes=routes) if item.name == room_name else item
+                  for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
+
+
 def import_room_zplane(raw: str, room_name: str, index: int, png_path: str) -> str:
     """Author one full-room native occlusion plane from a white-on-black PNG.
 
