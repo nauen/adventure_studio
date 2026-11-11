@@ -52,6 +52,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                apply_dialogue_speaking_template,
                                assign_dialogue_direction_speaking_sequence,
                                dialogue_speaking_sequence_selection,
+                               discard_dialogue_speaking_draft,
                                dialogue_speaking_timeline, edit_dialogue_speaking_timeline,
                                dialogue_speaking_timeline_preview,
                                dialogue_animation_phase_selection,
@@ -789,6 +790,9 @@ def make_app():
             with gr.Row():
                 native_dialogue_speaking_sequence = gr.Textbox(label="Sprechframes dieser Dialogzeile", elem_id="native-dialogue-speaking-sequence")
                 native_dialogue_sequence_apply = gr.Button("Für alle Richtungen speichern", elem_id="native-dialogue-sequence-apply")
+                native_dialogue_draft_discard = gr.Button(
+                    "Entwurf verwerfen · gespeicherte Folge laden",
+                    elem_id="native-dialogue-draft-discard")
             gr.Markdown("**Sprechfolge per Klick bearbeiten:** PNG-Frame auswählen, "
                         "hinzufügen und einen nummerierten Schritt zum Verschieben "
                         "oder Entfernen auswählen. Wiederholte Frames sind erlaubt. "
@@ -1938,6 +1942,23 @@ def make_app():
                  native_dialogue_draft_step],
                 [native_dialogue_speaking_sequence, native_dialogue_draft_step,
                  native_dialogue_draft_step_preview])
+
+        def discard_speaking_draft(raw, line, direction):
+            if not raw:
+                raise gr.Error("Bitte zuerst ein natives Projekt laden")
+            try:
+                saved = discard_dialogue_speaking_draft(raw, line, direction)
+                return (saved, gr.update(choices=speaking_draft_steps(saved), value=None),
+                        None, None, "Entwurf verworfen; gespeicherte Folge wiederhergestellt.")
+            except ValueError as error:
+                raise gr.Error(f"Entwurf nicht wiederherstellbar: {error}") from error
+
+        native_dialogue_draft_discard.click(
+            discard_speaking_draft,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction],
+            [native_dialogue_speaking_sequence, native_dialogue_draft_step,
+             native_dialogue_draft_step_preview, native_dialogue_draft_animation,
+             native_dialogue_draft_animation_status])
 
         def play_dialogue_draft(raw, line, frames, duration):
             if not raw:
