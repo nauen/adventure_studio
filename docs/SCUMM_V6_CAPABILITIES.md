@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #171, CI-Abnahme bestanden):**
+Der NPC-Dialogeditor zeigt vor Anwendung einer gespeicherten
+Sprechfolgenvorlage Costume, Framezahl, native Frame-Reihenfolge
+und Zielkompatibilität. Bei fehlendem oder fremdem Costume-Ziel
+ist die Anwendung deaktiviert; native COST-/SCUMM-v6-Ausgabe und
+Capability-Status bleiben unverändert. Core-/Chromium-CI je zweimal
+und stock-ScummVM-CI grün (Merge `68d0d207`, Runs `42974596952`,
+`42974618351`, `42974597034`, `42974618382`, `42974618367`).
+Menschliche UI-Abnahme offen. Nächstes Editorpaket: visuelle
+Animationsvorschau der Vorlagenframes.
+
 **D03 – aktuelle Editor-Ergänzung (PR #170, CI-Abnahme bestanden):**
 Persistente Sprechfolgenvorlagen können validiert ins editierbare
 PNG-Frame-Eingabefeld geladen werden, ohne die native Animation
