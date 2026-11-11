@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Gewählten Sprechframe vor dem Anhängen ansehen (CI-Abnahme
+bestanden):** Die Frame-Auswahl im NPC-Dialogeditor zeigt die echte
+native Costume-Pixelpose, bevor ein PNG-Frame als Folgenschritt
+übernommen wird. Projekt- und Sprecherwechsel halten die Vorschau
+synchron; keine Persistenz oder Runtime-Änderung. Core-/Chromium-CI
+je zweimal grün (PR #175, Merge `b41ae487`, Runs `42981767588` /
+`42981767768`). Kein neuer ScummVM-Lauf für diesen UI-Diff,
+letzter unveränderter Nachweis `42979576719`. Menschliche
+UI-Abnahme offen. **Danach:** Den aktuell ausgewählten Schritt einer
+bestehenden Frame-Folge ebenfalls als Pixelpose anzeigen.
+
 **Sprechframes klickbar zusammenstellen (CI-Abnahme bestanden):**
 Der NPC-Dialogeditor bietet eine Liste verfügbarer Costume-Frames,
 Frame anhängen sowie nummerierte Schritte nach oben/unten bewegen
