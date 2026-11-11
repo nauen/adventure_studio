@@ -59,6 +59,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_animation_phase_selection,
                                edit_dialogue_animation_phases, edit_dialogue_animation)
 from .studio_sequences import (dialogue_ending_animation_selection,
+                               switch_dialogue_speaking_draft,
                                edit_dialogue_ending_animation,
                                dialogue_ending_timeline,
                                edit_dialogue_ending_timeline, dialogue_ending_timeline_preview,
@@ -797,6 +798,7 @@ def make_app():
             native_dialogue_draft_save_status = gr.Markdown(
                 "Bitte eine Sprecher-Dialogzeile auswählen",
                 elem_id="native-dialogue-draft-save-status")
+            native_dialogue_draft_session = gr.State({"target": None, "drafts": {}})
             gr.Markdown("**Sprechfolge per Klick bearbeiten:** PNG-Frame auswählen, "
                         "hinzufügen und einen nummerierten Schritt zum Verschieben "
                         "oder Entfernen auswählen. Wiederholte Frames sind erlaubt. "
@@ -1395,6 +1397,9 @@ def make_app():
                           native_actor_initial]
         native_file.change(native_load, [native_file], [native_state, native_linked,
                                                        *native_outputs, native_report])
+        native_file.change(
+            lambda: {"target": None, "drafts": {}},
+            outputs=[native_dialogue_draft_session], show_progress="hidden")
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])
         native_music_add.click(native_music_import,
@@ -1695,33 +1700,41 @@ def make_app():
                     dialogue_speaking_frame_preview(raw, line, selected_frame),
                     direction_image, dialogue_speaking_sequence_selection(raw, line, direction), direction_status)
 
-        def dialogue_animation_refresh(raw, line, direction):
+        def animation_with_session(raw, line, direction, sequence, session):
+            view = dialogue_animation_update(raw, line, direction)
+            restored, updated = switch_dialogue_speaking_draft(
+                raw, line, direction, sequence, session)
+            return (*view[:-2], restored, view[-1], updated)
+
+        def dialogue_animation_refresh(raw, line, direction, sequence, session):
             lines = dialogue_animation_lines(raw) if raw else ()
             current = line if line in {identity for _label, identity in lines} else None
             return (gr.update(choices=lines, value=current),
-                    *dialogue_animation_update(raw, current, direction))
+                    *animation_with_session(raw, current, direction, sequence, session))
 
         # Retain the selected authored line across a save, and refresh both
         # its animation and PNG pose from the persisted project. Old/stale
         # lines are cleared instead of silently selecting another speaker.
         native_state.change(
             dialogue_animation_refresh,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction],
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session],
             [native_dialogue_animation_line, native_dialogue_animation,
              native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status])
+             native_dialogue_direction_status, native_dialogue_draft_session])
         # Programmatic dropdown refreshes from native_state already render
         # the previews. Only real user selection should request them again;
         # overlapping identical Gradio image writes can truncate HTTP PNGs.
         native_dialogue_animation_line.input(
-            dialogue_animation_update,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction],
+            animation_with_session,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session],
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status])
+             native_dialogue_direction_status, native_dialogue_draft_session])
         for direction_control in (native_dialogue_animation, native_dialogue_direction):
             direction_control.input(
                 dialogue_direction_animation_preview,
@@ -1729,9 +1742,10 @@ def make_app():
                  native_dialogue_animation, native_dialogue_direction],
                 [native_dialogue_direction_preview, native_dialogue_direction_status])
         native_dialogue_direction.input(
-            dialogue_speaking_sequence_selection,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction],
-            [native_dialogue_speaking_sequence])
+            switch_dialogue_speaking_draft,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session],
+            [native_dialogue_speaking_sequence, native_dialogue_draft_session])
         native_dialogue_speaking_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
@@ -1912,31 +1926,25 @@ def make_app():
             [native_dialogue_draft_step])
         native_dialogue_speaking_sequence.input(
             lambda: None, outputs=[native_dialogue_draft_step_preview])
-        def speaking_draft_navigation_guard(raw, line, direction, sequence):
+        def speaking_draft_session_status(raw, line, direction, sequence):
             status = dialogue_speaking_draft_save_status(raw, line, direction, sequence)
-            dirty = status == "Ungespeicherte Änderungen an der Sprechfolge"
-            if dirty:
-                status += " · Vor einem Zeilen- oder Richtungswechsel speichern oder verwerfen."
-            return (status, gr.update(interactive=not dirty),
-                    gr.update(interactive=not dirty))
+            if status == "Ungespeicherte Änderungen an der Sprechfolge":
+                status += " · Entwurf bleibt bei Zeilen- und Richtungswechsel in dieser Sitzung erhalten."
+            return status
 
         native_dialogue_speaking_sequence.change(
-            speaking_draft_navigation_guard,
+            speaking_draft_session_status,
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
-            [native_dialogue_draft_save_status, native_dialogue_animation_line,
-             native_dialogue_direction], show_progress="hidden")
+            [native_dialogue_draft_save_status], show_progress="hidden")
         native_state.change(
-            speaking_draft_navigation_guard,
+            speaking_draft_session_status,
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
-            [native_dialogue_draft_save_status, native_dialogue_animation_line,
-             native_dialogue_direction], show_progress="hidden")
-        # Do not write a dropdown from its own change handler: Gradio may
-        # retrigger the handler while its loading overlay blocks interaction.
+            [native_dialogue_draft_save_status], show_progress="hidden")
         for source in (native_dialogue_animation_line, native_dialogue_direction):
             source.change(
-                dialogue_speaking_draft_save_status,
+                speaking_draft_session_status,
                 [native_state, native_dialogue_animation_line,
                  native_dialogue_direction, native_dialogue_speaking_sequence],
                 [native_dialogue_draft_save_status], show_progress="hidden")
