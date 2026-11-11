@@ -30,6 +30,19 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #161, CI-Abnahme bestanden):**
+Ein markierter Sprite-Sheet-Bildblock kann mit beliebiger positiver
+Anzahl zusätzlicher Kopien an der gewünschten Position in die
+Abspielfolge übernommen werden. Die bestehende validierte Folge
+liefert die Bildleiste und den nativen COST-Frame-Stapel; die
+Batch-Funktion schützt das temporäre PNG-Editor-Staging mit einem
+expliziten Limit von 2048 Abspielbildern (keine SCUMM-v6-Grenze).
+Core-/Chromium-CI je zweimal grün, Chromium-Pixel-/Neun-Frame-
+Import-/Export-Nachweis (Run `42961680499`) und stock-ScummVM-
+Regression (Run `42961680844`, Merge `0ff8a565`) bestanden.
+D03 bleibt eine Teilfähigkeit; menschliche UI-Abnahme und
+vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #160, CI-Abnahme bestanden):**
 Ein visuell gewählter Sprite-Sheet-Bildblock kann unter Erhalt seiner
 internen Reihenfolge an eine beliebige Grenze der ursprünglichen
