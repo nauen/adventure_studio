@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Benannte Sprite-Sheet-Historienschritte gezielt ansteuern
+(CI-Abnahme bestanden):** Der NPC-Dialogeditor zeigt für jeden
+verfügbaren Undo-/Redo-Stand eine verständliche Beschreibung der
+Folgenänderung und ermöglicht die direkte Auswahl. Der
+kontextgebundene Verlauf bleibt auf maximal 20 Änderungen begrenzt;
+JSON-Projektmodell und nativer Export bleiben unverändert.
+Core- und Chromium-CI je zweimal sowie stock-ScummVM-CI grün
+(PR #165, Merge `039f22ad`, Runs `42966089591` / `42966116983` /
+`42966089618` / `42966117054` / `42966117068`). Menschliche
+UI-Abnahme offen. **Danach:** Eine bearbeitete Bildfolge als benannte
+Vorlage sichern und für eine andere NPC-Dialogzeile übernehmen.
+
 **Mehrstufige Sprite-Sheet-Undo-/Redo-Historie (CI-Abnahme
 bestanden):** Bis zu 20 Änderungen der freien NPC-Dialog-Abspielfolge
 können mit sichtbarer Verlaufsposition zurückgenommen oder erneut
