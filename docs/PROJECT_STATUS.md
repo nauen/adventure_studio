@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die bis zu
+20 Schritte umfassende Undo-/Redo-Historie der freien NPC-Dialog-
+Sprite-Sheet-Abspielfolge zeigt jetzt verständliche Änderungsnamen
+(verlängert, gekürzt oder bei gleicher Bildanzahl geändert) und
+lässt jeden verfügbaren Stand direkt anwählen. Die Navigation
+verändert weder native COST-Daten noch das Projektformat; ungültige
+Positionen und veraltete Sheet-/Raster-/Zellkontexte werden serverseitig
+abgewiesen. Core-CI und Chromium-UI-CI jeweils zweimal sowie stock-
+ScummVM-CI grün (PR #165, Merge `039f22ad`, Runs `42966089591` /
+`42966116983` / `42966089618` / `42966117054` /
+`42966117068`). Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Eine fertig bearbeitete Bildfolge als benannte
+Vorlage wiederverwenden und auf eine andere NPC-Dialogzeile anwenden
+können, ohne die Zellfolge manuell neu einzugeben.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Die freie
 Dialog-Sprite-Sheet-Abspielfolge besitzt jetzt eine mehrstufige
 Undo-/Redo-Historie mit maximal 20 Bearbeitungsschritten und einer
