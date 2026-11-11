@@ -44,6 +44,7 @@ from adventure_studio.studio_sequences import (
     has_unsaved_dialogue_speaking_drafts,
     unsaved_dialogue_speaking_draft_targets,
     unsaved_dialogue_speaking_draft_entries,
+    discard_selected_dialogue_speaking_draft,
     dialogue_animation_phase_selection, edit_dialogue_animation_phases,
     dialogue_ending_animation_selection, edit_dialogue_ending_animation,
     dialogue_ending_timeline, assign_dialogue_ending_sequence,
@@ -185,6 +186,23 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(tuple(entry[0] for entry in entries), affected)
         self.assertEqual({(line, facing) for _, line, facing in entries},
                          {(first, "S"), (second, "N")})
+        retained, one_left = discard_selected_dialogue_speaking_draft(
+            raw, second, "N", "SpeakAlt", other_session, first, "S")
+        self.assertEqual(retained, "SpeakAlt")
+        self.assertEqual(
+            tuple((line, facing) for _, line, facing in
+                  unsaved_dialogue_speaking_draft_entries(
+                      raw, second, "N", retained, one_left)),
+            ((second, "N"),))
+        restored_saved, empty = discard_selected_dialogue_speaking_draft(
+            raw, second, "N", retained, one_left, second, "N")
+        self.assertEqual(restored_saved,
+                         dialogue_speaking_sequence_selection(raw, second, "N"))
+        self.assertFalse(unsaved_dialogue_speaking_draft_entries(
+            raw, second, "N", restored_saved, empty))
+        with self.assertRaisesRegex(ValueError, "nicht mehr ungespeichert"):
+            discard_selected_dialogue_speaking_draft(
+                raw, second, "N", restored_saved, empty, first, "S")
         after_save = record_dialogue_speaking_draft(
             raw, second, "N", dialogue_speaking_sequence_selection(raw, second, "N"),
             other_session)
