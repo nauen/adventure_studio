@@ -10,29 +10,11 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 
 ## Ein aktiver Produktpfad
 
-**Jetzt:** PR [#190](https://github.com/nauen/adventure_studio/pull/190),
-gemeinsame atomare Übernahme offener NPC-Sprechfolgen, anhand der
-laufenden Core-/Chromium-/nativen CI abschließen. Kein weiteres
-NPC-Editor-Komfortpaket anhängen. Die neue Funktion verändert den
-Editor-Speicherablauf, aber weder das JSON-Schema noch native v6-Opcodes.
-
-**Danach, Priorität 1:** P0.4/O03 – ein zur Laufzeit verschobenes
-Objekt muss im nativen Spiel sichtbar sein und an der **neuen** Position
-anklickbar bleiben; die alte Hitbox darf nicht weiter reagieren.
-Auf vorhandenen Room-Hotspot-/Objektzustandsdaten und dokumentiertem
-ScummC-v6-Vertrag aufbauen. Mindestabnahme: allgemeine Modelloperation,
-native Ausgabe, automatisierter Strukturtest und echte ScummVM-Klickprobe.
-
-**Blocker/Risiken:**
-
-- Offene native Einzelsprecher-/Mehrsprecher-Animation aus PR #80
-  nicht durch grüne Editor-Tests als gelöst deklarieren.
-- Menschliche Browser-Abnahme des tatsächlichen Abbrechens beim
-  Tab-Verlassen aus PR #187 fehlt; Editor-CI bestätigt bislang nur
-  den automatisierbaren Zustand.
-- P0.1–P0.3 besitzen bereits Modell-, Export- und native Teilnachweise,
-  sind aber nicht pauschal vollständig. Die früheren offenen Checkboxen
-  sind kein Grund, diese Grundlagen neu zu implementieren.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator, nachgewiesen am tatsächlichen Spielverhalten.
+- **Jetzt:** [PR #190](https://github.com/nauen/adventure_studio/pull/190) für atomare NPC-Sprechentwurfsübernahme abschließen, danach [PR #191](https://github.com/nauen/adventure_studio/pull/191) konsolidieren. Kein weiteres NPC-Komfortpaket. #190 ändert keine v6-Opcodes und begründet daher keinen neuen nativen Capability-Abschluss.
+- **Abnahme:** Als **genau eine** native Fähigkeit R06 – vom frei authorierbaren Raum-Z-Masken-Modell über ZPxx-Export bis zur Actor-Verdeckung im unveränderten ScummVM, einschließlich automatisierter relevanter Modell-/Binärprüfung und echter Spielprobe. Die vorhandene Verdeckungs-Fixture ist nur Teilnachweis.
+- **Blocker:** CI von #190 noch nicht vollständig abgenommen (Core grün, Chromium-/Dialog-Gates bei letzter Prüfung offen); #187 benötigt weiterhin die menschliche Tab-Abbruchprüfung. #80 bleibt für native Einzel-/Mehrsprecher-Animation offen. Bei R06 fehlende allgemeine Authoring- oder Gameplay-Evidenz explizit dokumentieren.
+- **Danach:** R08 – frei authorierbare Walkbox-Polygone mit BOXD und realen Actor-Laufgrenzen. R09/R10 und O03 erst später und separat.
 
 ## Zuletzt tatsächlich geliefert
 
