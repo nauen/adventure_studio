@@ -470,6 +470,7 @@ def main() -> None:
 
             page.locator("#native-dialogue-draft-discard").click()
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            expect(page.locator("#native-dialogue-line input")).to_be_enabled(timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
             expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
@@ -479,9 +480,14 @@ def main() -> None:
             sequence_input.fill("SpeakAlt")
             expect(page.locator("#native-dialogue-direction input")).to_be_disabled(timeout=20000)
             page.locator("#native-dialogue-draft-discard").click()
+            expect(page.locator("#native-dialogue-direction input")).to_be_enabled(timeout=20000)
             select_option(page, "native-dialogue-direction", "Nord")
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             sequence_input.fill("SpeakAlt, Speak")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-dialogue-direction-sequence-apply").click()
             expect(sequence_input).to_have_value("SpeakAlt, Speak", timeout=20000)
             select_option(page, "native-dialogue-direction", "Süd")
