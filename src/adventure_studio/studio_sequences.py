@@ -1573,6 +1573,26 @@ def discard_dialogue_speaking_draft(raw: str, line_id: str, direction: str) -> s
     return dialogue_speaking_sequence_selection(raw, line_id, direction)
 
 
+def discard_selected_dialogue_speaking_draft(
+        raw: str | None, line_id: str | None, direction: str,
+        sequence: str | None, session: dict | None,
+        selected_line: str, selected_direction: str) -> tuple[str, dict]:
+    """Discard exactly one listed session draft, preserving the current editor target."""
+    allowed = {(target_id, facing) for _, target_id, facing in
+               unsaved_dialogue_speaking_draft_entries(
+                   raw, line_id, direction, sequence, session)}
+    if (selected_line, selected_direction) not in allowed:
+        raise ValueError("Der gewählte Entwurf ist nicht mehr ungespeichert")
+    updated = record_dialogue_speaking_draft(raw, line_id, direction, sequence, session)
+    drafts = dict(updated["drafts"])
+    target = (parse_document(raw).id, selected_line, selected_direction)
+    drafts.pop(target)
+    updated["drafts"] = drafts
+    if line_id == selected_line and direction == selected_direction:
+        return dialogue_speaking_sequence_selection(raw, selected_line, selected_direction), updated
+    return sequence or "", updated
+
+
 def dialogue_speaking_timeline(raw: str, line_id: str | None, direction: str):
     """Show the selected line's actual native COST direction, in frame order."""
     if direction not in ("N", "E", "S", "W"):
