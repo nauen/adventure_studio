@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Auch eine noch
+nicht gespeicherte NPC-Sprechframe-Folge lässt sich jetzt direkt aus
+dem Eingabefeld als Editor-GIF aus echten Costume-Pixeln abspielen.
+Native Frame-Versätze und Reihenfolge bleiben sichtbar; die
+Bilddauer ist zwischen 40 und 2000 ms wählbar. Ungültige Frame-IDs,
+fehlende Dialogziele und geteilte Costumes werden klar abgewiesen;
+bei Änderungen am Entwurf, Projekt, Ziel oder Timing verschwindet
+jede veraltete GIF-Vorschau. Die Aktion speichert weder Projekt noch
+Vorlage oder Dialoganimation. Core-/Chromium-CI je zweimal sowie
+stock-ScummVM-CI grün (PR #173, Merge `c6204ef8`, Runs
+`42977464651` / `42977464576` / `42977464512`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Eine Sprechframe-Folge direkt
+über eine Auswahl vorhandener PNG-Frames zusammenstellen und
+umsortieren, ohne manuelle Komma-IDs eintippen zu müssen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Gespeicherte
 NPC-Sprechfolgenvorlagen lassen sich vor Zuweisung als animiertes GIF
 mit echten Costume-Pixeln, nativen Frame-Versätzen und gespeicherter
