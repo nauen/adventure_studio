@@ -1247,6 +1247,35 @@ def main() -> None:
             expect(sequence_input).to_have_value(saved_before_discard, timeout=20000)
             expect(page.locator("#native-drafts-discard-confirm input[type=checkbox]")) \
                 .not_to_be_checked(timeout=20000)
+            # Save two unsaved line/facing edits together and export their native result.
+            first_bulk = saved_before_discard + ", Speak"
+            sequence_input.fill(first_bulk)
+            sequence_input.press("Tab")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen", timeout=20000)
+            select_option(page, "native-dialogue-line", second[0])
+            select_option(page, "native-dialogue-direction", "Süd")
+            second_bulk = dialogue_speaking_sequence_selection(
+                sprite_raw, second[1], "S") + ", Speak"
+            sequence_input.fill(second_bulk)
+            sequence_input.press("Tab")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen", timeout=20000)
+            page.locator("#native-drafts-save-confirm input[type=checkbox]").check()
+            page.locator("#native-drafts-save").click()
+            expect(page.locator("#native-drafts-status")).to_contain_text(
+                "Keine offenen Entwürfe mehr", timeout=30000)
+            expect(page.locator(
+                "#native-project-report textarea, #native-project-report input"
+            )).to_have_value(re.compile("NPC-Sprechfolge.*übernommen"), timeout=30000)
+            page.locator("#native-project-export-button").click()
+            with page.expect_download() as bulk_info:
+                sequence_link.first.click()
+            bulk_file = evidence / "bulk-speaking-project.json"
+            bulk_info.value.save_as(str(bulk_file))
+            bulk_raw = bulk_file.read_text(encoding="utf-8")
+            assert dialogue_speaking_sequence_selection(bulk_raw, first[1], "S") == first_bulk
+            assert dialogue_speaking_sequence_selection(bulk_raw, second[1], "S") == second_bulk
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
