@@ -2011,6 +2011,40 @@ def assign_dialogue_direction_speaking_sequence(raw: str, line_id: str,
                                              reset_to_stand, direction)
 
 
+def save_all_dialogue_speaking_drafts(
+        raw: str | None, line_id: str | None, direction: str,
+        sequence: str | None, session: dict | None) -> tuple[str, str, dict, int]:
+    """Atomically save all changed line/facing drafts using the native writer."""
+    if not raw:
+        raise ValueError("Bitte zuerst ein natives Projekt laden")
+    entries = unsaved_dialogue_speaking_draft_entries(
+        raw, line_id, direction, sequence, session)
+    if not entries:
+        raise ValueError("Keine ungespeicherten Sprechfolgenentwürfe vorhanden")
+    updated_session = record_dialogue_speaking_draft(
+        raw, line_id, direction, sequence, session)
+    draft_values = updated_session["drafts"]
+    document_id = parse_document(raw).id
+    updated_raw = raw
+    for label, target_line, facing in entries:
+        cue = next((item for item in parse_document(updated_raw).dialogue_animation_cues
+                    if item.line_id == target_line), None)
+        reset = cue.reset_to_stand if cue else True
+        try:
+            updated_raw = assign_dialogue_direction_speaking_sequence(
+                updated_raw, target_line, facing,
+                draft_values[(document_id, target_line, facing)], reset)
+        except ValueError as error:
+            raise ValueError(f"Sprechfolge {label} nicht gespeichert: {error}") from error
+    drafts = dict(draft_values)
+    for _, target_line, facing in entries:
+        drafts.pop((document_id, target_line, facing))
+    updated_session = {**updated_session, "drafts": drafts}
+    active_sequence = (dialogue_speaking_sequence_selection(
+        updated_raw, line_id, direction) if line_id else "")
+    return updated_raw, active_sequence, updated_session, len(entries)
+
+
 def assign_dialogue_speaking_frame(raw: str, line_id: str, frame_id: str,
                                    reset_to_stand: bool = True) -> str:
     """Author a speaker's imported PNG pose and bind it to a dialogue line in one edit."""
