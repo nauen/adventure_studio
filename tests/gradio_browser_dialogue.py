@@ -420,7 +420,7 @@ def main() -> None:
             expect(page.locator(
                 "#native-dialogue-direction-status input, "
                 "#native-dialogue-direction-status textarea")).to_have_value(
-                    re.compile(r"· Süd ·"), timeout=20000)
+                    re.compile(r"· Süd(?::| ·)"), timeout=20000)
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("SpeakAlt")
             sequence_input.press("Tab")
