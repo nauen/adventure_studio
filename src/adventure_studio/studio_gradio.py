@@ -1502,6 +1502,46 @@ def make_app():
                      native_file_switch_drafts,
                      native_file_switch_target, native_file_switch_open,
                      native_file_switch_confirm, native_file_switch_cancel])
+
+        def refresh_pending_speaking_drafts(raw, line, direction, sequence,
+                                            session, pending, selected):
+            if not pending:
+                return (gr.skip(),) * 7
+            updated = record_dialogue_speaking_draft(
+                raw, line, direction, sequence, session)
+            entries = unsaved_dialogue_speaking_draft_entries(
+                raw, line, direction, sequence, updated)
+            if not entries:
+                return (updated,
+                        "**Alle Sprechfolgen gespeichert.** Das neue Projekt ist noch "
+                        "nicht geladen. Du kannst den Wechsel jetzt bestätigen oder abbrechen.",
+                        gr.update(value="", visible=False),
+                        gr.update(choices=[], value=None, visible=False),
+                        gr.update(visible=False),
+                        gr.update(visible=True), gr.update(visible=True))
+            options = [(label, json.dumps([target_id, facing]))
+                       for label, target_id, facing in entries]
+            valid = {value for _, value in options}
+            return (updated,
+                    f"⚠️ **Noch {len(entries)} ungespeicherte Sprechfolge(n).** "
+                    "Das neue Projekt ist noch nicht geladen.",
+                    gr.update(value="\n".join(label for label, _, _ in entries),
+                              visible=True),
+                    gr.update(choices=options,
+                              value=selected if selected in valid else options[0][1],
+                              visible=True),
+                    gr.update(visible=True),
+                    gr.update(visible=True), gr.update(visible=True))
+
+        pending_draft_refresh_inputs = [
+            native_state, native_dialogue_animation_line, native_dialogue_direction,
+            native_dialogue_speaking_sequence, native_dialogue_draft_session,
+            native_pending_file, native_file_switch_target]
+        pending_draft_refresh_outputs = [
+            native_dialogue_draft_session, native_file_switch_status,
+            native_file_switch_drafts, native_file_switch_target,
+            native_file_switch_open, native_file_switch_confirm,
+            native_file_switch_cancel]
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])
         native_music_add.click(native_music_import,
@@ -1873,7 +1913,9 @@ def make_app():
         native_dialogue_sequence_apply.click(
             lambda *args: native_edit(assign_dialogue_speaking_sequence, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_sequence,
-             native_dialogue_reset], [native_state, *native_outputs, native_report])
+             native_dialogue_reset], [native_state, *native_outputs, native_report]).then(
+                 refresh_pending_speaking_drafts,
+                 pending_draft_refresh_inputs, pending_draft_refresh_outputs)
         def remember_dialogue_template(raw, line, name, sequence):
             outcome = native_edit(
                 save_dialogue_speaking_template, raw, line, name, sequence)
@@ -2166,13 +2208,17 @@ def make_app():
                 raw, line, name, reset),
             [native_state, native_dialogue_animation_line,
              native_dialogue_template_select, native_dialogue_reset],
-            [native_state, *native_outputs, native_report])
+            [native_state, *native_outputs, native_report]).then(
+                refresh_pending_speaking_drafts,
+                pending_draft_refresh_inputs, pending_draft_refresh_outputs)
 
         native_dialogue_direction_sequence_apply.click(
             lambda *args: native_edit(assign_dialogue_direction_speaking_sequence, *args),
             [native_state, native_dialogue_animation_line, native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_reset],
-            [native_state, *native_outputs, native_report])
+            [native_state, *native_outputs, native_report]).then(
+                refresh_pending_speaking_drafts,
+                pending_draft_refresh_inputs, pending_draft_refresh_outputs)
         def dialogue_timeline_view(raw, line, direction, selected_frame):
             if not raw or not line:
                 return [], gr.update(choices=[], value=None), gr.update(choices=[], value=None)

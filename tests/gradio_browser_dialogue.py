@@ -453,6 +453,15 @@ def main() -> None:
             expect(sequence_input).to_have_value("Speak, Speak, Speak", timeout=20000)
             expect(page.locator("#native-file-switch-status")).to_contain_text(
                 "Entwurf ausgewählt", timeout=20000)
+            page.locator("#native-dialogue-direction-sequence-apply").click()
+            expect(page.locator(
+                "#native-project-report textarea, #native-project-report input")).to_have_value(
+                    "Interaktionsablauf geändert und validiert", timeout=20000)
+            expect(page.locator("#native-file-switch-status")).to_contain_text(
+                "Noch 1 ungespeicherte Sprechfolge", timeout=20000)
+            expect(draft_list).to_have_value(
+                re.compile(re.escape(first[0]) + r".*Süd", re.S), timeout=20000)
+            assert second[0] not in draft_list.input_value()
             select_option(page, "native-file-switch-target",
                           f"{first[0]} · Süd ({first[1]})")
             page.locator("#native-file-switch-open").click()

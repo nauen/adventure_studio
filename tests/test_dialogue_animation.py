@@ -185,6 +185,16 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(tuple(entry[0] for entry in entries), affected)
         self.assertEqual({(line, facing) for _, line, facing in entries},
                          {(first, "S"), (second, "N")})
+        after_save = record_dialogue_speaking_draft(
+            raw, second, "N", dialogue_speaking_sequence_selection(raw, second, "N"),
+            other_session)
+        self.assertEqual(
+            tuple((line, facing) for _, line, facing in
+                  unsaved_dialogue_speaking_draft_entries(
+                      raw, second, "N",
+                      dialogue_speaking_sequence_selection(raw, second, "N"),
+                      after_save)),
+            ((first, "S"),))
         self.assertFalse(has_unsaved_dialogue_speaking_drafts(
             raw, first, "S", dialogue_speaking_sequence_selection(raw, first, "S"),
             {"drafts": {}}))

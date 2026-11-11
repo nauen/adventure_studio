@@ -7,6 +7,24 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Ist beim
+Projektdateiwechsel die Verlustwarnung offen, aktualisiert der
+NPC-Dialogeditor nach dem expliziten Speichern einer Sprechfolge
+die Liste: Die gespeicherte Dialogzeile/Blickrichtung verschwindet,
+andere ungespeicherte Entwürfe bleiben auswählbar. Dies gilt für
+alle Richtungen, eine gezielte Richtung und das Anwenden einer
+Sprechfolgenvorlage. Sind keine Entwürfe mehr offen, bestätigt
+die Warnung den vollständig gespeicherten Stand; das neue Projekt
+wird weiterhin erst durch ausdrückliche Bestätigung geladen.
+Projektformat, COST und SCUMM-v6-Export bleiben unverändert.
+Core- und echte Chromium-CI je zweimal grün (PR #186,
+Runs `43029799583` / `43029813622` / `43029799611` /
+`43029813958`). Native stock-ScummVM-CI für diesen rein
+editorseitigen Stand nicht erneut erforderlich, vorige Abnahme
+PR #185 unverändert. Menschliche UI-Abnahme offen.
+**Nächstes Paket:** Beim Verlassen oder Neuladen des Browser-Tabs
+vor noch ungespeicherten NPC-Sprechfolgenentwürfen warnen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Aus der
 Verlustwarnung beim nativen Projektdateiwechsel kann eine betroffene
 ungespeicherte NPC-Sprechfolge direkt im Dialogeditor ausgewählt
