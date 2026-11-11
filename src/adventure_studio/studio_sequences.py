@@ -1571,6 +1571,35 @@ def save_dialogue_speaking_template(
         SpeakingSequenceTemplate(label, costume.name, sequence))))
 
 
+def dialogue_speaking_template_preview(
+        raw: str | None, line_id: str | None, name: str | None
+        ) -> tuple[str, bool]:
+    """Describe one saved template and its target compatibility before applying."""
+    if not raw or not name:
+        return "Bitte eine gespeicherte Vorlage auswählen", False
+    document = parse_document(raw)
+    template = next((item for item in document.speaking_sequence_templates
+                     if item.name == name), None)
+    if template is None:
+        return "Die ausgewählte Vorlage ist im Projekt nicht mehr vorhanden", False
+    target = _dialogue_animation_targets(document).get(line_id)
+    actor = next((item for item in document.actors
+                  if target is not None and item.id == target[1]), None)
+    compatible = actor is not None and actor.costume == template.costume
+    if actor is None:
+        assessment = "Ziel: Bitte eine Sprecher-Dialogzeile auswählen"
+    elif not compatible:
+        assessment = (f"Ziel: nicht kompatibel (ausgewählte Costume: "
+                      f"{actor.costume})")
+    else:
+        assessment = "Ziel: kompatibel – kann auf diese Dialogzeile angewendet werden"
+    frames = "\n".join(f"{index}. {frame}" for index, frame
+                        in enumerate(template.frames, start=1))
+    return (f"Vorlage: {template.name}\nCostume: {template.costume}\n"
+            f"Abspielbilder: {len(template.frames)}\n"
+            f"Frame-Reihenfolge:\n{frames}\n{assessment}"), compatible
+
+
 def load_dialogue_speaking_template_for_editing(
         raw: str, line_id: str, name: str) -> str:
     """Read one validated project template into an editable sequence, without saving."""

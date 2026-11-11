@@ -23,7 +23,7 @@ from adventure_studio.studio_sequences import (compose_story_project, dialogue_a
                                                 assign_dialogue_speaking_frame,
                                                 assign_dialogue_speaking_sequence,
     save_dialogue_speaking_template, apply_dialogue_speaking_template,
-    dialogue_speaking_template_choices,
+    dialogue_speaking_template_choices, dialogue_speaking_template_preview,
     rename_dialogue_speaking_template, delete_dialogue_speaking_template,
     update_dialogue_speaking_template,
     load_dialogue_speaking_template_for_editing,
@@ -99,6 +99,16 @@ class DialogueAnimationTests(unittest.TestCase):
         self.assertEqual(dialogue_speaking_template_choices(saved), ["Begrüßung"])
         template = parse_document(saved).speaking_sequence_templates[0]
         self.assertEqual(template.frames, ("Speak", "SpeakAlt", "Speak"))
+        summary, can_apply = dialogue_speaking_template_preview(
+            saved, second, "Begrüßung")
+        self.assertTrue(can_apply)
+        self.assertIn("Costume: WitnessCostume", summary)
+        self.assertIn("Abspielbilder: 3", summary)
+        self.assertIn("1. Speak\n2. SpeakAlt\n3. Speak", summary)
+        self.assertEqual(dialogue_speaking_template_preview(
+            saved, second, "Unbekannt")[1], False)
+        self.assertEqual(dialogue_speaking_template_preview(
+            saved, None, "Begrüßung")[1], False)
         self.assertEqual(
             load_dialogue_speaking_template_for_editing(
                 saved, second, "Begrüßung"),
@@ -173,6 +183,10 @@ class DialogueAnimationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "anderen Costume"):
             load_dialogue_speaking_template_for_editing(
                 different_costume, second, "Begrüßung")
+        summary, can_apply = dialogue_speaking_template_preview(
+            different_costume, second, "Begrüßung")
+        self.assertFalse(can_apply)
+        self.assertIn("nicht kompatibel", summary)
         # The optional field does not change the v1 format or legacy files.
         self.assertNotIn('"speaking_sequence_templates"', raw)
         self.assertIn('"format_version":1', saved)

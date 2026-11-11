@@ -309,6 +309,15 @@ def main() -> None:
             expect(page.locator("#native-project-report textarea, #native-project-report input")).to_have_value(
                 "Natives Projekt geladen und validiert", timeout=30000)
             select_option(page, "native-dialogue-template-select", "Begrüßung")
+            template_preview = page.locator(
+                "#native-dialogue-template-preview textarea, "
+                "#native-dialogue-template-preview input")
+            expect(template_preview).to_have_value(
+                re.compile(r"Vorlage: Begrüßung.*Costume: WitnessCostume.*"
+                           r"Abspielbilder: 2.*1\. Speak.*2\. SpeakAlt.*"
+                           r"Ziel: kompatibel", re.S), timeout=20000)
+            expect(page.locator("#native-dialogue-template-apply")).to_be_enabled(
+                timeout=20000)
             await_selection(page, "native-dialogue-line", first[0])
             sequence_input.fill("unfertiger Entwurf")
             page.locator("#native-dialogue-template-load").click()
