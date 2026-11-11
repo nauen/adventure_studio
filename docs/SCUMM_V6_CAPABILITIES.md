@@ -30,6 +30,18 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #174, CI-Abnahme bestanden):**
+Sprechfolgen können jetzt im NPC-Dialogeditor per Frame-Dropdown
+und nummerierter Schrittauswahl ohne Komma-Texteingabe erstellt,
+verschoben und entfernt werden (auch wiederholte Frames).
+Erst die vorhandenen Speicher-/Vorlagenaktionen schreiben das
+Projekt; keine Modell-/COST-/SCUMM-v6-Opcode-Änderung und keine
+Statusänderung der Capability. Core-/Chromium-CI je zweimal,
+stock-ScummVM-CI grün (Merge `94a83464`, Runs `42979576693`,
+`42979576683`, `42979576719`). Menschliche UI-Abnahme offen.
+Nächstes Editorpaket: ausgewählte Pose vor dem Anhängen visuell
+mit echten Costume-Pixeln zeigen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #173, CI-Abnahme bestanden):**
 Der NPC-Dialogeditor kann jetzt auch die noch ungespeicherte
 Sprechframe-Folge mit echten COST-Pixeln und einstellbarer Bilddauer
