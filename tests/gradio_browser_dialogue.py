@@ -482,6 +482,10 @@ def main() -> None:
             expect(batch_preview).to_have_value(
                 re.compile(r"1\. Batch-A\.png → Batch_A.*2\. Batch-B\.png → Batch_B.*3\. Batch-Excluded\.png → Batch_Excluded", re.S),
                 timeout=20000)
+            readiness = page.locator("#native-dialogue-png-batch-readiness")
+            batch_import = page.locator("#native-dialogue-png-batch-import")
+            expect(readiness).to_contain_text("Importbereit: 3 PNG-Frame(s)", timeout=20000)
+            expect(batch_import).to_be_enabled()
             await_batch_gallery_colors(page, [(125, 185, 55), (225, 110, 40), (65, 120, 215)])
             select_option(page, "native-dialogue-png-batch-selected", "2. Batch-B.png")
             page.locator("#native-dialogue-png-batch-up").click()
@@ -523,8 +527,12 @@ def main() -> None:
             expect(page.get_by_text("Bild 2 von 2 · Batch_Excluded · noch nicht importiert")).to_be_visible(timeout=20000)
             await_batch_frame_color(page, (65, 120, 215))
             page.keyboard.press("Escape")
-            page.locator("#native-dialogue-png-batch-import").click()
+            expect(readiness).to_contain_text("Importbereit: 2 PNG-Frame(s)", timeout=20000)
+            batch_import.click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
+            expect(readiness).to_contain_text("Import blockiert:", timeout=20000)
+            expect(readiness).to_contain_text("Frame-ID existiert bereits")
+            expect(batch_import).to_be_disabled()
             page.locator("#native-project-export-button").click()
             expect(sequence_link.first).to_be_visible(timeout=20000)
             with page.expect_download() as batch_info:
@@ -556,6 +564,7 @@ def main() -> None:
                 "staged_png_animated_preview": True,
                 "staged_png_frame_navigation": True,
                 "staged_png_gallery_direct_selection": True,
+                "staged_png_import_preflight": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

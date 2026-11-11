@@ -576,9 +576,33 @@ def import_dialogue_png_batch(raw: str, line_id: str, direction: str,
         raise ValueError("Mindestens eine PNG-Frame-ID existiert bereits in dieser Costume")
     updated = raw
     for path, frame_id in entries:
-        updated = import_dialogue_png_frame(updated, line_id, direction, path,
-                                            frame_id, target, ending_ticks, reset_to_stand)
+        try:
+            updated = import_dialogue_png_frame(updated, line_id, direction, path,
+                                                frame_id, target, ending_ticks, reset_to_stand)
+        except (ValueError, OSError) as error:
+            raise ValueError(f"{Path(path).name}: {error}") from error
     return updated
+
+
+def dialogue_png_batch_preflight(raw: str | None, line_id: str | None,
+                                 direction: str | None,
+                                 paths: list[str] | tuple[str, ...] | None,
+                                 target: str | None, ending_ticks: int | float = 12,
+                                 reset_to_stand: bool = True,
+                                 order: list[int] | tuple[int, ...] | None = None
+                                 ) -> tuple[bool, str]:
+    """Check the real atomic import in memory before exposing its commit action."""
+    if not raw or not line_id:
+        return False, "Bitte zuerst eine native Sprecher-Dialogzeile auswählen"
+    try:
+        included = dialogue_png_batch_order(paths, order)
+        if not included:
+            return False, "Die Importauswahl ist leer; bitte PNGs aufnehmen"
+        import_dialogue_png_batch(raw, line_id, direction, paths, target,
+                                  ending_ticks, reset_to_stand, order)
+    except (ValueError, OSError) as error:
+        return False, f"Import blockiert: {error}"
+    return True, f"Importbereit: {len(included)} PNG-Frame(s) für {target} · {direction}"
 
 
 def dialogue_ending_timeline_preview(raw: str, line_id: str, direction: str,
