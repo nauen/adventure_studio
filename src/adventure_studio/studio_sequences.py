@@ -588,7 +588,8 @@ def dialogue_png_sprite_sheet_preview(
         sheet_path: str | None, columns: int | float, rows: int | float,
         margin_x: int | float = 0, margin_y: int | float = 0,
         gap_x: int | float = 0, gap_y: int | float = 0,
-        skipped: list[int] | tuple[int, ...] | None = None
+        skipped: list[int] | tuple[int, ...] | None = None,
+        cell_order: list[int] | tuple[int, ...] | None = None
         ) -> tuple[object, list[tuple[object, str]], str]:
     """Show the exact prospective source rectangles without staging any frames."""
     from PIL import ImageDraw
@@ -596,6 +597,9 @@ def dialogue_png_sprite_sheet_preview(
     pixels, boxes = _dialogue_png_sprite_sheet_cells(
         sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
     excluded = _dialogue_png_sprite_skipped(boxes, skipped)
+    sequence = dialogue_png_sprite_sheet_order(len(boxes), cell_order)
+    positions = {index: number for number, index in enumerate(
+        (index for index in sequence if index not in excluded), 1)}
     overlay = pixels.copy()
     draw = ImageDraw.Draw(overlay)
     for index, (left, top, right, bottom) in enumerate(boxes):
@@ -604,13 +608,52 @@ def dialogue_png_sprite_sheet_preview(
                                 (255, 75, 35, 255)), width=1)
     thumbnails = [(pixels.crop(box), f"{index}. Zeile {(index - 1) // int(columns) + 1}, "
                     f"Spalte {(index - 1) % int(columns) + 1} · "
-                    + ("⛔ Überspringen" if index - 1 in excluded else "✓ Übernehmen"))
+                    + ("⛔ Überspringen" if index - 1 in excluded else
+                       f"✓ Abspielposition {positions[index - 1]}"))
                   for index, box in enumerate(boxes, 1)]
     width = boxes[0][2] - boxes[0][0]
     height = boxes[0][3] - boxes[0][1]
     return overlay, thumbnails, (f"{len(boxes) - len(excluded)} von {len(boxes)} "
-                                  "PNG-Frames ausgewählt · Zeilenreihenfolge "
+                                  "PNG-Frames ausgewählt · Abspielreihenfolge "
                                   f"· je {width} × {height} Pixel · noch nicht hinzugefügt")
+
+
+def dialogue_png_sprite_sheet_order(count: int,
+                                     cell_order: list[int] | tuple[int, ...] | None
+                                     ) -> tuple[int, ...]:
+    """Validate a full permutation so skipped cells retain their position on restore."""
+    if type(count) is not int or count < 1:
+        raise ValueError("Das Sprite-Sheet benötigt mindestens eine Zelle")
+    if cell_order is not None and not isinstance(cell_order, (list, tuple)):
+        raise ValueError("Die Sprite-Sheet-Abspielreihenfolge passt nicht mehr zum Raster")
+    indexes = tuple(range(count)) if cell_order is None or len(cell_order) == 0 else tuple(cell_order)
+    if (len(indexes) != count or any(type(i) is not int for i in indexes) or
+            set(indexes) != set(range(count))):
+        raise ValueError("Die Sprite-Sheet-Abspielreihenfolge passt nicht mehr zum Raster")
+    return indexes
+
+
+def move_dialogue_png_sprite_sheet_cell(count: int,
+                                        cell_order: list[int] | tuple[int, ...] | None,
+                                        skipped: list[int] | tuple[int, ...] | None,
+                                        selected: int | None, step: int
+                                        ) -> tuple[int, ...]:
+    """Move an included source cell among included positions; keep exclusions stable."""
+    sequence = list(dialogue_png_sprite_sheet_order(count, cell_order))
+    excluded = _dialogue_png_sprite_skipped(tuple((0, 0, 1, 1) for _ in range(count)), skipped)
+    included = [index for index in sequence if index not in excluded]
+    if type(selected) is not int or selected not in included:
+        raise ValueError("Bitte zuerst eine übernommene Sprite-Sheet-Zelle auswählen")
+    if step not in (-1, 1):
+        raise ValueError("Die Sprite-Sheet-Zelle kann nur eine Position bewegt werden")
+    position = included.index(selected)
+    destination = position + step
+    if destination not in range(len(included)):
+        return tuple(sequence)
+    other = included[destination]
+    first, second = sequence.index(selected), sequence.index(other)
+    sequence[first], sequence[second] = sequence[second], sequence[first]
+    return tuple(sequence)
 
 
 def _dialogue_png_sprite_skipped(boxes: tuple[tuple[int, int, int, int], ...],
@@ -630,9 +673,10 @@ def stage_dialogue_png_sprite_sheet(
         sheet_path: str | None, columns: int | float, rows: int | float,
         margin_x: int | float = 0, margin_y: int | float = 0,
         gap_x: int | float = 0, gap_y: int | float = 0,
-        skipped: list[int] | tuple[int, ...] | None = None
+        skipped: list[int] | tuple[int, ...] | None = None,
+        cell_order: list[int] | tuple[int, ...] | None = None
         ) -> tuple[tuple[str, ...], tuple[int, ...]]:
-    """Append row-major PNG tiles to the staged native batch, preserving exclusions."""
+    """Append selected tiles in preview order, preserving existing staged exclusions."""
     originals = tuple(paths or ())
     included_indexes = (tuple(range(len(originals))) if order is None else tuple(order))
     if originals:
@@ -642,13 +686,15 @@ def stage_dialogue_png_sprite_sheet(
     pixels, boxes = _dialogue_png_sprite_sheet_cells(
         sheet_path, columns, rows, margin_x, margin_y, gap_x, gap_y)
     excluded = _dialogue_png_sprite_skipped(boxes, skipped)
+    sequence = dialogue_png_sprite_sheet_order(len(boxes), cell_order)
     if len(excluded) == len(boxes):
         raise ValueError("Bitte mindestens eine Sprite-Sheet-Zelle für den Import auswählen")
     destination = Path(tempfile.mkdtemp(prefix="adventure-studio-sprite-sheet-"))
     tiles = []
-    for index, box in enumerate(boxes):
+    for index in sequence:
         if index in excluded:
             continue
+        box = boxes[index]
         row, column = divmod(index, int(columns))
         tile = destination / f"{Path(sheet_path).stem}_r{row + 1}_c{column + 1}.png"
         pixels.crop(box).save(tile)
