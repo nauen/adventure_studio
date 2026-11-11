@@ -519,6 +519,10 @@ def main() -> None:
             animated = page.locator("#native-dialogue-png-batch-animation img")
             expect(animated.first).to_be_visible(timeout=20000)
             expect(page.get_by_text("240 ms pro Bild nur in der Editor-Vorschau", exact=False)).to_be_visible()
+            page.locator("#native-dialogue-png-batch-gallery img").nth(1).click()
+            expect(page.get_by_text("Bild 2 von 2 · Batch_Excluded · noch nicht importiert")).to_be_visible(timeout=20000)
+            await_batch_frame_color(page, (65, 120, 215))
+            page.keyboard.press("Escape")
             page.locator("#native-dialogue-png-batch-import").click()
             expect(ending_gallery.locator("img")).to_have_count(6, timeout=20000)
             page.locator("#native-project-export-button").click()
@@ -551,6 +555,7 @@ def main() -> None:
                 "staged_png_pixel_thumbnail_order": True,
                 "staged_png_animated_preview": True,
                 "staged_png_frame_navigation": True,
+                "staged_png_gallery_direct_selection": True,
             }, indent=2) + "\n", encoding="utf-8")
             print("Real Chromium Gradio dialogue-pose editor roundtrip passed")
         except Exception:

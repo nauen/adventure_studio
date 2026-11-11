@@ -9,7 +9,16 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Einzelbild-Navigation in der noch nicht importierten PNG-Folge (in Prüfung):**
+**Miniaturklick als direkte Frame-Navigation (in Prüfung):**
+Ein beliebiges Bild der vorbereiteten Importfolge lässt sich durch
+Klick auf seine Galerie-Karte direkt auswählen. Die bestehende
+Einzelbildansicht zeigt die echten PNG-Pixel, Position und geplante
+native ID. Keine Änderung am Importformat; die Auswahl bleibt an
+die aktuellen Galerie-/Dropdown-Einträge gebunden. 334 lokale Tests grün, Browser-/CI-Gates
+ausstehend. Anschließend: präventive Importfehleranzeige für die
+vorbereitete Sequenz.
+
+**Einzelbild-Navigation in der noch nicht importierten PNG-Folge (CI-Abnahme bestanden):**
 Autorinnen und Autoren können jedes gewählte Frame mit Dateipixeln,
 Position und nativer Frame-ID ansehen und schrittweise vor/zurück wechseln.
 Die Auswahl bleibt dieselbe wie für den atomaren Import; bei leerer
@@ -19,7 +28,7 @@ ScummVM-Regression blieb grün (PR #118, Merge `cff209c`, Runs
 `42926566873` / `42926566651` / `42926566581`). Menschliche
 UI-Abnahme offen. Danach: Klick auf eine Miniatur als direkte Navigation.
 
-**Abspielbare Vorabvorschau für PNG-Stapelimport (in Prüfung):**
+**Abspielbare Vorabvorschau für PNG-Stapelimport (CI-Abnahme bestanden):**
 Die sichtbare, noch ungespeicherte Auswahl wird als Editor-GIF mit
 einstellbarer Bilddauer abgespielt. Die Reihenfolge stammt aus derselben
 validierten Auswahl wie der atomare native Import. Ändert sich die Auswahl,
