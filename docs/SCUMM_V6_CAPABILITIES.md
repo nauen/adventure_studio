@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #159, CI-Abnahme bestanden):**
+Zusammenhängende Sprite-Sheet-Abspielbilder können im Dialogeditor
+gemeinsam entfernt werden, sofern keine Quellzelle ihre letzte Kopie
+verliert. Die Operation ist atomar und nutzt die bestehende validierte
+Sequenz für den nativen COST-Import. Core- und Chromium-CI zweimal
+grün; Chromium belegt Button, Restpixel, fünf native Importframes und
+JSON-Export (Run `42959011637`), stock-ScummVM-Regression grün
+(Run `42959011475`, Merge `d1e810fa`). D03 bleibt eine
+Teilfähigkeit; menschliche UI-Abnahme und vollständiger Lippensync
+bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #158, CI-Abnahme bestanden):**
 Ein zusammenhängender Bildblock der Sprite-Sheet-Abspielfolge kann an
 jeder Position einschließlich vor dem ersten Bild und mitten im
