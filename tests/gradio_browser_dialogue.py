@@ -65,7 +65,7 @@ def await_selection(page, elem_id: str, label: str) -> None:
 def await_preview_color(page, rgb: tuple[int, int, int]) -> None:
     """Require real pixel colors from the Gradio image in Chromium."""
     image = page.locator("#native-dialogue-pose-preview img")
-    expect(image.first).to_be_visible(timeout=20000)
+    expect(image.first).to_have_attribute("src", re.compile(r"/gradio_api/file="), timeout=20000)
     page.wait_for_function(
         """({color}) => {
             const img = document.querySelector('#native-dialogue-pose-preview img');
@@ -90,7 +90,7 @@ def await_preview_color(page, rgb: tuple[int, int, int]) -> None:
 def await_direction_preview_color(page, rgb: tuple[int, int, int]) -> None:
     """Inspect native direction-specific frame pixels, not only the dropdown."""
     image = page.locator("#native-dialogue-direction-preview img")
-    expect(image.first).to_be_visible(timeout=20000)
+    expect(image.first).to_have_attribute("src", re.compile(r"/gradio_api/file="), timeout=20000)
     page.wait_for_function(
         """({color}) => {
             const img = document.querySelector('#native-dialogue-direction-preview img');
