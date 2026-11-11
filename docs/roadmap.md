@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Sprite-Sheet-Folge über die Oberfläche zusammenstellen (CI-Abnahme bestanden):**
+Quellzelle und Position werden per Dropdown gewählt; Einfügen,
+Entfernen zusätzlicher Kopien und Zurücksetzen bearbeiten die freie
+Abspielsequenz. Die letzte Kopie jeder eingeschlossenen Zelle ist
+geschützt. Dieselbe Folge steuert GIF, nativen COST-Import und Export.
+334 lokale Tests sowie Core-/Chromium-/stock-ScummVM-CI grün;
+Chromium prüfte den vollständigen Editor- und Importablauf (PR #150,
+Merge `eb82f1b`, Runs `42952683287` / `42952683261` /
+`42952683322`). Menschliche UI-Abnahme offen. Danach: eine
+übersichtliche visuelle Bildfolge für jede Abspielposition anzeigen.
+
 **Freie Sprite-Sheet-Abspielsequenz (CI-Abnahme bestanden):**
 Ein optionales Sequenzfeld nimmt die gewünschte Folge von Rasterzellen
 als Zellnummern entgegen, einschließlich nicht benachbarter Wiederholungen

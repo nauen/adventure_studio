@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Freie
+Sprite-Sheet-Abspielfolgen lassen sich jetzt direkt über Quellzellen- und
+Positionsauswahl zusammenstellen, ohne Zellnummern einzugeben. Eine
+gewählte Zelle kann an jeder Position eingefügt und eine zusätzliche
+Kopie entfernt werden; das Zurücksetzen aktiviert wieder die bestehende
+Grundreihenfolge mit Wiederholungen. Die letzte Kopie einer übernommenen
+Zelle bleibt geschützt. GIF-Vorschau, nativer COST-Import und JSON-Export
+verwenden weiterhin dieselbe validierte Folge. 334 lokale Tests und
+Core-/Chromium-/stock-ScummVM-CI grün; der Chromium-Test führte die
+neuen Schaltflächen bis zum nativen Import aus (PR #150, Merge
+`eb82f1b`, Runs `42952683287` / `42952683261` / `42952683322`).
+Menschliche UI-Abnahme offen. **Nächstes Paket:** Die einzelnen
+Abspielpositionen als visuelle Bildfolge direkt im Editor zugänglich
+machen, um die zusammengesetzte Sequenz auf einen Blick zu kontrollieren.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Sprite-Sheet-Zellen
 können vor dem nativen Dialog-COST-Import in einer frei angegebenen
 Abspielsequenz aus 1-basierten Zellnummern stehen, etwa `2,1,2`.

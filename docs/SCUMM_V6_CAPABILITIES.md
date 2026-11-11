@@ -30,6 +30,16 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #150, CI-Abnahme bestanden):**
+Die frei konfigurierbare Sprite-Sheet-Sequenz lässt sich über eine
+Quellzellen- und Positionsauswahl einfügen, bearbeiten und zurücksetzen.
+Die letzte Kopie jeder eingeschlossenen Zelle ist geschützt; GIF und
+nativer COST-Import verwenden die gleiche validierte Reihenfolge.
+334 lokale Tests sowie Chromium-UI-/Import-/Export-Nachweis (Run
+`42952683261`) und stock-ScummVM-Regression (Run `42952683322`,
+Merge `eb82f1b`) bestanden. D03 bleibt eine Teilfähigkeit;
+menschliche UI-Abnahme und vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #148, CI-Abnahme bestanden):**
 Eine frei angegebene Sequenz aus PNG-Sprite-Sheet-Zellnummern erlaubt
 wiederholte Frames an beliebigen Abspielpositionen. Die gleiche
