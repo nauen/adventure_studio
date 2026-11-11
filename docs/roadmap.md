@@ -9,6 +9,16 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Browser-Tab mit ungespeicherten NPC-Sprechfolgen schützen
+(PR #187, Abnahme offen):** Beim Neuladen/Verlassen des Tabs wird
+der browserseitige Bestätigungsdialog nur ausgelöst, solange die
+aktive Folge oder ein sitzungsgebundener Entwurf ungespeichert ist.
+Die Aktion verändert keine Projekt- oder nativen Ressourcen.
+Gezielte lokale Dialogtests grün; Core-CI zweimal grün, Chromium-CI
+noch nicht vollständig bestanden. Menschliche UI-Abnahme offen.
+**Danach:** Browser-Bestätigung und Abbruch im realen Nutzerfluss
+nachweisen; insbesondere Entwürfe nach abgebrochenem Verlassen erhalten.
+
 **Offene Sprechfolgen nach Speichern aktualisieren (CI-Abnahme
 bestanden):** Bei ausstehendem Projektwechsel werden nach einer
 erfolgreichen Sprechfolgen-Speichern-Aktion die betroffenen
