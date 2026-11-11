@@ -1,12 +1,35 @@
 import subprocess
+import tempfile
 import unittest
+from importlib.util import find_spec
 from pathlib import Path
 from unittest.mock import patch
 
-from adventure_studio.scumm_room_visual_probe import black_costume_pixels, verify_visual_effects
+from adventure_studio.scumm_room_visual_probe import (black_costume_pixels,
+                                                     run_visual_comparison, verify_visual_effects)
 
 
 class NativeRoomVisualProbeTests(unittest.TestCase):
+    @unittest.skipUnless(find_spec("PIL"), "PNG probe requires optional Pillow")
+    def test_comparison_uses_validated_png_project_authoring(self):
+        def captured(room, upstream, generated, destination, label):
+            occluded = sum(room.zplanes[0].pixels)
+            if label == "masked":
+                self.assertGreater(occluded, 0)
+            else:
+                self.assertEqual(occluded, 0)
+            return {"dark_costume_pixels": {"masked": 0, "unmasked": 488,
+                                             "fullscale": 1476}[label]}
+
+        with tempfile.TemporaryDirectory() as directory, patch(
+                "adventure_studio.scumm_room_visual_probe.render_native_room",
+                side_effect=captured) as renderer:
+            root = Path(directory)
+            result = run_visual_comparison(root, root, root / "comparison")
+            self.assertEqual(renderer.call_count, 3)
+            self.assertTrue(result["comparison"]["occlusion_passed"])
+            self.assertTrue((root / "comparison" / "masked-authored-zplane.png").exists())
+
     def test_proven_native_mask_and_box_scale_counts(self):
         result = verify_visual_effects(0, 488, 1476)
         self.assertTrue(result["occlusion_passed"])

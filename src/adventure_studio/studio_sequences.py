@@ -24,9 +24,52 @@ from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render
                             costume_timeline_images, render_costume_preview,
                             render_costume_frame_sequence_preview)
 from .scumm_costume import CostumeAnimation, CostumeDirection
+from .scumm_assets import ZPlane
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
+
+
+def import_room_zplane(raw: str, room_name: str, index: int, png_path: str) -> str:
+    """Author one full-room native occlusion plane from a white-on-black PNG.
+
+    White pixels occlude actors; black pixels remain transparent. The alpha
+    channel is respected, so fully transparent pixels never occlude.
+    """
+    from PIL import Image
+
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    if type(index) is not int or not 1 <= index <= 9:
+        raise ValueError("Z-Ebenenindex muss zwischen 1 und 9 liegen")
+    if index > len(room.zplanes) + 1:
+        raise ValueError("Z-Ebenen müssen lückenlos ab 1 angelegt werden")
+    path = Path(png_path)
+    if path.suffix.lower() != ".png":
+        raise ValueError("Bitte eine PNG-Z-Maske wählen")
+    try:
+        with Image.open(path) as source:
+            if source.format != "PNG":
+                raise ValueError("Z-Maske muss eine echte PNG-Datei sein")
+            size = (room.geometry.room_width, room.geometry.room_height)
+            if source.size != size:
+                raise ValueError(f"Z-Maske muss exakt {size[0]} × {size[1]} Pixel groß sein")
+            rgba = source.convert("RGBA")
+            pixels = bytes(1 if alpha >= 128 and
+                           (red * 299 + green * 587 + blue * 114) >= 128000
+                           else 0 for red, green, blue, alpha in rgba.getdata())
+    except (OSError, Image.DecompressionBombError) as error:
+        raise ValueError(f"PNG-Z-Maske nicht lesbar: {error}") from error
+    planes = list(room.zplanes)
+    if index <= len(planes):
+        planes[index - 1] = ZPlane(index, pixels)
+    else:
+        planes.append(ZPlane(index, pixels))
+    rooms = tuple(replace(item, zplanes=tuple(planes)) if item.name == room_name else item
+                  for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
 
 
 def import_room_music(raw: str, room_name: str, music_id: str, midi_path: str) -> str:
@@ -2201,8 +2244,16 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
         return canonical_json(project)
     native = parse_document(native_raw)
     music_by_room = {room.name: room.music_id for room in native.rooms}
-    composed = replace(project, rooms=tuple(replace(room, music_id=music_by_room.get(room.name))
-                                            for room in project.rooms),
+    native_by_room = {room.name: room for room in native.rooms}
+    rooms = []
+    for room in project.rooms:
+        previous = native_by_room.get(room.name)
+        zplanes = previous.zplanes if previous is not None else ()
+        if zplanes and (room.geometry.room_width != previous.geometry.room_width or
+                        room.geometry.room_height != previous.geometry.room_height):
+            raise ValueError(f"Raum-Z-Maske für {room.name} passt nicht mehr zur Story-Raumgröße")
+        rooms.append(replace(room, music_id=music_by_room.get(room.name), zplanes=zplanes))
+    composed = replace(project, rooms=tuple(rooms),
                        costumes=native.costumes, actors=native.actors,
                        animation_rules=native.animation_rules,
                        animation_input_rules=native.animation_input_rules,

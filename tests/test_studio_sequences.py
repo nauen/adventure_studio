@@ -62,6 +62,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 self.assertEqual(frames["S"], ("Pose0",))
             self.assertEqual(costume_direction_speaking_frame(raw, "Speaker", "N"), "NorthPose")
             self.assertEqual(costume_direction_speaking_frame(raw, "Speaker", "E"), "Pose0")
+
             self.assertIn("NorthPose", costume_source(costume))
             self.assertEqual(parse_document(canonical_json(parse_document(raw))).costumes[0], costume)
             with self.assertRaisesRegex(ValueError, "vorhandenes Costume-Frame"):
@@ -85,6 +86,21 @@ class NativeSequenceEditorTests(unittest.TestCase):
             for invalid in ("", "NorthPose, Missing", "NorthPose, "):
                 with self.assertRaises(ValueError):
                     set_costume_direction_speaking_sequence(raw, "Speaker", "N", invalid)
+
+    def test_story_linked_export_retains_authored_room_zplane(self):
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        room = scrolling_fixture()
+        width, height = room.geometry.room_width, room.geometry.room_height
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import ZPlane
+        masked = replace(room, zplanes=(ZPlane(1, bytes(
+            1 if x == 30 and y == 40 else 0
+            for y in range(height) for x in range(width))),))
+        native = canonical_json(GameDocument("linked_mask", (masked, destination_fixture())))
+        combined = parse_document(compose_story_project(story, native))
+        harbor = next(room for room in combined.rooms if room.name == "Harbor")
+        self.assertEqual(harbor.zplanes, masked.zplanes)
 
     def test_spoken_line_language_variants_and_escape_stop_all_sounds(self):
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences

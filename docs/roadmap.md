@@ -10,17 +10,17 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Nach den gemergten [PR #190](https://github.com/nauen/adventure_studio/pull/190) und [PR #191](https://github.com/nauen/adventure_studio/pull/191) endet die NPC-Komfortkette. Genau **R06 – frei authorierbare Raum-Z-Masken** ist das nächste native Produktpaket.
-- **Abnahme:** Ein Autor definiert im allgemeinen Raum-Modell eine Verdeckung, exportiert sie nativ als ZPxx und beobachtet im unveränderten ScummVM, wie ein Actor beim Bewegen korrekt vor beziehungsweise hinter dieser Raumebene erscheint. Relevante leere, einfache und mehrere Verdeckungsbereiche sowie Binär- und Gameplay-Verhalten gezielt prüfen.
-- **Blocker:** ZPlane, JSON, ScummC-ZPxx und eine native Fixture sind bereits vorhanden, jedoch kein allgemeiner Authoring-/Gameplay-Abschluss. Die menschliche Tab-Abbruchabnahme aus #187 und native Mehrsprecher-Fragen aus #80 bleiben separat offen.
-- **Danach:** Erst nach R06-Evidenz **R08 – frei definierbare Walkbox-Polygone** mit BOXD und verifizierten Actor-Laufgrenzen. R09/R10 sowie P0.4/O03 folgen als eigene spätere Pakete.
+- **Jetzt:** Nach dem NPC-Abschluss #190 und der Konsolidierung #191/#192 liefert [PR #193](https://github.com/nauen/adventure_studio/pull/193) genau **R06.1 – PNG-Z-Maske im Studio authorieren und nativ abspielen**. Kein weiteres NPC-Komfortpaket.
+- **Abnahme:** Echter Studio-PNG-Upload → validiertes Projekt-JSON (auch bei Story-Verknüpfung) → ScummC-ZPxx → stock ScummVM. Native [CI 43073010730](https://github.com/nauen/adventure_studio/actions/runs/43073010730) grün: 0 dunkle Actor-Pixel maskiert, 350 ohne Maske, `occlusion_passed=true`; [Screenshot-/Vergleichsartefakt](https://github.com/nauen/adventure_studio/actions/runs/43073010730/artifacts/13880271730). Core/Chromium-Upload und JSON-Roundtrip grün.
+- **Blocker:** Dies ist **eine vollständig belegte PNG-Maskenfähigkeit**, kein allgemeiner R06-Abschluss für beliebige Mehr-Ebenen-/Enginevarianten. Menschliche #187-Tab-Abbruchprüfung und native Mehrsprecher-Fragen aus #80 bleiben separat offen.
+- **Danach:** Genau **R08 – frei definierbare Walkbox-Polygone** mit BOXD und echten Actor-Laufgrenzen als nächstes Paket auswählen; R09/R10 und P0.4/O03 bleiben nachgeordnet.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
 | Historisches Paket | Tatsächlicher Teilstand | Noch fehlender Abschluss |
 | --- | --- | --- |
 | P0.1 – Raum-Binärprüfung | Chunk-/Offset-Parser und deterministische Tests vorhanden | Allgemeinheit und noch nicht abgedeckte Binärvarianten separat prüfen |
-| P0.2 / R06 – Z-Masken | `RoomAsset.zplanes`, JSON, ScummC-ZPxx und native Verdeckungsprobe vorhanden | Freies Authoring, mehr als eine Ebene und Varianten/Grenzen nicht als voll verifiziert behaupten |
+| P0.2 / R06 – Z-Masken | PNG-Authoring über Studio/JSON/ZPxx und native Actor-Verdeckung für eine Ebene belegt | Mehrere Ebenen und allgemeine Varianten/Grenzen nicht als voll verifiziert behaupten |
 | P0.3 / R08–R10 – Walkbox/SCAL | `RoomAsset.walkboxes`, BOXM, SCAL, JSON und native Sicht-/Skalierungsprobe vorhanden | Allgemeine Wege-/Boxennetze, frei erstellte Polygone und Perspektivvarianten offen |
 | P0.5 / A01–A07 – Actors/Costumes | COST, Framefolgen, COUNT und viele Gameplay-Teilproben vorhanden | Alle Actor-/Costume-Varianten und native Mehrsprecher-Animation noch nicht fertig |
 

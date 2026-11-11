@@ -1284,10 +1284,36 @@ def main() -> None:
             bulk_raw = bulk_file.read_text(encoding="utf-8")
             assert dialogue_speaking_sequence_selection(bulk_raw, first[1], "S") == first_bulk
             assert dialogue_speaking_sequence_selection(bulk_raw, second[1], "S") == second_bulk
+            # Author a room-sized Z-plane via the real Studio file-upload control,
+            # then verify that the exported native project retains its mask.
+            authored_room = parse_document(bulk_raw).rooms[0]
+            select_option(page, "native-room", authored_room.name)
+            width, height = (authored_room.geometry.room_width,
+                             authored_room.geometry.room_height)
+            authored_mask = Image.new("RGBA", (width, height), (0, 0, 0, 255))
+            authored_mask.putpixel((10, 20), (255, 255, 255, 255))
+            mask_file = evidence / "authored-room-zplane.png"
+            authored_mask.save(mask_file)
+            page.locator("#native-zplane-file input[type=file]").set_input_files(str(mask_file))
+            page.locator("#native-zplane-add").click()
+            expect(page.locator(
+                "#native-project-report textarea, #native-project-report input"
+            )).to_have_value(re.compile("Z-Ebene 1.*gespeichert"), timeout=30000)
+            page.locator("#native-project-export-button").click()
+            with page.expect_download() as mask_download:
+                sequence_link.first.click()
+            mask_project = evidence / "authored-mask-project.json"
+            mask_download.value.save_as(str(mask_project))
+            exported_room = next(room for room in parse_document(
+                mask_project.read_text(encoding="utf-8")).rooms
+                if room.name == authored_room.name)
+            assert exported_room.zplanes[0].pixels[20 * width + 10] == 1
+            assert sum(exported_room.zplanes[0].pixels) == 1
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
                 "independent_direction_sequences": True,
+                "authored_native_png_zplane": True,
                 "graphical_line_timeline": True,
                 "native_dialogue_phases": True,
                 "native_ending_gesture": True,

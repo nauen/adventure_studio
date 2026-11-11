@@ -3,6 +3,7 @@
 import struct
 import tempfile
 import unittest
+from importlib.util import find_spec
 from dataclasses import replace
 from pathlib import Path
 
@@ -11,9 +12,38 @@ from adventure_studio.scumm_assets import (ScaleCurve, ZPlane, _native_box_file,
                                           scummc_room_source, write_room_sources)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room, perspective_room
+from adventure_studio.studio_sequences import import_room_zplane
 
 
 class RoomNativePrimitiveTests(unittest.TestCase):
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
+    def test_authored_png_mask_roundtrips_to_native_room_assets(self):
+        from PIL import Image
+
+        room = native_room(occlusion=False)
+        raw = canonical_json(GameDocument("authored", (room, destination_fixture())))
+        width, height = room.geometry.room_width, room.geometry.room_height
+        with tempfile.TemporaryDirectory() as directory:
+            png = Path(directory) / "author-mask.png"
+            mask = Image.new("RGBA", (width, height), (0, 0, 0, 255))
+            mask.putpixel((10, 20), (255, 255, 255, 255))
+            mask.putpixel((11, 20), (255, 255, 255, 0))
+            mask.save(png)
+            updated = import_room_zplane(raw, room.name, 1, str(png))
+            stored = parse_document(updated).rooms[0]
+            self.assertEqual(stored.zplanes[0].pixels[20 * width + 10], 1)
+            self.assertEqual(stored.zplanes[0].pixels[20 * width + 11], 0)
+            self.assertEqual(sum(stored.zplanes[0].pixels), 1)
+            write_room_sources(stored, Path(directory))
+            self.assertIn('zplane = { "HarborZ01.bmp" };',
+                          (Path(directory) / "Harbor.scc").read_text())
+            self.assertTrue((Path(directory) / "HarborZ01.bmp").exists())
+            with self.assertRaisesRegex(ValueError, "lückenlos"):
+                import_room_zplane(updated, room.name, 3, str(png))
+            mask.resize((width // 2, height)).save(png)
+            with self.assertRaisesRegex(ValueError, "exakt"):
+                import_room_zplane(updated, room.name, 2, str(png))
+
     def test_project_json_roundtrip_preserves_native_assets(self):
         document = GameDocument("native", (native_room(), destination_fixture()))
         self.assertEqual(parse_document(canonical_json(document)), document)
