@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Bildblöcke in der Sprite-Sheet-Folge mehrfach wiederholen
+(CI-Abnahme bestanden):** Eine positive Anzahl zusätzlicher Kopien
+eines frei gewählten zusammenhängenden Blocks wird in einer Aktion
+an eine Zielposition eingefügt. Die gesamte neue Folge ist als
+Pixel-Bildleiste vor dem nativen Import sichtbar; die Batch-Erzeugung
+schützt temporäres PNG-Staging mit einem ausdrücklich nicht nativen
+Limit von 2048 Abspielbildern. Core-/Chromium-CI je zweimal,
+stock-ScummVM-CI einmal grün (PR #161, Merge `0ff8a565`,
+Runs `42961680836` / `42961680499` / `42961680844`).
+Menschliche UI-Abnahme offen. Danach: letzte Sequenzbearbeitung
+rückgängig machen, ohne die gesamte Folge oder den bereits
+vorbereiteten nativen Frame-Stapel zu verwerfen.
+
 **Sprite-Sheet-Bildblock frei positionieren (CI-Abnahme bestanden):**
 Ein markierter Block kann ohne Kopieren direkt an jede Zielgrenze
 der ursprünglichen Abspielsequenz verschoben werden (0 vor dem ersten
