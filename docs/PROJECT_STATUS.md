@@ -4,6 +4,21 @@ Stand: 2026-11-07. **Dies ist die kurze Einstiegseite für jede neue
 Arbeitssitzung.** Sie ersetzt nicht die [Roadmap](roadmap.md) oder die
 [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
+**Produktpaket (2026-11-11, CI-Abnahme bestanden):** Sprite-Sheet-Zellen
+können vor dem nativen Dialog-COST-Import in einer frei angegebenen
+Abspielsequenz aus 1-basierten Zellnummern stehen, etwa `2,1,2`.
+Damit sind Wiederholungen auch außerhalb benachbarter Halteframes
+möglich. Die Schnittvorschau markiert sämtliche Positionen; Editor-GIF,
+native PNG-Frames und exportierte Dialogfolge folgen exakt dieser
+Reihenfolge. Falsche, ausgeschlossene und fehlende Zellnummern werden
+erklärt; ein leeres Feld erhält alle bisherigen Knopf-Workflows.
+334 lokale Tests und Core-/Chromium-/stock-ScummVM-CI grün;
+Chromium bestätigt fehlerhafte und korrigierte Eingabe, GIF-Pixel sowie
+nativen Import und JSON-Export (PR #148, Merge `36cb68a`, Runs
+`42951315432` / `42951315398` / `42951315529`). Menschliche
+UI-Abnahme offen. **Nächstes Paket:** Die freie Sprite-Sheet-Sequenz
+direkt über die Vorschau zusammenstellen, ohne Zellnummern einzutippen.
+
 **Produktpaket (2026-11-11, CI-Abnahme bestanden):** Eine gewählte
 Sprite-Sheet-Zelle kann vor dem nativen Dialog-COST-Import beliebig oft
 unmittelbar hintereinander abgespielt werden. **Zelle nochmals
