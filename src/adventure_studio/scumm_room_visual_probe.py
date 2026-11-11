@@ -120,7 +120,7 @@ def run_visual_comparison(upstream: Path, generated: Path, destination: Path) ->
                        for y in range(height) for x in range(width))
         png = destination / f"{label}-authored-zplane.png"
         Image.frombytes("L", (width, height), pixels).save(png)
-        project = canonical_json(GameDocument("authored-mask", (base,)))
+        project = canonical_json(GameDocument("authored_mask", (base,)))
         authored = import_room_zplane(project, base.name, 1, str(png))
         room = parse_document(authored).rooms[0]
         results[label] = {
