@@ -9,6 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Ungespeicherte Sprechfolge animiert prüfen (CI-Abnahme bestanden):**
+Die aktuelle Komma-Liste von NPC-Sprechframes kann direkt vor
+Speichern oder Zuweisen in ein GIF aus echten Costume-Frames
+übersetzt werden. Ungültige Frames, ungeeignete Sprecher und
+Bildzeiten werden abgefangen; Eingabeänderungen leeren die alte
+Vorschau. Die Editoraktion verändert keine nativen Projektdaten.
+Core-/Chromium-CI je zweimal und stock-ScummVM-CI grün (PR #173,
+Merge `c6204ef8`, Runs `42977464651` / `42977464576` /
+`42977464512`). Menschliche UI-Abnahme offen. **Danach:**
+Sprechframes ohne manuelles Eintippen auswählen, hinzufügen und
+in der Reihenfolge verschieben.
+
 **Gespeicherte Sprechvorlage animiert prüfen (CI-Abnahme bestanden):**
 Die echte Frame-Folge einer NPC-Vorlage kann vor der Zuweisung als
 Editor-GIF aus vorhandenen Costume-Pixeln abgespielt werden; native
