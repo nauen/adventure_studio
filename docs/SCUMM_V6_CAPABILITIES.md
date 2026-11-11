@@ -14,11 +14,13 @@ Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
 `tests/test_scumm_reference_contract.py` prüft den Quellenindex auf
 Vollständigkeit gegenüber den 64 IDs.
 
-**D03 – Editor-Ergänzung (PR #187, Abnahme offen):** Eine browserseitige
-Warnung schützt aktive und zwischengespeicherte NPC-Sprechfolgenentwürfe
-vor versehentlichem Tab-Neuladen bzw. Verlassen. Der D03-Capability-Status
-und der native COST-/SCUMM-v6-Export bleiben unverändert. Lokale
-Dialogtests und Core-CI grün; Chromium-Abnahme noch offen.
+**D03 – Editor-Ergänzung (PR #187, CI-Abnahme bestanden):**
+Die Gradio-6-Oberfläche bindet eine `beforeunload`-Warnung für
+aktive und zwischengespeicherte NPC-Sprechfolgenentwürfe ein.
+Core-/Chromium-CI je zweimal grün (Runs `43046439156`,
+`43046446969`, `43046439114`, `43046447015`).
+Menschliche Browser-Abnahme offen; D03-Capability-Status und
+nativer COST-/SCUMM-v6-Export unverändert.
 
 **D03 – aktuelle Editor-Ergänzung (PR #186, CI-Abnahme bestanden):**
 Nach dem Speichern einer NPC-Sprechfolge während einer offenen
