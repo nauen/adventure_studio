@@ -494,6 +494,38 @@ def dialogue_png_batch_thumbnails(paths: list[str] | tuple[str, ...] | None,
             for _source, frame_id in _dialogue_png_batch_entries((path,))]
 
 
+def dialogue_png_batch_image_diagnostics(
+        raw: str | None, line_id: str | None, direction: str | None,
+        paths: list[str] | tuple[str, ...] | None, target: str | None,
+        ending_ticks: int | float = 12, reset_to_stand: bool = True,
+        order: list[int] | tuple[int, ...] | None = None
+        ) -> tuple[list[tuple[str, str]], str]:
+    """Locate per-PNG import errors using the real native frame import path."""
+    if not paths:
+        return [], "Noch keine PNG-Dateien ausgewählt"
+    included = dialogue_png_batch_order(paths, order)
+    if not included:
+        return [], "Die Importauswahl enthält keine Bilder"
+    if not raw or not line_id:
+        return dialogue_png_batch_thumbnails(paths, order), "Bitte eine Dialogzeile wählen"
+    updated = raw
+    gallery = []
+    failures = []
+    for position, path in enumerate(included, 1):
+        try:
+            frame_id = _dialogue_png_batch_entries((path,))[0][1]
+            updated = import_dialogue_png_frame(updated, line_id, direction,
+                                                path, frame_id, target,
+                                                ending_ticks, reset_to_stand)
+            caption = f"{position}. {frame_id}"
+        except (ValueError, OSError) as error:
+            caption = f"{position}. {Path(path).name} ⚠️"
+            failures.append(f"{position}. {Path(path).name}: {error}")
+        gallery.append((path, caption))
+    return gallery, ("\n".join(failures) if failures else
+                     "Keine bildbezogenen Konflikte erkannt")
+
+
 def dialogue_png_batch_frame_preview(
         paths: list[str] | tuple[str, ...] | None,
         order: list[int] | tuple[int, ...] | None,
