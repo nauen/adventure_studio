@@ -9,13 +9,18 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**Vorabprüfung der nativen PNG-Importfähigkeit (in Prüfung):**
+**Vorabprüfung der nativen PNG-Importfähigkeit (CI-Abnahme bestanden):**
 Die Studio-Oberfläche simuliert den atomaren Stapelimport mit aktueller
 Dialogzeile, Richtung, Ziel und PNG-Reihenfolge ohne Projektänderung.
 Konkrete Fehler werden vor dem Klick angezeigt und der Importknopf
 bleibt in diesem Zustand deaktiviert. Gleiche Prüfung für 0/1/N-Bilder,
-Dateiformat, Frame-ID- und Palettenkonflikte. Lokale Tests grün;
-Chromium-/CI-Abnahme noch offen. Anschließend: Fehler an konkreten
+Dateiformat, Frame-ID- und Palettenkonflikte. 334 lokale Tests und
+Core-/Chromium-CI grün; realer Import/Export und anschließende
+Blockierung belegter IDs im Chromium bestätigt. Native ScummVM-
+Regression im unveränderten vollständigen Job-Replay grün (erster
+Lauf mit Richtungs-Frame-Abtastungsfehler; PR #122, Merge `3d94a6d`,
+Runs `42930996980` / `42930997132` / `42930997256`). Menschliche
+UI-Abnahme offen. Anschließend: Fehler an konkreten
 Miniaturkarten markieren.
 
 **Miniaturklick als direkte Frame-Navigation (CI-Abnahme bestanden):**
