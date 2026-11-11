@@ -9,6 +9,17 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Ungespeicherten Sprechfolgenentwurf verwerfen (CI-Abnahme
+bestanden):** Der Dialogeditor kann die noch nicht persistierte
+Framefolge ausdrücklich zurücksetzen und die gespeicherte
+richtungsbezogene Folge wiederherstellen. Schritt- und GIF-
+Vorschauen werden dabei geleert; der native Projektzustand bleibt
+unangetastet. Core-/Chromium-CI je zweimal und stock-ScummVM-CI
+grün (PR #180, Merge `2ecc5143`, Runs `42991905022` /
+`42991905238` / `42991905095`). Menschliche UI-Abnahme offen.
+**Danach:** Einen eindeutigen Status »ungespeichert« oder
+»entspricht gespeicherter Folge« am Editor anzeigen.
+
 **Sprechfolgeschritt per Klick duplizieren (CI-Abnahme bestanden):**
 Ein vorhandener nummerierter Frame kann ohne erneute Auswahl des
 PNGs unmittelbar hinter sich kopiert werden. Die Kopie wird
