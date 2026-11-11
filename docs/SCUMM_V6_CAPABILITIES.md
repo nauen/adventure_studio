@@ -30,6 +30,17 @@ Implementierung. Für „fertig“ müssen der ausgewiesene Zielumfang und
 die konkreten Akzeptanzkriterien nachgewiesen sein. Bestehende
 CI-Workflows gelten nicht automatisch als erfolgreiche aktuelle Runs.
 
+**D03 – aktuelle Editor-Ergänzung (PR #128, CI-Abnahme bestanden):**
+Vorbereitete Dialog-PNGs können jetzt ohne externe Dateiumbenennung
+eine selbst gewählte native Frame-ID erhalten. Diese bleibt beim
+Umordnen und Ausschließen stabil und wird für Vorprüfung und nativen
+COST-Import genutzt; doppelte IDs blockieren den atomaren Import.
+334 lokale Tests, Chromium-Bedienung mit Pixelvorschau/JSON-Export
+(Run `42936784836`, unveränderter zweiter Lauf) und vollständige
+stock-ScummVM-Regression (Run `42936784961`, Merge `d96954d`)
+bestanden. D03 bleibt ausdrücklich eine Teilfähigkeit; menschliche
+UI-Abnahme und vollständiger Lippensync bleiben offen.
+
 **D03 – aktuelle Editor-Ergänzung (PR #126, CI-Abnahme bestanden):**
 Die vorbereitete native 1..N-Dialog-PNG-Folge unterstützt jetzt den
 gezielten Austausch eines ausgewählten Bilds per Einzelupload, ohne

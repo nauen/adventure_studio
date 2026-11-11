@@ -9,6 +9,19 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Native Frame-ID eines vorbereiteten PNGs bearbeiten (CI-Abnahme bestanden):**
+Im Dialogeditor kann ein ausgewähltes Upload-PNG eine individuelle
+native ID erhalten. Die Zuordnung überlebt Umsortieren, Ausschließen
+und Wiederaufnehmen, ohne Bilddaten oder Projekt-JSON vor dem Import
+zu ändern. Vorschau, Konfliktprüfung, GIF und nativer COST-Stapelimport
+verwenden die bearbeitete ID. Ungültige IDs werden abgelehnt; Duplikate
+verhindern bis zur vollständigen Auflösung den Import. 334 lokale Tests,
+Core-/Chromium- und stock-ScummVM-CI grün; Browser nach einmaligem
+unverändertem Replay und ScummVM im ersten Lauf bestanden (PR #128,
+Merge `d96954d`, Runs `42936785066` / `42936784836` /
+`42936784961`). Menschliche UI-Abnahme offen. Danach: einen freien
+nativen ID-Vorschlag für Konfliktbilder direkt übernehmen können.
+
 **Ein vorbereitetes PNG gezielt ersetzen (CI-Abnahme bestanden):**
 Eine separate Einzeldatei-Auswahl ersetzt das gewählte Importbild,
 ohne weitere Uploads, die editierte Reihenfolge oder Ausschlüsse
