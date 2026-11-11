@@ -1224,6 +1224,29 @@ def main() -> None:
                 ("15. Mouth_Strip_r1_c2_repeat4", 14),
                 ("16. Mouth_Strip_r1_c2_repeat5", 15),
                 ("17. Mouth_Strip_r1_c2_repeat6", 16))
+            # The draft overview discards only the selected active edit.
+            select_option(page, "native-dialogue-line", first[0])
+            select_option(page, "native-dialogue-direction", "Süd")
+            saved_before_discard = dialogue_speaking_sequence_selection(
+                sprite_raw, first[1], "S")
+            sequence_input.fill(saved_before_discard + ", Speak")
+            sequence_input.press("Tab")
+            expect(sequence_input).to_have_value(
+                saved_before_discard + ", Speak", timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
+            page.locator("#native-drafts-refresh").click()
+            expect(page.locator("#native-drafts-status")).to_contain_text(
+                "offene Sprechfolgenentwürfe", timeout=20000)
+            select_option(page, "native-drafts-target",
+                          f"{first[0]} · Süd ({first[1]})")
+            page.locator("#native-drafts-discard-confirm input[type=checkbox]").check()
+            page.locator("#native-drafts-discard").click()
+            expect(page.locator("#native-drafts-status")).to_contain_text(
+                "Entwurf verworfen", timeout=20000)
+            expect(sequence_input).to_have_value(saved_before_discard, timeout=20000)
+            expect(page.locator("#native-drafts-discard-confirm input[type=checkbox]")) \
+                .not_to_be_checked(timeout=20000)
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,

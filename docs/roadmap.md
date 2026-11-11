@@ -9,6 +9,14 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
+**Einzelnen Sprechfolgenentwurf aus der Übersicht verwerfen
+(Abnahme ausstehend):** Autoren können genau eine Zeile und Richtung
+markieren und das Verwerfen bewusst bestätigen. Das aktive Eingabefeld
+kehrt ggf. zum gespeicherten Wert zurück, andere Sitzungsentwürfe
+bleiben unverändert. Die Liste wird nach dem Verwerfen aktualisiert.
+Modell und nativer Export bleiben unverändert. **Danach:** Core- und
+Chromium-CI abnehmen; manuelle Tab-Abbruchprüfung separat nachholen.
+
 **Ungespeicherte Sprechfolgen ohne Projektwechsel wiederfinden
 (Abnahme ausstehend):** Im NPC-Dialogeditor lässt sich die Liste
 offener Sitzungsentwürfe bei Bedarf aktualisieren. Einträge sind
