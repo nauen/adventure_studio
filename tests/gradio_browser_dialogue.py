@@ -1325,12 +1325,39 @@ def main() -> None:
                 if room.name == authored_room.name)
             assert walkbox_room.walkboxes[0].corners == (
                 (0, 70), (110, 70), (110, 150), (0, 150))
+            # R09: connect two author-created boxes using the real Studio UI
+            # and verify that native JSON preserves the generated next-hop path.
+            page.locator("#native-walkbox-index input").fill("2")
+            page.locator("#native-walkbox-corners textarea, #native-walkbox-corners input").fill(
+                f"110,70; {width - 1},70; {width - 1},150; 110,150")
+            page.locator("#native-walkbox-add").click()
+            expect(page.locator(
+                "#native-project-report textarea, #native-project-report input"
+            )).to_have_value(re.compile("Walkbox 2.*gespeichert"), timeout=30000)
+            page.locator("#native-box-routes-connections textarea, #native-box-routes-connections input").fill(
+                "1-2")
+            page.locator("#native-box-routes-add").click()
+            expect(page.locator(
+                "#native-project-report textarea, #native-project-report input"
+            )).to_have_value(re.compile("BOXM-Wege.*gespeichert"), timeout=30000)
+            page.locator("#native-project-export-button").click()
+            with page.expect_download() as boxm_download:
+                sequence_link.first.click()
+            boxm_file = evidence / "authored-boxm-routes-project.json"
+            boxm_download.value.save_as(str(boxm_file))
+            boxm_room = next(room for room in parse_document(
+                boxm_file.read_text(encoding="utf-8")).rooms
+                if room.name == authored_room.name)
+            assert boxm_room.box_routes[1][2] == 2
+            assert boxm_room.box_routes[2][1] == 1
+            assert len(boxm_room.walkboxes) == 2
             (evidence / "result.json").write_text(json.dumps({
                 "passed": True, "first": first[1], "second": second[1],
                 "reimported_second_pose": "Speak", "independent_line_sequences": True,
                 "independent_direction_sequences": True,
                 "authored_native_png_zplane": True,
                 "authored_native_walkbox_polygon": True,
+                "authored_native_boxm_routes": True,
                 "graphical_line_timeline": True,
                 "native_dialogue_phases": True,
                 "native_ending_gesture": True,
