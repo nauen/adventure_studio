@@ -1995,12 +1995,9 @@ def make_app():
             [native_dialogue_draft_step])
         native_dialogue_speaking_sequence.input(
             lambda: None, outputs=[native_dialogue_draft_step_preview])
-        native_dialogue_speaking_sequence.input(
-            record_dialogue_speaking_draft,
-            [native_state, native_dialogue_animation_line,
-             native_dialogue_direction, native_dialogue_speaking_sequence,
-             native_dialogue_draft_session],
-            [native_dialogue_draft_session], show_progress="hidden")
+        # The line/direction switch records the outgoing textbox atomically.
+        # A separate textbox.input writer races with that switch and can
+        # overwrite the session's new target with a stale event result.
         def speaking_draft_session_status(raw, line, direction, sequence):
             status = dialogue_speaking_draft_save_status(raw, line, direction, sequence)
             if status == "Ungespeicherte Änderungen an der Sprechfolge":
