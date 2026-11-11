@@ -9,13 +9,16 @@
 
 ## Aktuelle Produktphasen und Abnahme
 
-**PNG-Konflikte an einzelnen Importminiaturen anzeigen (in Prüfung):**
+**PNG-Konflikte an einzelnen Importminiaturen anzeigen (CI-Abnahme bestanden):**
 Bei der vorbereiteten 1..N-PNG-Folge werden native Frameimporte
 sequenziell auf einer nur temporären Projektkopie geprüft. Die Galerie
 kennzeichnet konfliktbehaftete Positionen und zeigt den Fehler je
 Datei darunter; valide Frames und bestehende Reihenfolge bleiben
 sichtbar. Die vollständige Importfreigabe nutzt weiter die atomare
-Gesamtprüfung. Lokale Tests grün, Browser-/CI-Gates ausstehend.
+Gesamtprüfung. 334 lokale Tests und alle drei CI-Workflows bestanden;
+Chromium-Warnkarten, Fehlerliste, Import/Export und native stock-ScummVM-
+Regression belegt (PR #124, Merge `a3e1281`, Runs `42933208866` /
+`42933208843` / `42933208842`). Menschliche UI-Abnahme offen.
 Danach: einzelne PNG-Datei in der Upload-Reihenfolge ersetzen.
 
 **Vorabprüfung der nativen PNG-Importfähigkeit (CI-Abnahme bestanden):**
