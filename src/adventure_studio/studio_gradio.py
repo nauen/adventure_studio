@@ -55,6 +55,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                dialogue_speaking_sequence_selection,
                                discard_dialogue_speaking_draft,
                                discard_selected_dialogue_speaking_draft,
+                               save_all_dialogue_speaking_drafts,
                                dialogue_speaking_draft_save_status,
                                dialogue_speaking_timeline, edit_dialogue_speaking_timeline,
                                dialogue_speaking_timeline_preview,
@@ -857,6 +858,11 @@ def make_app():
                     value=False, elem_id="native-drafts-discard-confirm")
                 native_drafts_discard = gr.Button(
                     "Nur diesen Entwurf verwerfen", elem_id="native-drafts-discard")
+                native_drafts_save_confirm = gr.Checkbox(
+                    label="Alle offenen Entwürfe ins native Projekt übernehmen",
+                    value=False, elem_id="native-drafts-save-confirm")
+                native_drafts_save = gr.Button(
+                    "Alle offenen Sprechfolgen speichern", elem_id="native-drafts-save")
                 native_drafts_status = gr.Markdown("", elem_id="native-drafts-status")
             native_dialogue_session_unsaved = gr.Textbox(
                 value="0", interactive=False, show_label=False,
@@ -1594,6 +1600,34 @@ def make_app():
              native_drafts_target, native_drafts_discard_confirm,
              native_drafts_status])
 
+        def save_listed_speaking_drafts(raw, line, direction, sequence, session,
+                                       confirmed, room, selected_sequence, costume, actor):
+            if not confirmed:
+                raise gr.Error("Bitte die Übernahme aller offenen Entwürfe bestätigen")
+            try:
+                updated_raw, saved, updated, count = save_all_dialogue_speaking_drafts(
+                    raw, line, direction, sequence, session)
+            except ValueError as error:
+                raise gr.Error(str(error)) from error
+            return (updated_raw, *native_selectors(
+                        updated_raw, room, selected_sequence, costume, actor),
+                    saved, updated,
+                    f"{count} NPC-Sprechfolge(n) ins native Projekt übernommen und validiert. "
+                    "Für eine dauerhafte Projektdatei bitte Native Projekt-JSON exportieren.",
+                    gr.update(choices=[], value=None), gr.update(value=False),
+                    f"**{count} Sprechfolgen gespeichert.** Keine offenen Entwürfe mehr. "
+                    "Bitte das native Projekt-JSON exportieren.")
+
+        native_drafts_save_event = native_drafts_save.click(
+            save_listed_speaking_drafts,
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_speaking_sequence, native_dialogue_draft_session,
+             native_drafts_save_confirm, native_room, native_sequence,
+             native_costume_select, native_actor],
+            [native_state, *native_outputs, native_dialogue_speaking_sequence,
+             native_dialogue_draft_session, native_report, native_drafts_target,
+             native_drafts_save_confirm, native_drafts_status])
+
         def cancel_native_file_load():
             return None, "Projektwechsel abgebrochen; bisherige Entwürfe bleiben erhalten.", \
                 gr.update(value="", visible=False), \
@@ -1647,6 +1681,9 @@ def make_app():
             native_file_switch_drafts, native_file_switch_target,
             native_file_switch_open, native_file_switch_confirm,
             native_file_switch_cancel]
+        native_drafts_save_event.then(
+            refresh_pending_speaking_drafts,
+            pending_draft_refresh_inputs, pending_draft_refresh_outputs)
         native_sync_button.click(native_sync, [state, native_state],
                                  [native_state, native_linked, *native_outputs, native_report])
         native_music_add.click(native_music_import,
