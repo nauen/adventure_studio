@@ -128,21 +128,21 @@ def run_simultaneous_three_mask_probe(upstream: Path, generated: Path,
                    scene_walk_clicks=(("third-goal", 460, 390),
                                       ("second-goal", 245, 390),
                                       ("third-crossing", 460, 390),
-                                      ("third-return", 460, 390),
+                                      ("third-return", 630, 390),
                                       ("fourth-crossing", 630, 390),
-                                      ("fourth-return", 630, 390)))}
+                                      ("fourth-return", 790, 390)))}
         images = destination / f"{label}-screenshots"
         row.update({
             "second_pixels": black_costume_pixels(
-                images / "scummvm-second-goal.png", "120x95+410+305"),
+                images / "scummvm-second-goal.png", "400x95+320+305"),
             "third_pixels": black_costume_pixels(
-                images / "scummvm-third-goal.png", "130x95+350+305"),
+                images / "scummvm-third-goal.png", "400x95+320+305"),
             "fourth_pixels": black_costume_pixels(
-                images / "scummvm-end.png", "110x85+575+305"),
+                images / "scummvm-end.png", "400x95+320+305"),
             "third_return_pixels": black_costume_pixels(
-                images / "scummvm-third-return.png", "130x95+350+305"),
+                images / "scummvm-third-return.png", "400x95+320+305"),
             "fourth_return_pixels": black_costume_pixels(
-                images / "scummvm-fourth-return.png", "110x85+575+305"),
+                images / "scummvm-fourth-return.png", "400x95+320+305"),
         })
         variants[label] = row
     print("Native three-mask scene pixel observations:", json.dumps({name: {key: value for key, value in row.items() if key.endswith("_pixels")} for name, row in variants.items()}, sort_keys=True), flush=True)
