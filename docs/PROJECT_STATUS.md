@@ -11,10 +11,10 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 ## Ein aktiver Produktpfad
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
-- **Jetzt:** R08.2 mit [PR #202](https://github.com/nauen/adventure_studio/pull/202) nach sechs grünen Pflichtchecks auf `4bfd0b2` als `58022c5` in `main` gemergt. **Genau ein nächstes Paket priorisiert:** R08.3 – Walkbox-Maskennummer im Studio authorieren und mit nativer Verdeckung prüfen; NPC-Komfort bleibt beendet.
-- **Abnahme:** R08.2: bestehendes BOXM-Netz → dritte zunächst isolierte Box → explizite Verbindung, alte Next-Hops unverändert → JSON/Story → natives BOXD/BOXM → beide Spielvarianten in unverändertem ScummVM; vollständige Core-/Chromium-/Dialog-/Native-CI grün. Für R08.3 ist noch kein Implementierungs- oder Runtime-Nachweis erfolgt.
-- **Blocker:** Keiner für gemergtes R08.2. R08.3 erfordert noch die belegte Semantik der Walkbox-Maskennummer, Studio-Integration und eine echte ScummVM-Gegenprobe.
-- **Danach:** Erst nach vollständig abgenommenem R08.3 ein weiteres einzelnes natives Raum-/Z-Masken-/Walkbox-Paket bearbeiten.
+- **Jetzt:** Genau R06.3 – dritte separat authorierte Raum-Z-Maske ZP03 mit BOXD-Index 3 und sichtbarer Actor-Verdeckung in stock ScummVM abnehmen. R08.2 PR #202 (`58022c5`) und Konsolidierung PR #203 (`be255329`) sind gemergt; keine NPC-Komfortarbeit.
+- **Abnahme:** Studio-ZP01/ZP02/ZP03 → Projekt-JSON/Story → natives ScummC ZP01/ZP02/ZP03 und BOXD → drei getrennte Maskenvarianten plus transparenter Kontrollfall in unverändertem ScummVM. Core- und native CI auf dem finalen Head müssen grün sein; R06.3-Implementierung der Gegenprobe ist eingereicht, native Evidenz noch offen.
+- **Blocker:** Stock-ScummVM-Gegenprobe für die dritte Ebene und die finalen Pflichtchecks stehen aus. Die bereits vorhandene Eingabe von Maskennummern ist kein neues Produktfeature.
+- **Danach:** Erst nach vollständiger R06.3-Abnahme die nächste einzelne native Raum-/Walkbox-/Z-Maskenlücke bearbeiten.
 
 ## Zuletzt tatsächlich geliefert
 

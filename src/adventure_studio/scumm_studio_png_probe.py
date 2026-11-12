@@ -21,7 +21,10 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
     build = destination / "build"
     build.mkdir(parents=True, exist_ok=True)
     png_paths = []
-    colors = ((245, 40, 75), (180, 40, 245))
+    # Distinguish authored frames from the upstream red/pink walking hero.
+    # Screenshot evidence showed the former red test color on that hero too,
+    # so it could overwhelm the second pose without measuring our PNG Actor.
+    colors = ((25, 220, 95), (180, 40, 245))
     for name, color in zip(("pose", "wave"), colors):
         image = Image.new("RGBA", (24, 32), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
@@ -40,7 +43,7 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
         raw = set_costume_animation(raw, "StudioPngCostume", "wave", 28,
                                     direction, "Pose0, WavePose, Pose0, WavePose", True)
     raw = add_actor(raw, "StudioPngActor", "StudioPngCostume", "Harbor",
-                    430, 110, "S", "Studio PNG Actor")
+                    240, 110, "S", "Studio PNG Actor")
     document = parse_document(raw)
     document = replace(document, actors=(replace(document.actors[0],
                                                   initial_animation="wave"),))
