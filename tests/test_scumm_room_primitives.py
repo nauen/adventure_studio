@@ -516,6 +516,7 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Fourth Z-plane occlusion absent"):
             verify_four_layer_occlusion(1200, 0, 0, 0, 1100)
 
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
     def test_fifth_png_zplane_json_boxd_story_and_native_source(self):
         from PIL import Image
         from adventure_studio.scumm_multi_zplane_probe import verify_five_layer_occlusion
