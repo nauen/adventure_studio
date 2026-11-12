@@ -31,6 +31,7 @@ on:
       - 'tests/gradio_browser_dialogue.py'
       - 'tests/gradio_browser_boxm.py'
       - 'tests/gradio_browser_scal.py'
+      - 'tests/gradio_browser_zplanes.py'
   pull_request:
     paths:
       - '.github/workflows/studio.yml'
@@ -60,6 +61,7 @@ on:
       - 'tests/gradio_browser_dialogue.py'
       - 'tests/gradio_browser_boxm.py'
       - 'tests/gradio_browser_scal.py'
+      - 'tests/gradio_browser_zplanes.py'
 
 jobs:
   smoke:
@@ -124,6 +126,20 @@ jobs:
           path: |
             /tmp/studio-boxm-evidence/*.png
             /tmp/studio-boxm-evidence/*.json
+          if-no-files-found: ignore
+      - name: Click through two authored Z-planes in real Chrome
+        env:
+          ADVENTURE_STUDIO_ZPLANES_EVIDENCE: /tmp/studio-zplanes-evidence
+        run: |
+          python tests/gradio_browser_zplanes.py
+      - name: Retain authored Z-plane browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-gradio-two-zplanes-browser
+          path: |
+            /tmp/studio-zplanes-evidence/*.png
+            /tmp/studio-zplanes-evidence/*.json
           if-no-files-found: ignore
       - name: Click through authored SCAL perspective in real Chrome
         env:
