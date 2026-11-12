@@ -33,6 +33,7 @@ class RoomHotspot:
     talk_actor_lines: tuple[str, ...] = ()
     talk_face_directions: tuple[str | None, ...] = ()
     object_zplane_pixels: bytes | None = None
+    open_object_zplane_pixels: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -270,6 +271,11 @@ def _validate(room: RoomAsset) -> None:
                 raise ValueError("Object Z-mask requires a sprite and exact sprite dimensions")
             if any(pixel not in (0, 1) for pixel in hotspot.object_zplane_pixels):
                 raise ValueError("Object Z-mask pixels must be binary")
+        if hotspot.open_object_zplane_pixels is not None:
+            if hotspot.open_sprite_pixels is None or len(hotspot.open_object_zplane_pixels) != hotspot.width * hotspot.height:
+                raise ValueError("Open-state object Z-mask requires an open sprite with exact dimensions")
+            if any(pixel not in (0, 1) for pixel in hotspot.open_object_zplane_pixels):
+                raise ValueError("Open-state object Z-mask pixels must be binary")
         if hotspot.open_sprite_pixels is not None:
             if hotspot.sprite_pixels is None or len(hotspot.open_sprite_pixels) != hotspot.width * hotspot.height:
                 raise ValueError("Open sprite dimensions do not match closed sprite")
@@ -622,7 +628,10 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                 first = (f'{{ 0, 0, "{hotspot.id}.bmp", {{ "{hotspot.id}Z01.bmp" }} }}'
                          if hotspot.object_zplane_pixels is not None
                          else f'{{ 0, 0, "{hotspot.id}.bmp" }}')
-                parts.append(f'        states = {{ {first}, {{ 0, 0, "{hotspot.id}Open.bmp" }} }};\n')
+                second = (f'{{ 0, 0, "{hotspot.id}Open.bmp", {{ "{hotspot.id}OpenZ01.bmp" }} }}'
+                          if hotspot.open_object_zplane_pixels is not None
+                          else f'{{ 0, 0, "{hotspot.id}Open.bmp" }}')
+                parts.append(f'        states = {{ {first}, {second} }};\n')
             parts.append("        state = 0;\n" if hotspot.id in hidden else "        state = 1;\n")
         if hotspot.pickup:
             parts.append("        class = { Pickable };\n")
@@ -807,6 +816,10 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
             (directory / f"{hotspot.id}.bmp").write_bytes(
                 _indexed_bmp(hotspot.width, hotspot.height, hotspot.sprite_pixels, room.palette)
             )
+            if hotspot.open_object_zplane_pixels is not None:
+                (directory / f"{hotspot.id}OpenZ01.bmp").write_bytes(
+                    _indexed_bmp(hotspot.width, hotspot.height, hotspot.open_object_zplane_pixels,
+                                 ((0, 0, 0), (255, 255, 255))))
             if hotspot.open_sprite_pixels is not None:
                 (directory / f"{hotspot.id}Open.bmp").write_bytes(
                     _indexed_bmp(hotspot.width, hotspot.height, hotspot.open_sprite_pixels, room.palette)

@@ -50,6 +50,44 @@ def main() -> None:
                 page.locator("#native-object-zplane-add").click()
                 expect(report).to_have_value(re.compile(r"Objekt-Z-Maske für Door importiert"),
                                              timeout=30000)
+                # R07.2: prove the first mask survives project export and
+                # reload, then author the second mask in a fresh editor session.
+                page.locator("#native-project-export-button").click()
+                first_link = page.locator("#native-project-export-file a[download]")
+                expect(first_link.first).to_be_visible(timeout=30000)
+                with page.expect_download() as first_download:
+                    first_link.first.click()
+                first_saved = evidence / "first-state-object-zmask.json"
+                first_download.value.save_as(str(first_saved))
+                first_project = parse_document(first_saved.read_text())
+                first_object = next(h for room in first_project.rooms if room.name == "Harbor"
+                                    for h in room.hotspots if h.id == "Door")
+                assert first_object.object_zplane_pixels == bytes([1]) * 256
+
+                page.goto("http://127.0.0.1:7860/", wait_until="domcontentloaded",
+                          timeout=30000)
+                page.get_by_role("tab", name="Native Interaktionsabläufe").click()
+                page.locator("#native-project-file input[type=file]").set_input_files(str(first_saved))
+                report = page.locator("#native-project-report textarea, #native-project-report input")
+                expect(report).to_have_value("Natives Projekt geladen und validiert", timeout=30000)
+                selection = page.locator("#native-hotspot input[role=combobox]")
+                selection.click()
+                selection.fill("Door")
+                page.get_by_role("option", name="Door", exact=True).click(timeout=12000)
+                open_mask = root / "door-open-mask.png"
+                Image.new("L", (16, 16), 0).save(open_mask)
+                state_selection = page.locator("#native-object-zplane-state input[role=combobox]")
+                state_selection.click()
+                page.get_by_role("option", name="Offenes Bild (2)", exact=True).click(timeout=12000)
+                expect(state_selection).to_have_value("Offenes Bild (2)", timeout=12000)
+                with page.expect_file_chooser() as second_chooser:
+                    page.locator("#native-object-zplane-file").click()
+                second_chooser.value.set_files(str(open_mask))
+                page.locator("#native-object-zplane-add").click()
+                expect(report).to_have_value(
+                    re.compile(r"Objekt-Z-Maske für Door, Bildzustand 2 importiert"),
+                    timeout=30000,
+                )
                 page.locator("#native-project-export-button").click()
                 link = page.locator("#native-project-export-file a[download]")
                 expect(link.first).to_be_visible(timeout=30000)
@@ -61,6 +99,7 @@ def main() -> None:
                 obj = next(h for room in parsed.rooms if room.name == "Harbor"
                            for h in room.hotspots if h.id == "Door")
                 assert obj.object_zplane_pixels == bytes([1]) * 256
+                assert obj.open_object_zplane_pixels == bytes(256)
                 page.screenshot(path=str(evidence / "authored-object-zmask.png"),
                                 full_page=True)
                 (evidence / "result.json").write_text(json.dumps(

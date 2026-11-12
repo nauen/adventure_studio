@@ -48,6 +48,42 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Objektbild"):
                 import_object_zplane(raw, "Harbor", "missing", str(png))
 
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
+    def test_second_object_state_zmask_roundtrip_and_native_im02(self):
+        from PIL import Image
+        from adventure_studio.studio_sequences import import_object_zplane
+
+        room = scrolling_fixture()
+        raw = canonical_json(GameDocument("two_state_mask", (room, destination_fixture())))
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            png = directory / "door-mask.png"
+            Image.new("L", (16, 16), color=255).save(png)
+            first = import_object_zplane(raw, "Harbor", "Door", str(png), 1)
+            Image.new("L", (16, 16), color=0).save(png)
+            second = import_object_zplane(first, "Harbor", "Door", str(png), 2)
+            saved = next(h for h in parse_document(second).rooms[0].hotspots if h.id == "Door")
+            self.assertEqual(saved.object_zplane_pixels, bytes([1]) * 256)
+            self.assertEqual(saved.open_object_zplane_pixels, bytes(256))
+            write_room_sources(parse_document(second).rooms[0], directory)
+            source = (directory / "Harbor.scc").read_text()
+            self.assertIn('"Door.bmp", { "DoorZ01.bmp" }', source)
+            self.assertIn('"DoorOpen.bmp", { "DoorOpenZ01.bmp" }', source)
+            self.assertTrue((directory / "DoorZ01.bmp").is_file())
+            self.assertTrue((directory / "DoorOpenZ01.bmp").is_file())
+            story = (Path(__file__).parent / "fixtures" / "mini_story_chain.json").read_text(encoding="utf-8")
+            composed = parse_document(compose_story_project(story, second))
+            persisted = next(h for r in composed.rooms if r.name == "Harbor"
+                             for h in r.hotspots if h.id == "Door")
+            self.assertEqual(persisted.open_object_zplane_pixels, saved.open_object_zplane_pixels)
+            with self.assertRaisesRegex(ValueError, "Bildzustand 2"):
+                import_object_zplane(first, "Harbor", "Key", str(png), 2)
+            with self.assertRaisesRegex(ValueError, "Bildzustand 1 oder 2"):
+                import_object_zplane(first, "Harbor", "Door", str(png), 3)
+            Image.new("L", (8, 8), color=255).save(png)
+            with self.assertRaisesRegex(ValueError, "exakt"):
+                import_object_zplane(first, "Harbor", "Door", str(png), 2)
+
     def test_free_walkbox_polygon_authors_json_and_boxd(self):
         room = scrolling_fixture()
         raw = canonical_json(GameDocument("walkbox", (room, destination_fixture())))

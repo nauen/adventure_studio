@@ -11,10 +11,10 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 ## Ein aktiver Produktpfad
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
-- **Jetzt:** R06.3 – dritte separat authorierte Raum-Z-Maske ZP03 mit BOXD-Index 3 und Actor-Verdeckung in stock ScummVM – ist mit [PR #204](https://github.com/nauen/adventure_studio/pull/204), Squash `c78d817`, gemergt. Nur den belegten Stand konsolidieren und eine nächste einzelne native Raumgrafik-/Z-Masken-/Walkbox-Lücke priorisieren; keine NPC-Komfortarbeit.
-- **Abnahme:** Studio-ZP01/ZP02/ZP03 → Projekt-JSON/Story → ScummC-ZP01/ZP02/ZP03 mit BOXD → drei getrennte Maskenvarianten und transparenter Kontrollfall in unverändertem ScummVM. Auf finalem PR-Head `90ec4b0` vier Pflichtchecks erfolgreich (2× Core, 2× native); Runs [43251867709](https://github.com/nauen/adventure_studio/actions/runs/43251867709), [43251882252](https://github.com/nauen/adventure_studio/actions/runs/43251882252). PNG-Animation in beiden nativen Läufen grün.
-- **Blocker:** Kein offenes R06.3-Gate. Vier oder mehr Masken, allgemeine Walkboxnetze und zusätzliche Objektbild-Z-Masken sind **nicht** durch diese Teilabnahme belegt. Vor einem nächsten Feature dessen isolierte native Abnahme definieren.
-- **Danach:** Genau ein offenes nativen Paket auswählen und Modell → Export → stock ScummVM bis grüner Pflicht-CI bearbeiten. Kandidat: R07 zweiter maskierter Objektbildzustand; alternativ R06 vierte Ebene oder R08/R09 erweitertes Netz. Nicht mehrere parallel starten.
+- **Jetzt:** Genau R07.2 – zweite unabhängig authorierbare Objektbild-Z-Maske für das bereits vorhandene offene Bild (nativer Bildzustand 2). PR #204 R06.3 (`c78d817`) und PR #205 Konsolidierung (`c4b135f`) sind gemergt. Keine NPC-Komfortarbeit.
+- **Abnahme:** Studio-PNG-Grundbildmaske und separate PNG-Open-State-Maske → RoomHotspot/Projekt-JSON/Story → ScummC-Objektbildzustände IM01/IM02 mit eigener ZP01 → unverändertes ScummVM muss getrennte Actor-Verdeckung im aktiven zweiten Bildzustand zeigen. Native und Core-/UI-Pflicht-CI auf dem finalen Head vollständig grün.
+- **Blocker:** R07.2-Implementierung ist im Feature-Branch; native ScummVM-Evidenz und finale CI auf dem Branch stehen noch aus. Erste Objekt-Z-Maske ist über PR #200 bereits belegt.
+- **Danach:** Nach vollständiger R07.2-Abnahme squash-mergen, Status konsolidieren und erst dann ein einziges weiteres Raum-/Walkbox-/Z-Maskenpaket auswählen.
 
 ## Zuletzt tatsächlich geliefert
 

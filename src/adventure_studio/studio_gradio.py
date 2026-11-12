@@ -492,13 +492,16 @@ def make_app():
         except (ValueError, OSError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
-    def native_object_zplane_import(raw, room, hotspot, file_path):
+    def native_object_zplane_import(raw, room, hotspot, image_state, file_path):
         if raw is None or not file_path:
             raise gr.Error("Bitte natives Projekt, Objekt und PNG-Maske wählen")
         try:
-            updated = import_object_zplane(raw, room, hotspot, file_path)
+            updated = import_object_zplane(raw, room, hotspot, file_path, image_state)
             return (updated, *native_selectors(updated, selected_room=room),
-                    f"Objekt-Z-Maske für {hotspot} importiert. IM01-Export nach nativem Projekt-JSON-Download.")
+                    (f"Objekt-Z-Maske für {hotspot} importiert. IM01-Export nach nativem Projekt-JSON-Download."
+                     if image_state == 1 else
+                     f"Objekt-Z-Maske für {hotspot}, Bildzustand 2 importiert. "
+                     "Native IM02-Maske wird beim Projekt-Export erzeugt."))
         except (ValueError, OSError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
@@ -847,8 +850,9 @@ def make_app():
                 native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-zplane-file")
                 native_zplane_index = gr.Number(label="Z-Ebene (1–9)", value=1, precision=0, elem_id="native-zplane-index")
                 native_zplane_add = gr.Button("Z-Maske ins native Projekt übernehmen", elem_id="native-zplane-add")
-            gr.Markdown("**R07 Objektbild-Z-Maske (IM01):** Für das ausgewählte Objekt mit Sprite eine PNG-Maske in exakter Objektbildgröße importieren. Weiß setzt Objektmaskenbits, Schwarz/Transparenz lässt Pixel frei. Die Änderung wird mit dem nativen Projekt-JSON dauerhaft gesichert.")
+            gr.Markdown("**R07 Objektbild-Z-Maske (IM01):** Für das ausgewählte Objekt eine PNG-Maske in exakter Objektbildgröße importieren. Zustand 1 nutzt das Grundbild, Zustand 2 das vorhandene offene Bild; beide Masken bleiben unabhängig. Weiß verdeckt Actors, Schwarz/Transparenz bleibt frei. Projekt-JSON exportieren, um die Änderung dauerhaft zu sichern.")
             with gr.Row():
+                native_object_zplane_state = gr.Dropdown(label="Objektbildzustand", choices=[("Grundbild (1)", 1), ("Offenes Bild (2)", 2)], value=1, elem_id="native-object-zplane-state")
                 native_object_zplane_file = gr.File(label="Objekt-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-object-zplane-file")
                 native_object_zplane_add = gr.Button("Objekt-Z-Maske übernehmen", elem_id="native-object-zplane-add")
             gr.Markdown("**Native Laufbereiche (BOXD):** Vier Eckpunkte im Uhrzeigersinn als UL;UR;LR;LL eingeben, z. B. `0,70; 120,70; 120,150; 0,150`. Vorhandene Walkboxen bleiben inklusive ihrer Wege/Skalierung erhalten; neue Boxen benötigen später eine gesonderte BOXM-Verbindung, wenn bereits Routen existieren.")
@@ -1820,7 +1824,7 @@ def make_app():
                                 [native_state, native_room, native_zplane_index, native_zplane_file],
                                 [native_state, *native_outputs, native_report])
         native_object_zplane_add.click(native_object_zplane_import,
-                                       [native_state, native_room, native_hotspot, native_object_zplane_file],
+                                       [native_state, native_room, native_hotspot, native_object_zplane_state, native_object_zplane_file],
                                        [native_state, *native_outputs, native_report])
         native_walkbox_add.click(native_walkbox_author,
                                  [native_state, native_room, native_walkbox_index, native_walkbox_corners],

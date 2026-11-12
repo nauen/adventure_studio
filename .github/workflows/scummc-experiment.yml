@@ -214,7 +214,7 @@ jobs:
             /tmp/native-multi-zplanes/*-screenshots/scummvm-end.png
             /tmp/native-multi-zplanes/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
-      - name: Verify Studio-authored object IM01 Z-mask in stock ScummVM
+      - name: Verify Studio-authored object IM01 and second-state IM02 Z-masks in stock ScummVM
         env:
           PYTHONPATH: src
         run: |
