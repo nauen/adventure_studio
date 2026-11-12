@@ -178,6 +178,57 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             author_room_box_connections(updated, "Harbor", "2-2")
         self.assertEqual(parse_document(updated).rooms[0].walkboxes, room.walkboxes)
 
+    def test_branching_four_box_alternative_paths_survive_native_export(self):
+        from adventure_studio.scumm_boxm_routing_probe import verify_branching_boxm
+
+        raw = canonical_json(GameDocument("branching_routes",
+                                          (scrolling_fixture(), destination_fixture())))
+        for index, corners in (
+                (1, "0,70; 110,70; 110,150; 0,150"),
+                (2, "110,70; 240,70; 240,110; 110,110"),
+                (3, "110,110; 240,110; 240,150; 110,150"),
+                (4, "240,70; 639,70; 639,150; 240,150")):
+            raw = author_room_walkbox(raw, "Harbor", index, corners)
+        upper = author_room_box_connections(raw, "Harbor", "1-2; 2-4")
+        lower = author_room_box_connections(raw, "Harbor", "1-3; 3-4")
+        upper_room = parse_document(upper).rooms[0]
+        lower_room = parse_document(lower).rooms[0]
+        self.assertEqual(upper_room.box_routes[1][4], 2)
+        self.assertEqual(lower_room.box_routes[1][4], 3)
+        self.assertEqual(upper_room.box_routes[4][1], 2)
+        self.assertEqual(lower_room.box_routes[4][1], 3)
+        self.assertEqual(len(upper_room.walkboxes), 4)
+        self.assertEqual(parse_document(canonical_json(parse_document(upper))).rooms[0],
+                         upper_room)
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        saved = next(room for room in
+                     parse_document(compose_story_project(story, lower)).rooms
+                     if room.name == "Harbor")
+        self.assertEqual(saved.box_routes, lower_room.box_routes)
+        with tempfile.TemporaryDirectory() as directory:
+            write_room_sources(upper_room, Path(directory))
+            binary_upper = (Path(directory) / "Harbor.box").read_bytes()
+            write_room_sources(lower_room, Path(directory))
+            binary_lower = (Path(directory) / "Harbor.box").read_bytes()
+            self.assertNotEqual(binary_upper, binary_lower)
+            self.assertIn(b"BOXM", binary_upper)
+            self.assertIn(b"BOXM", binary_lower)
+        with self.assertRaisesRegex(ValueError, "gemeinsame Kante"):
+            author_room_box_connections(raw, "Harbor", "1-4")
+        def scene(reached, matrix):
+            return {"frame_report": {"scroll_color_signature_passed": reached},
+                    "route_matrix": [list(row) for row in matrix]}
+        blocked = parse_document(author_room_box_connections(raw, "Harbor", "")).rooms[0]
+        result = verify_branching_boxm(
+            scene(True, upper_room.box_routes), scene(True, lower_room.box_routes),
+            scene(False, blocked.box_routes), 100)
+        self.assertTrue(result["native_branching_boxm_passed"])
+        with self.assertRaisesRegex(RuntimeError, "Both alternative"):
+            verify_branching_boxm(scene(True, upper_room.box_routes),
+                                  scene(False, lower_room.box_routes),
+                                  scene(False, blocked.box_routes), 100)
+
     def test_studio_authored_scal_json_story_and_native_box_encoding(self):
         base = native_room(occlusion=False, far_scale=255)
         raw = canonical_json(GameDocument("studio_scal", (base, destination_fixture())))
