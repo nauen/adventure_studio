@@ -571,9 +571,9 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         raw = canonical_json(GameDocument("two_masks_one_room",
                                           (room, destination_fixture())))
         for index, corners in (
-                (1, "0,70; 360,70; 360,150; 0,150"),
-                (2, "360,70; 480,70; 480,150; 360,150"),
-                (3, "480,70; 639,70; 639,150; 480,150")):
+                (1, "0,70; 240,70; 240,150; 0,150"),
+                (2, "240,70; 400,70; 400,150; 240,150"),
+                (3, "400,70; 639,70; 639,150; 400,150")):
             raw = author_room_walkbox(raw, "Harbor", index, corners)
         raw = author_room_box_connections(raw, "Harbor", "1-2; 2-3")
         with tempfile.TemporaryDirectory() as root:
