@@ -235,6 +235,42 @@ def import_room_zplane(raw: str, room_name: str, index: int, png_path: str) -> s
     return _checked(replace(document, rooms=rooms))
 
 
+
+def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: str) -> str:
+    """Assign a binary PNG Z-mask to the first native image state of an object."""
+    from PIL import Image
+
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    hotspot = next((item for item in room.hotspots if item.id == hotspot_id), None)
+    if hotspot is None or hotspot.sprite_pixels is None:
+        raise ValueError("Objekt-Z-Maske benötigt ein vorhandenes Objektbild")
+    path = Path(png_path)
+    if path.suffix.lower() != ".png":
+        raise ValueError("Bitte eine PNG-Objekt-Z-Maske wählen")
+    try:
+        with Image.open(path) as image:
+            if image.format != "PNG":
+                raise ValueError("Objekt-Z-Maske muss eine echte PNG-Datei sein")
+            expected = (hotspot.width, hotspot.height)
+            if image.size != expected:
+                raise ValueError(f"Objekt-Z-Maske muss exakt {expected[0]} × {expected[1]} Pixel groß sein")
+            pixels = bytes(
+                1 if alpha >= 128 and (red * 299 + green * 587 + blue * 114) >= 128000 else 0
+                for red, green, blue, alpha in image.convert("RGBA").getdata()
+            )
+    except (OSError, Image.DecompressionBombError) as error:
+        raise ValueError(f"PNG-Objekt-Z-Maske nicht lesbar: {error}") from error
+    updated = replace(hotspot, object_zplane_pixels=pixels)
+    rooms = tuple(
+        replace(item, hotspots=tuple(updated if obj.id == hotspot_id else obj for obj in item.hotspots))
+        if item.name == room_name else item for item in document.rooms
+    )
+    return _checked(replace(document, rooms=rooms))
+
+
 def import_room_music(raw: str, room_name: str, music_id: str, midi_path: str) -> str:
     """Attach a real MIDI asset to one room; the native exporter wraps it as GMD."""
     document = parse_document(raw)
