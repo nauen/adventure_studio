@@ -11,15 +11,16 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 ## Ein aktiver Produktpfad
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
-- **Jetzt:** Genau R08.2 – ein bestehendes BOXM-Netz mit einer neuen Walkbox erweitern, ohne bisherige Next-Hop-Einträge zu verändern. R07.1 mit [PR #200](https://github.com/nauen/adventure_studio/pull/200) gemergt (`ed35413`), keine NPC-Komfortarbeit.
-- **Abnahme:** Produktiver Studio-Walkbox-Editor → validiertes Projekt-JSON/Story → natives BOXD/BOXM; bestehende Route bleibt erhalten, neue Box startet isoliert und wird durch eine explizite Kante zugänglich. Echte Gegenprobe angebunden/getrennt in unverändertem ScummVM sowie finale Core-/Chromium-/native CI.
-- **Blocker:** R08.2-Code und Drei-Boxen-Gegenprobe im neuen Feature-Branch; vollständiger nativer Nachweis und PR-Gates noch offen. R07.1 wurde mit sechs grünen Checks auf geprüftem Head `2cc8a28` gemergt; Objektmasken-Vergleich 1476→0 Actor-Pixel, nur erster Bildzustand.
-- **Danach:** Erst nach vollständigem R08.2-Nachweis die nächste native Walkbox-/Perspektivlücke aus der Matrix nehmen; keine parallelen NPC-Komfortpakete.
+- **Jetzt:** R08.2 mit [PR #202](https://github.com/nauen/adventure_studio/pull/202) nach sechs grünen Pflichtchecks auf `4bfd0b2` als `58022c5` in `main` gemergt. **Genau ein nächstes Paket priorisiert:** R08.3 – Walkbox-Maskennummer im Studio authorieren und mit nativer Verdeckung prüfen; NPC-Komfort bleibt beendet.
+- **Abnahme:** R08.2: bestehendes BOXM-Netz → dritte zunächst isolierte Box → explizite Verbindung, alte Next-Hops unverändert → JSON/Story → natives BOXD/BOXM → beide Spielvarianten in unverändertem ScummVM; vollständige Core-/Chromium-/Dialog-/Native-CI grün. Für R08.3 ist noch kein Implementierungs- oder Runtime-Nachweis erfolgt.
+- **Blocker:** Keiner für gemergtes R08.2. R08.3 erfordert noch die belegte Semantik der Walkbox-Maskennummer, Studio-Integration und eine echte ScummVM-Gegenprobe.
+- **Danach:** Erst nach vollständig abgenommenem R08.3 ein weiteres einzelnes natives Raum-/Z-Masken-/Walkbox-Paket bearbeiten.
 
 ## Zuletzt tatsächlich geliefert
 
 | PR | Nutzerfunktion | Evidenz/Grenze |
 | --- | --- | --- |
+| [#202](https://github.com/nauen/adventure_studio/pull/202) | Vorhandenes Walkbox-Netz um eine zunächst isolierte Box erweitern; neue Verbindung explizit authorieren | Sechs finale Checks auf `4bfd0b2` grün (Core 2×, Chromium 2×, Dialog, native); nativer Run `43242184897`, Chromium `43242185359` und `43242172287`; Squash-Merge `58022c5`; R08/R09 bleiben Teilfähigkeiten |
 | [#198](https://github.com/nauen/adventure_studio/pull/198) | Zwei PNG-Z-Masken im Studio mit Walkbox-ZPxx-Auswahl authorieren und in stock ScummVM getrennt verdecken | Fünf finale Checks am Head `2cba5d7` grün (Core 2×, Chromium, Dialog, native); [native Run 43105298694](https://github.com/nauen/adventure_studio/actions/runs/43105298694), [Screenshot-Artefakt 13893353897](https://github.com/nauen/adventure_studio/actions/runs/43105298694/artifacts/13893353897); Merge `0809336c`; begrenzte R06-Teilfähigkeit |
 | [#197](https://github.com/nauen/adventure_studio/pull/197) | SCAL-Kurven und Walkbox-Slots über Studio authorieren | Sechs finale CI-Checks inklusive stock ScummVM und Chromium grün; Merge `b66287a`, native Run `43093101278` |
 | [#196](https://github.com/nauen/adventure_studio/pull/196) | Benachbarte Walkboxen verbinden, native BOXM-Next-Hop-Wege authorieren | Finale Core-, Chromium-, Dialog- und stock-ScummVM-CI grün; Merge `d917ead4`, nativer Run `43087563847` |
