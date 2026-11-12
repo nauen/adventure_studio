@@ -125,9 +125,9 @@ def run_simultaneous_three_mask_probe(upstream: Path, generated: Path,
                "mask_enabled": list(enabled),
                **render_native_room(
                    room, upstream, generated, destination, label,
-                   scene_walk_clicks=(("third-goal", 400, 390),
+                   scene_walk_clicks=(("third-goal", 460, 390),
                                       ("second-goal", 245, 390),
-                                      ("third-return", 400, 390),
+                                      ("third-return", 460, 390),
                                       ("fourth-return", 630, 390)))}
         images = destination / f"{label}-screenshots"
         row.update({
