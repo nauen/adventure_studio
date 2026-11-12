@@ -9,7 +9,8 @@ from pathlib import Path
 
 from adventure_studio.scumm_assets import (ScaleCurve, ZPlane, _native_box_file,
                                           destination_fixture, scrolling_fixture,
-                                          scummc_room_source, write_room_sources)
+                                          scummc_room_source, write_game_sources,
+                                          write_room_sources)
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room, perspective_room
 from adventure_studio.studio_sequences import author_room_walkbox, author_room_box_connections, author_room_scale_curve, compose_story_project
@@ -515,6 +516,51 @@ class RoomNativePrimitiveTests(unittest.TestCase):
                         ["four_layers_visually_verified"])
         with self.assertRaisesRegex(RuntimeError, "Fourth Z-plane occlusion absent"):
             verify_four_layer_occlusion(1200, 0, 0, 0, 1100)
+
+    def test_stock_v6_export_rejects_fifth_zplane_without_losing_studio_data(self):
+        room = native_room(occlusion=False)
+        width, height = room.geometry.room_width, room.geometry.room_height
+        planes = tuple(ZPlane(index, bytes([index % 2]) * (width * height))
+                       for index in range(1, 6))
+        five = replace(room, zplanes=planes,
+                       walkboxes=(room.walkboxes[0],
+                                  replace(room.walkboxes[1], mask=5)))
+        saved = canonical_json(GameDocument("authored_five_zplanes",
+                                            (five, destination_fixture())))
+        restored = parse_document(saved).rooms[0]
+        self.assertEqual(restored.zplanes, planes)
+        self.assertEqual(restored.walkboxes[1].mask, 5)
+        self.assertEqual(parse_document(canonical_json(parse_document(saved))).rooms[0],
+                         restored)
+        with self.assertRaisesRegex(ValueError, "Stock ScummVM SCUMM v6.*ZP05"):
+            scummc_room_source(restored)
+        with self.assertRaisesRegex(ValueError, "ZP05"):
+            _native_box_file(restored)
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            with self.assertRaisesRegex(ValueError, "ZP05"):
+                write_room_sources(restored, directory)
+            self.assertEqual(list(directory.iterdir()), [])
+            with self.assertRaisesRegex(ValueError, "ZP05"):
+                write_game_sources((destination_fixture(), restored), directory)
+            self.assertEqual(list(directory.iterdir()), [])
+
+        four = replace(restored, zplanes=planes[:4],
+                       walkboxes=(room.walkboxes[0],
+                                  replace(room.walkboxes[1], mask=4)))
+        self.assertIn('"HarborZ04.bmp"', scummc_room_source(four))
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            write_room_sources(four, directory)
+            self.assertTrue((directory / "HarborZ04.bmp").is_file())
+            self.assertEqual((directory / "Harbor.box").read_bytes()[30 + 16], 4)
+        unsupported_box = replace(four,
+                                  walkboxes=(four.walkboxes[0],
+                                             replace(four.walkboxes[1], mask=5)))
+        with self.assertRaisesRegex(ValueError, "walkbox 2.*ZP05"):
+            scummc_room_source(unsupported_box)
+        with self.assertRaisesRegex(ValueError, "walkbox 2.*ZP05"):
+            _native_box_file(unsupported_box)
 
     def test_project_json_roundtrip_preserves_native_assets(self):
         document = GameDocument("native", (native_room(), destination_fixture()))

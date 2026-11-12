@@ -424,6 +424,29 @@ def _indexed_bmp(width: int, height: int, pixels: bytes, palette: tuple[tuple[in
     return header + info + palette_data + pixel_data
 
 
+def _validate_stock_v6_zplanes(room: RoomAsset) -> None:
+    """Refuse room masks that stock ScummVM's SCUMM-v6 Gdi cannot decode.
+
+    The authoring model retains up to nine ordered Z-planes for lossless
+    editing. The stock-v6 export is narrower: Gdi::getZPlanes() uses fixed
+    ZP00..ZP04 tags, so a fifth room plane silently fails to occlude actors.
+    Do not mistake ScummC acceptance of ZP05 for runtime compatibility.
+    """
+    if len(room.zplanes) > 4:
+        raise ValueError(
+            f"Stock ScummVM SCUMM v6 export: room {room.name} has "
+            f"{len(room.zplanes)} Z-planes; only ZP01-ZP04 are supported "
+            "(ZP05 and higher do not render actor occlusion). "
+            "The Studio project remains editable; reduce room Z-planes "
+            "before exporting.")
+    for index, box in enumerate(room.walkboxes, start=1):
+        if box.mask > 4:
+            raise ValueError(
+                f"Stock ScummVM SCUMM v6 export: room {room.name}, "
+                f"walkbox {index} selects unsupported ZP{box.mask:02}; "
+                "only mask indices 0-ZP04 are supported.")
+
+
 def indexed_bmp(room: RoomAsset) -> bytes:
     """Emit an uncompressed bottom-up Windows BMP with 8-bit indexed pixels."""
     _validate(room)
@@ -434,6 +457,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                        graphical_language_buttons: bool = False,
                        dialogue_voice_cues=(), dialogue_animation_cues=()) -> str:
     _validate(room)
+    _validate_stock_v6_zplanes(room)
     if graphical_language_buttons and catalog is None:
         raise ValueError("Graphical language buttons require a language catalog")
     if graphical_language_buttons:
@@ -853,6 +877,7 @@ def _native_box_file(room: RoomAsset) -> bytes:
     (first destination, last destination, next-hop) triples, 0xff terminated.
     """
     _validate(room)
+    _validate_stock_v6_zplanes(room)
     boxes = bytearray()
     for box in room.walkboxes:
         coordinates = [number for point in box.corners for number in point]
@@ -901,6 +926,7 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
         raise ValueError("Duplicate room name")
     for room in rooms:
         _validate(room)
+        _validate_stock_v6_zplanes(room)
         for rule in room.use_rules:
             if rule.destination_room is not None and rule.destination_room not in names:
                 raise ValueError(f"Unknown destination room: {rule.destination_room}")

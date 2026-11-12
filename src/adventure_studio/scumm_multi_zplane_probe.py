@@ -1,4 +1,4 @@
-"""R06.2–R06.4: independently author and verify four native room Z-planes."""
+"""R06: prove four stock-v6 masks and refuse an unsupported fifth export."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from .scumm_assets import destination_fixture
+from .scumm_assets import destination_fixture, write_room_sources
 from .scumm_project import GameDocument, canonical_json, parse_document
 from .scumm_room_fixture import native_room
 from .scumm_room_visual_probe import render_native_room
@@ -94,6 +94,33 @@ def run_multi_zplane_probe(upstream: Path, generated: Path, destination: Path) -
         results["variants"]["second"]["dark_costume_pixels"],
         results["variants"]["third"]["dark_costume_pixels"],
         results["variants"]["fourth"]["dark_costume_pixels"])
+    # R06 stock-v6 compatibility contract: a fifth Studio PNG remains
+    # editable, but the native exporter must fail before creating assets.
+    # The four preceding variants are still tested in unmodified ScummVM.
+    fifth_png = destination / "layer-5-mask.png"
+    Image.frombytes("L", (width, height), opaque).save(fifth_png)
+    fifth = import_room_zplane(project, "Harbor", 5, str(fifth_png))
+    fifth = author_room_walkbox_zplane(fifth, "Harbor", 2, 5)
+    (destination / "fifth-refused-project.json").write_text(fifth, encoding="utf-8")
+    fifth_room = parse_document(fifth).rooms[0]
+    if len(fifth_room.zplanes) != 5 or fifth_room.walkboxes[1].mask != 5:
+        raise RuntimeError("Fifth room mask was not preserved in Studio authoring")
+    refused_dir = destination / "fifth-refused-native-assets"
+    try:
+        write_room_sources(fifth_room, refused_dir)
+    except ValueError as error:
+        if "ZP05" not in str(error):
+            raise
+        if refused_dir.exists():
+            raise RuntimeError("Unsupported fifth Z-plane wrote partial native assets")
+        results["stock_v6_export_guard"] = {
+            "fifth_studio_png_preserved": True,
+            "fifth_native_export_refused": True,
+            "native_assets_written": False,
+            "rejection": str(error),
+        }
+    else:
+        raise RuntimeError("Stock-v6 exporter accepted unsupported fifth Z-plane")
     (destination / "multi-zplane-report.json").write_text(
         json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return results
