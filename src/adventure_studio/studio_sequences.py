@@ -2451,7 +2451,22 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                 room.geometry.room_width != previous.geometry.room_width or
                 room.geometry.room_height != previous.geometry.room_height):
             raise ValueError(f"Raum-Z-Maske/Walkbox für {room.name} passt nicht mehr zur Story-Raumgröße")
+        previous_objects = ({item.id: item for item in previous.hotspots}
+                            if previous is not None else {})
+        story_ids = {item.id for item in room.hotspots}
+        for old in previous_objects.values():
+            if old.object_zmask_pixels is not None and old.id not in story_ids:
+                raise ValueError(f"Objekt-Z-Maske für {old.id} kann nicht in Story übernommen werden")
+        composed_objects = []
+        for item in room.hotspots:
+            old = previous_objects.get(item.id)
+            if old is not None and old.object_zmask_pixels is not None:
+                if (item.width, item.height) != (old.width, old.height) or item.sprite_pixels is None:
+                    raise ValueError(f"Objekt-Z-Maske für {item.id} passt nicht zum Story-Objektbild")
+                item = replace(item, object_zmask_pixels=old.object_zmask_pixels)
+            composed_objects.append(item)
         rooms.append(replace(room, music_id=music_by_room.get(room.name), zplanes=zplanes,
+                             hotspots=tuple(composed_objects),
                              walkboxes=previous.walkboxes if previous is not None else (),
                              box_routes=previous.box_routes if previous is not None else (),
                              scale_slots=previous.scale_slots if previous is not None else None,
