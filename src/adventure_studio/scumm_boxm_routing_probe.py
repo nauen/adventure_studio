@@ -26,6 +26,23 @@ def verify_boxm_routing(connected: dict, disconnected: dict, stopped_pixels: int
             "native_boxm_routing_passed": True}
 
 
+def verify_branching_boxm(upper: dict, lower: dict, blocked: dict, stopped_pixels: int) -> dict:
+    """Two distinct authored first hops must both lead to the same native goal."""
+    upper_matrix, lower_matrix = upper["route_matrix"], lower["route_matrix"]
+    if upper_matrix[1][4] != 2 or lower_matrix[1][4] != 3:
+        raise RuntimeError("Four-box BOXM alternative first hops were not authored")
+    if not (upper["frame_report"]["scroll_color_signature_passed"] and
+            lower["frame_report"]["scroll_color_signature_passed"]):
+        raise RuntimeError("Both alternative four-box routes must reach the far room in ScummVM")
+    if blocked["frame_report"]["scroll_color_signature_passed"] or stopped_pixels < 80:
+        raise RuntimeError("Unconnected four-box control reached the goal or lost the actor")
+    return {"upper_first_hop": 2, "lower_first_hop": 3,
+            "both_alternative_native_routes_reached_goal": True,
+            "blocked_route_stopped_at_boundary": True,
+            "blocked_actor_pixels": stopped_pixels,
+            "native_branching_boxm_passed": True}
+
+
 def run_boxm_probe(upstream: Path, generated: Path, destination: Path) -> dict:
     """Studio connection text -> JSON -> ScummC BOXM -> real ScummVM movement."""
     destination.mkdir(parents=True, exist_ok=True)
@@ -81,6 +98,38 @@ def run_boxm_probe(upstream: Path, generated: Path, destination: Path) -> dict:
     results["extension"]["native_comparison"] = verify_boxm_routing(
         results["extension"]["extended-connected"],
         results["extension"]["extended-isolated"], extension_pixels)
+    # R09: the existing Studio model and BOXM authoring accept a real fork.
+    # Either path (1→2→4 or 1→3→4) must let the native actor reach the same
+    # distant goal. With neither path, the actor stops at the near boundary.
+    fork = canonical_json(GameDocument("forked_boxm",
+                                        (scrolling_fixture(), destination_fixture())))
+    for index, corners in (
+            (1, "0,70; 110,70; 110,150; 0,150"),
+            (2, "110,70; 240,70; 240,110; 110,110"),
+            (3, "110,110; 240,110; 240,150; 110,150"),
+            (4, "240,70; 639,70; 639,150; 240,150")):
+        fork = author_room_walkbox(fork, "Harbor", index, corners)
+    results["branching"] = {}
+    for label, links in (("branch-upper", "1-2; 2-4"),
+                         ("branch-lower", "1-3; 3-4"),
+                         ("branch-blocked", "")):
+        edited = author_room_box_connections(fork, "Harbor", links)
+        project_file = destination / f"{label}-project.json"
+        project_file.write_text(edited, encoding="utf-8")
+        room = parse_document(project_file.read_text(encoding="utf-8")).rooms[0]
+        results["branching"][label] = {
+            "authored_connections": links,
+            "route_matrix": [list(row) for row in room.box_routes],
+            **render_native_room(room, upstream, generated, destination, label,
+                                 allow_static_scene=label == "branch-blocked"),
+        }
+    stopped = black_costume_pixels(
+        destination / "branch-blocked-screenshots" / "scummvm-end.png",
+        crop="250x155+200+300")
+    results["branching"]["native_comparison"] = verify_branching_boxm(
+        results["branching"]["branch-upper"],
+        results["branching"]["branch-lower"],
+        results["branching"]["branch-blocked"], stopped)
     (destination / "native-boxm-routing-report.json").write_text(
         json.dumps(results, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return results
