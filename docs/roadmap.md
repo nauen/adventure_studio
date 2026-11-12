@@ -10,10 +10,10 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** R06.3 mit [PR #204](https://github.com/nauen/adventure_studio/pull/204) **gemergt** (Squash `c78d817`); nativen Room-/Walkbox-/Z-Masken-Stand konsolidieren und **genau eine** nächste Lücke anhand der Capability-Matrix eingrenzen, ohne sie vor der Konsolidierung zu implementieren. R08.2 wurde in PR #202 und die frühere Konsolidierung in PR #203 gemergt.
-- **Abnahme:** Drei separat authorierte PNG-Z-Masken → RoomAsset/JSON/Story → ZP01/ZP02/ZP03 mit BOXD-Index 1/2/3 → unverändertes ScummVM: jede verdeckt unabhängig Actor-Pixel, transparenter Kontrollfall nicht. Vier finale Pflichtchecks auf PR-Head `90ec4b0` grün (Core 2×, native 2×), native Runs [43251867709](https://github.com/nauen/adventure_studio/actions/runs/43251867709) und [43251882252](https://github.com/nauen/adventure_studio/actions/runs/43251882252). PNG-Costume-Regression ebenfalls in beiden nativen Läufen grün. **Nur drei Ebenen verifiziert**, keine allgemeine ZPxx-Zusage.
-- **Blocker:** Für R06.3 keiner; die verifizierte Teilfähigkeit ist integriert. Für weitere Ebenen, allgemeine Boxnetze und Objektzustands-Z-Masken fehlt eine jeweils eigene native Gegenprobe. Vor neuer Implementierung zuerst eine begrenzte Fähigkeit auswählen.
-- **Danach:** Einzelne native Lücke priorisieren (Kandidat: R07, Objektbild-Z-Maske für einen weiteren Bildzustand; Alternativen R06 weitere Ebene oder R08/R09 komplexere Boxnetze). Erst anschließend **ein** Paket Modell → Export → stock ScummVM → grüne CI; keine NPC-Komfortarbeit.
+- **Jetzt:** Genau R07.2 – eine **unabhängige Objektbild-Z-Maske für den zweiten nativen Bildzustand** authorieren. Für ein Objekt mit Grundbild und offenem Bild können im Studio zwei verschiedene PNG-Verdeckungsmasken gespeichert werden. R06.3 wurde mit PR #204 gemergt (`c78d817`), die Konsolidierung PR #205 (`c4b135f`).
+- **Abnahme:** Studio-PNG pro Bildzustand 1/2 → RoomHotspot/JSON/Story → zwei getrennte ScummC-Objektbildzustände mit IM01/IM02-ZP01 → tatsächliche Actor-Verdeckung nur durch die gewählte zweite Maske in stock ScummVM gegen einen transparenten Kontrollfall. Gezielte Core-Tests, native und passende UI-CI auf finalem Head grün.
+- **Blocker:** Native R07.2-Gegenprobe und vollständige Pflicht-CI auf diesem Feature-Branch noch offen. Der R07.1-Nachweis für den ersten Zustand bleibt gültig; weitere Zustände oder Z-Masken pro Bildzustand sind nicht pauschal belegt.
+- **Danach:** **Erst nach Abnahme und Merge** die nächste einzelne native Raumgrafik-/Z-Masken-/Walkbox-Lücke wählen. NPC-Komfort nach PR #190 ausgesetzt.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
