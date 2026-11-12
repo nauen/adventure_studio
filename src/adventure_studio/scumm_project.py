@@ -395,6 +395,8 @@ def document_dict(document: GameDocument) -> dict:
                           "pickup": h.pickup, "sprite_pixels": _encode_pixels(h.sprite_pixels),
                           "open_sprite_pixels": _encode_pixels(h.open_sprite_pixels),
                           "exit_destination": h.exit_destination,
+                          **({"object_zplane_pixels": _encode_pixels(h.object_zplane_pixels)}
+                             if h.object_zplane_pixels is not None else {}),
                           **({"talk_lines": list(h.talk_lines)} if h.talk_lines else {}),
                           **({"talk_actor_lines": list(h.talk_actor_lines)}
                              if h.talk_actor_lines else {}),
@@ -1183,7 +1185,7 @@ def parse_document(source: str) -> GameDocument:
         for item in room["hotspots"]:
             h = _only(item, {"id", "label", "description", "x", "y", "width", "height", "pickup",
                              "sprite_pixels", "open_sprite_pixels", "exit_destination", "talk_lines",
-                             "talk_actor_lines", "talk_face_directions"},
+                             "talk_actor_lines", "talk_face_directions", "object_zplane_pixels"},
                       {"id", "label", "description", "x", "y", "width", "height", "pickup",
                        "sprite_pixels", "open_sprite_pixels", "exit_destination"})
             if type(h["pickup"]) is not bool:
@@ -1206,6 +1208,7 @@ def parse_document(source: str) -> GameDocument:
                 _decode_pixels(h["open_sprite_pixels"]) if h["open_sprite_pixels"] is not None else None,
                 h["exit_destination"], tuple(talk_lines), tuple(talk_actor_lines),
                 tuple(talk_face_directions),
+                _decode_pixels(h["object_zplane_pixels"]) if h.get("object_zplane_pixels") is not None else None,
             ))
         rules = []
         for item in room["use_rules"]:

@@ -10,9 +10,9 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Genau R07.1 – Objektbilder durch authorierte native Z-Masken verdecken. R06.2 wurde nach fünf grünen Checks auf `2cba5d7` mit [PR #198](https://github.com/nauen/adventure_studio/pull/198) gemergt (`0809336c`).
+- **Jetzt:** Genau R07.1 – eine native `IM01`-Objektbild-Z-Maske über Studio-PNG, Projekt-JSON/Story und ScummC exportieren; [PR #200](https://github.com/nauen/adventure_studio/pull/200) in Abnahme. R06.2 ist bereits gemergt (`0809336c`).
 - **Abnahme:** Produktiver Studio-Objektbild-Pfad → validiertes JSON/Story → nativer, belegter Objektbild-Z-Masken-Writer/Decoder-Pfad → in stock ScummVM sichtbare Verdeckung gegenüber maskenfreier Kontrolle. Relevante Core-, Chromium- und native CI auf dem finalen Head grün.
-- **Blocker:** R07 hat bisher nur A; R07-Objektbild-Masken sind weder implementiert noch getestet oder nativ verifiziert. Bereits grüne R06.2-Raummasken belegen R07 nicht. Falls das Objekt-Ressourcenformat eine neue Grenze hat, den konkreten Writer/Decoder-Blocker vor weiterer Implementierung dokumentieren.
+- **Blocker:** R07.1-Einzelprobe in stock ScummVM [43225198702](https://github.com/nauen/adventure_studio/actions/runs/43225198702) erfolgreich: 1476 dunkle Actor-Pixel ohne Objektmaske, 0 mit `IM01`-Maske, Artefakt `native-object-zmask` #13947836345. Finale Core-/Chromium-/Dialog-/native CI auf dem abschließenden PR-Head noch nicht vollständig abgenommen; keine Generalisierung auf alle Objektzustände oder Z-Ebenen.
 - **Danach:** R08.2 – komplexere native Walkbox-Netze/Polygongrenzen auf Grundlage von R08.1, R09 und R10; nicht parallel NPC-Komfort erweitern.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
