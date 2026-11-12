@@ -10,10 +10,10 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** R08.2 abgeschlossen: [PR #202](https://github.com/nauen/adventure_studio/pull/202), Squash-Merge `58022c5`. Eine dritte Walkbox wird in einem verbundenen Netz zunächst isoliert ergänzt; alte BOXM-Next-Hops bleiben erhalten, die neue Kante wird erst explizit gesetzt. Als **einziges nächstes natives Paket** priorisiert: R08.3 – authorierbare Walkbox-Maskennummer mit begrenztem ZP01/2-Effekt.
-- **Abnahme:** Für R08.2 Studio-Modell → JSON/Story → BOXD/BOXM → stock ScummVM verbunden/getrennt nachgewiesen; sechs finale GitHub-Checks auf Head `4bfd0b2` grün (2× Core, 2× Chromium, Dialog und native Gesamtprobe). Für R08.3 zuerst native Maskennummer-Semantik und 0/1/2-Fälle verifizieren, dann Studio → Modell → Export und echte Actor-Verdeckung in unverändertem ScummVM gegenüberstellen.
-- **Blocker:** R08.2 hat keinen offenen Blocker. R08.3 ist bislang **nur priorisiert, nicht implementiert**; Walkbox-Maskennummern und allgemeine Polygone sind noch keine bestätigte Studio-Funktion.
-- **Danach:** Erst nach vollständiger R08.3-Evidenz und grünen Pflichtgates das nächste einzelne native Raum-/Walkbox-/Z-Masken-Paket nehmen; NPC-Komfort bleibt ausgesetzt.
+- **Jetzt:** Genau R06.3 – die bestehende Studio-Funktion für eine **dritte unabhängig auswählbare Raum-Z-Maske (ZP03)** vom Modell/PNG und BOXD-Maskenindex 3 bis zur tatsächlichen Actor-Verdeckung in stock ScummVM nachweisen. R08.2 ist mit [PR #202](https://github.com/nauen/adventure_studio/pull/202) gemergt (`58022c5`), die Konsolidierung mit [PR #203](https://github.com/nauen/adventure_studio/pull/203) (`be255329`).
+- **Abnahme:** Drei separat authorierte PNG-Masken → RoomAsset/JSON/Story → ZP01/ZP02/ZP03 und BOXD-Index 1/2/3 → unverändertes ScummVM: jede der drei Masken muss unabhängig Actor-Pixel verdecken, der transparente Kontrollfall nicht. Gezielte Core-Tests und vollständige Pflicht-CI auf dem finalen PR-Head grün. Eine vierte/weitere Ebene ist damit noch nicht verifiziert.
+- **Blocker:** Native ZP03-Gegenprobe und vollständige CI auf dem R06.3-Feature-Head noch ausstehend. Maskennummern 0–9 sind im Studio bereits eingebbar; sie werden nicht als neues UI-Feature erneut implementiert.
+- **Danach:** Erst nach nativer R06.3-Evidenz und grünen Pflichtchecks das nächste einzelne offene Raumgrafik-/Z-Masken-/Walkbox-Paket priorisieren. NPC-Komfort bleibt ausgesetzt.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
