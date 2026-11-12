@@ -11,15 +11,16 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 ## Ein aktiver Produktpfad
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
-- **Jetzt:** Genau R06.3 – dritte separat authorierte Raum-Z-Maske ZP03 mit BOXD-Index 3 und sichtbarer Actor-Verdeckung in stock ScummVM abnehmen. R08.2 PR #202 (`58022c5`) und Konsolidierung PR #203 (`be255329`) sind gemergt; keine NPC-Komfortarbeit.
-- **Abnahme:** Studio-ZP01/ZP02/ZP03 → Projekt-JSON/Story → natives ScummC ZP01/ZP02/ZP03 und BOXD → drei getrennte Maskenvarianten plus transparenter Kontrollfall in unverändertem ScummVM. Core- und native CI auf dem finalen Head müssen grün sein; R06.3-Implementierung der Gegenprobe ist eingereicht, native Evidenz noch offen.
-- **Blocker:** Stock-ScummVM-Gegenprobe für die dritte Ebene und die finalen Pflichtchecks stehen aus. Die bereits vorhandene Eingabe von Maskennummern ist kein neues Produktfeature.
-- **Danach:** Erst nach vollständiger R06.3-Abnahme die nächste einzelne native Raum-/Walkbox-/Z-Maskenlücke bearbeiten.
+- **Jetzt:** R06.3 – dritte separat authorierte Raum-Z-Maske ZP03 mit BOXD-Index 3 und Actor-Verdeckung in stock ScummVM – ist mit [PR #204](https://github.com/nauen/adventure_studio/pull/204), Squash `c78d817`, gemergt. Nur den belegten Stand konsolidieren und eine nächste einzelne native Raumgrafik-/Z-Masken-/Walkbox-Lücke priorisieren; keine NPC-Komfortarbeit.
+- **Abnahme:** Studio-ZP01/ZP02/ZP03 → Projekt-JSON/Story → ScummC-ZP01/ZP02/ZP03 mit BOXD → drei getrennte Maskenvarianten und transparenter Kontrollfall in unverändertem ScummVM. Auf finalem PR-Head `90ec4b0` vier Pflichtchecks erfolgreich (2× Core, 2× native); Runs [43251867709](https://github.com/nauen/adventure_studio/actions/runs/43251867709), [43251882252](https://github.com/nauen/adventure_studio/actions/runs/43251882252). PNG-Animation in beiden nativen Läufen grün.
+- **Blocker:** Kein offenes R06.3-Gate. Vier oder mehr Masken, allgemeine Walkboxnetze und zusätzliche Objektbild-Z-Masken sind **nicht** durch diese Teilabnahme belegt. Vor einem nächsten Feature dessen isolierte native Abnahme definieren.
+- **Danach:** Genau ein offenes nativen Paket auswählen und Modell → Export → stock ScummVM bis grüner Pflicht-CI bearbeiten. Kandidat: R07 zweiter maskierter Objektbildzustand; alternativ R06 vierte Ebene oder R08/R09 erweitertes Netz. Nicht mehrere parallel starten.
 
 ## Zuletzt tatsächlich geliefert
 
 | PR | Nutzerfunktion | Evidenz/Grenze |
 | --- | --- | --- |
+| [#204](https://github.com/nauen/adventure_studio/pull/204) | Dritte unabhängig wählbare Raum-Z-Maske ZP03 vom Studio-PNG bis zur Actor-Verdeckung in stock ScummVM | Vier finale Checks am Head `90ec4b0` grün (Core 2×, native 2×), Runs `43251867709` und `43251882252`, PNG-Costume-Regression repariert; Squash-Merge `c78d817`. R06 bleibt Teilfähigkeit: mehr als drei Ebenen nicht bewiesen |
 | [#202](https://github.com/nauen/adventure_studio/pull/202) | Vorhandenes Walkbox-Netz um eine zunächst isolierte Box erweitern; neue Verbindung explizit authorieren | Sechs finale Checks auf `4bfd0b2` grün (Core 2×, Chromium 2×, Dialog, native); nativer Run `43242184897`, Chromium `43242185359` und `43242172287`; Squash-Merge `58022c5`; R08/R09 bleiben Teilfähigkeiten |
 | [#198](https://github.com/nauen/adventure_studio/pull/198) | Zwei PNG-Z-Masken im Studio mit Walkbox-ZPxx-Auswahl authorieren und in stock ScummVM getrennt verdecken | Fünf finale Checks am Head `2cba5d7` grün (Core 2×, Chromium, Dialog, native); [native Run 43105298694](https://github.com/nauen/adventure_studio/actions/runs/43105298694), [Screenshot-Artefakt 13893353897](https://github.com/nauen/adventure_studio/actions/runs/43105298694/artifacts/13893353897); Merge `0809336c`; begrenzte R06-Teilfähigkeit |
 | [#197](https://github.com/nauen/adventure_studio/pull/197) | SCAL-Kurven und Walkbox-Slots über Studio authorieren | Sechs finale CI-Checks inklusive stock ScummVM und Chromium grün; Merge `b66287a`, native Run `43093101278` |
