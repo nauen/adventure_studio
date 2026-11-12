@@ -40,8 +40,10 @@ def main() -> None:
                 report = page.locator("#native-project-report textarea, #native-project-report input")
                 expect(report).to_have_value("Natives Projekt geladen und validiert",
                                              timeout=30000)
-                page.locator("#native-hotspot").click()
-                page.get_by_role("option", name=re.compile("Door")).click()
+                selection = page.locator("#native-hotspot input[role=\"combobox\"]")
+                selection.click()
+                selection.fill("Door")
+                page.get_by_role("option", name="Door", exact=True).click(timeout=12000)
                 with page.expect_file_chooser() as chooser:
                     page.locator("#native-object-zplane-file").click()
                 chooser.value.set_files(str(mask))
