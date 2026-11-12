@@ -926,6 +926,7 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
         raise ValueError("Duplicate room name")
     for room in rooms:
         _validate(room)
+        _validate_stock_v6_zplanes(room)
         for rule in room.use_rules:
             if rule.destination_room is not None and rule.destination_room not in names:
                 raise ValueError(f"Unknown destination room: {rule.destination_room}")
