@@ -562,6 +562,65 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "walkbox 2.*ZP05"):
             _native_box_file(unsupported_box)
 
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
+    def test_simultaneous_two_zplanes_on_connected_walkboxes_json_story_and_boxd(self):
+        from PIL import Image
+        from adventure_studio.scumm_simultaneous_zplane_probe import verify_simultaneous_masks
+
+        room = scrolling_fixture()
+        raw = canonical_json(GameDocument("two_masks_one_room",
+                                          (room, destination_fixture())))
+        for index, corners in (
+                (1, "0,70; 360,70; 360,150; 0,150"),
+                (2, "360,70; 480,70; 480,150; 360,150"),
+                (3, "480,70; 639,70; 639,150; 480,150")):
+            raw = author_room_walkbox(raw, "Harbor", index, corners)
+        raw = author_room_box_connections(raw, "Harbor", "1-2; 2-3")
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            for index in (1, 2):
+                png = root / f"independent-{index}.png"
+                Image.new("L", (room.geometry.room_width, room.geometry.room_height),
+                          color=255 if index == 1 else 0).save(png)
+                raw = import_room_zplane(raw, "Harbor", index, str(png))
+            raw = author_room_walkbox_zplane(raw, "Harbor", 2, 1)
+            raw = author_room_walkbox_zplane(raw, "Harbor", 3, 2)
+            authored = parse_document(raw).rooms[0]
+            self.assertEqual(len(authored.zplanes), 2)
+            self.assertEqual([box.mask for box in authored.walkboxes], [0, 1, 2])
+            self.assertEqual(authored.box_routes[1][3], 2)
+            self.assertEqual(authored.box_routes[3][1], 2)
+            self.assertEqual(parse_document(canonical_json(parse_document(raw))).rooms[0],
+                             authored)
+            story = (Path(__file__).resolve().parents[1] / "examples" /
+                     "mini_story_chain.json").read_text(encoding="utf-8")
+            saved = next(r for r in parse_document(compose_story_project(story, raw)).rooms
+                         if r.name == "Harbor")
+            self.assertEqual(saved.zplanes, authored.zplanes)
+            self.assertEqual(saved.walkboxes, authored.walkboxes)
+            write_room_sources(saved, root)
+            source = (root / "Harbor.scc").read_text(encoding="utf-8")
+            self.assertIn('"HarborZ01.bmp", "HarborZ02.bmp"', source)
+            self.assertEqual((root / "Harbor.box").read_bytes()[30 + 16], 1)
+            self.assertEqual((root / "Harbor.box").read_bytes()[30 + 21 + 16], 2)
+            self.assertTrue((root / "HarborZ01.bmp").is_file())
+            self.assertTrue((root / "HarborZ02.bmp").is_file())
+
+        def frame(mid, far, ret):
+            return {"walkbox_masks": [0, 1, 2],
+                    "frame_report": {"scroll_color_signature_passed": True},
+                    "middle_pixels": mid, "far_pixels": far, "return_pixels": ret}
+        variants = {"both": frame(0, 0, 0),
+                    "first-only": frame(0, 1200, 1200),
+                    "second-only": frame(1200, 0, 0),
+                    "clear": frame(1200, 1200, 1200)}
+        self.assertTrue(verify_simultaneous_masks(variants)
+                        ["native_simultaneous_room_masks_passed"])
+        failed = dict(variants)
+        failed["both"] = frame(1200, 0, 0)
+        with self.assertRaisesRegex(RuntimeError, "not selective"):
+            verify_simultaneous_masks(failed)
+
     def test_project_json_roundtrip_preserves_native_assets(self):
         document = GameDocument("native", (native_room(), destination_fixture()))
         self.assertEqual(parse_document(canonical_json(document)), document)
