@@ -1,6 +1,6 @@
 # Adventure Studio – aktueller Arbeitsstand
 
-Stand: 2026-11-11. **Einstieg für die nächste Arbeitssitzung.**
+Stand: 2026-11-12. **Einstieg für die nächste Arbeitssitzung.**
 Produktziel: [PRODUCT_VISION](PRODUCT_VISION.md) · aktive
 [Roadmap](roadmap.md) · einzige [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md) ·
 [Referenzvertrag](scumm-v6-reference/README.md) · [Arbeitsvertrag](../AGENTS.md).
@@ -11,15 +11,16 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 ## Ein aktiver Produktpfad
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
-- **Jetzt:** Genau R06.2 – mehrere PNG-Z-Masken im Studio importieren und vorhandenen Walkboxen je ZPxx-Ebene zuweisen. R10/SCAL wurde in PR #197 nach sechs grünen Checks gemergt (b66287a); NPC-Komfort nach #190 beendet.
-- **Abnahme:** Echter Studio-Pfad → zwei validierte PNG-Masken im RoomAsset/JSON mit Story-Verknüpfung → native ScummC-ZP01/ZP02 plus BOXD-Zuordnung → beide Z-Ebenen getrennt im unveränderten ScummVM als Actor-Verdeckung gegenüber maskenfreier Kontrolle sichtbar. Core-, Chromium- und native CI nachweisen.
-- **Blocker:** R06.2 hat native Zwei-Ebenen-Actor-Verdeckung (Run 43103736222: 1556 → 0/0 Actor-Pixel) und Browser-Klickpfad (Run 43104689805) als Teilproben bestanden. Alle Gesamtchecks auf finalem Commit und Merge noch offen; keine generelle Zusage für neun Ebenen.
-- **Danach:** Erst nach vollständiger R06.2-Evidenz und Merge genau das nächste aus der Matrix priorisierte native Raum-/Walkbox-Paket; keine NPC-Komfortarbeit.
+- **Jetzt:** Genau R07.1 – Objektbild-Verdeckung durch eine authorierte native Z-Maske ermöglichen (R07 bisher A, kein I/T/V). Vorhandene Raum-ZPxx-/Walkbox-Primitive aus R06.2 wiederverwenden; keine erneute R06.2-Fixture-Schleife.
+- **Abnahme:** Ein Nutzer kann für ein Objektbild in einem Raum eine Verdeckung authorieren und über Projekt-JSON/Story bis zur nativen SCUMM-v6-Ressource exportieren. Die sichtbare Objektbild-Verdeckung muss gegenüber einer maskenfreien Kontrollvariante im unveränderten ScummVM nachweisbar sein; gezielte Core-, Chromium- und native CI müssen grün sein.
+- **Blocker:** R07-Objektbild-Z-Masken haben laut Matrix bislang nur Analyse (A); nativer Writer/Decoder-Pfad und reale Darstellung für Objektbilder sind noch nicht produktiv belegt. Kein Feature-Abschluss vor einem vertikalen End-to-End-Nachweis. Allgemeine R06-Höherebenenvarianten und R08-Mehrboxnetze bleiben separate Teil-Lücken.
+- **Danach:** Nach R07.1-Abnahme genau R08.2 – Walkbox-Netze über den bisherigen konvexen Vierpunkt-/einfachen BOXM-Routingumfang hinaus; keine NPC-Komfortpakete.
 
 ## Zuletzt tatsächlich geliefert
 
 | PR | Nutzerfunktion | Evidenz/Grenze |
 | --- | --- | --- |
+| [#198](https://github.com/nauen/adventure_studio/pull/198) | Zwei PNG-Z-Masken im Studio mit Walkbox-ZPxx-Auswahl authorieren und in stock ScummVM getrennt verdecken | Fünf finale Checks am Head `2cba5d7` grün (Core 2×, Chromium, Dialog, native); [native Run 43105298694](https://github.com/nauen/adventure_studio/actions/runs/43105298694), [Screenshot-Artefakt 13893353897](https://github.com/nauen/adventure_studio/actions/runs/43105298694/artifacts/13893353897); Merge `0809336c`; begrenzte R06-Teilfähigkeit |
 | [#197](https://github.com/nauen/adventure_studio/pull/197) | SCAL-Kurven und Walkbox-Slots über Studio authorieren | Sechs finale CI-Checks inklusive stock ScummVM und Chromium grün; Merge `b66287a`, native Run `43093101278` |
 | [#196](https://github.com/nauen/adventure_studio/pull/196) | Benachbarte Walkboxen verbinden, native BOXM-Next-Hop-Wege authorieren | Finale Core-, Chromium-, Dialog- und stock-ScummVM-CI grün; Merge `d917ead4`, nativer Run `43087563847` |
 | [#194](https://github.com/nauen/adventure_studio/pull/194) | Konvexe Vierpunkt-Walkbox im Editor authorieren und native Laufgrenze erreichen | Core, Dialog, Chromium und ScummVM-CI grün; Merge `7acc7fb3`; nur R08.1-Teilfähigkeit |
