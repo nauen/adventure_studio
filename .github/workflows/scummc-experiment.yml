@@ -197,7 +197,7 @@ jobs:
             /tmp/native-boxm-routing/*-screenshots/scummvm-end.png
             /tmp/native-boxm-routing/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
-      - name: Verify three independently selected Studio-authored Z-plane layers in stock ScummVM
+      - name: Verify four independently selected Studio-authored Z-plane layers in stock ScummVM
         env:
           PYTHONPATH: src
         run: |
@@ -207,7 +207,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: native-three-zplanes
+          name: native-four-zplanes
           path: |
             /tmp/native-multi-zplanes/multi-zplane-report.json
             /tmp/native-multi-zplanes/*-project.json
