@@ -182,7 +182,7 @@ jobs:
         # its linked resource tree must contain the requested native chunks.
         # This is NOT a visual ScummVM occlusion/walking acceptance test.
         # Kept separate from the existing screenshot baseline.
-      - name: Verify authored BOXM walkbox routes in stock ScummVM
+      - name: Verify authored BOXM fork routes and four-box native navigation in stock ScummVM
         env:
           PYTHONPATH: src
         run: |
@@ -194,6 +194,7 @@ jobs:
           name: native-boxm-routing
           path: |
             /tmp/native-boxm-routing/native-boxm-routing-report.json
+            /tmp/native-boxm-routing/branch-*-project.json
             /tmp/native-boxm-routing/*-screenshots/scummvm-end.png
             /tmp/native-boxm-routing/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
