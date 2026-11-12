@@ -17,6 +17,7 @@ from adventure_studio.studio_sequences import import_room_zplane, author_room_wa
 
 
 class RoomNativePrimitiveTests(unittest.TestCase):
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
     def test_object_zmask_png_json_story_and_native_im01(self):
         from PIL import Image
         from adventure_studio.studio_sequences import import_object_zplane
