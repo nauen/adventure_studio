@@ -11,10 +11,10 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 ## Ein aktiver Produktpfad
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
-- **Jetzt:** Genau R07.1 – eine PNG-Z-Maske für den ersten Bildzustand eines Raumobjekts im Studio authorieren und als natives ScummC-`IM01` exportieren. PR #200 implementiert den vertikalen Pfad; keine NPC-Komfortarbeit.
-- **Abnahme:** Ein Nutzer kann für ein Objektbild in einem Raum eine Verdeckung authorieren und über Projekt-JSON/Story bis zur nativen SCUMM-v6-Ressource exportieren. Die sichtbare Objektbild-Verdeckung muss gegenüber einer maskenfreien Kontrollvariante im unveränderten ScummVM nachweisbar sein; gezielte Core-, Chromium- und native CI müssen grün sein.
-- **Blocker:** R07.1-Teilnachweis: stock-ScummVM-Run [43225198702](https://github.com/nauen/adventure_studio/actions/runs/43225198702) (Artefakt `native-object-zmask` #13947836345) zeigt 1476 Actor-Pixel ohne und 0 mit Objekt-`IM01`-Maske. Der erste Screenshot-Test hatte eine nicht überlappende Objektposition; nach Fixturekorrektur grün. **Finale Gesamt-CI am PR #200-Head inklusive Chromium noch ausstehend, kein Merge vorher.** Scope derzeit nur erster Objektbildzustand/eine Maske; beliebige Objektzustands-/Z-Ebenenvarianten offen.
-- **Danach:** Nach R07.1-Abnahme genau R08.2 – Walkbox-Netze über den bisherigen konvexen Vierpunkt-/einfachen BOXM-Routingumfang hinaus; keine NPC-Komfortpakete.
+- **Jetzt:** Genau R08.2 – ein bestehendes BOXM-Netz mit einer neuen Walkbox erweitern, ohne bisherige Next-Hop-Einträge zu verändern. R07.1 mit [PR #200](https://github.com/nauen/adventure_studio/pull/200) gemergt (`ed35413`), keine NPC-Komfortarbeit.
+- **Abnahme:** Produktiver Studio-Walkbox-Editor → validiertes Projekt-JSON/Story → natives BOXD/BOXM; bestehende Route bleibt erhalten, neue Box startet isoliert und wird durch eine explizite Kante zugänglich. Echte Gegenprobe angebunden/getrennt in unverändertem ScummVM sowie finale Core-/Chromium-/native CI.
+- **Blocker:** R08.2-Code und Drei-Boxen-Gegenprobe im neuen Feature-Branch; vollständiger nativer Nachweis und PR-Gates noch offen. R07.1 wurde mit sechs grünen Checks auf geprüftem Head `2cc8a28` gemergt; Objektmasken-Vergleich 1476→0 Actor-Pixel, nur erster Bildzustand.
+- **Danach:** Erst nach vollständigem R08.2-Nachweis die nächste native Walkbox-/Perspektivlücke aus der Matrix nehmen; keine parallelen NPC-Komfortpakete.
 
 ## Zuletzt tatsächlich geliefert
 
