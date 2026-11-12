@@ -328,6 +328,42 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Third Z-plane occlusion absent"):
             verify_three_layer_occlusion(1200, 0, 0, 1100)
 
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
+    def test_fourth_png_zplane_json_boxd_story_and_native_source(self):
+        from PIL import Image
+        from adventure_studio.scumm_multi_zplane_probe import verify_four_layer_occlusion
+
+        room = native_room(occlusion=False)
+        raw = canonical_json(GameDocument("four_zplanes", (room, destination_fixture())))
+        width, height = room.geometry.room_width, room.geometry.room_height
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            for index in (1, 2, 3, 4):
+                png = directory / f"zplane-{index}.png"
+                Image.new("L", (width, height), color=255 if index == 4 else 0).save(png)
+                raw = import_room_zplane(raw, "Harbor", index, str(png))
+            raw = author_room_walkbox_zplane(raw, "Harbor", 2, 4)
+            authored = parse_document(raw).rooms[0]
+            self.assertEqual(tuple(p.index for p in authored.zplanes), (1, 2, 3, 4))
+            self.assertEqual(authored.walkboxes[1].mask, 4)
+            self.assertEqual(authored.box_routes, room.box_routes)
+            write_room_sources(authored, directory)
+            self.assertIn('"HarborZ01.bmp", "HarborZ02.bmp", "HarborZ03.bmp", "HarborZ04.bmp"',
+                          (directory / "Harbor.scc").read_text())
+            self.assertTrue((directory / "HarborZ04.bmp").exists())
+            self.assertEqual((directory / "Harbor.box").read_bytes()[30 + 16], 4)
+            story = (Path(__file__).resolve().parents[1] / "examples" /
+                     "mini_story_chain.json").read_text(encoding="utf-8")
+            saved = next(item for item in
+                         parse_document(compose_story_project(story, raw)).rooms
+                         if item.name == "Harbor")
+            self.assertEqual(saved.zplanes, authored.zplanes)
+            self.assertEqual(saved.walkboxes, authored.walkboxes)
+        self.assertTrue(verify_four_layer_occlusion(1200, 0, 0, 0, 0)
+                        ["four_layers_visually_verified"])
+        with self.assertRaisesRegex(RuntimeError, "Fourth Z-plane occlusion absent"):
+            verify_four_layer_occlusion(1200, 0, 0, 0, 1100)
+
     def test_project_json_roundtrip_preserves_native_assets(self):
         document = GameDocument("native", (native_room(), destination_fixture()))
         self.assertEqual(parse_document(canonical_json(document)), document)
