@@ -75,12 +75,12 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         room = native_room()
         raw = canonical_json(GameDocument("walkbox", (room, destination_fixture())))
         updated = author_room_walkbox(raw, "Harbor", 1,
-                                      "0,70; 110,70; 110,150; 0,150")
+                                      "0,70; 120,70; 120,150; 0,150")
         authored = parse_document(updated).rooms[0]
         self.assertEqual(authored.box_routes, room.box_routes)
         self.assertEqual(authored.scale_slots, room.scale_slots)
         extended = author_room_walkbox(updated, "Harbor", 3,
-                                       "120,70; 200,70; 200,150; 120,150")
+                                       "120,150; 200,150; 200,199; 120,199")
         extra = parse_document(extended).rooms[0]
         self.assertEqual(extra.box_routes[:3],
                          tuple(row + (None,) for row in authored.box_routes))
