@@ -32,6 +32,7 @@ on:
       - 'tests/gradio_browser_boxm.py'
       - 'tests/gradio_browser_scal.py'
       - 'tests/gradio_browser_zplanes.py'
+      - 'tests/gradio_browser_object_zmask.py'
   pull_request:
     paths:
       - '.github/workflows/studio.yml'
@@ -62,6 +63,7 @@ on:
       - 'tests/gradio_browser_boxm.py'
       - 'tests/gradio_browser_scal.py'
       - 'tests/gradio_browser_zplanes.py'
+      - 'tests/gradio_browser_object_zmask.py'
 
 jobs:
   smoke:
@@ -140,6 +142,20 @@ jobs:
           path: |
             /tmp/studio-zplanes-evidence/*.png
             /tmp/studio-zplanes-evidence/*.json
+          if-no-files-found: ignore
+      - name: Click through authored object Z-mask in real Chrome
+        env:
+          ADVENTURE_STUDIO_OBJECT_ZMASK_EVIDENCE: /tmp/studio-object-zmask-evidence
+        run: |
+          python tests/gradio_browser_object_zmask.py
+      - name: Retain object Z-mask Studio evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-gradio-object-zmask-browser
+          path: |
+            /tmp/studio-object-zmask-evidence/*.json
+            /tmp/studio-object-zmask-evidence/*.png
           if-no-files-found: ignore
       - name: Click through authored SCAL perspective in real Chrome
         env:
