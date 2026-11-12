@@ -632,8 +632,8 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         for index, corners in (
                 (1, "0,70; 160,70; 160,150; 0,150"),
                 (2, "160,70; 320,70; 320,150; 160,150"),
-                (3, "320,70; 480,70; 480,150; 320,150"),
-                (4, "480,70; 639,70; 639,150; 480,150")):
+                (3, "320,70; 400,70; 400,150; 320,150"),
+                (4, "400,70; 639,70; 639,150; 400,150")):
             raw = author_room_walkbox(raw, "Harbor", index, corners)
         raw = author_room_box_connections(raw, "Harbor", "1-2; 2-3; 3-4")
         with tempfile.TemporaryDirectory() as directory:
