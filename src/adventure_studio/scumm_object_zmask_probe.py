@@ -23,7 +23,7 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
     # mask changes between variants; the sprite and actor route are identical.
     foreground = RoomHotspot(
         "Curtain", "the curtain", "A foreground curtain.",
-        520, 60, 64, 48, sprite_pixels=bytes([2]) * (64 * 48),
+        390, 60, 64, 48, sprite_pixels=bytes([2]) * (64 * 48),
     )
     room = replace(room, hotspots=(*room.hotspots, foreground))
     base = canonical_json(GameDocument("object_zmask", (room, destination_fixture())))
