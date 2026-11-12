@@ -1,6 +1,6 @@
 # Adventure Studio – aktive Produktroadmap
 
-Stand: 2026-11-11. Diese Seite steuert **nur die nächsten Produktentscheidungen**.
+Stand: 2026-11-12. Diese Seite steuert **nur die nächsten Produktentscheidungen**.
 Das Hauptziel steht in [PRODUCT_VISION](PRODUCT_VISION.md), die einzige
 64-Fähigkeiten-Matrix in [SCUMM_V6_CAPABILITIES](SCUMM_V6_CAPABILITIES.md).
 Die frühere ausführliche Roadmap bleibt vollständig als
@@ -10,17 +10,17 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Genau R06.2 – zwei unabhängig authorierte PNG-Z-Masken mit Walkbox-ZPxx-Zuordnung in stock ScummVM nachweisen. R10/SCAL wurde mit PR #197 und sechs grünen CI-Checks in main gemergt (b66287a); NPC-Komfort nach #190 beendet.
-- **Abnahme:** Realer Studio-Klickpfad: zwei PNG-Z-Ebenen und Walkbox-Ebenenauswahl → RoomAsset/JSON/Story → ScummC ZP01/ZP02 und BOXD-Maskenwert → zwei getrennte, sichtbare Verdeckungsfälle in unverändertem ScummVM, mit freier Kontrollvariante. Core-, Chromium- und native CI müssen auf finalem R06.2-Commit grün sein.
-- **Blocker:** R06.2-Einzelproben erfolgreich: native ZP01-/ZP02-Actor-Verdeckung (Run 43103736222: Kontrolle 1556, beide Masken 0 Pixel), echter Chromium-Klickpfad (Run 43104689805). Finale Gesamt-CI für letzten Commit noch offen; neun Masken nicht generell verifiziert.
-- **Danach:** Erst nach grüner R06.2-CI und Merge genau das nächste priorisierte native Raum-/Walkbox-Paket gemäß Capability-Matrix; keine parallelen NPC-Komfortpakete.
+- **Jetzt:** Genau R07.1 – PNG-Z-Maske für den ersten Bildzustand eines nativen Raumobjekts im Studio authorieren, im OBIM/IM01/ZP01 exportieren und Actor-Verdeckung in unverändertem ScummVM nachweisen. R06.2/ZP01+ZP02 wurde mit PR #198 und fünf grünen Checks gemergt (`0809336`); keine NPC-Komfortpakete nach #190.
+- **Abnahme:** Realer Studio-PNG-Klickpfad → validiertes RoomHotspot-Objektmaskenfeld in JSON und Story-Komposition ohne Verlust → ScummC-Objektbildzustand mit nativem ZP01 → sichtbarer maskierter Actor im unveränderten ScummVM gegenüber identischer Variante ohne Objektmaske. Core-, Chromium- und native CI auf finalem R07.1-Commit grün.
+- **Blocker:** R07.1-Gameplay-Evidenz und finale CI stehen aus. Erster Objektbildzustand ist der bewusst begrenzte Umfang; weitere Zustände/Z-Ebenen, allgemeine Decoder-/Engine-Varianten offen.
+- **Danach:** Erst nach vollständig grüner R07.1-CI und Merge genau das nächste aus der Capability-Matrix priorisierte native Raum-/Walkbox-Paket; keine parallele NPC-Komfortarbeit.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
 | Historisches Paket | Tatsächlicher Teilstand | Noch fehlender Abschluss |
 | --- | --- | --- |
 | P0.1 – Raum-Binärprüfung | Chunk-/Offset-Parser und deterministische Tests vorhanden | Allgemeinheit und noch nicht abgedeckte Binärvarianten separat prüfen |
-| P0.2 / R06 – Z-Masken | PNG-Authoring über Studio/JSON/ZPxx und native Actor-Verdeckung für eine Ebene belegt | Mehrere Ebenen und allgemeine Varianten/Grenzen nicht als voll verifiziert behaupten |
+| P0.2 / R06 – Z-Masken | PNG-Authoring über Studio/JSON/ZPxx und native Actor-Verdeckung für zwei einzeln wählbare Ebenen belegt (PR #198) | Allgemeine Ebenenzahlen und Engine-Varianten offen |
 | P0.3 / R08–R10 – Walkbox/SCAL | `RoomAsset.walkboxes`, BOXM, SCAL, JSON und native Sicht-/Skalierungsprobe; R08.1 mit frei authorierter konvexer Box und nativer Laufgrenze belegt | Allgemeine Polygone, Wege-/Boxennetze und Perspektivvarianten offen |
 | P0.5 / A01–A07 – Actors/Costumes | COST, Framefolgen, COUNT und viele Gameplay-Teilproben vorhanden | Alle Actor-/Costume-Varianten und native Mehrsprecher-Animation noch nicht fertig |
 
