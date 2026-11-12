@@ -57,10 +57,14 @@ def main() -> None:
                 state_selection = page.locator("#native-object-zplane-state input[role=combobox]")
                 state_selection.click()
                 page.get_by_role("option", name="Offenes Bild (2)", exact=True).click(timeout=12000)
+                expect(state_selection).to_have_value("Offenes Bild (2)", timeout=12000)
                 # Gradio File replaces its input with a file-card after upload;
                 # clear the prior selected PNG before choosing another.
                 page.locator('#native-object-zplane-file button[aria-label="Clear"]').click()
                 page.locator("#native-object-zplane-file input[type=file]").set_input_files(str(open_mask))
+                # Gradio uploads asynchronously; submitting before the new
+                # file-card appears can silently reuse the previous state.
+                expect(page.locator('#native-object-zplane-file button[aria-label="Clear"]')).to_be_visible(timeout=30000)
                 page.locator("#native-object-zplane-add").click()
                 expect(report).to_have_value(
                     re.compile(r"Objekt-Z-Maske für Door, Bildzustand 2 importiert"),
