@@ -43,6 +43,33 @@ def verify_branching_boxm(upper: dict, lower: dict, blocked: dict, stopped_pixel
             "native_branching_boxm_passed": True}
 
 
+def verify_two_goal_t_branch(connected_routes: list[list[int | None]],
+                             disconnected_routes: list[list[int | None]],
+                             upper_start: int, lower_reached: int,
+                             upper_return: int, blocked_lower: int) -> dict:
+    """Check native actor pixels at both destinations, not just BOXM data."""
+    if (len(connected_routes) != 6 or connected_routes[1][4] != 2
+            or connected_routes[1][5] != 2
+            or connected_routes[3][4] != 4 or connected_routes[3][5] != 5):
+        raise RuntimeError("Authored five-box T junction does not route to both goals")
+    if disconnected_routes[1][5] is not None or disconnected_routes[1][4] != 2:
+        raise RuntimeError("The negative control did not disconnect only the lower goal")
+    if any(type(v) is not int or v < 0 for v in
+           (upper_start, lower_reached, upper_return, blocked_lower)):
+        raise ValueError("Invalid measured native actor pixel count")
+    if (min(upper_start, lower_reached, upper_return) < 80
+            or blocked_lower > lower_reached // 3):
+        raise RuntimeError(
+            "Two-goal T-branch navigation absent in stock ScummVM: "
+            f"upper={upper_start}, lower={lower_reached}, "
+            f"return={upper_return}, blocked={blocked_lower}")
+    return {"upper_goal_pixels": upper_start,
+            "lower_goal_pixels": lower_reached,
+            "upper_return_pixels": upper_return,
+            "blocked_lower_goal_pixels": blocked_lower,
+            "native_two_goal_t_branch_passed": True}
+
+
 def run_boxm_probe(upstream: Path, generated: Path, destination: Path) -> dict:
     """Studio connection text -> JSON -> ScummC BOXM -> real ScummVM movement."""
     destination.mkdir(parents=True, exist_ok=True)
@@ -130,6 +157,51 @@ def run_boxm_probe(upstream: Path, generated: Path, destination: Path) -> dict:
         results["branching"]["branch-upper"],
         results["branching"]["branch-lower"],
         results["branching"]["branch-blocked"], stopped)
+    # R09: author a single five-box T junction with two *different* goals.
+    # Both walking targets are clicked in the same running, unmodified game.
+    # The lower branch is disconnected for the negative control only.
+    t_project = canonical_json(GameDocument(
+        "two_goal_t_branch", (scrolling_fixture(), destination_fixture())))
+    for index, corners in (
+            (1, "0,70; 110,70; 110,150; 0,150"),
+            (2, "110,70; 240,70; 240,150; 110,150"),
+            (3, "240,70; 360,70; 360,150; 240,150"),
+            (4, "360,70; 639,70; 639,110; 360,110"),
+            (5, "360,110; 639,110; 639,150; 360,150")):
+        t_project = author_room_walkbox(t_project, "Harbor", index, corners)
+    results["two_goals"] = {}
+    for label, links in (
+            ("two-goals-connected", "1-2; 2-3; 3-4; 3-5"),
+            ("two-goals-blocked", "1-2; 2-3; 3-4")):
+        edited = author_room_box_connections(t_project, "Harbor", links)
+        project_path = destination / f"{label}-project.json"
+        project_path.write_text(edited, encoding="utf-8")
+        room = parse_document(project_path.read_text(encoding="utf-8")).rooms[0]
+        results["two_goals"][label] = {
+            "connections": links,
+            "route_matrix": [list(row) for row in room.box_routes],
+            **render_native_room(room, upstream, generated, destination, label,
+                                 scene_walk_clicks=(("lower-goal", 630, 449),
+                                                    ("upper-return", 630, 364))
+                                 if label == "two-goals-connected"
+                                 else (("lower-goal", 630, 449),)),
+        }
+    upper_start = black_costume_pixels(
+        destination / "two-goals-connected-screenshots" / "scummvm-end.png",
+        crop="110x75+575+312")
+    lower_reached = black_costume_pixels(
+        destination / "two-goals-connected-screenshots" / "scummvm-lower-goal.png",
+        crop="110x65+575+390")
+    upper_return = black_costume_pixels(
+        destination / "two-goals-connected-screenshots" / "scummvm-upper-return.png",
+        crop="110x75+575+312")
+    blocked_lower = black_costume_pixels(
+        destination / "two-goals-blocked-screenshots" / "scummvm-lower-goal.png",
+        crop="110x65+575+390")
+    results["two_goals"]["native_comparison"] = verify_two_goal_t_branch(
+        results["two_goals"]["two-goals-connected"]["route_matrix"],
+        results["two_goals"]["two-goals-blocked"]["route_matrix"],
+        upper_start, lower_reached, upper_return, blocked_lower)
     (destination / "native-boxm-routing-report.json").write_text(
         json.dumps(results, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return results
