@@ -235,6 +235,41 @@ def import_room_zplane(raw: str, room_name: str, index: int, png_path: str) -> s
     return _checked(replace(document, rooms=rooms))
 
 
+
+def import_object_zmask(raw: str, room_name: str, object_id: str, png_path: str) -> str:
+    """Import one object-local 1-bit Z mask for its first native image state."""
+    from PIL import Image
+
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    hotspot = next((item for item in room.hotspots if item.id == object_id), None)
+    if hotspot is None:
+        raise ValueError("Bitte ein vorhandenes Raumobjekt wählen")
+    if hotspot.sprite_pixels is None or hotspot.pickup:
+        raise ValueError("Objekt-Z-Maske benötigt ein nicht aufhebbares Objektbild")
+    path = Path(png_path)
+    if path.suffix.lower() != ".png":
+        raise ValueError("Bitte eine PNG-Objektmaske wählen")
+    try:
+        with Image.open(path) as source:
+            if source.format != "PNG":
+                raise ValueError("Objekt-Z-Maske muss eine echte PNG-Datei sein")
+            if source.size != (hotspot.width, hotspot.height):
+                raise ValueError(f"Objekt-Z-Maske muss exakt {hotspot.width} × {hotspot.height} Pixel groß sein")
+            pixels = bytes(1 if alpha >= 128 and
+                           red * 299 + green * 587 + blue * 114 >= 128000
+                           else 0 for red, green, blue, alpha in source.convert("RGBA").getdata())
+    except (OSError, Image.DecompressionBombError) as error:
+        raise ValueError(f"PNG-Objektmaske nicht lesbar: {error}") from error
+    updated = tuple(replace(item, object_zmask_pixels=pixels) if item.id == object_id else item
+                    for item in room.hotspots)
+    rooms = tuple(replace(item, hotspots=updated) if item.name == room_name else item
+                  for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
+
+
 def import_room_music(raw: str, room_name: str, music_id: str, midi_path: str) -> str:
     """Attach a real MIDI asset to one room; the native exporter wraps it as GMD."""
     document = parse_document(raw)
