@@ -1,4 +1,4 @@
-"""R06.2: prove two Studio-authored ZPxx layers selectably occlude in stock ScummVM."""
+"""R06.2/R06.3: independently author and verify three native room Z-planes."""
 
 from __future__ import annotations
 
@@ -25,6 +25,17 @@ def verify_two_layer_occlusion(clear: int, first: int, second: int) -> dict:
             "second_layer_pixels": second, "both_layers_visually_verified": True}
 
 
+def verify_three_layer_occlusion(clear: int, first: int, second: int, third: int) -> dict:
+    """A third independently selected native BOXD mask must hide the same actor."""
+    previous = verify_two_layer_occlusion(clear, first, second)
+    if type(third) is not int or third < 0 or third > clear // 3:
+        raise RuntimeError(
+            f"Third Z-plane occlusion absent in stock ScummVM: "
+            f"clear={clear}, first={first}, second={second}, third={third}")
+    return {**previous, "third_layer_pixels": third,
+            "three_layers_visually_verified": True}
+
+
 def run_multi_zplane_probe(upstream: Path, generated: Path, destination: Path) -> dict:
     from PIL import Image
 
@@ -32,40 +43,43 @@ def run_multi_zplane_probe(upstream: Path, generated: Path, destination: Path) -
     base = native_room(occlusion=False, far_scale=255)
     width, height = base.geometry.room_width, base.geometry.room_height
     project = canonical_json(GameDocument("multi_zplane", (base, destination_fixture())))
-    # Two independent PNG files, not a hardcoded mask fixture.
+    # All three layers come from independently imported PNG files, not a binary fixture.
     transparent = bytes(width * height)
     opaque = bytes(255 if x > width // 2 and 60 < y < 110 else 0
                    for y in range(height) for x in range(width))
-    first_png = destination / "first-mask.png"
-    second_png = destination / "second-mask.png"
-    Image.frombytes("L", (width, height), opaque).save(first_png)
-    Image.frombytes("L", (width, height), transparent).save(second_png)
-    project = import_room_zplane(project, "Harbor", 1, str(first_png))
-    project = import_room_zplane(project, "Harbor", 2, str(second_png))
-    results = {"authoring": "PNG1+PNG2 → Studio model/JSON → ScummC ZP01/ZP02 + BOXD → stock ScummVM",
-               "variants": {}}
-    for label, layer, layer1, layer2 in (
-            ("first", 1, opaque, transparent),
-            ("second", 2, transparent, opaque),
-            ("clear", 2, transparent, transparent)):
-        Image.frombytes("L", (width, height), layer1).save(first_png)
-        Image.frombytes("L", (width, height), layer2).save(second_png)
-        raw = import_room_zplane(project, "Harbor", 1, str(first_png))
-        raw = import_room_zplane(raw, "Harbor", 2, str(second_png))
+    pngs = tuple(destination / f"layer-{index}-mask.png" for index in (1, 2, 3))
+    for index, path in enumerate(pngs, start=1):
+        Image.frombytes("L", (width, height), transparent).save(path)
+        project = import_room_zplane(project, "Harbor", index, str(path))
+    results = {
+        "authoring": "PNG1+PNG2+PNG3 → Studio model/JSON → ScummC ZP01/ZP02/ZP03 + BOXD → stock ScummVM",
+        "variants": {},
+    }
+    # One opaque plane at a time. The unchanged third-plane PNG must not affect
+    # first/second masks; the third selection must be distinct from both.
+    for label, layer, opaque_index in (
+            ("first", 1, 1), ("second", 2, 2),
+            ("third", 3, 3), ("clear", 3, 0)):
+        raw = project
+        for index, path in enumerate(pngs, start=1):
+            Image.frombytes("L", (width, height),
+                            opaque if index == opaque_index else transparent).save(path)
+            raw = import_room_zplane(raw, "Harbor", index, str(path))
         raw = author_room_walkbox_zplane(raw, "Harbor", 2, layer)
         project_path = destination / f"{label}-project.json"
         project_path.write_text(raw, encoding="utf-8")
         room = parse_document(project_path.read_text(encoding="utf-8")).rooms[0]
-        assert len(room.zplanes) == 2
+        assert len(room.zplanes) == 3
         assert room.walkboxes[1].mask == layer
         results["variants"][label] = {
             "selected_zplane": layer,
             **render_native_room(room, upstream, generated, destination, label),
         }
-    results["comparison"] = verify_two_layer_occlusion(
+    results["comparison"] = verify_three_layer_occlusion(
         results["variants"]["clear"]["dark_costume_pixels"],
         results["variants"]["first"]["dark_costume_pixels"],
-        results["variants"]["second"]["dark_costume_pixels"])
+        results["variants"]["second"]["dark_costume_pixels"],
+        results["variants"]["third"]["dark_costume_pixels"])
     (destination / "multi-zplane-report.json").write_text(
         json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return results
