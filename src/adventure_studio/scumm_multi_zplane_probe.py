@@ -1,4 +1,4 @@
-"""R06.2/R06.3: independently author and verify three native room Z-planes."""
+"""R06.2–R06.4: independently author and verify four native room Z-planes."""
 
 from __future__ import annotations
 
@@ -36,6 +36,19 @@ def verify_three_layer_occlusion(clear: int, first: int, second: int, third: int
             "three_layers_visually_verified": True}
 
 
+def verify_four_layer_occlusion(clear: int, first: int, second: int,
+                                third: int, fourth: int) -> dict:
+    """The fourth Studio-authored BOXD mask must hide the actor independently."""
+    previous = verify_three_layer_occlusion(clear, first, second, third)
+    if type(fourth) is not int or fourth < 0 or fourth > clear // 3:
+        raise RuntimeError(
+            f"Fourth Z-plane occlusion absent in stock ScummVM: "
+            f"clear={clear}, first={first}, second={second}, "
+            f"third={third}, fourth={fourth}")
+    return {**previous, "fourth_layer_pixels": fourth,
+            "four_layers_visually_verified": True}
+
+
 def run_multi_zplane_probe(upstream: Path, generated: Path, destination: Path) -> dict:
     from PIL import Image
 
@@ -43,23 +56,23 @@ def run_multi_zplane_probe(upstream: Path, generated: Path, destination: Path) -
     base = native_room(occlusion=False, far_scale=255)
     width, height = base.geometry.room_width, base.geometry.room_height
     project = canonical_json(GameDocument("multi_zplane", (base, destination_fixture())))
-    # All three layers come from independently imported PNG files, not a binary fixture.
+    # All four layers come from independently imported PNG files, not a binary fixture.
     transparent = bytes(width * height)
     opaque = bytes(255 if x > width // 2 and 60 < y < 110 else 0
                    for y in range(height) for x in range(width))
-    pngs = tuple(destination / f"layer-{index}-mask.png" for index in (1, 2, 3))
+    pngs = tuple(destination / f"layer-{index}-mask.png" for index in (1, 2, 3, 4))
     for index, path in enumerate(pngs, start=1):
         Image.frombytes("L", (width, height), transparent).save(path)
         project = import_room_zplane(project, "Harbor", index, str(path))
     results = {
-        "authoring": "PNG1+PNG2+PNG3 → Studio model/JSON → ScummC ZP01/ZP02/ZP03 + BOXD → stock ScummVM",
+        "authoring": "PNG1+PNG2+PNG3+PNG4 → Studio model/JSON → ScummC ZP01/ZP02/ZP03/ZP04 + BOXD → stock ScummVM",
         "variants": {},
     }
-    # One opaque plane at a time. The unchanged third-plane PNG must not affect
-    # first/second masks; the third selection must be distinct from both.
+    # One opaque plane at a time. All other PNG layers remain transparent;
+    # each selected native BOXD mask must independently hide the same actor.
     for label, layer, opaque_index in (
             ("first", 1, 1), ("second", 2, 2),
-            ("third", 3, 3), ("clear", 3, 0)):
+            ("third", 3, 3), ("fourth", 4, 4), ("clear", 4, 0)):
         raw = project
         for index, path in enumerate(pngs, start=1):
             Image.frombytes("L", (width, height),
@@ -69,17 +82,18 @@ def run_multi_zplane_probe(upstream: Path, generated: Path, destination: Path) -
         project_path = destination / f"{label}-project.json"
         project_path.write_text(raw, encoding="utf-8")
         room = parse_document(project_path.read_text(encoding="utf-8")).rooms[0]
-        assert len(room.zplanes) == 3
+        assert len(room.zplanes) == 4
         assert room.walkboxes[1].mask == layer
         results["variants"][label] = {
             "selected_zplane": layer,
             **render_native_room(room, upstream, generated, destination, label),
         }
-    results["comparison"] = verify_three_layer_occlusion(
+    results["comparison"] = verify_four_layer_occlusion(
         results["variants"]["clear"]["dark_costume_pixels"],
         results["variants"]["first"]["dark_costume_pixels"],
         results["variants"]["second"]["dark_costume_pixels"],
-        results["variants"]["third"]["dark_costume_pixels"])
+        results["variants"]["third"]["dark_costume_pixels"],
+        results["variants"]["fourth"]["dark_costume_pixels"])
     (destination / "multi-zplane-report.json").write_text(
         json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return results
