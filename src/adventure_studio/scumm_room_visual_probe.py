@@ -70,7 +70,8 @@ def verify_visual_effects(masked: int, unmasked: int, fullscale: int) -> dict:
 
 def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                        destination: Path, label: str, *, crop: str = "140x105+535+305",
-                       allow_static_scene: bool = False) -> dict:
+                       allow_static_scene: bool = False,
+                       initial_object_state2: str | None = None) -> dict:
     """Compile, link, run and measure exactly one independently authored room."""
     if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", label):
         raise ValueError("Invalid native visual probe label")
@@ -83,6 +84,21 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
     root = destination / label
     root.mkdir(parents=True, exist_ok=True)
     write_room_sources(room, root)
+    if initial_object_state2 is not None:
+        # Native visual fixture only: select the second, product-exported
+        # object image state at room entry without automating a puzzle click.
+        # The generated IM02 sprite/Z-plane and the SCUMM VM are unmodified.
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", initial_object_state2):
+            raise ValueError("Invalid fixture object id")
+        script = root / f"{room.name}.scc"
+        source = script.read_text(encoding="utf-8")
+        pattern = (r"(    object " + re.escape(initial_object_state2)
+                   + r" \{\n(?:[^\n]*\n)*?        states = [^\n]+;\n)"
+                   + r"        state = 1;")
+        changed, count = re.subn(pattern, r"\g<1>        state = 2;", source, count=1)
+        if count != 1:
+            raise ValueError("Second-state fixture requires an exported two-state object")
+        script.write_text(changed, encoding="utf-8")
     shutil.copyfile(goal_manifest, root / "game-goal.json")
     subprocess.run([
         str(compiler), "-V", "6", "-I", str(upstream / "include"),
