@@ -10,10 +10,10 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Genau R07.1 – eine native `IM01`-Objektbild-Z-Maske über Studio-PNG, Projekt-JSON/Story und ScummC exportieren; [PR #200](https://github.com/nauen/adventure_studio/pull/200) in Abnahme. R06.2 ist bereits gemergt (`0809336c`).
-- **Abnahme:** Produktiver Studio-Objektbild-Pfad → validiertes JSON/Story → nativer, belegter Objektbild-Z-Masken-Writer/Decoder-Pfad → in stock ScummVM sichtbare Verdeckung gegenüber maskenfreier Kontrolle. Relevante Core-, Chromium- und native CI auf dem finalen Head grün.
-- **Blocker:** R07.1-Einzelprobe in stock ScummVM [43225198702](https://github.com/nauen/adventure_studio/actions/runs/43225198702) erfolgreich: 1476 dunkle Actor-Pixel ohne Objektmaske, 0 mit `IM01`-Maske, Artefakt `native-object-zmask` #13947836345. Finale Core-/Chromium-/Dialog-/native CI auf dem abschließenden PR-Head noch nicht vollständig abgenommen; keine Generalisierung auf alle Objektzustände oder Z-Ebenen.
-- **Danach:** R08.2 – komplexere native Walkbox-Netze/Polygongrenzen auf Grundlage von R08.1, R09 und R10; nicht parallel NPC-Komfort erweitern.
+- **Jetzt:** Genau R08.2 – in einem bereits verbundenen Walkbox-Netz eine weitere native Box im Studio anlegen, bestehende BOXM-Next-Hops erhalten und die neue Verbindung explizit freischalten. R07.1 ist mit [PR #200](https://github.com/nauen/adventure_studio/pull/200) gemergt (`ed35413`).
+- **Abnahme:** Bestehendes Zwei-Boxen-Netz im Studio → dritte konvexe Box → altes Routing unverändert, neue Box isoliert → explizite 2-3-Verbindung → JSON/Story → BOXD/BOXM → in stock ScummVM Laufziel nur mit Verbindung erreichbar. Core-, Chromium- und native CI auf dem finalen Head grün.
+- **Blocker:** R08.2-Implementierung und native Gegenprobe im Feature-Branch; der neue Dreiernetz-Test ist noch nicht durch die finale CI abgenommen. Kein allgemein beliebiges Polygon, keine automatische Neuverbindung oder Universalaussage.
+- **Danach:** Erst nach grünem R08.2-Merge die nächste noch offene native Walkbox-/Perspektivvariante anhand der 64-Fähigkeiten-Matrix priorisieren; NPC-Komfort bleibt ausgesetzt.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 

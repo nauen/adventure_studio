@@ -49,6 +49,38 @@ def run_boxm_probe(upstream: Path, generated: Path, destination: Path) -> dict:
                                  "scummvm-end.png", crop="250x155+200+300")
     results["comparison"] = verify_boxm_routing(
         results["connected"], results["disconnected"], pixels)
+    # R08.2: create two already connected walkboxes, then append a third
+    # through the exact Studio authoring path. Its first state must be isolated
+    # without invalidating existing BOXM next hops. Linking it is explicit.
+    network = author_room_walkbox(original, "Harbor", 1,
+                                  "0,70; 110,70; 110,150; 0,150")
+    network = author_room_walkbox(network, "Harbor", 2,
+                                  "110,70; 240,70; 240,150; 110,150")
+    network = author_room_box_connections(network, "Harbor", "1-2")
+    old_routes = parse_document(network).rooms[0].box_routes
+    extended = author_room_walkbox(network, "Harbor", 3,
+                                   "240,70; 639,70; 639,150; 240,150")
+    isolated = parse_document(extended).rooms[0].box_routes
+    if isolated[:3] != tuple(row + (None,) for row in old_routes) or isolated[3] != (None, None, None, 3):
+        raise RuntimeError("R08.2 append changed previously authored BOXM paths")
+    results["extension"] = {"old_routes": [list(row) for row in old_routes],
+                            "isolated_routes": [list(row) for row in isolated]}
+    for state, links in (("extended-connected", "1-2; 2-3"),
+                         ("extended-isolated", "1-2")):
+        edited = author_room_box_connections(extended, "Harbor", links)
+        room = parse_document(edited).rooms[0]
+        results["extension"][state] = {
+            "authored_connections": links,
+            "route_matrix": [list(row) for row in room.box_routes],
+            **render_native_room(room, upstream, generated, destination, state,
+                                 allow_static_scene=state == "extended-isolated"),
+        }
+    extension_pixels = black_costume_pixels(
+        destination / "extended-isolated-screenshots" / "scummvm-end.png",
+        crop="250x155+200+300")
+    results["extension"]["native_comparison"] = verify_boxm_routing(
+        results["extension"]["extended-connected"],
+        results["extension"]["extended-isolated"], extension_pixels)
     (destination / "native-boxm-routing-report.json").write_text(
         json.dumps(results, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return results
