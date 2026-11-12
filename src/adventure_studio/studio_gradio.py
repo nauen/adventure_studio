@@ -498,8 +498,10 @@ def make_app():
         try:
             updated = import_object_zplane(raw, room, hotspot, file_path, image_state)
             return (updated, *native_selectors(updated, selected_room=room),
-                    f"Objekt-Z-Maske für {hotspot}, Bildzustand {image_state} importiert. "
-                    "Native IM01-Maske wird beim Projekt-Export erzeugt.")
+                    (f"Objekt-Z-Maske für {hotspot} importiert. IM01-Export nach nativem Projekt-JSON-Download."
+                     if image_state == 1 else
+                     f"Objekt-Z-Maske für {hotspot}, Bildzustand 2 importiert. "
+                     "Native IM02-Maske wird beim Projekt-Export erzeugt."))
         except (ValueError, OSError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
