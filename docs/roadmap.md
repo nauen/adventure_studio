@@ -10,10 +10,10 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 ## Aktiver Entscheidungsstand
 
 - **Hauptziel:** Vollständiger Generator originaler SCUMM-v6-Spiele ohne zusätzliche Runtime; belegter Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Genau R08.2 – in einem bereits verbundenen Walkbox-Netz eine weitere native Box im Studio anlegen, bestehende BOXM-Next-Hops erhalten und die neue Verbindung explizit freischalten. R07.1 ist mit [PR #200](https://github.com/nauen/adventure_studio/pull/200) gemergt (`ed35413`).
-- **Abnahme:** Bestehendes Zwei-Boxen-Netz im Studio → dritte konvexe Box → altes Routing unverändert, neue Box isoliert → explizite 2-3-Verbindung → JSON/Story → BOXD/BOXM → in stock ScummVM Laufziel nur mit Verbindung erreichbar. Core-, Chromium- und native CI auf dem finalen Head grün.
-- **Blocker:** R08.2-Implementierung und native Gegenprobe im Feature-Branch; der neue Dreiernetz-Test ist noch nicht durch die finale CI abgenommen. Kein allgemein beliebiges Polygon, keine automatische Neuverbindung oder Universalaussage.
-- **Danach:** Erst nach grünem R08.2-Merge die nächste noch offene native Walkbox-/Perspektivvariante anhand der 64-Fähigkeiten-Matrix priorisieren; NPC-Komfort bleibt ausgesetzt.
+- **Jetzt:** R08.2 abgeschlossen: [PR #202](https://github.com/nauen/adventure_studio/pull/202), Squash-Merge `58022c5`. Eine dritte Walkbox wird in einem verbundenen Netz zunächst isoliert ergänzt; alte BOXM-Next-Hops bleiben erhalten, die neue Kante wird erst explizit gesetzt. Als **einziges nächstes natives Paket** priorisiert: R08.3 – authorierbare Walkbox-Maskennummer mit begrenztem ZP01/2-Effekt.
+- **Abnahme:** Für R08.2 Studio-Modell → JSON/Story → BOXD/BOXM → stock ScummVM verbunden/getrennt nachgewiesen; sechs finale GitHub-Checks auf Head `4bfd0b2` grün (2× Core, 2× Chromium, Dialog und native Gesamtprobe). Für R08.3 zuerst native Maskennummer-Semantik und 0/1/2-Fälle verifizieren, dann Studio → Modell → Export und echte Actor-Verdeckung in unverändertem ScummVM gegenüberstellen.
+- **Blocker:** R08.2 hat keinen offenen Blocker. R08.3 ist bislang **nur priorisiert, nicht implementiert**; Walkbox-Maskennummern und allgemeine Polygone sind noch keine bestätigte Studio-Funktion.
+- **Danach:** Erst nach vollständiger R08.3-Evidenz und grünen Pflichtgates das nächste einzelne native Raum-/Walkbox-/Z-Masken-Paket nehmen; NPC-Komfort bleibt ausgesetzt.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
