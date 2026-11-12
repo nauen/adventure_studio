@@ -17,6 +17,36 @@ from adventure_studio.studio_sequences import import_room_zplane, author_room_wa
 
 
 class RoomNativePrimitiveTests(unittest.TestCase):
+    def test_object_zmask_png_json_story_and_native_im01(self):
+        from PIL import Image
+        from adventure_studio.studio_sequences import import_object_zplane
+
+        room = scrolling_fixture()
+        raw = canonical_json(GameDocument("object_mask", (room, destination_fixture())))
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            png = directory / "object-mask.png"
+            Image.new("L", (16, 16), color=255).save(png)
+            updated = import_object_zplane(raw, "Harbor", "Door", str(png))
+            authored = parse_document(updated).rooms[0]
+            door = next(h for h in authored.hotspots if h.id == "Door")
+            self.assertEqual(door.object_zplane_pixels, bytes([1]) * 256)
+            write_room_sources(authored, directory)
+            source = (directory / "Harbor.scc").read_text()
+            self.assertIn('"Door.bmp", { "DoorZ01.bmp" }', source)
+            self.assertTrue((directory / "DoorZ01.bmp").exists())
+            story = (Path(__file__).resolve().parents[1] / "examples" /
+                     "mini_story_chain.json").read_text(encoding="utf-8")
+            composed = parse_document(compose_story_project(story, updated))
+            saved = next(h for r in composed.rooms if r.name == "Harbor"
+                         for h in r.hotspots if h.id == "Door")
+            self.assertEqual(saved.object_zplane_pixels, door.object_zplane_pixels)
+            Image.new("L", (8, 8), color=255).save(png)
+            with self.assertRaisesRegex(ValueError, "exakt"):
+                import_object_zplane(updated, "Harbor", "Door", str(png))
+            with self.assertRaisesRegex(ValueError, "Objektbild"):
+                import_object_zplane(raw, "Harbor", "missing", str(png))
+
     def test_free_walkbox_polygon_authors_json_and_boxd(self):
         room = scrolling_fixture()
         raw = canonical_json(GameDocument("walkbox", (room, destination_fixture())))
