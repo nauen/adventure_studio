@@ -11,9 +11,9 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 ## Ein aktiver Produktpfad
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator mit realem stock-ScummVM-Spielverhalten.
-- **Jetzt:** Genau R07.1 – Objektbild-Verdeckung durch eine authorierte native Z-Maske ermöglichen (R07 bisher A, kein I/T/V). Vorhandene Raum-ZPxx-/Walkbox-Primitive aus R06.2 wiederverwenden; keine erneute R06.2-Fixture-Schleife.
+- **Jetzt:** Genau R07.1 – eine PNG-Z-Maske für den ersten Bildzustand eines Raumobjekts im Studio authorieren und als natives ScummC-`IM01` exportieren. PR #200 implementiert den vertikalen Pfad; keine NPC-Komfortarbeit.
 - **Abnahme:** Ein Nutzer kann für ein Objektbild in einem Raum eine Verdeckung authorieren und über Projekt-JSON/Story bis zur nativen SCUMM-v6-Ressource exportieren. Die sichtbare Objektbild-Verdeckung muss gegenüber einer maskenfreien Kontrollvariante im unveränderten ScummVM nachweisbar sein; gezielte Core-, Chromium- und native CI müssen grün sein.
-- **Blocker:** R07-Objektbild-Z-Masken haben laut Matrix bislang nur Analyse (A); nativer Writer/Decoder-Pfad und reale Darstellung für Objektbilder sind noch nicht produktiv belegt. Kein Feature-Abschluss vor einem vertikalen End-to-End-Nachweis. Allgemeine R06-Höherebenenvarianten und R08-Mehrboxnetze bleiben separate Teil-Lücken.
+- **Blocker:** R07.1-Teilnachweis: stock-ScummVM-Run [43225198702](https://github.com/nauen/adventure_studio/actions/runs/43225198702) (Artefakt `native-object-zmask` #13947836345) zeigt 1476 Actor-Pixel ohne und 0 mit Objekt-`IM01`-Maske. Der erste Screenshot-Test hatte eine nicht überlappende Objektposition; nach Fixturekorrektur grün. **Finale Gesamt-CI am PR #200-Head inklusive Chromium noch ausstehend, kein Merge vorher.** Scope derzeit nur erster Objektbildzustand/eine Maske; beliebige Objektzustands-/Z-Ebenenvarianten offen.
 - **Danach:** Nach R07.1-Abnahme genau R08.2 – Walkbox-Netze über den bisherigen konvexen Vierpunkt-/einfachen BOXM-Routingumfang hinaus; keine NPC-Komfortpakete.
 
 ## Zuletzt tatsächlich geliefert
