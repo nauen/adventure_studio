@@ -75,9 +75,9 @@ def run_simultaneous_mask_probe(upstream: Path, generated: Path, destination: Pa
     project = canonical_json(GameDocument("simultaneous_room_masks",
                                            (base, destination_fixture())))
     for index, corners in (
-            (1, "0,70; 360,70; 360,150; 0,150"),
-            (2, "360,70; 480,70; 480,150; 360,150"),
-            (3, "480,70; 639,70; 639,150; 480,150")):
+            (1, "0,70; 240,70; 240,150; 0,150"),
+            (2, "240,70; 400,70; 400,150; 240,150"),
+            (3, "400,70; 639,70; 639,150; 400,150")):
         project = author_room_walkbox(project, "Harbor", index, corners)
     project = author_room_box_connections(project, "Harbor", "1-2; 2-3")
     zpngs = (destination / "middle-zp01.png", destination / "far-zp02.png")
@@ -88,9 +88,9 @@ def run_simultaneous_mask_probe(upstream: Path, generated: Path, destination: Pa
     project = author_room_walkbox_zplane(project, "Harbor", 2, 1)
     project = author_room_walkbox_zplane(project, "Harbor", 3, 2)
     # The masks overlap the torso while the actor walks at world y=100.
-    middle = bytes(255 if 360 <= x <= 480 and 60 < y < 110 else 0
+    middle = bytes(255 if 240 <= x < 400 and 60 < y < 110 else 0
                    for y in range(height) for x in range(width))
-    far = bytes(255 if x >= 480 and 60 < y < 110 else 0
+    far = bytes(255 if x >= 400 and 60 < y < 110 else 0
                 for y in range(height) for x in range(width))
     results = {"authoring": "Studio two independent PNGs -> RoomAsset/JSON/Story "
                             "-> SCUMM-v6 ZP01/ZP02 + BOXD masks 1/2 -> stock ScummVM",
