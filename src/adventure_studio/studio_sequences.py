@@ -40,8 +40,6 @@ def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str)
         raise ValueError("Walkbox-Nummer muss zwischen 1 und 254 liegen")
     if index > len(room.walkboxes) + 1:
         raise ValueError("Walkboxen müssen lückenlos ab 1 angelegt werden")
-    if index == len(room.walkboxes) + 1 and room.box_routes:
-        raise ValueError("Neue Walkbox benötigt eine angepasste BOXM-Verbindungsmatrix; bestehende Wege bleiben unverändert")
     parts = [part.strip() for part in corners_text.split(";")]
     if len(parts) != 4:
         raise ValueError("Vier Eckpunkte in der Reihenfolge UL;UR;LR;LL erforderlich")
@@ -66,8 +64,15 @@ def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str)
         boxes[index - 1] = replace(boxes[index - 1], corners=tuple(points))
     else:
         boxes.append(Walkbox(tuple(points)))
-    rooms = tuple(replace(item, walkboxes=tuple(boxes)) if item.name == room_name else item
-                  for item in document.rooms)
+    routes = room.box_routes
+    if len(boxes) > len(room.walkboxes) and routes:
+        # Newly appended box starts isolated; existing paths remain unchanged.
+        # BOXM edges are only recomputed after explicit connection authoring.
+        new_index = len(boxes)
+        routes = tuple(tuple(row) + (None,) for row in routes) + (
+            tuple([None] * new_index + [new_index]),)
+    rooms = tuple(replace(item, walkboxes=tuple(boxes), box_routes=routes)
+                  if item.name == room_name else item for item in document.rooms)
     return _checked(replace(document, rooms=rooms))
 
 
