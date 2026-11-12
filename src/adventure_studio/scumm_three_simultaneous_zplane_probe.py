@@ -127,7 +127,9 @@ def run_simultaneous_three_mask_probe(upstream: Path, generated: Path,
                    room, upstream, generated, destination, label,
                    scene_walk_clicks=(("third-goal", 460, 390),
                                       ("second-goal", 245, 390),
+                                      ("third-crossing", 460, 390),
                                       ("third-return", 460, 390),
+                                      ("fourth-crossing", 630, 390),
                                       ("fourth-return", 630, 390)))}
         images = destination / f"{label}-screenshots"
         row.update({
