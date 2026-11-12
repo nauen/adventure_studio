@@ -17,6 +17,7 @@ on:
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_authored_scal_probe.py'
       - 'src/adventure_studio/scumm_multi_zplane_probe.py'
+      - 'src/adventure_studio/scumm_object_zmask_probe.py'
   push:
     paths:
       - '.github/workflows/scummc-experiment.yml'
@@ -28,6 +29,7 @@ on:
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_authored_scal_probe.py'
       - 'src/adventure_studio/scumm_multi_zplane_probe.py'
+      - 'src/adventure_studio/scumm_object_zmask_probe.py'
       - 'src/adventure_studio/scumm_scal_probe.py'
       - 'src/adventure_studio/scumm_camera_probe.py'
       - 'src/adventure_studio/scumm_costume.py'
@@ -211,6 +213,23 @@ jobs:
             /tmp/native-multi-zplanes/*-project.json
             /tmp/native-multi-zplanes/*-screenshots/scummvm-end.png
             /tmp/native-multi-zplanes/*-screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
+      - name: Verify Studio-authored object-local Z-mask in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_object_zmask_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-object-zmask
+      - name: Retain native object Z-mask gameplay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-object-zmask
+          path: |
+            /tmp/native-object-zmask/object-zmask-report.json
+            /tmp/native-object-zmask/authored-object-mask-project.json
+            /tmp/native-object-zmask/*-screenshots/scummvm-end.png
+            /tmp/native-object-zmask/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify Studio-authored SCAL perspective in stock ScummVM
         env:
