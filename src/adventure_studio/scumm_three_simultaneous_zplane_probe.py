@@ -80,8 +80,8 @@ def run_simultaneous_three_mask_probe(upstream: Path, generated: Path,
     for index, corners in (
             (1, "0,70; 160,70; 160,150; 0,150"),
             (2, "160,70; 320,70; 320,150; 160,150"),
-            (3, "320,70; 480,70; 480,150; 320,150"),
-            (4, "480,70; 639,70; 639,150; 480,150")):
+            (3, "320,70; 400,70; 400,150; 320,150"),
+            (4, "400,70; 639,70; 639,150; 400,150")):
         project = author_room_walkbox(project, "Harbor", index, corners)
     project = author_room_box_connections(project, "Harbor", "1-2; 2-3; 3-4")
     pngs = tuple(destination / f"mask-zp{index:02d}.png" for index in (1, 2, 3))
@@ -90,7 +90,7 @@ def run_simultaneous_three_mask_probe(upstream: Path, generated: Path,
         Image.frombytes("L", (width, height), transparent).save(path)
         project = import_room_zplane(project, "Harbor", index, str(path))
         project = author_room_walkbox_zplane(project, "Harbor", index + 1, index)
-    mask_regions = ((160, 320), (320, 480), (480, width))
+    mask_regions = ((160, 320), (320, 400), (400, width))
     opaque = tuple(bytes(255 if start <= x < end and 60 < y < 110 else 0
                          for y in range(height) for x in range(width))
                    for start, end in mask_regions)
@@ -132,7 +132,7 @@ def run_simultaneous_three_mask_probe(upstream: Path, generated: Path,
         images = destination / f"{label}-screenshots"
         row.update({
             "second_pixels": black_costume_pixels(
-                images / "scummvm-second-goal.png", "120x95+180+305"),
+                images / "scummvm-second-goal.png", "120x95+410+305"),
             "third_pixels": black_costume_pixels(
                 images / "scummvm-third-goal.png", "130x95+350+305"),
             "fourth_pixels": black_costume_pixels(
@@ -143,6 +143,7 @@ def run_simultaneous_three_mask_probe(upstream: Path, generated: Path,
                 images / "scummvm-fourth-return.png", "110x85+575+305"),
         })
         variants[label] = row
+    print("Native three-mask scene pixel observations:", json.dumps({name: {key: value for key, value in row.items() if key.endswith("_pixels")} for name, row in variants.items()}, sort_keys=True), flush=True)
     report = {
         "authoring": "Studio three PNGs -> RoomAsset/JSON/Story -> ScummC ZP01/ZP02/ZP03 + BOXD masks 1/2/3 -> stock ScummVM",
         "variants": variants,
