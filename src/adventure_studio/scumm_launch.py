@@ -297,7 +297,15 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  scene_only: bool = False, verify_return: bool = True,
                  verify_chain: bool = False, verify_recipe: bool = False,
                  allow_static_scene: bool = False, reverse_recipe: bool = False,
-                 auto_recipe: bool = False, sample_scene_frames: bool = False) -> None:
+                 auto_recipe: bool = False, sample_scene_frames: bool = False,
+                 scene_walk_clicks: tuple[tuple[str, int, int], ...] = ()) -> None:
+    if scene_walk_clicks and not scene_only:
+        raise ValueError("Scene walking probes require scene-only mode")
+    if any(not re.fullmatch(r"[a-z][a-z0-9-]*", label)
+           or type(x) is not int or type(y) is not int
+           or not 192 <= x < 832 or not 184 <= y < 472
+           for label, x, y in scene_walk_clicks):
+        raise ValueError("Scene click coordinates must lie within game viewport")
     if allow_static_scene and not (verify_chain or scene_only):
         raise ValueError("Static scene exception requires a chain or isolated scene fixture")
     if reverse_recipe and not verify_recipe:
@@ -435,6 +443,16 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                      initial_pickup_rgb=initial_rgb,
                                      require_key_sprite=not (allow_static_scene and scene_only))
             if scene_only:
+                for label, screen_x, screen_y in scene_walk_clicks:
+                    click = subprocess.run(
+                        ["xdotool", "mousemove", str(screen_x), str(screen_y), "click", "1"],
+                        capture_output=True, text=True, timeout=5, check=False)
+                    if click.returncode:
+                        raise RuntimeError(f"Native walk click failed: {click.stderr}")
+                    time.sleep(5)
+                    if process.poll() is not None:
+                        raise RuntimeError("ScummVM quit during authored walking route")
+                    capture_frame(label)
                 print(f"Story-compiled SCUMM room rendered and scrolled: {changed} changed pixels")
                 print(f"Scene-only screenshots: {output_directory}")
                 return
