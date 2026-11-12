@@ -57,9 +57,7 @@ def main() -> None:
                 state_selection = page.locator("#native-object-zplane-state input[role=combobox]")
                 state_selection.click()
                 page.get_by_role("option", name="Offenes Bild (2)", exact=True).click(timeout=12000)
-                with page.expect_file_chooser() as chooser:
-                    page.locator("#native-object-zplane-file").click()
-                chooser.value.set_files(str(open_mask))
+                page.locator("#native-object-zplane-file input[type=file]").set_input_files(str(open_mask))
                 page.locator("#native-object-zplane-add").click()
                 expect(report).to_have_value(
                     re.compile(r"Objekt-Z-Maske für Door, Bildzustand 2 importiert"),
