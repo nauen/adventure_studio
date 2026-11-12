@@ -70,7 +70,9 @@ on:
 jobs:
   smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # Full Chrome regression includes the existing long NPC dialogue suite after BOXM.
+    # Preserve all assertions; allow sufficient wall time for slower CI runners.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
