@@ -79,9 +79,24 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         authored = parse_document(updated).rooms[0]
         self.assertEqual(authored.box_routes, room.box_routes)
         self.assertEqual(authored.scale_slots, room.scale_slots)
-        with self.assertRaisesRegex(ValueError, "BOXM"):
-            author_room_walkbox(updated, "Harbor", 3,
-                                "120,70; 200,70; 200,150; 120,150")
+        extended = author_room_walkbox(updated, "Harbor", 3,
+                                       "120,70; 200,70; 200,150; 120,150")
+        extra = parse_document(extended).rooms[0]
+        self.assertEqual(extra.box_routes[:3],
+                         tuple(row + (None,) for row in authored.box_routes))
+        self.assertEqual(extra.box_routes[3], (None, None, None, 3))
+        self.assertEqual(extra.walkboxes[:2], authored.walkboxes)
+        self.assertEqual(extra.scale_slots, authored.scale_slots)
+        with tempfile.TemporaryDirectory() as directory:
+            write_room_sources(extra, Path(directory))
+            binary = (Path(directory) / "Harbor.box").read_bytes()
+            offset = struct.unpack_from(">I", binary, 4)[0]
+            self.assertEqual(binary[offset:offset + 4], b"BOXM")
+        linked = parse_document(author_room_box_connections(
+            extended, "Harbor", "1-2; 2-3")).rooms[0]
+        self.assertEqual(linked.box_routes[1][3], 2)
+        self.assertEqual(linked.box_routes[3][1], 2)
+        self.assertEqual(linked.box_routes[1][2], authored.box_routes[1][2])
         story = (Path(__file__).resolve().parents[1] / "examples" /
                  "mini_story_chain.json").read_text(encoding="utf-8")
         composed = parse_document(compose_story_project(story, updated))
