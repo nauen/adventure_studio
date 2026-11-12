@@ -182,7 +182,7 @@ jobs:
         # its linked resource tree must contain the requested native chunks.
         # This is NOT a visual ScummVM occlusion/walking acceptance test.
         # Kept separate from the existing screenshot baseline.
-      - name: Verify five-box two-goal native walking and existing BOXM routing in stock ScummVM
+      - name: Verify six-box cyclic BOXM detours and disconnected control in stock ScummVM
         env:
           PYTHONPATH: src
         run: |
@@ -196,6 +196,7 @@ jobs:
             /tmp/native-boxm-routing/native-boxm-routing-report.json
             /tmp/native-boxm-routing/branch-*-project.json
             /tmp/native-boxm-routing/two-goals-*-project.json
+            /tmp/native-boxm-routing/cycle-*-project.json
             /tmp/native-boxm-routing/two-goals-*-screenshots/scummvm-lower-goal.png
             /tmp/native-boxm-routing/two-goals-*-screenshots/scummvm-upper-return.png
             /tmp/native-boxm-routing/*-screenshots/scummvm-end.png

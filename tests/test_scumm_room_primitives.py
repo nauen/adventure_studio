@@ -275,6 +275,61 @@ class RoomNativePrimitiveTests(unittest.TestCase):
                 [list(r) for r in room.box_routes],
                 [list(r) for r in blocked_room.box_routes], 140, 130, 120, 110)
 
+    def test_six_box_cycle_alternate_studio_routes_native_export(self):
+        from adventure_studio.scumm_boxm_routing_probe import verify_cyclic_six_box_detour
+
+        raw = canonical_json(GameDocument(
+            "six_box_cycle", (scrolling_fixture(), destination_fixture())))
+        for index, corners in (
+                (1, "0,70; 110,70; 110,150; 0,150"),
+                (2, "110,70; 240,70; 240,110; 110,110"),
+                (3, "110,110; 240,110; 240,150; 110,150"),
+                (4, "240,70; 360,70; 360,110; 240,110"),
+                (5, "240,110; 360,110; 360,150; 240,150"),
+                (6, "360,70; 639,70; 639,150; 360,150")):
+            raw = author_room_walkbox(raw, "Harbor", index, corners)
+        alternatives = (
+            ("cycle-intact", "1-2; 2-4; 4-6; 1-3; 3-5; 5-6", 2, True),
+            ("cycle-upper-blocked", "1-2; 4-6; 1-3; 3-5; 5-6", 3, True),
+            ("cycle-lower-blocked", "1-2; 2-4; 4-6; 1-3; 5-6", 2, True),
+            ("cycle-both-blocked", "1-2; 4-6; 1-3; 5-6", None, False),
+        )
+        variants = {}
+        binary_variants = set()
+        for name, connections, first_hop, reached in alternatives:
+            authored = author_room_box_connections(raw, "Harbor", connections)
+            room = parse_document(authored).rooms[0]
+            self.assertEqual(len(room.walkboxes), 6)
+            self.assertEqual(room.box_routes[1][6], first_hop)
+            self.assertEqual(room.box_routes[6][1], (4 if first_hop == 2 else
+                                                      5 if first_hop == 3 else None))
+            self.assertEqual(parse_document(canonical_json(parse_document(authored))).rooms[0],
+                             room)
+            with tempfile.TemporaryDirectory() as directory:
+                write_room_sources(room, Path(directory))
+                data = (Path(directory) / "Harbor.box").read_bytes()
+                self.assertIn(b"BOXM", data)
+                binary_variants.add(data)
+            variants[name] = {"route_matrix": [list(row) for row in room.box_routes],
+                              "frame_report": {"scroll_color_signature_passed": reached}}
+            if name == "cycle-upper-blocked":
+                story = (Path(__file__).resolve().parents[1] / "examples" /
+                         "mini_story_chain.json").read_text(encoding="utf-8")
+                composed = parse_document(compose_story_project(story, authored))
+                self.assertEqual(next(r for r in composed.rooms if r.name == "Harbor").box_routes,
+                                 room.box_routes)
+        self.assertEqual(len(binary_variants), len(alternatives))
+        verified = verify_cyclic_six_box_detour(variants, 180)
+        self.assertTrue(verified["native_six_box_cycle_detour_passed"])
+        with self.assertRaisesRegex(RuntimeError, "Actor reached"):
+            invalid = dict(variants)
+            invalid["cycle-both-blocked"] = {
+                **variants["cycle-both-blocked"],
+                "frame_report": {"scroll_color_signature_passed": True}}
+            verify_cyclic_six_box_detour(invalid, 180)
+        with self.assertRaisesRegex(ValueError, "gemeinsame Kante"):
+            author_room_box_connections(raw, "Harbor", "1-6")
+
     def test_studio_authored_scal_json_story_and_native_box_encoding(self):
         base = native_room(occlusion=False, far_scale=255)
         raw = canonical_json(GameDocument("studio_scal", (base, destination_fixture())))
