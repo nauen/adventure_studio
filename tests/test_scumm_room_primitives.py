@@ -210,6 +210,44 @@ class RoomNativePrimitiveTests(unittest.TestCase):
                 author_room_walkbox_zplane(raw, "Harbor", 3, 2)
             self.assertEqual(author_room_walkbox_zplane(raw, "Harbor", 2, 2), raw)
 
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
+    def test_studio_object_zmask_json_story_and_native_obim_source(self):
+        from PIL import Image
+
+        from adventure_studio.studio_sequences import import_object_zmask
+        base = scrolling_fixture()
+        document = GameDocument("object_zmask", (base, destination_fixture()))
+        raw = canonical_json(document)
+        door = next(obj for obj in base.hotspots if obj.id == "Door")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            image = Image.new("RGBA", (door.width, door.height), (0, 0, 0, 255))
+            image.putpixel((3, 5), (255, 255, 255, 255))
+            image.putpixel((4, 5), (255, 255, 255, 0))
+            png = root / "door-mask.png"
+            image.save(png)
+            updated = import_object_zmask(raw, "Harbor", "Door", str(png))
+            stored = parse_document(updated).rooms[0]
+            masked = next(obj for obj in stored.hotspots if obj.id == "Door")
+            self.assertEqual(masked.object_zmask_pixels[5 * door.width + 3], 1)
+            self.assertEqual(masked.object_zmask_pixels[5 * door.width + 4], 0)
+            self.assertEqual(len(masked.object_zmask_pixels), 256)
+            self.assertEqual(next(obj for obj in stored.hotspots if obj.id == "Key").object_zmask_pixels, None)
+            self.assertIn('"Door.bmp", { "DoorZ01.bmp" }', scummc_room_source(stored))
+            write_room_sources(stored, root)
+            self.assertTrue((root / "DoorZ01.bmp").is_file())
+            story = (Path(__file__).resolve().parents[1] / "examples" /
+                     "mini_story_chain.json").read_text(encoding="utf-8")
+            composed = parse_document(compose_story_project(story, updated))
+            self.assertEqual(next(obj for obj in composed.rooms[0].hotspots
+                                  if obj.id == "Door").object_zmask_pixels,
+                             masked.object_zmask_pixels)
+            with self.assertRaisesRegex(ValueError, "nicht aufhebbares"):
+                import_object_zmask(raw, "Harbor", "Key", str(png))
+            image.resize((8, 8)).save(png)
+            with self.assertRaisesRegex(ValueError, "exakt"):
+                import_object_zmask(raw, "Harbor", "Door", str(png))
+
     def test_project_json_roundtrip_preserves_native_assets(self):
         document = GameDocument("native", (native_room(), destination_fixture()))
         self.assertEqual(parse_document(canonical_json(document)), document)
