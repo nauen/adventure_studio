@@ -70,6 +70,33 @@ def verify_two_goal_t_branch(connected_routes: list[list[int | None]],
             "native_two_goal_t_branch_passed": True}
 
 
+def verify_cyclic_six_box_detour(variants: dict[str, dict], stopped_pixels: int) -> dict:
+    """Require both true native detours and a truly unreachable negative control."""
+    initial = variants["cycle-intact"]["route_matrix"]
+    upper = variants["cycle-upper-blocked"]["route_matrix"]
+    lower = variants["cycle-lower-blocked"]["route_matrix"]
+    blocked = variants["cycle-both-blocked"]["route_matrix"]
+    if any(len(matrix) != 7 or any(len(row) != 7 for row in matrix)
+           for matrix in (initial, upper, lower, blocked)):
+        raise RuntimeError("Native cyclic network needs six authored walkboxes")
+    if not (initial[1][6] == 2 and upper[1][6] == 3
+            and lower[1][6] == 2 and blocked[1][6] is None
+            and upper[3][6] == 5 and lower[2][6] == 4):
+        raise RuntimeError("Studio BOXM did not route around each disconnected edge")
+    if any(not variants[name]["frame_report"]["scroll_color_signature_passed"]
+           for name in ("cycle-intact", "cycle-upper-blocked", "cycle-lower-blocked")):
+        raise RuntimeError("Actor did not reach the distant destination via both native detours")
+    if variants["cycle-both-blocked"]["frame_report"]["scroll_color_signature_passed"]:
+        raise RuntimeError("Actor reached the goal although both native paths are disconnected")
+    if type(stopped_pixels) is not int or stopped_pixels < 80:
+        raise RuntimeError("Actor was not visible at the disconnected near-room boundary")
+    return {"full_network_first_hop": 2, "upper_edge_missing_first_hop": 3,
+            "lower_edge_missing_first_hop": 2,
+            "upper_detour_reached_goal": True, "lower_detour_reached_goal": True,
+            "both_paths_blocked": True, "blocked_actor_pixels": stopped_pixels,
+            "native_six_box_cycle_detour_passed": True}
+
+
 def run_boxm_probe(upstream: Path, generated: Path, destination: Path) -> dict:
     """Studio connection text -> JSON -> ScummC BOXM -> real ScummVM movement."""
     destination.mkdir(parents=True, exist_ok=True)
@@ -202,6 +229,40 @@ def run_boxm_probe(upstream: Path, generated: Path, destination: Path) -> dict:
         results["two_goals"]["two-goals-connected"]["route_matrix"],
         results["two_goals"]["two-goals-blocked"]["route_matrix"],
         upper_start, lower_reached, upper_return, blocked_lower)
+    # R09: one actual six-box cycle (1→2→4→6→5→3→1) from the
+    # existing Studio model. Removing either independent segment must leave
+    # the other valid shortest-hop route through the real native game.
+    cycle = canonical_json(GameDocument(
+        "six_box_cycle", (scrolling_fixture(), destination_fixture())))
+    for index, corners in (
+            (1, "0,70; 110,70; 110,150; 0,150"),
+            (2, "110,70; 240,70; 240,110; 110,110"),
+            (3, "110,110; 240,110; 240,150; 110,150"),
+            (4, "240,70; 360,70; 360,110; 240,110"),
+            (5, "240,110; 360,110; 360,150; 240,150"),
+            (6, "360,70; 639,70; 639,150; 360,150")):
+        cycle = author_room_walkbox(cycle, "Harbor", index, corners)
+    results["cycle"] = {}
+    for label, connections in (
+            ("cycle-intact", "1-2; 2-4; 4-6; 1-3; 3-5; 5-6"),
+            ("cycle-upper-blocked", "1-2; 4-6; 1-3; 3-5; 5-6"),
+            ("cycle-lower-blocked", "1-2; 2-4; 4-6; 1-3; 5-6"),
+            ("cycle-both-blocked", "1-2; 4-6; 1-3; 5-6")):
+        authored = author_room_box_connections(cycle, "Harbor", connections)
+        project_path = destination / f"{label}-project.json"
+        project_path.write_text(authored, encoding="utf-8")
+        room = parse_document(project_path.read_text(encoding="utf-8")).rooms[0]
+        results["cycle"][label] = {
+            "connections": connections,
+            "route_matrix": [list(row) for row in room.box_routes],
+            **render_native_room(room, upstream, generated, destination, label,
+                                 allow_static_scene=label == "cycle-both-blocked"),
+        }
+    stopped_pixels = black_costume_pixels(
+        destination / "cycle-both-blocked-screenshots" / "scummvm-end.png",
+        crop="250x155+200+300")
+    results["cycle"]["native_comparison"] = verify_cyclic_six_box_detour(
+        results["cycle"], stopped_pixels)
     (destination / "native-boxm-routing-report.json").write_text(
         json.dumps(results, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return results
