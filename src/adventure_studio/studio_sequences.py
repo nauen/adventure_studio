@@ -241,8 +241,9 @@ def import_room_zplane(raw: str, room_name: str, index: int, png_path: str) -> s
 
 
 
-def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: str) -> str:
-    """Assign a binary PNG Z-mask to the first native image state of an object."""
+def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: str,
+                         image_state: int = 1) -> str:
+    """Assign a PNG Z-mask independently to native object image state 1 or 2."""
     from PIL import Image
 
     document = parse_document(raw)
@@ -252,6 +253,10 @@ def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: st
     hotspot = next((item for item in room.hotspots if item.id == hotspot_id), None)
     if hotspot is None or hotspot.sprite_pixels is None:
         raise ValueError("Objekt-Z-Maske benötigt ein vorhandenes Objektbild")
+    if type(image_state) is not int or image_state not in (1, 2):
+        raise ValueError("Objekt-Z-Maske unterstützt Bildzustand 1 oder 2")
+    if image_state == 2 and hotspot.open_sprite_pixels is None:
+        raise ValueError("Bildzustand 2 benötigt ein vorhandenes offenes Objektbild")
     path = Path(png_path)
     if path.suffix.lower() != ".png":
         raise ValueError("Bitte eine PNG-Objekt-Z-Maske wählen")
@@ -268,7 +273,8 @@ def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: st
             )
     except (OSError, Image.DecompressionBombError) as error:
         raise ValueError(f"PNG-Objekt-Z-Maske nicht lesbar: {error}") from error
-    updated = replace(hotspot, object_zplane_pixels=pixels)
+    updated = (replace(hotspot, object_zplane_pixels=pixels) if image_state == 1
+               else replace(hotspot, open_object_zplane_pixels=pixels))
     rooms = tuple(
         replace(item, hotspots=tuple(updated if obj.id == hotspot_id else obj for obj in item.hotspots))
         if item.name == room_name else item for item in document.rooms
