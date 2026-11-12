@@ -229,6 +229,52 @@ class RoomNativePrimitiveTests(unittest.TestCase):
                                   scene(False, lower_room.box_routes),
                                   scene(False, blocked.box_routes), 100)
 
+    def test_five_box_t_branch_two_goals_persist_and_export(self):
+        from adventure_studio.scumm_boxm_routing_probe import verify_two_goal_t_branch
+
+        raw = canonical_json(GameDocument(
+            "two_goal_t_branch", (scrolling_fixture(), destination_fixture())))
+        for index, corners in (
+                (1, "0,70; 110,70; 110,150; 0,150"),
+                (2, "110,70; 240,70; 240,150; 110,150"),
+                (3, "240,70; 360,70; 360,150; 240,150"),
+                (4, "360,70; 639,70; 639,110; 360,110"),
+                (5, "360,110; 639,110; 639,150; 360,150")):
+            raw = author_room_walkbox(raw, "Harbor", index, corners)
+        connected = author_room_box_connections(raw, "Harbor", "1-2; 2-3; 3-4; 3-5")
+        blocked = author_room_box_connections(raw, "Harbor", "1-2; 2-3; 3-4")
+        room = parse_document(connected).rooms[0]
+        blocked_room = parse_document(blocked).rooms[0]
+        self.assertEqual(len(room.walkboxes), 5)
+        self.assertEqual(room.box_routes[1][4], 2)
+        self.assertEqual(room.box_routes[1][5], 2)
+        self.assertEqual(room.box_routes[3][4], 4)
+        self.assertEqual(room.box_routes[3][5], 5)
+        self.assertIsNone(blocked_room.box_routes[1][5])
+        self.assertEqual(blocked_room.box_routes[1][4], 2)
+        self.assertEqual(parse_document(canonical_json(parse_document(connected))).rooms[0],
+                         room)
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        saved = next(r for r in parse_document(compose_story_project(story, connected)).rooms
+                     if r.name == "Harbor")
+        self.assertEqual(saved.box_routes, room.box_routes)
+        with tempfile.TemporaryDirectory() as directory:
+            write_room_sources(room, Path(directory))
+            first = (Path(directory) / "Harbor.box").read_bytes()
+            write_room_sources(blocked_room, Path(directory))
+            second = (Path(directory) / "Harbor.box").read_bytes()
+            self.assertIn(b"BOXM", first)
+            self.assertNotEqual(first, second)
+        proof = verify_two_goal_t_branch(
+            [list(r) for r in room.box_routes],
+            [list(r) for r in blocked_room.box_routes], 140, 130, 120, 0)
+        self.assertTrue(proof["native_two_goal_t_branch_passed"])
+        with self.assertRaisesRegex(RuntimeError, "navigation absent"):
+            verify_two_goal_t_branch(
+                [list(r) for r in room.box_routes],
+                [list(r) for r in blocked_room.box_routes], 140, 130, 120, 110)
+
     def test_studio_authored_scal_json_story_and_native_box_encoding(self):
         base = native_room(occlusion=False, far_scale=255)
         raw = canonical_json(GameDocument("studio_scal", (base, destination_fixture())))
