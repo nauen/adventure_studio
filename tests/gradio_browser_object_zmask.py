@@ -50,6 +50,21 @@ def main() -> None:
                 page.locator("#native-object-zplane-add").click()
                 expect(report).to_have_value(re.compile(r"Objekt-Z-Maske für Door importiert"),
                                              timeout=30000)
+                # R07.2: choose the second object-image state in the real
+                # editor, import a distinct transparent mask, then export.
+                open_mask = root / "door-open-mask.png"
+                Image.new("L", (16, 16), 0).save(open_mask)
+                state_selection = page.locator("#native-object-zplane-state input[role=combobox]")
+                state_selection.click()
+                page.get_by_role("option", name="Offenes Bild (2)", exact=True).click(timeout=12000)
+                with page.expect_file_chooser() as chooser:
+                    page.locator("#native-object-zplane-file").click()
+                chooser.value.set_files(str(open_mask))
+                page.locator("#native-object-zplane-add").click()
+                expect(report).to_have_value(
+                    re.compile(r"Objekt-Z-Maske für Door, Bildzustand 2 importiert"),
+                    timeout=30000,
+                )
                 page.locator("#native-project-export-button").click()
                 link = page.locator("#native-project-export-file a[download]")
                 expect(link.first).to_be_visible(timeout=30000)
@@ -61,6 +76,7 @@ def main() -> None:
                 obj = next(h for room in parsed.rooms if room.name == "Harbor"
                            for h in room.hotspots if h.id == "Door")
                 assert obj.object_zplane_pixels == bytes([1]) * 256
+                assert obj.open_object_zplane_pixels == bytes(256)
                 page.screenshot(path=str(evidence / "authored-object-zmask.png"),
                                 full_page=True)
                 (evidence / "result.json").write_text(json.dumps(
