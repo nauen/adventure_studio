@@ -46,6 +46,7 @@ class UseRule:
     destination_room: str | None = None
     open_target: bool = False
     requires_inventory: tuple[str, ...] = ()
+    unlock_walkbox: int | None = None  # native index 1..N, changed by successful Use
 
 
 @dataclass(frozen=True)
@@ -369,6 +370,13 @@ def _validate(room: RoomAsset) -> None:
             raise ValueError("Invalid destination room in use rule")
         if rule.open_target and rule.hide_target:
             raise ValueError("Use rule cannot hide and open the same target")
+        if rule.unlock_walkbox is not None:
+            if (type(rule.unlock_walkbox) is not int or not 1 <= rule.unlock_walkbox <= len(room.walkboxes)):
+                raise ValueError("Walkbox unlock must reference an authored native walkbox")
+            if not rule.open_target or rule.destination_room is not None or rule.hide_target:
+                raise ValueError("Walkbox unlock needs a local open-state door Use action")
+            if room.walkboxes[rule.unlock_walkbox - 1].flags & 0xC0:
+                raise ValueError("Walkbox unlock requires an initially passable authored box")
         if rule.open_target and next(h for h in room.hotspots if h.id == rule.target_id).open_sprite_pixels is None:
             raise ValueError("Use rule open target needs an open-state sprite")
         if len(set(rule.requires_inventory)) != len(rule.requires_inventory):
@@ -747,6 +755,9 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                     parts.append("                setObjectState(objA,0);\n")
                 if rule.open_target:
                     parts.append("                setObjectState(objA,2);\n")
+                if rule.unlock_walkbox is not None:
+                    parts.append(f"                setBoxFlags([{rule.unlock_walkbox}],0);\n")
+                    parts.append("                createBoxMatrix();\n")
                 if rule.destination_room:
                     parts.append(f"                startRoom({rule.destination_room});\n")
                 parts.extend(["                return;\n", "            }\n", "            return;\n"])
@@ -789,6 +800,11 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         f"        putActorAt(VAR_EGO, 60, 100, {room.name});\n",
         "        setActorFollowBoxes();\n" if room.walkboxes else "        setActorIgnoreBoxes();\n",
         "        setActorStanding();\n",
+        *[f"        if(getObjectState({rule.target_id}) == 2) setBoxFlags([{rule.unlock_walkbox}],0);\n"
+          f"        else setBoxFlags([{rule.unlock_walkbox}],128);\n" for rule in room.use_rules
+          if rule.unlock_walkbox is not None],
+        *(["        createBoxMatrix();\n"] if any(rule.unlock_walkbox is not None
+                                                  for rule in room.use_rules) else []),
         *(["        cameraFollowActor(VAR_EGO);\n"] if not room.camera_cues else []),
         *[{
             "set": lambda cue: f"        setCameraAt({cue.x});\n",

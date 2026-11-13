@@ -95,6 +95,33 @@ def author_room_walkbox_zplane(raw: str, room_name: str, box_index: int, zplane_
     return _checked(replace(document, rooms=rooms))
 
 
+
+def author_room_walkbox_gate(raw: str, room_name: str, door_id: str,
+                             box_index: int) -> str:
+    """Attach a real SCUMM-v6 box unlock to an existing authored door Use rule.
+
+    This is a persistent rule parameter, never user-supplied script source.
+    The door's existing successful inventory Use action changes the box state.
+    """
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    if type(box_index) is not int or not 1 <= box_index <= len(room.walkboxes):
+        raise ValueError("Eine vorhandene Walkbox-Nummer wählen")
+    matching = [rule for rule in room.use_rules if rule.target_id == door_id]
+    if len(matching) != 1 or not matching[0].open_target:
+        raise ValueError("Tür benötigt eine bestehende Use-Regel mit Open-State")
+    if any(rule.unlock_walkbox == box_index and rule.target_id != door_id
+           for rule in room.use_rules):
+        raise ValueError("Walkbox ist bereits einer anderen Tür zugeordnet")
+    rules = tuple(replace(rule, unlock_walkbox=box_index)
+                  if rule.target_id == door_id else rule for rule in room.use_rules)
+    rooms = tuple(replace(item, use_rules=rules) if item.name == room_name else item
+                  for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
+
+
 def author_room_box_connections(raw: str, room_name: str, connections: str) -> str:
     """Author touching box links and deterministic shortest-hop native BOXM routes.
 
@@ -2463,11 +2490,28 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                 room.geometry.room_width != previous.geometry.room_width or
                 room.geometry.room_height != previous.geometry.room_height):
             raise ValueError(f"Raum-Z-Maske/Walkbox für {room.name} passt nicht mehr zur Story-Raumgröße")
+        # Story regenerates its inventory rules. Preserve the Studio-native gate
+        # only when the same item still opens the same local door. Otherwise
+        # reject a stale binding instead of silently losing gameplay.
+        native_gates = {rule.target_id: rule for rule in previous.use_rules
+                        if rule.unlock_walkbox is not None} if previous is not None else {}
+        story_rules = []
+        for rule in room.use_rules:
+            old = native_gates.pop(rule.target_id, None)
+            if old is not None:
+                if (old.item_id != rule.item_id or not rule.open_target
+                        or rule.hide_target or rule.destination_room is not None):
+                    raise ValueError(f"Story changed native walkbox gate action: {room.name}/{rule.target_id}")
+                rule = replace(rule, unlock_walkbox=old.unlock_walkbox)
+            story_rules.append(rule)
+        if native_gates:
+            raise ValueError(f"Story removed native walkbox gate target: {room.name}/{sorted(native_gates)}")
         rooms.append(replace(room, music_id=music_by_room.get(room.name), zplanes=zplanes,
                              walkboxes=previous.walkboxes if previous is not None else (),
                              box_routes=previous.box_routes if previous is not None else (),
                              scale_slots=previous.scale_slots if previous is not None else None,
-                             scale_curves=previous.scale_curves if previous is not None else ()))
+                             scale_curves=previous.scale_curves if previous is not None else (),
+                             use_rules=tuple(story_rules)))
     composed = replace(project, rooms=tuple(rooms),
                        costumes=native.costumes, actors=native.actors,
                        animation_rules=native.animation_rules,
