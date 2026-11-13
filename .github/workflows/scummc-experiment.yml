@@ -186,6 +186,24 @@ jobs:
         # its linked resource tree must contain the requested native chunks.
         # This is NOT a visual ScummVM occlusion/walking acceptance test.
         # Kept separate from the existing screenshot baseline.
+      - name: Verify native door-controlled R09 walkbox detour and shortcut in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dynamic_walkbox_gate_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r09-dynamic-walkbox-gate
+      - name: Retain real R09 walkbox door-route gameplay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r09-dynamic-walkbox-gate
+          path: |
+            /tmp/native-r09-dynamic-walkbox-gate/native-r09-dynamic-walkbox-gate-report.json
+            /tmp/native-r09-dynamic-walkbox-gate/*-project.json
+            /tmp/native-r09-dynamic-walkbox-gate/*-screenshots/scummvm-*.png
+            /tmp/native-r09-dynamic-walkbox-gate/*-screenshots/scummvm-*.json
+            /tmp/native-r09-dynamic-walkbox-gate/*-screenshots/scummvm-launch.log
+          if-no-files-found: ignore
       - name: Verify six-box cyclic BOXM detours and disconnected control in stock ScummVM
         env:
           PYTHONPATH: src
@@ -205,24 +223,6 @@ jobs:
             /tmp/native-boxm-routing/two-goals-*-screenshots/scummvm-upper-return.png
             /tmp/native-boxm-routing/*-screenshots/scummvm-end.png
             /tmp/native-boxm-routing/*-screenshots/scummvm-frame-report.json
-          if-no-files-found: ignore
-      - name: Verify native door-controlled R09 walkbox detour and shortcut in stock ScummVM
-        env:
-          PYTHONPATH: src
-        run: |
-          python -m pip install 'Pillow>=10,<13'
-          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dynamic_walkbox_gate_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r09-dynamic-walkbox-gate
-      - name: Retain real R09 walkbox door-route gameplay evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-r09-dynamic-walkbox-gate
-          path: |
-            /tmp/native-r09-dynamic-walkbox-gate/native-r09-dynamic-walkbox-gate-report.json
-            /tmp/native-r09-dynamic-walkbox-gate/*-project.json
-            /tmp/native-r09-dynamic-walkbox-gate/*-screenshots/scummvm-*.png
-            /tmp/native-r09-dynamic-walkbox-gate/*-screenshots/scummvm-*.json
-            /tmp/native-r09-dynamic-walkbox-gate/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Verify four independently selected Studio-authored Z-plane layers in stock ScummVM
         env:
