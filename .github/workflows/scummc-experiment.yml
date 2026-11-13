@@ -17,6 +17,7 @@ on:
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_authored_scal_probe.py'
       - 'src/adventure_studio/scumm_multi_zplane_probe.py'
+      - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
       - 'src/adventure_studio/scumm_object_zmask_probe.py'
   push:
     paths:
@@ -29,6 +30,7 @@ on:
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_authored_scal_probe.py'
       - 'src/adventure_studio/scumm_multi_zplane_probe.py'
+      - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
       - 'src/adventure_studio/scumm_object_zmask_probe.py'
       - 'src/adventure_studio/scumm_scal_probe.py'
       - 'src/adventure_studio/scumm_camera_probe.py'
@@ -254,6 +256,23 @@ jobs:
             /tmp/native-three-simultaneous-zplanes/*-project.json
             /tmp/native-three-simultaneous-zplanes/*-screenshots/scummvm-*.png
             /tmp/native-three-simultaneous-zplanes/*-screenshots/scummvm-frame-report.json
+          if-no-files-found: ignore
+      - name: Verify four simultaneous Studio PNG Z-masks on connected native walkboxes
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_four_simultaneous_zplane_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-four-simultaneous-zplanes
+      - name: Retain four-mask stock-ScummVM screenshots and independent control games
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-four-simultaneous-zplanes
+          path: |
+            /tmp/native-four-simultaneous-zplanes/native-four-simultaneous-mask-report.json
+            /tmp/native-four-simultaneous-zplanes/*-project.json
+            /tmp/native-four-simultaneous-zplanes/*-screenshots/scummvm-*.png
+            /tmp/native-four-simultaneous-zplanes/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify Studio-authored object IM01 and second-state IM02 Z-masks in stock ScummVM
         env:
