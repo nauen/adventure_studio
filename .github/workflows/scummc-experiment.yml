@@ -188,11 +188,12 @@ jobs:
         # its linked resource tree must contain the requested native chunks.
         # This is NOT a visual ScummVM occlusion/walking acceptance test.
         # Kept separate from the existing screenshot baseline.
-      - name: Play two independently gated Story rooms in stock ScummVM
+      - name: Play two independent native door gates and compare Actor routes with control
         env:
           PYTHONPATH: src
         run: |
-          python -m adventure_studio.scumm_independent_gate_chain_probe /tmp/scummc-upstream /tmp/native-r09-independent-gates
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_independent_gate_chain_probe /tmp/scummc-upstream /tmp/native-r09-independent-gates
       - name: Retain independent Story gate state and native ScummVM screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -200,10 +201,10 @@ jobs:
           name: native-r09-independent-gates
           path: |
             /tmp/native-r09-independent-gates/native-r09-independent-gates-report.json
-            /tmp/native-r09-independent-gates/build/project.json
-            /tmp/native-r09-independent-gates/screenshots/scummvm-*.png
-            /tmp/native-r09-independent-gates/screenshots/scummvm-*.json
-            /tmp/native-r09-independent-gates/screenshots/scummvm-launch.log
+            /tmp/native-r09-independent-gates/*/build/project.json
+            /tmp/native-r09-independent-gates/*/screenshots/scummvm-*.png
+            /tmp/native-r09-independent-gates/*/screenshots/scummvm-*.json
+            /tmp/native-r09-independent-gates/*/screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Verify reversible R09 door closes and reopens native walkbox in stock ScummVM
         env:
