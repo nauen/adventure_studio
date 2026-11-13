@@ -133,8 +133,8 @@ def run_simultaneous_four_mask_probe(upstream: Path, generated: Path,
                                       ("fourth-goal", 790, 390),
                                       ("fifth-crossing", 790, 390),
                                       ("fifth-goal", 790, 390),
-                                      ("fourth-crossing", 630, 390),
-                                      ("fourth-return", 630, 390),
+                                      ("fourth-crossing", 460, 390),
+                                      ("fourth-return", 460, 390),
                                       ("fifth-recrossing", 790, 390),
                                       ("fifth-return", 790, 390)))}
         images = destination / f"{label}-screenshots"
