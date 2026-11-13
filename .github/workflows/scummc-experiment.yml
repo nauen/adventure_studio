@@ -186,6 +186,24 @@ jobs:
         # its linked resource tree must contain the requested native chunks.
         # This is NOT a visual ScummVM occlusion/walking acceptance test.
         # Kept separate from the existing screenshot baseline.
+      - name: Verify reversible R09 door closes and reopens native walkbox in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dynamic_walkbox_gate_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r09-reversible-walkbox-gate --reversible
+      - name: Retain native reversible R09 gameplay and independent control
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r09-reversible-walkbox-gate
+          path: |
+            /tmp/native-r09-reversible-walkbox-gate/native-r09-dynamic-walkbox-gate-report.json
+            /tmp/native-r09-reversible-walkbox-gate/*-project.json
+            /tmp/native-r09-reversible-walkbox-gate/*-screenshots/scummvm-*.png
+            /tmp/native-r09-reversible-walkbox-gate/*-screenshots/scummvm-*.json
+            /tmp/native-r09-reversible-walkbox-gate/*-screenshots/scummvm-launch.log
+          if-no-files-found: ignore
       - name: Verify native door-controlled R09 walkbox detour and shortcut in stock ScummVM
         env:
           PYTHONPATH: src
