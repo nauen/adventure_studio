@@ -97,12 +97,14 @@ def author_room_walkbox_zplane(raw: str, room_name: str, box_index: int, zplane_
 
 
 def author_room_walkbox_gate(raw: str, room_name: str, door_id: str,
-                             box_index: int) -> str:
+                             box_index: int, reversible: bool = False) -> str:
     """Attach a real SCUMM-v6 box unlock to an existing authored door Use rule.
 
     This is a persistent rule parameter, never user-supplied script source.
     The door's existing successful inventory Use action changes the box state.
     """
+    if type(reversible) is not bool:
+        raise ValueError("Reversibles Tür-Gate muss ein Wahrheitswert sein")
     document = parse_document(raw)
     room = next((item for item in document.rooms if item.name == room_name), None)
     if room is None:
@@ -115,7 +117,8 @@ def author_room_walkbox_gate(raw: str, room_name: str, door_id: str,
     if any(rule.unlock_walkbox == box_index and rule.target_id != door_id
            for rule in room.use_rules):
         raise ValueError("Walkbox ist bereits einer anderen Tür zugeordnet")
-    rules = tuple(replace(rule, unlock_walkbox=box_index)
+    rules = tuple(replace(rule, unlock_walkbox=box_index,
+                          reversible_walkbox=reversible)
                   if rule.target_id == door_id else rule for rule in room.use_rules)
     rooms = tuple(replace(item, use_rules=rules) if item.name == room_name else item
                   for item in document.rooms)
@@ -2502,7 +2505,8 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                 if (old.item_id != rule.item_id or not rule.open_target
                         or rule.hide_target or rule.destination_room is not None):
                     raise ValueError(f"Story changed native walkbox gate action: {room.name}/{rule.target_id}")
-                rule = replace(rule, unlock_walkbox=old.unlock_walkbox)
+                rule = replace(rule, unlock_walkbox=old.unlock_walkbox,
+                               reversible_walkbox=old.reversible_walkbox)
             story_rules.append(rule)
         if native_gates:
             raise ValueError(f"Story removed native walkbox gate target: {room.name}/{sorted(native_gates)}")

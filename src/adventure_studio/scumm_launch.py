@@ -299,9 +299,12 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  allow_static_scene: bool = False, reverse_recipe: bool = False,
                  auto_recipe: bool = False, sample_scene_frames: bool = False,
                  scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
-                 native_walkbox_gate_probe: bool = False) -> None:
+                 native_walkbox_gate_probe: bool = False,
+                 native_reversible_walkbox_probe: bool = False) -> None:
     if scene_walk_clicks and not scene_only:
         raise ValueError("Scene walking probes require scene-only mode")
+    if native_reversible_walkbox_probe and not native_walkbox_gate_probe:
+        raise ValueError("Reversible walkbox probe requires the native gate route")
     if native_walkbox_gate_probe and (scene_only or verify_recipe or verify_chain or scene_walk_clicks):
         raise ValueError("Walkbox-gate smoke needs its own single-room inventory action")
     if any(not re.fullmatch(r"[a-z][a-z0-9-]*", label)
@@ -1036,6 +1039,68 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     if process.poll() is not None:
                         raise RuntimeError("Native gate game exited during walkbox route")
                     capture_frame(label)
+                if native_reversible_walkbox_probe:
+                    # Stage the next two *real* Use Key with Door operations in
+                    # the same live interpreter, not a source or resource edit.
+                    # Re-use the exact inventory/verb workflow already used
+                    # for the initial open state above.
+                    transitions = []
+                    for ordinal, wanted_open in ((1, False), (2, True)):
+                        # Travel to the far door; it can be off camera after
+                        # the previous return toward the left walkboxes.
+                        for step in range(3):
+                            subprocess.run(["xdotool", "mousemove", "790", "390",
+                                            "click", "1"], check=True, timeout=5)
+                            time.sleep(5.0)
+                        approach = f"gate-switch-{ordinal}-approach"
+                        capture_frame(approach)
+                        if wanted_open:
+                            target_x, target_y = door_center(output_directory, approach)
+                        else:
+                            target_x, target_y = open_door_center(output_directory, approach)
+                        for click_x, click_y in ((408, 506), recipe_item_center or (552, 520),
+                                                 (target_x, target_y)):
+                            subprocess.run(["xdotool", "mousemove", str(click_x), str(click_y),
+                                            "click", "1"], check=True, timeout=5)
+                            time.sleep(0.3)
+                        expected = "open" if wanted_open else "closed"
+                        switched = False
+                        for attempt in range(40):
+                            label = f"gate-{expected}-{ordinal}-state"
+                            capture_frame(label)
+                            closed_pixels = door_pixels(output_directory, label)
+                            open_pixels = door_pixels(output_directory, label, open_state=True)
+                            if (open_pixels >= 40 and closed_pixels < 10) if wanted_open else (
+                                    closed_pixels >= 40 and open_pixels < 10):
+                                switched = True
+                                break
+                            time.sleep(0.35)
+                        if not switched:
+                            raise RuntimeError(
+                                f"Native reversible gate did not become {expected}: "
+                                f"closed={closed_pixels}, opened={open_pixels}")
+                        for step in range(3):
+                            subprocess.run(["xdotool", "mousemove", "220", "390",
+                                            "click", "1"], check=True, timeout=5)
+                            time.sleep(5.0)
+                        capture_frame(f"gate-{expected}-{ordinal}-left")
+                        subprocess.run(["xdotool", "mousemove", "790", "390",
+                                        "click", "1"], check=True, timeout=5)
+                        samples = []
+                        for sample in range(9):
+                            time.sleep(0.4)
+                            label = f"gate-{expected}-{ordinal}-sample-{sample:02d}"
+                            capture_frame(label)
+                            samples.append(label)
+                        time.sleep(4)
+                        capture_frame(f"gate-{expected}-{ordinal}-far")
+                        transitions.append({"state": expected, "door_state_verified": True,
+                                            "actor_sample_frames": samples})
+                    (output_directory / "scummvm-native-reversible-walkbox-report.json").write_text(
+                        json.dumps({"initial_open": door_opened,
+                                    "transitions": transitions,
+                                    "native_actor_returned": True}, indent=2) + "\n",
+                        encoding="utf-8")
                 (output_directory / "scummvm-native-walkbox-gate-report.json").write_text(
                     json.dumps({"native_door_use_opened": door_opened,
                                 "closed_walk_sampled": sample_scene_frames,
