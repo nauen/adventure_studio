@@ -100,7 +100,10 @@ def verify_reversible_native_walkbox_gate(results: dict[str, dict]) -> dict:
 
 
 def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path,
-                                   reversible: bool = False) -> dict:
+                                   reversible: bool = False,
+                                   save_load: bool = False) -> dict:
+    if save_load and not reversible:
+        raise ValueError("R09 Save/Load requires a reversible walkbox gate")
     output.mkdir(parents=True, exist_ok=True)
     base = scrolling_fixture()
     # The existing Door is a two-state local hotspot, not a room exit.
@@ -142,7 +145,8 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
                 raise RuntimeError("Story composition lost door gate and BOXM")
         render_native_room(saved, upstream, generated, output, label,
                            native_walkbox_gate_probe=True,
-                           native_reversible_walkbox_probe=(reversible and label == "reversible"))
+                           native_reversible_walkbox_probe=(reversible and label == "reversible"),
+                           native_reversible_gate_save_probe=(save_load and label == "reversible"))
         images = output / f"{label}-screenshots"
         log = (images / "scummvm-launch.log").read_text(encoding="utf-8")
         import re
@@ -188,6 +192,11 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
           flush=True)
     comparison = (verify_reversible_native_walkbox_gate(results) if reversible else
                   verify_native_walkbox_gate(results))
+    if save_load:
+        from .scumm_walkbox_save_probe import verify_reversible_gate_save_load
+        comparison["native_save_load"] = verify_reversible_gate_save_load(
+            output / "reversible", output / "reversible-screenshots",
+            output / "always-open-screenshots", output / "reversible-save-load")
     report = {"variants": results, "comparison": comparison}
     (output / "native-r09-dynamic-walkbox-gate-report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -195,8 +204,9 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (4, 5) or (len(sys.argv) == 5 and sys.argv[4] != "--reversible"):
-        raise SystemExit("Usage: python -m adventure_studio.scumm_dynamic_walkbox_gate_probe UPSTREAM GENERATED OUTPUT [--reversible]")
+    if sys.argv[4:] not in ([], ["--reversible"], ["--reversible", "--save-load"]):
+        raise SystemExit("Usage: python -m adventure_studio.scumm_dynamic_walkbox_gate_probe UPSTREAM GENERATED OUTPUT [--reversible [--save-load]]")
     print(json.dumps(run_dynamic_walkbox_gate_probe(
         Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]),
-        reversible=len(sys.argv) == 5), indent=2))
+        reversible="--reversible" in sys.argv[4:],
+        save_load="--save-load" in sys.argv[4:]), indent=2))
