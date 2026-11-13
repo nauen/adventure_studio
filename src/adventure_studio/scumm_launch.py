@@ -1041,7 +1041,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                 "closed_walk_sampled": sample_scene_frames,
                                 "open_walk_captured": True,
                                 "return_captured": True,
-                                "door_click": [door_x, door_y]}, indent=2) + "\\n",
+                                "door_click": [door_x, door_y]}, indent=2) + "\n",
                     encoding="utf-8")
                 return
             exit_x, exit_y = open_door_center(output_directory)
