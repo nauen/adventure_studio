@@ -922,6 +922,99 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Reversibles Tür-Gate muss ein Wahrheitswert sein"):
             author_room_walkbox_gate(raw, "Harbor", "Door", 2, reversible=1)
 
+    def test_r09_two_independent_reversible_gates_survive_model_story_and_export(self):
+        from adventure_studio.scumm_assets import UseRule
+        from adventure_studio.studio_sequences import author_room_walkbox_gate
+
+        base = scrolling_fixture()
+        door = next(h for h in base.hotspots if h.id == "Door")
+        room = replace(
+            base, demo_walk_to_x=None,
+            hotspots=tuple(replace(h, exit_destination=None)
+                           if h.id == "Door" else h for h in base.hotspots)
+                     + (replace(door, id="SideDoor", x=520,
+                                exit_destination=None),),
+            use_rules=base.use_rules
+                      + (UseRule("Key", "SideDoor", "The side door is unlocked.",
+                                 open_target=True),),
+        )
+        raw = canonical_json(GameDocument("two_native_gates",
+                                          (room, destination_fixture())))
+        for index, corners in (
+                (1, "0,70; 110,70; 110,150; 0,150"),
+                (2, "110,70; 240,70; 240,108; 110,108"),
+                (3, "110,112; 240,112; 240,150; 110,150"),
+                (4, "240,70; 639,70; 639,150; 240,150")):
+            raw = author_room_walkbox(raw, "Harbor", index, corners)
+        raw = author_room_box_connections(raw, "Harbor",
+                                           "1-2; 2-4; 1-3; 3-4")
+        raw = author_room_walkbox_gate(raw, "Harbor", "Door", 2,
+                                       reversible=True)
+        raw = author_room_walkbox_gate(raw, "Harbor", "SideDoor", 3,
+                                       reversible=True)
+        saved = parse_document(raw).rooms[0]
+        self.assertEqual([(r.target_id, r.unlock_walkbox, r.reversible_walkbox)
+                          for r in saved.use_rules],
+                         [("Door", 2, True), ("SideDoor", 3, True)])
+        self.assertEqual(parse_document(canonical_json(parse_document(raw))).rooms[0],
+                         saved)
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        # Story owns its scene content: it must reject a second native gate
+        # not represented by the source Story, instead of silently dropping it.
+        with self.assertRaisesRegex(ValueError, "Story removed native walkbox gate target"):
+            compose_story_project(story, raw)
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            write_room_sources(saved, target)
+            source = (target / "Harbor.scc").read_text(encoding="utf-8")
+            for box in (2, 3):
+                self.assertEqual(source.count(f"setBoxFlags([{box}],128);"), 2)
+                self.assertEqual(source.count(f"setBoxFlags([{box}],0);"), 2)
+            self.assertEqual(source.count("createBoxMatrix();"), 3)
+            self.assertIn("getObjectState(Door)", source)
+            self.assertIn("getObjectState(SideDoor)", source)
+        with self.assertRaisesRegex(ValueError, "bereits einer anderen Tür"):
+            author_room_walkbox_gate(raw, "Harbor", "SideDoor", 2,
+                                     reversible=True)
+        invalid = replace(saved, use_rules=(saved.use_rules[0],
+                          replace(saved.use_rules[1], unlock_walkbox=2)))
+        with self.assertRaisesRegex(ValueError, "distinct target box"):
+            scummc_room_source(invalid)
+
+    def test_r09_two_story_room_gates_are_independently_authored_and_exported(self):
+        from adventure_studio.studio_sequences import author_room_walkbox_gate
+
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        raw = compose_story_project(story)
+        for room_name, door_name in (("Harbor", "Door"), ("Cellar", "Door2")):
+            for index, corners in (
+                    (1, "0,70; 110,70; 110,150; 0,150"),
+                    (2, "110,70; 240,70; 240,108; 110,108"),
+                    (3, "110,112; 240,112; 240,150; 110,150"),
+                    (4, "240,70; 639,70; 639,150; 240,150")):
+                raw = author_room_walkbox(raw, room_name, index, corners)
+            raw = author_room_box_connections(
+                raw, room_name, "1-2; 2-4; 1-3; 3-4")
+            raw = author_room_walkbox_gate(raw, room_name, door_name, 2,
+                                           reversible=True)
+        composed = parse_document(compose_story_project(story, raw))
+        self.assertEqual(
+            [(r.name, rule.target_id, rule.unlock_walkbox, rule.reversible_walkbox)
+             for r in composed.rooms for rule in r.use_rules if rule.unlock_walkbox],
+            [("Harbor", "Door", 2, True), ("Cellar", "Door2", 2, True)])
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            for room in composed.rooms[:2]:
+                write_room_sources(room, target)
+                source = (target / f"{room.name}.scc").read_text(encoding="utf-8")
+                self.assertEqual(source.count("setBoxFlags([2],128);"), 2)
+                self.assertEqual(source.count("setBoxFlags([2],0);"), 2)
+                self.assertEqual(source.count("createBoxMatrix();"), 2)
+                self.assertIn(f"getObjectState({'Door' if room.name == 'Harbor' else 'Door2'})",
+                              source)
+
     def test_legacy_json_omits_new_optional_fields(self):
         room = scrolling_fixture()
         json_text = canonical_json(GameDocument("legacy", (room, destination_fixture())))

@@ -6,10 +6,21 @@ from unittest.mock import patch
 from subprocess import CompletedProcess
 from pathlib import Path
 
-from adventure_studio.scumm_launch import authored_item_center, close_rgb, colored_item_center, compare_frames, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, door_center, door_pixels, open_door_center, visible_key_pixels, screenshot_frame, key_center, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel
+from adventure_studio.scumm_launch import authored_item_center, close_rgb, colored_item_center, compare_frames, count_color_pixels, count_cyan_pixels, count_gold_pixels, count_green_pixels, door_center, door_pixels, open_door_center, visible_key_pixels, screenshot_frame, key_center, launch_smoke, parse_changed_pixels, parse_key_bounds, parse_srgb_pixel, should_retry_open_door_exit
 
 
 class ScummLaunchTests(unittest.TestCase):
+    def test_open_story_door_exit_retries_once_after_real_open_state(self):
+        # The stock-ScummVM --puzzle-only story previously lacked the
+        # retry already available to recipe games. Do not retry while
+        # the door is closed, nor after the one permitted retry.
+        self.assertTrue(should_retry_open_door_exit(40, already_retried=False))
+        self.assertTrue(should_retry_open_door_exit(120, already_retried=False))
+        self.assertFalse(should_retry_open_door_exit(39, already_retried=False))
+        self.assertFalse(should_retry_open_door_exit(120, already_retried=True))
+        self.assertFalse(should_retry_open_door_exit(-1, already_retried=False))
+        self.assertFalse(should_retry_open_door_exit(True, already_retried=False))
+
     def test_door_helpers_accept_new_frame_names_without_allowlist_edits(self):
         folder = Path("/tmp/native-game")
         with patch("adventure_studio.scumm_launch.subprocess.run",
