@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from .scumm_launch import launch_smoke
-from .scumm_project import export_document, parse_document
+from .scumm_project import canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
 from .story_document import build_story_document
 from .studio_sequences import (author_room_box_connections, author_room_walkbox,
@@ -83,6 +84,15 @@ def run_independent_gate_chain(upstream: Path, output: Path) -> dict:
                 raw = author_room_walkbox_gate(
                     raw, room_name, door_id, 2, reversible=True)
         authored = parse_document(compose_story_project(story, raw))
+        # The generic Story's Back2 passage at x=120 can be hit while a
+        # route probe walks to the left edge. Keep the actual room exit but
+        # place it outside the route-click corridor (x=220 in 1024px Xvfb).
+        authored = replace(
+            authored,
+            rooms=tuple(replace(room, hotspots=tuple(
+                replace(hotspot, x=40) if hotspot.id == "Back2" else hotspot
+                for hotspot in room.hotspots)) if room.name == "Cellar" else room
+                for room in authored.rooms))
         for room, door in (("Harbor", "Door"), ("Cellar", "Door2")):
             actual = next(r for r in authored.rooms if r.name == room)
             gates = [rule for rule in actual.use_rules if rule.unlock_walkbox is not None]
@@ -92,8 +102,8 @@ def run_independent_gate_chain(upstream: Path, output: Path) -> dict:
                 raise RuntimeError(f"Story composition changed {room}'s native gate")
             if variant == "always-open" and gates:
                 raise RuntimeError("Control Story must not have gated walkboxes")
-        built.project_json.write_text(raw, encoding="utf-8")
-        export_document(parse_document(raw), built.resource_directory)
+        built.project_json.write_text(canonical_json(authored), encoding="utf-8")
+        export_document(authored, built.resource_directory)
         game = compile_story_game(build, upstream, output / variant / "game")
         frames = output / variant / "screenshots"
         launch_smoke(game, frames, verify_chain=True,
