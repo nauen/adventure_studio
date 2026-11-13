@@ -108,8 +108,8 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
         images = output / f"{label}-screenshots"
         log = (images / "scummvm-launch.log").read_text(encoding="utf-8")
         import re
-        closed = bool(re.search(r"setBoxFlags\\(2, 0x80\\)", log))
-        opened = bool(re.search(r"setBoxFlags\\(2, 0x00\\)", log))
+        closed = bool(re.search(r"setBoxFlags\(2, 0x80\)", log))
+        opened = bool(re.search(r"setBoxFlags\(2, 0x00\)", log))
         frames = [images / f"scummvm-sample-{index:02d}.png" for index in range(9, 18)]
         sample_y = [actor_y_in_native_frame(frame) for frame in frames]
         after_y = actor_y_in_native_frame(images / "scummvm-gate-open-transit.png")
