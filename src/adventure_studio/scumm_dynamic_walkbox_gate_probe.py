@@ -199,10 +199,8 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
                 actor_y_in_native_frame(images / f"scummvm-{p}.png")
                 for p in native["transitions"][1]["actor_sample_frames"]]
             if room_return:
-                from .scumm_gate_room_return_probe import verify_native_gate_room_return
-                room_return_report = json.loads((images / "scummvm-native-gate-room-return-report.json").read_text())
-                results[label]["native_gate_room_return"] = verify_native_gate_room_return(
-                    room_return_report, images, output / "always-open-screenshots")
+                results[label]["room_return_report"] = json.loads(
+                    (images / "scummvm-native-gate-room-return-report.json").read_text())
             results[label]["native_reversible_flags_executed"] = (
                 log.count("setBoxFlags(2, 0x80)") >= 2
                 and log.count("setBoxFlags(2, 0x00)") >= 2)
@@ -210,6 +208,12 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
           flush=True)
     comparison = (verify_reversible_native_walkbox_gate(results) if reversible else
                   verify_native_walkbox_gate(results))
+    if room_return:
+        from .scumm_gate_room_return_probe import verify_native_gate_room_return
+        comparison["native_room_return"] = verify_native_gate_room_return(
+            results["reversible"]["room_return_report"],
+            output / "reversible-screenshots",
+            output / "always-open-screenshots")
     if save_load:
         from .scumm_walkbox_save_probe import verify_reversible_gate_save_load
         comparison["native_save_load"] = verify_reversible_gate_save_load(
