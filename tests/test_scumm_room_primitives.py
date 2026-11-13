@@ -919,7 +919,7 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Reversible door"):
             scummc_room_source(replace(room, use_rules=(
                 replace(room.use_rules[0], reversible_walkbox=True),)))
-        with self.assertRaisesRegex(ValueError, "Reversible walkbox flag must be boolean"):
+        with self.assertRaisesRegex(ValueError, "Reversibles Tür-Gate muss ein Wahrheitswert sein"):
             author_room_walkbox_gate(raw, "Harbor", "Door", 2, reversible=1)
 
     def test_legacy_json_omits_new_optional_fields(self):
