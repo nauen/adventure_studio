@@ -300,9 +300,12 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  auto_recipe: bool = False, sample_scene_frames: bool = False,
                  scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                  native_walkbox_gate_probe: bool = False,
-                 native_reversible_walkbox_probe: bool = False) -> None:
+                 native_reversible_walkbox_probe: bool = False,
+                 native_reversible_gate_save_probe: bool = False) -> None:
     if scene_walk_clicks and not scene_only:
         raise ValueError("Scene walking probes require scene-only mode")
+    if native_reversible_gate_save_probe and not native_reversible_walkbox_probe:
+        raise ValueError("Native gate Save/Load requires the reversible gameplay route")
     if native_reversible_walkbox_probe and not native_walkbox_gate_probe:
         raise ValueError("Reversible walkbox probe requires the native gate route")
     if native_walkbox_gate_probe and (scene_only or verify_recipe or verify_chain or scene_walk_clicks):
@@ -392,6 +395,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
     output_directory.mkdir(parents=True, exist_ok=True)
     log_path = output_directory / "scummvm-launch.log"
+    save_path = output_directory / "native-gate-saves"
+    if native_reversible_gate_save_probe:
+        save_path.mkdir(exist_ok=True)
     environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
 
     def capture_frame(label: str) -> Path:
@@ -413,7 +419,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
     with log_path.open("w", encoding="utf-8") as log:
         process = subprocess.Popen(
-            ["scummvm", *(["--debuglevel=3"] if native_walkbox_gate_probe else []), f"--path={game_directory.resolve()}", "tentacle"],
+            ["scummvm", *(["--debuglevel=3"] if native_walkbox_gate_probe else []),
+             *([f"--savepath={save_path.resolve()}"] if native_reversible_gate_save_probe else []),
+             f"--path={game_directory.resolve()}", "tentacle"],
             stdout=log,
             stderr=subprocess.STDOUT,
             env=environment,
@@ -1096,6 +1104,42 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                         capture_frame(f"gate-{expected}-{ordinal}-far")
                         transitions.append({"state": expected, "door_state_verified": True,
                                             "actor_sample_frames": samples})
+                    if native_reversible_gate_save_probe:
+                        # Save the REOPENED gate after a real third inventory Use,
+                        # with the Actor back at the left endpoint. The subsequent
+                        # probe starts a fresh stock ScummVM process from slot 1.
+                        for step in range(3):
+                            subprocess.run(["xdotool", "mousemove", "220", "390",
+                                            "click", "1"], check=True, timeout=5)
+                            time.sleep(5.0)
+                        capture_frame("gate-before-save")
+                        from .scumm_save_load_probe import (open_native_global_menu,
+                                                           verify_global_menu_ready)
+                        open_native_global_menu()
+                        time.sleep(2)
+                        capture_frame("gate-save-menu")
+                        verify_global_menu_ready(output_directory / "scummvm-gate-save-menu.png")
+                        subprocess.run(["xdotool", "mousemove", "512", "367",
+                                        "click", "1"], check=True, timeout=5)
+                        time.sleep(2)
+                        subprocess.run(["xdotool", "mousemove", "298", "285",
+                                        "click", "1"], check=True, timeout=5)
+                        time.sleep(2)
+                        subprocess.run(["xdotool", "type", "--clearmodifiers",
+                                        "--delay", "60", "R09 reversible gate"],
+                                       check=True, timeout=15)
+                        subprocess.run(["xdotool", "mousemove", "618", "414",
+                                        "click", "1"], check=True, timeout=5)
+                        time.sleep(3)
+                        slot = save_path / "tentacle.s01"
+                        if not slot.is_file() or slot.stat().st_size == 0:
+                            raise RuntimeError("Native R09 gate save slot was not created")
+                        (output_directory / "scummvm-native-gate-save-report.json").write_text(
+                            json.dumps({"native_save_created": True,
+                                        "slot": "tentacle.s01",
+                                        "saved_gate_state": "open-after-reopen",
+                                        "saved_actor_endpoint": "left"}, indent=2) + "\n",
+                            encoding="utf-8")
                     (output_directory / "scummvm-native-reversible-walkbox-report.json").write_text(
                         json.dumps({"initial_open": door_opened,
                                     "transitions": transitions,
