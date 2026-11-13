@@ -14,7 +14,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from .scumm_assets import destination_fixture, scrolling_fixture
+from .scumm_assets import RoomHotspot, destination_fixture, scrolling_fixture
 from .scumm_project import GameDocument, canonical_json, parse_document
 from .scumm_room_visual_probe import render_native_room
 from .scumm_launch import scene_pixel, close_rgb
@@ -101,9 +101,12 @@ def verify_reversible_native_walkbox_gate(results: dict[str, dict]) -> dict:
 
 def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path,
                                    reversible: bool = False,
-                                   save_load: bool = False) -> dict:
+                                   save_load: bool = False,
+                                   room_return: bool = False) -> dict:
     if save_load and not reversible:
         raise ValueError("R09 Save/Load requires a reversible walkbox gate")
+    if room_return and (not reversible or save_load):
+        raise ValueError("R09 room return requires its own reversible gate gameplay")
     output.mkdir(parents=True, exist_ok=True)
     base = scrolling_fixture()
     # The existing Door is a two-state local hotspot, not a room exit.
@@ -112,6 +115,15 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
         hotspots=tuple(replace(hotspot, exit_destination=None)
                        if hotspot.id == "Door" else hotspot for hotspot in base.hotspots),
     )
+    if room_return:
+        # A separate walk-to exit keeps the keyed Door local and reversible.
+        # Both hotspots are ordinary persisted Studio room objects.
+        portal = RoomHotspot("Passage", "the cellar passage", "A passage downstairs.",
+                             568, 100, 16, 16,
+                             sprite_pixels=bytes([6]) * (16 * 16),
+                             exit_destination="Cellar")
+        room = replace(room, palette=(*room.palette, (175, 60, 210)),
+                       hotspots=(*room.hotspots, portal))
     raw = canonical_json(GameDocument("r09_native_door_gate",
                                        (room, destination_fixture())))
     for index, corners in (
@@ -146,7 +158,8 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
         render_native_room(saved, upstream, generated, output, label,
                            native_walkbox_gate_probe=True,
                            native_reversible_walkbox_probe=(reversible and label == "reversible"),
-                           native_reversible_gate_save_probe=(save_load and label == "reversible"))
+                           native_reversible_gate_save_probe=(save_load and label == "reversible"),
+                           native_gate_room_return_probe=(room_return and label == "reversible"))
         images = output / f"{label}-screenshots"
         log = (images / "scummvm-launch.log").read_text(encoding="utf-8")
         import re
@@ -185,6 +198,11 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
             results[label]["reopened_route_actor_y"] = [
                 actor_y_in_native_frame(images / f"scummvm-{p}.png")
                 for p in native["transitions"][1]["actor_sample_frames"]]
+            if room_return:
+                from .scumm_gate_room_return_probe import verify_native_gate_room_return
+                room_return_report = json.loads((images / "scummvm-native-gate-room-return-report.json").read_text())
+                results[label]["native_gate_room_return"] = verify_native_gate_room_return(
+                    room_return_report, images, output / "always-open-screenshots")
             results[label]["native_reversible_flags_executed"] = (
                 log.count("setBoxFlags(2, 0x80)") >= 2
                 and log.count("setBoxFlags(2, 0x00)") >= 2)
@@ -204,9 +222,11 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
 
 
 if __name__ == "__main__":
-    if sys.argv[4:] not in ([], ["--reversible"], ["--reversible", "--save-load"]):
-        raise SystemExit("Usage: python -m adventure_studio.scumm_dynamic_walkbox_gate_probe UPSTREAM GENERATED OUTPUT [--reversible [--save-load]]")
+    if sys.argv[4:] not in ([], ["--reversible"], ["--reversible", "--save-load"],
+                            ["--reversible", "--room-return"]):
+        raise SystemExit("Usage: python -m adventure_studio.scumm_dynamic_walkbox_gate_probe UPSTREAM GENERATED OUTPUT [--reversible [--save-load|--room-return]]")
     print(json.dumps(run_dynamic_walkbox_gate_probe(
         Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]),
         reversible="--reversible" in sys.argv[4:],
-        save_load="--save-load" in sys.argv[4:]), indent=2))
+        save_load="--save-load" in sys.argv[4:],
+        room_return="--room-return" in sys.argv[4:]), indent=2))
