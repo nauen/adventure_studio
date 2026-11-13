@@ -298,9 +298,12 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  verify_chain: bool = False, verify_recipe: bool = False,
                  allow_static_scene: bool = False, reverse_recipe: bool = False,
                  auto_recipe: bool = False, sample_scene_frames: bool = False,
-                 scene_walk_clicks: tuple[tuple[str, int, int], ...] = ()) -> None:
+                 scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
+                 native_walkbox_gate_probe: bool = False) -> None:
     if scene_walk_clicks and not scene_only:
         raise ValueError("Scene walking probes require scene-only mode")
+    if native_walkbox_gate_probe and (scene_only or verify_recipe or verify_chain or scene_walk_clicks):
+        raise ValueError("Walkbox-gate smoke needs its own single-room inventory action")
     if any(not re.fullmatch(r"[a-z][a-z0-9-]*", label)
            or type(x) is not int or type(y) is not int
            or not 192 <= x < 832 or not 184 <= y < 472
@@ -1010,6 +1013,35 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 time.sleep(0.4)
             if not door_opened:
                 raise RuntimeError(f"Use Key with Door did not leave an open door in Harbor: closed={remaining_door_pixels}, open={open_door_pixels}, transitioned={room_changed}")
+            if native_walkbox_gate_probe:
+                # R09: this is the same live stock-ScummVM process in which
+                # the real inventory Use just opened the author-controlled box.
+                # The room-entry demo walk supplied initial closed-route
+                # screenshots (sample-XX). After opening, walk back to the
+                # left, cross again and return: no runtime or source patch.
+                actions = (
+                    ("gate-return-start", 220, 390, 6.0),
+                    ("gate-open-transit", 790, 390, 1.5),
+                    ("gate-open-goal", None, None, 5.0),
+                    ("gate-return-transit", 220, 390, 1.5),
+                    ("gate-return-complete", None, None, 6.0),
+                )
+                for label, x, y, seconds_to_wait in actions:
+                    if x is not None:
+                        subprocess.run(["xdotool", "mousemove", str(x), str(y),
+                                        "click", "1"], check=True, timeout=5)
+                    time.sleep(seconds_to_wait)
+                    if process.poll() is not None:
+                        raise RuntimeError("Native gate game exited during walkbox route")
+                    capture_frame(label)
+                (output_directory / "scummvm-native-walkbox-gate-report.json").write_text(
+                    json.dumps({"native_door_use_opened": door_opened,
+                                "closed_walk_sampled": sample_scene_frames,
+                                "open_walk_captured": True,
+                                "return_captured": True,
+                                "door_click": [door_x, door_y]}, indent=2) + "\\n",
+                    encoding="utf-8")
+                return
             exit_x, exit_y = open_door_center(output_directory)
             exit_click = subprocess.run(
                 ["xdotool", "mousemove", str(exit_x), str(exit_y), "click", "1"],
