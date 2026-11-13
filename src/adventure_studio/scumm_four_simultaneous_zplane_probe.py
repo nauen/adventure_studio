@@ -128,12 +128,14 @@ def run_simultaneous_four_mask_probe(upstream: Path, generated: Path,
                **render_native_room(
                    room, upstream, generated, destination, label,
                    scene_walk_clicks=(("second-goal", 245, 390),
-                                      ("third-goal", 460, 390),
-                                      ("fourth-goal", 630, 390),
+                                      ("third-crossing", 460, 390),
+                                      ("third-goal", 630, 390),
+                                      ("fourth-goal", 790, 390),
+                                      ("fifth-crossing", 790, 390),
                                       ("fifth-goal", 790, 390),
                                       ("fourth-crossing", 630, 390),
                                       ("fourth-return", 630, 390),
-                                      ("fifth-crossing", 790, 390),
+                                      ("fifth-recrossing", 790, 390),
                                       ("fifth-return", 790, 390)))}
         images = destination / f"{label}-screenshots"
         row.update({
