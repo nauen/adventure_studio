@@ -544,17 +544,19 @@ def make_app():
         except (ValueError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
-    def native_walkbox_gate_author(raw, room, door_id, box_index):
+    def native_walkbox_gate_author(raw, room, door_id, box_index, reversible):
         if raw is None:
             raise gr.Error("Bitte zuerst ein natives Projekt laden")
         try:
             if (type(box_index) not in (int, float) or not isfinite(box_index)
                     or box_index != int(box_index)):
                 raise ValueError("Walkbox-Nummer muss eine ganze Zahl sein")
-            updated = author_room_walkbox_gate(raw, room, door_id, int(box_index))
+            updated = author_room_walkbox_gate(raw, room, door_id, int(box_index),
+                                              reversible=bool(reversible))
             return (updated, *native_selectors(updated, selected_room=room),
-                    f"Tür {door_id} öffnet nach erfolgreicher Inventar-Use-Aktion "
-                    f"native Walkbox {int(box_index)}; BOXM wird dann in SCUMM v6 neu berechnet.")
+                    f"Tür {door_id} " + ("wechselt nach jeder Inventar-Use-Aktion zwischen "
+                    "offen und geschlossen" if reversible else "öffnet nach erfolgreicher Inventar-Use-Aktion")
+                    + f"; native Walkbox {int(box_index)} und BOXM werden in SCUMM v6 neu berechnet.")
         except (ValueError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
@@ -896,6 +898,9 @@ def make_app():
                                               elem_id="native-gate-door-id")
                 native_gate_box = gr.Number(label="Freizugebende Walkbox", value=2,
                                             precision=0, elem_id="native-gate-box-index")
+                native_gate_reversible = gr.Checkbox(
+                    label="Tür durch erneutes Verwenden wieder schließen/öffnen", value=False,
+                    elem_id="native-gate-reversible")
                 native_gate_add = gr.Button("Tür mit Walkbox verbinden",
                                             elem_id="native-gate-add")
             gr.Markdown("**Native Perspektive (SCAL):** Skalierung 1–255 zwischen zwei Y-Werten. "
@@ -1861,7 +1866,7 @@ def make_app():
                                     [native_state, native_room, native_box_routes_connections],
                                     [native_state, *native_outputs, native_report])
         native_gate_add.click(native_walkbox_gate_author,
-                              [native_state, native_room, native_gate_door, native_gate_box],
+                              [native_state, native_room, native_gate_door, native_gate_box, native_gate_reversible],
                               [native_state, *native_outputs, native_report])
         native_scal_add.click(native_scal_author,
                               [native_state, native_room, native_scal_slot, native_scal_s1,
