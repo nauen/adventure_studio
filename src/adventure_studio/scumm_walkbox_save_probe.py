@@ -108,14 +108,25 @@ def verify_reversible_gate_save_load(game: Path, original: Path,
             raise RuntimeError("R09 Save/Load failed to restore the Harbor room")
         # Native gameplay proof: loaded open shortcut, not only an open sprite.
         loaded_open = measure_route("loaded-open")
-        opened_pixels = door_pixels(output, "loaded-open-far", open_state=True)
-        closed_pixels = door_pixels(output, "loaded-open-far")
+        # The actor is still travelling toward the far target when the
+        # nine route samples finish. The Door is then beyond the camera edge,
+        # so probing the far-route screenshot reports zero pixels for both
+        # states. Finish the same genuine in-game approach used in the
+        # reversible R09 probe; only inspect the Door once it is on screen.
+        for _ in range(3):
+            click(790, 390)
+            time.sleep(5)
+        capture("loaded-open-door-approach")
+        opened_pixels = door_pixels(output, "loaded-open-door-approach", open_state=True)
+        closed_pixels = door_pixels(output, "loaded-open-door-approach")
         if opened_pixels < 40 or closed_pixels >= 10:
-            raise RuntimeError("Saved reopened gate did not restore its door object state")
+            raise RuntimeError(
+                "Saved reopened gate did not restore its visible door object state: "
+                f"open={opened_pixels}, closed={closed_pixels}")
 
         # The inventory key must still be usable after a fresh interpreter load.
         # Toggle that restored state to CLOSED, then measure its real detour.
-        x, y = open_door_center(output, "loaded-open-far")
+        x, y = open_door_center(output, "loaded-open-door-approach")
         for cx, cy in ((408, 506), (552, 520), (x, y)):
             click(cx, cy)
             time.sleep(0.3)
