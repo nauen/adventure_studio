@@ -1195,9 +1195,6 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                 "door_click": [door_x, door_y]}, indent=2) + "\n",
                     encoding="utf-8")
                 return
-            if native_independent_gate_chain_probe:
-                independent_gate_routes["first_open"] = capture_independent_route(
-                    "first-open")
             exit_x, exit_y = open_door_center(output_directory)
             exit_click = subprocess.run(
                 ["xdotool", "mousemove", str(exit_x), str(exit_y), "click", "1"],
@@ -1274,10 +1271,6 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     time.sleep(0.4)
                 if not opened:
                     raise RuntimeError("Second room door did not open with its story item")
-                if native_independent_gate_chain_probe:
-                    independent_gate_routes["second_open"] = capture_independent_route(
-                        "second-open")
-                    capture_frame("chain-second-open")
                 second_exit = open_door_center(output_directory, "chain-second-open")
                 command = subprocess.run(
                     ["xdotool", "mousemove", str(second_exit[0]), str(second_exit[1]), "click", "1"],
@@ -1328,6 +1321,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     return_checks["middle_item_owned"] = colored_item_pixels(output_directory, "chain-middle-state", rgb, inventory=True) >= 40
                     if not all(return_checks.values()):
                         raise RuntimeError(f"Middle room state was not preserved: {return_checks}")
+                    if native_independent_gate_chain_probe:
+                        independent_gate_routes["second_open"] = capture_independent_route(
+                            "second-open")
                     # The camera may be scrolled to the right. Move ego left
                     # until the uniquely colored back passage is visible.
                     for _ in range(4):
@@ -1354,6 +1350,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     return_checks["first_item_owned"] = colored_item_pixels(output_directory, "chain-first-return", tuple(route[0]["rgb"]), inventory=True) >= 40
                     if not all(return_checks.values()):
                         raise RuntimeError(f"Return-to-start state was not preserved: {return_checks}")
+                    if native_independent_gate_chain_probe:
+                        independent_gate_routes["first_open"] = capture_independent_route(
+                            "first-open")
                 (output_directory / "scummvm-chain-report.json").write_text(
                     json.dumps({"room_route": [step["room_id"] for step in route] + [goal["room_id"]],
                                 "first_door_opened": door_opened, "intermediate_room_visible": arrived,
