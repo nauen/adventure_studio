@@ -80,8 +80,6 @@ def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str)
 
 def author_room_walkbox_zplane(raw: str, room_name: str, box_index: int, zplane_index: int) -> str:
     """Assign a native room ZPxx layer to an existing walkbox, without changing routes."""
-    if type(reversible) is not bool:
-        raise ValueError("Reversibles Tür-Gate muss ein Wahrheitswert sein")
     document = parse_document(raw)
     room = next((item for item in document.rooms if item.name == room_name), None)
     if room is None:
@@ -105,6 +103,8 @@ def author_room_walkbox_gate(raw: str, room_name: str, door_id: str,
     This is a persistent rule parameter, never user-supplied script source.
     The door's existing successful inventory Use action changes the box state.
     """
+    if type(reversible) is not bool:
+        raise ValueError("Reversibles Tür-Gate muss ein Wahrheitswert sein")
     document = parse_document(raw)
     room = next((item for item in document.rooms if item.name == room_name), None)
     if room is None:
