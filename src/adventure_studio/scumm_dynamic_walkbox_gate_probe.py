@@ -100,7 +100,8 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
                      "mini_story_chain.json").read_text(encoding="utf-8")
             story_room = next(r for r in parse_document(compose_story_project(story, authored)).rooms
                               if r.name == "Harbor")
-            if story_room.use_rules != saved.use_rules or story_room.box_routes != saved.box_routes:
+            if (next(r for r in story_room.use_rules if r.target_id == "Door").unlock_walkbox != 2
+                    or story_room.box_routes != saved.box_routes):
                 raise RuntimeError("Story composition lost door gate and BOXM")
         render_native_room(saved, upstream, generated, output, label,
                            native_walkbox_gate_probe=True)
