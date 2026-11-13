@@ -800,7 +800,8 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         f"        putActorAt(VAR_EGO, 60, 100, {room.name});\n",
         "        setActorFollowBoxes();\n" if room.walkboxes else "        setActorIgnoreBoxes();\n",
         "        setActorStanding();\n",
-        *[f"        setBoxFlags([{rule.unlock_walkbox}],128);\n" for rule in room.use_rules
+        *[f"        if(getObjectState({rule.target_id}) == 2) setBoxFlags([{rule.unlock_walkbox}],0);\n"
+          f"        else setBoxFlags([{rule.unlock_walkbox}],128);\n" for rule in room.use_rules
           if rule.unlock_walkbox is not None],
         *(["        createBoxMatrix();\n"] if any(rule.unlock_walkbox is not None
                                                   for rule in room.use_rules) else []),
