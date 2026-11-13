@@ -12,7 +12,6 @@ import subprocess
 import time
 from pathlib import Path
 
-from .scumm_dynamic_walkbox_gate_probe import actor_y_in_native_frame
 from .scumm_launch import (close_rgb, door_pixels, open_door_center,
                            door_center, scene_pixel)
 
@@ -43,6 +42,8 @@ def verify_loaded_gate_routes(loaded_open: list[float], loaded_closed: list[floa
 
 def verify_reversible_gate_save_load(game: Path, original: Path,
                                      control: Path, output: Path) -> dict:
+    # Pillow is required only for the native screenshot probe, not core tests.
+    from .scumm_dynamic_walkbox_gate_probe import actor_y_in_native_frame
     if not os.environ.get("DISPLAY"):
         raise RuntimeError("Native R09 Save/Load requires Xvfb DISPLAY")
     save_report = original / "scummvm-native-gate-save-report.json"
