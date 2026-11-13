@@ -10,13 +10,18 @@ import json
 import sys
 from pathlib import Path
 
-from .scumm_dynamic_walkbox_gate_probe import actor_y_in_native_frame
 from .scumm_launch import launch_smoke
 from .scumm_project import export_document, parse_document
 from .scumm_toolchain import compile_story_game
 from .story_document import build_story_document
 from .studio_sequences import (author_room_box_connections, author_room_walkbox,
                                author_room_walkbox_gate, compose_story_project)
+
+
+def actor_y_in_native_frame(path: Path) -> float:
+    """Use the existing Pillow-based native Actor reader only during visual probes."""
+    from .scumm_dynamic_walkbox_gate_probe import actor_y_in_native_frame as measure
+    return measure(path)
 
 
 def verify_independent_gate_actor_routes(gated: dict, control: dict,
