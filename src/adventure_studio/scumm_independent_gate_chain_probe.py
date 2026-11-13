@@ -63,6 +63,10 @@ def verify_independent_gate_actor_routes(gated: dict, control: dict,
         differences[room] = {"closed_detour_pixels": detour,
                              "open_vs_control_pixels": shortcut}
     return {"two_independent_gate_actor_routes_passed": True,
+            "measurement_contract": {"samples_per_route": 9,
+                                     "minimum_detour_pixels": 15,
+                                     "minimum_detour_samples": 5,
+                                     "maximum_open_control_difference_pixels": 22},
             "room_routes": differences}
 
 
