@@ -74,7 +74,8 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                        initial_object_state2: str | None = None,
                        scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                        native_walkbox_gate_probe: bool = False,
-                       native_reversible_walkbox_probe: bool = False) -> dict:
+                       native_reversible_walkbox_probe: bool = False,
+                       native_reversible_gate_save_probe: bool = False) -> dict:
     """Compile, link, run and measure exactly one independently authored room."""
     if not re.fullmatch(r"[a-z][a-z0-9_-]{0,31}", label):
         raise ValueError("Invalid native visual probe label")
@@ -120,6 +121,7 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                  sample_scene_frames=native_walkbox_gate_probe,
                  native_walkbox_gate_probe=native_walkbox_gate_probe,
                  native_reversible_walkbox_probe=native_reversible_walkbox_probe,
+                 native_reversible_gate_save_probe=native_reversible_gate_save_probe,
                  scene_walk_clicks=scene_walk_clicks)
     return {
         "dark_costume_pixels": black_costume_pixels(images / "scummvm-end.png", crop),
