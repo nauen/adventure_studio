@@ -982,6 +982,39 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "distinct target box"):
             scummc_room_source(invalid)
 
+    def test_r09_two_story_room_gates_are_independently_authored_and_exported(self):
+        from adventure_studio.studio_sequences import author_room_walkbox_gate
+
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        raw = compose_story_project(story)
+        for room_name, door_name in (("Harbor", "Door"), ("Cellar", "Door2")):
+            for index, corners in (
+                    (1, "0,70; 110,70; 110,150; 0,150"),
+                    (2, "110,70; 240,70; 240,108; 110,108"),
+                    (3, "110,112; 240,112; 240,150; 110,150"),
+                    (4, "240,70; 639,70; 639,150; 240,150")):
+                raw = author_room_walkbox(raw, room_name, index, corners)
+            raw = author_room_box_connections(
+                raw, room_name, "1-2; 2-4; 1-3; 3-4")
+            raw = author_room_walkbox_gate(raw, room_name, door_name, 2,
+                                           reversible=True)
+        composed = parse_document(compose_story_project(story, raw))
+        self.assertEqual(
+            [(r.name, rule.target_id, rule.unlock_walkbox, rule.reversible_walkbox)
+             for r in composed.rooms for rule in r.use_rules if rule.unlock_walkbox],
+            [("Harbor", "Door", 2, True), ("Cellar", "Door2", 2, True)])
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory)
+            for room in composed.rooms[:2]:
+                write_room_sources(room, target)
+                source = (target / f"{room.name}.scc").read_text(encoding="utf-8")
+                self.assertEqual(source.count("setBoxFlags([2],128);"), 2)
+                self.assertEqual(source.count("setBoxFlags([2],0);"), 2)
+                self.assertEqual(source.count("createBoxMatrix();"), 2)
+                self.assertIn(f"getObjectState({'Door' if room.name == 'Harbor' else 'Door2'})",
+                              source)
+
     def test_legacy_json_omits_new_optional_fields(self):
         room = scrolling_fixture()
         json_text = canonical_json(GameDocument("legacy", (room, destination_fixture())))
