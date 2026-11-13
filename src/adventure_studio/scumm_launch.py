@@ -57,6 +57,11 @@ def close_rgb(actual: tuple[int, int, int], expected: tuple[int, int, int], tole
     return all(abs(a - e) <= tolerance for a, e in zip(actual, expected))
 
 
+def should_retry_open_door_exit(open_pixels: int, *, already_retried: bool) -> bool:
+    """Retry an exit click only once and only while the door is visibly open."""
+    return not already_retried and type(open_pixels) is int and open_pixels >= 40
+
+
 def count_gold_pixels(histogram: str) -> int:
     """Count the fixture's key pixels in ImageMagick RGB histogram output."""
     return count_color_pixels(histogram, (255, 220, 75))
@@ -1405,8 +1410,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 # This is required for the ordinary --puzzle-only story too,
                 # not only for recipes: CI observed a fully opened door but
                 # no transition to Cellar after the first exit click.
-                if (not exit_retried and time.monotonic() >= exit_retry_at
-                        and door_pixels(output_directory, "exit", open_state=True) >= 40):
+                if (time.monotonic() >= exit_retry_at
+                        and should_retry_open_door_exit(
+                            door_pixels(output_directory, "exit", open_state=True),
+                            already_retried=exit_retried)):
                     exit_retried = True
                     exit_x, exit_y = open_door_center(output_directory, "exit")
                     subprocess.run(
