@@ -892,6 +892,8 @@ class RoomNativePrimitiveTests(unittest.TestCase):
                                (4, "240,70; 639,70; 639,150; 240,150")):
             raw = author_room_walkbox(raw, "Harbor", index, corners)
         raw = author_room_box_connections(raw, "Harbor", "1-2; 2-4; 1-3; 3-4")
+        # Guard the existing R06 walkbox Z-plane path against unrelated R09 validation.
+        raw = author_room_walkbox_zplane(raw, "Harbor", 2, 0)
         toggled = author_room_walkbox_gate(raw, "Harbor", "Door", 2, reversible=True)
         saved = parse_document(toggled).rooms[0]
         self.assertTrue(saved.use_rules[0].reversible_walkbox)
