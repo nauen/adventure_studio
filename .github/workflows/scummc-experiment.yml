@@ -26,6 +26,11 @@ on:
   push:
     paths:
       - '.github/workflows/scummc-experiment.yml'
+      # Final R06/R09 evidence and acceptance documentation must not skip
+      # the native push gate merely because the last commit is documentation-only.
+      - 'docs/PROJECT_STATUS.md'
+      - 'docs/roadmap.md'
+      - 'docs/SCUMM_V6_CAPABILITIES.md'
       - 'src/adventure_studio/scumm_assets.py'
       - 'src/adventure_studio/scumm_binary.py'
       - 'src/adventure_studio/scumm_room_fixture.py'
