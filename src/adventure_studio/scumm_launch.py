@@ -1402,7 +1402,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 # The actor may still be finishing the door-opening animation
                 # when the first exit click arrives. Once the open hotspot is
                 # stable, repeat the click once with freshly measured bounds.
-                if (verify_recipe and not exit_retried and time.monotonic() >= exit_retry_at
+                # This is required for the ordinary --puzzle-only story too,
+                # not only for recipes: CI observed a fully opened door but
+                # no transition to Cellar after the first exit click.
+                if (not exit_retried and time.monotonic() >= exit_retry_at
                         and door_pixels(output_directory, "exit", open_state=True) >= 40):
                     exit_retried = True
                     exit_x, exit_y = open_door_center(output_directory, "exit")
