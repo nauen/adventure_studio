@@ -47,6 +47,7 @@ class UseRule:
     open_target: bool = False
     requires_inventory: tuple[str, ...] = ()
     unlock_walkbox: int | None = None  # native index 1..N, changed by successful Use
+    reversible_walkbox: bool = False  # repeated Use toggles door and its native box
 
 
 @dataclass(frozen=True)
@@ -370,6 +371,10 @@ def _validate(room: RoomAsset) -> None:
             raise ValueError("Invalid destination room in use rule")
         if rule.open_target and rule.hide_target:
             raise ValueError("Use rule cannot hide and open the same target")
+        if type(rule.reversible_walkbox) is not bool:
+            raise ValueError("Reversible walkbox flag must be boolean")
+        if rule.reversible_walkbox and rule.unlock_walkbox is None:
+            raise ValueError("Reversible door requires an authored walkbox gate")
         if rule.unlock_walkbox is not None:
             if (type(rule.unlock_walkbox) is not int or not 1 <= rule.unlock_walkbox <= len(room.walkboxes)):
                 raise ValueError("Walkbox unlock must reference an authored native walkbox")
@@ -753,11 +758,23 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                 ])
                 if rule.hide_target:
                     parts.append("                setObjectState(objA,0);\n")
-                if rule.open_target:
-                    parts.append("                setObjectState(objA,2);\n")
-                if rule.unlock_walkbox is not None:
-                    parts.append(f"                setBoxFlags([{rule.unlock_walkbox}],0);\n")
-                    parts.append("                createBoxMatrix();\n")
+                if rule.reversible_walkbox:
+                    parts.extend([
+                        "                if(getObjectState(objA) == 2) {\n",
+                        "                    setObjectState(objA,1);\n",
+                        f"                    setBoxFlags([{rule.unlock_walkbox}],128);\n",
+                        "                } else {\n",
+                        "                    setObjectState(objA,2);\n",
+                        f"                    setBoxFlags([{rule.unlock_walkbox}],0);\n",
+                        "                }\n",
+                        "                createBoxMatrix();\n",
+                    ])
+                else:
+                    if rule.open_target:
+                        parts.append("                setObjectState(objA,2);\n")
+                    if rule.unlock_walkbox is not None:
+                        parts.append(f"                setBoxFlags([{rule.unlock_walkbox}],0);\n")
+                        parts.append("                createBoxMatrix();\n")
                 if rule.destination_room:
                     parts.append(f"                startRoom({rule.destination_room});\n")
                 parts.extend(["                return;\n", "            }\n", "            return;\n"])
