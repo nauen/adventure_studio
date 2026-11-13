@@ -303,7 +303,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_reversible_walkbox_probe: bool = False,
                  native_reversible_gate_save_probe: bool = False,
                  native_gate_room_return_probe: bool = False,
-                 native_independent_gate_chain_probe: bool = False) -> None:
+                 native_independent_gate_chain_probe: bool = False,
+                 native_independent_gate_control: bool = False) -> None:
+    if native_independent_gate_control and not native_independent_gate_chain_probe:
+        raise ValueError("Native independent-gate control requires the same route capture")
     if native_independent_gate_chain_probe and not verify_chain:
         raise ValueError("Independent native gates require the real two-room chain")
     if scene_walk_clicks and not scene_only:
@@ -424,6 +427,30 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             raise RuntimeError(f"Screenshot PNG conversion failed: {preview.stderr}")
         return preview_path
 
+    independent_gate_routes = {}
+
+    def capture_independent_route(label: str) -> list[str]:
+        """Record aligned native Actor screenshots after a real walk command."""
+        for _ in range(3):
+            subprocess.run(["xdotool", "mousemove", "220", "390", "click", "1"],
+                           check=True, timeout=5)
+            time.sleep(5)
+        capture_frame(f"independent-{label}-left")
+        subprocess.run(["xdotool", "mousemove", "790", "390", "click", "1"],
+                       check=True, timeout=5)
+        labels = []
+        for ordinal in range(9):
+            time.sleep(0.4)
+            name = f"independent-{label}-{ordinal:02d}"
+            capture_frame(name)
+            labels.append(name)
+        for _ in range(3):
+            subprocess.run(["xdotool", "mousemove", "790", "390", "click", "1"],
+                           check=True, timeout=5)
+            time.sleep(5)
+        capture_frame(f"independent-{label}-right")
+        return labels
+
     with log_path.open("w", encoding="utf-8") as log:
         process = subprocess.Popen(
             ["scummvm", *(["--debuglevel=3"] if (native_walkbox_gate_probe or native_independent_gate_chain_probe) else []),
@@ -477,6 +504,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 print(f"Story-compiled SCUMM room rendered and scrolled: {changed} changed pixels")
                 print(f"Scene-only screenshots: {output_directory}")
                 return
+            if native_independent_gate_chain_probe:
+                independent_gate_routes["first_closed"] = capture_independent_route(
+                    "first-closed")
             # Negative path: walking into the locked door must leave it closed
             # and must not satisfy the goal. Check before collecting the key.
             capture_frame("locked-before")
@@ -1165,6 +1195,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                 "door_click": [door_x, door_y]}, indent=2) + "\n",
                     encoding="utf-8")
                 return
+            if native_independent_gate_chain_probe:
+                independent_gate_routes["first_open"] = capture_independent_route(
+                    "first-open")
             exit_x, exit_y = open_door_center(output_directory)
             exit_click = subprocess.run(
                 ["xdotool", "mousemove", str(exit_x), str(exit_y), "click", "1"],
@@ -1190,6 +1223,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     time.sleep(0.4)
                 if not arrived:
                     raise RuntimeError("Second story room did not render its pickup and locked exit")
+                if native_independent_gate_chain_probe:
+                    independent_gate_routes["second_closed"] = capture_independent_route(
+                        "second-closed")
                 # The second room cannot be left before collecting its item.
                 second_door = door_center(output_directory, "chain-arrival")
                 for x, y in ((328, 506),):
@@ -1238,6 +1274,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     time.sleep(0.4)
                 if not opened:
                     raise RuntimeError("Second room door did not open with its story item")
+                if native_independent_gate_chain_probe:
+                    independent_gate_routes["second_open"] = capture_independent_route(
+                        "second-open")
+                    capture_frame("chain-second-open")
                 second_exit = open_door_center(output_directory, "chain-second-open")
                 command = subprocess.run(
                     ["xdotool", "mousemove", str(second_exit[0]), str(second_exit[1]), "click", "1"],
@@ -1332,7 +1372,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     native_log = log_path.read_text(encoding="utf-8")
                     closed = native_log.count("setBoxFlags(2, 0x80)")
                     open_ = native_log.count("setBoxFlags(2, 0x00)")
-                    if closed < 2 or open_ < 2:
+                    if not native_independent_gate_control and (closed < 2 or open_ < 2):
                         raise RuntimeError(
                             f"Two native gate flag cycles not observed: closed={closed}, open={open_}")
                     (output_directory / "scummvm-native-independent-gates-report.json").write_text(
@@ -1341,7 +1381,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                     "second_door_use_opened": opened,
                                     "return_preserved_both_states": all(return_checks.values()),
                                     "native_box_flags_closed_calls": closed,
-                                    "native_box_flags_open_calls": open_},
+                                    "native_box_flags_open_calls": open_,
+                                    "control_game": native_independent_gate_control,
+                                    "actor_routes": independent_gate_routes},
                                    indent=2) + "\n", encoding="utf-8")
                 if not reached:
                     raise RuntimeError("Chain did not reach its final story room")
