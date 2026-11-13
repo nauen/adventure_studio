@@ -410,7 +410,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
     with log_path.open("w", encoding="utf-8") as log:
         process = subprocess.Popen(
-            ["scummvm", f"--path={game_directory.resolve()}", "tentacle"],
+            ["scummvm", *(["--debuglevel=3"] if native_walkbox_gate_probe else []), f"--path={game_directory.resolve()}", "tentacle"],
             stdout=log,
             stderr=subprocess.STDOUT,
             env=environment,
@@ -1020,11 +1020,13 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 # screenshots (sample-XX). After opening, walk back to the
                 # left, cross again and return: no runtime or source patch.
                 actions = (
-                    ("gate-return-start", 220, 390, 6.0),
+                    ("gate-leftward-1", 220, 390, 5.0),
+                    ("gate-leftward-2", 220, 390, 5.0),
+                    ("gate-return-start", 220, 390, 5.0),
                     ("gate-open-transit", 790, 390, 1.5),
                     ("gate-open-goal", None, None, 5.0),
-                    ("gate-return-transit", 220, 390, 1.5),
-                    ("gate-return-complete", None, None, 6.0),
+                    ("gate-return-transit", 220, 390, 3.0),
+                    ("gate-return-complete", 220, 390, 5.0),
                 )
                 for label, x, y, seconds_to_wait in actions:
                     if x is not None:
