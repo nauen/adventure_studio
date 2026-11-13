@@ -2490,11 +2490,28 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                 room.geometry.room_width != previous.geometry.room_width or
                 room.geometry.room_height != previous.geometry.room_height):
             raise ValueError(f"Raum-Z-Maske/Walkbox für {room.name} passt nicht mehr zur Story-Raumgröße")
+        # Story regenerates its inventory rules. Preserve the Studio-native gate
+        # only when the same item still opens the same local door. Otherwise
+        # reject a stale binding instead of silently losing gameplay.
+        native_gates = {rule.target_id: rule for rule in previous.use_rules
+                        if rule.unlock_walkbox is not None} if previous is not None else {}
+        story_rules = []
+        for rule in room.use_rules:
+            old = native_gates.pop(rule.target_id, None)
+            if old is not None:
+                if (old.item_id != rule.item_id or not rule.open_target
+                        or rule.hide_target or rule.destination_room is not None):
+                    raise ValueError(f"Story changed native walkbox gate action: {room.name}/{rule.target_id}")
+                rule = replace(rule, unlock_walkbox=old.unlock_walkbox)
+            story_rules.append(rule)
+        if native_gates:
+            raise ValueError(f"Story removed native walkbox gate target: {room.name}/{sorted(native_gates)}")
         rooms.append(replace(room, music_id=music_by_room.get(room.name), zplanes=zplanes,
                              walkboxes=previous.walkboxes if previous is not None else (),
                              box_routes=previous.box_routes if previous is not None else (),
                              scale_slots=previous.scale_slots if previous is not None else None,
-                             scale_curves=previous.scale_curves if previous is not None else ()))
+                             scale_curves=previous.scale_curves if previous is not None else (),
+                             use_rules=tuple(story_rules)))
     composed = replace(project, rooms=tuple(rooms),
                        costumes=native.costumes, actors=native.actors,
                        animation_rules=native.animation_rules,
