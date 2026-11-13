@@ -66,7 +66,41 @@ def verify_native_walkbox_gate(results: dict[str, dict]) -> dict:
             "walk_to_far_goal_and_return": True}
 
 
-def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path) -> dict:
+def verify_reversible_native_walkbox_gate(results: dict[str, dict]) -> dict:
+    changing = results["reversible"]
+    control = results["always-open"]
+    if changing["rule_unlock_walkbox"] != 2 or not changing["reversible_walkbox"]:
+        raise RuntimeError("Expected the same authored door to toggle native walkbox two")
+    if control["rule_unlock_walkbox"] is not None:
+        raise RuntimeError("Control game must have no gated walkbox")
+    if not all(r["door_used"] and r["visited_far_goal_and_returned"]
+               for r in results.values()):
+        raise RuntimeError("Native puzzle or initial return failed")
+    if not changing["stock_scummvm_box_flag_transition"]:
+        raise RuntimeError("Native closed-to-open door route was not observed")
+    if not changing["native_reversible_flags_executed"]:
+        raise RuntimeError("Stock ScummVM did not execute close and reopen flag changes")
+    if changing["native_door_transitions"] != ["closed", "open"]:
+        raise RuntimeError("Native door sprite did not close then reopen after two real Use actions")
+    before = [a - b for a, b in zip(changing["closed_route_actor_y"],
+                                    control["closed_route_actor_y"])]
+    reclosed = [a - b for a, b in zip(changing["reclosed_route_actor_y"],
+                                      control["closed_route_actor_y"])]
+    reopened = [abs(a - b) for a, b in zip(changing["reopened_route_actor_y"],
+                                           control["closed_route_actor_y"])]
+    if max(before) < 18 or max(reclosed) < 18:
+        raise RuntimeError(f"Native reclosed box failed to restore detour: {before}, {reclosed}")
+    if min(reopened) > 22:
+        raise RuntimeError(f"Reopened native box did not restore shortcut: {reopened}")
+    return {"native_r09_reversible_walkbox_gate_passed": True,
+            "initial_closed_detour_differences": before,
+            "after_close_detour_differences": reclosed,
+            "after_reopen_open_route_differences": reopened,
+            "same_native_game_three_gate_changes": True}
+
+
+def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path,
+                                   reversible: bool = False) -> dict:
     output.mkdir(parents=True, exist_ok=True)
     base = scrolling_fixture()
     # The existing Door is a two-state local hotspot, not a room exit.
@@ -84,10 +118,11 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
             (4, "240,70; 639,70; 639,150; 240,150")):
         raw = author_room_walkbox(raw, "Harbor", index, corners)
     raw = author_room_box_connections(raw, "Harbor", "1-2; 2-4; 1-3; 3-4")
-    variants = {
-        "door-gated": author_room_walkbox_gate(raw, "Harbor", "Door", 2),
-        "always-open": raw,
-    }
+    variants = ({"reversible": author_room_walkbox_gate(
+                      raw, "Harbor", "Door", 2, reversible=True),
+                 "always-open": raw} if reversible else
+                {"door-gated": author_room_walkbox_gate(raw, "Harbor", "Door", 2),
+                 "always-open": raw})
     results = {}
     for label, authored in variants.items():
         project_path = output / f"{label}-project.json"
@@ -95,16 +130,19 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
         saved = parse_document(authored).rooms[0]
         if parse_document(canonical_json(parse_document(authored))).rooms[0] != saved:
             raise RuntimeError(f"JSON roundtrip lost native gate: {label}")
-        if label == "door-gated":
+        if label in ("door-gated", "reversible"):
             story = (Path(__file__).resolve().parents[2] / "examples" /
                      "mini_story_chain.json").read_text(encoding="utf-8")
             story_room = next(r for r in parse_document(compose_story_project(story, authored)).rooms
                               if r.name == "Harbor")
-            if (next(r for r in story_room.use_rules if r.target_id == "Door").unlock_walkbox != 2
+            door_rule = next(r for r in story_room.use_rules if r.target_id == "Door")
+            if (door_rule.unlock_walkbox != 2
+                    or door_rule.reversible_walkbox != reversible
                     or story_room.box_routes != saved.box_routes):
                 raise RuntimeError("Story composition lost door gate and BOXM")
         render_native_room(saved, upstream, generated, output, label,
-                           native_walkbox_gate_probe=True)
+                           native_walkbox_gate_probe=True,
+                           native_reversible_walkbox_probe=(reversible and label == "reversible"))
         images = output / f"{label}-screenshots"
         log = (images / "scummvm-launch.log").read_text(encoding="utf-8")
         import re
@@ -119,6 +157,7 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
         used = json.loads((images / "scummvm-native-walkbox-gate-report.json").read_text())
         results[label] = {
             "rule_unlock_walkbox": saved.use_rules[0].unlock_walkbox,
+            "reversible_walkbox": saved.use_rules[0].reversible_walkbox,
             "authored_box_routes": [list(row) for row in saved.box_routes],
             "stock_scummvm_box_flag_transition": closed and opened,
             "closed_route_actor_y": sample_y,
@@ -130,16 +169,34 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
                 and close_rgb(returned_sky, (70, 130, 190)),
             "screen_sky": {"initial": before_sky, "far": far_sky, "return": returned_sky},
         }
+        if reversible and label == "reversible":
+            native = json.loads((images / "scummvm-native-reversible-walkbox-report.json")
+                                .read_text(encoding="utf-8"))
+            results[label]["native_door_transitions"] = [
+                item["state"] for item in native["transitions"]
+                if item["door_state_verified"]]
+            results[label]["reclosed_route_actor_y"] = [
+                actor_y_in_native_frame(images / p)
+                for p in native["transitions"][0]["actor_sample_frames"]]
+            results[label]["reopened_route_actor_y"] = [
+                actor_y_in_native_frame(images / p)
+                for p in native["transitions"][1]["actor_sample_frames"]]
+            results[label]["native_reversible_flags_executed"] = (
+                log.count("setBoxFlags(2, 0x80)") >= 2
+                and log.count("setBoxFlags(2, 0x00)") >= 2)
     print("R09 native actor route observations:", json.dumps(results, sort_keys=True),
           flush=True)
-    report = {"variants": results, "comparison": verify_native_walkbox_gate(results)}
+    comparison = (verify_reversible_native_walkbox_gate(results) if reversible else
+                  verify_native_walkbox_gate(results))
+    report = {"variants": results, "comparison": comparison}
     (output / "native-r09-dynamic-walkbox-gate-report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return report
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        raise SystemExit("Usage: python -m adventure_studio.scumm_dynamic_walkbox_gate_probe UPSTREAM GENERATED OUTPUT")
+    if len(sys.argv) not in (4, 5) or (len(sys.argv) == 5 and sys.argv[4] != "--reversible"):
+        raise SystemExit("Usage: python -m adventure_studio.scumm_dynamic_walkbox_gate_probe UPSTREAM GENERATED OUTPUT [--reversible]")
     print(json.dumps(run_dynamic_walkbox_gate_probe(
-        Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])), indent=2))
+        Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]),
+        reversible=len(sys.argv) == 5), indent=2))
