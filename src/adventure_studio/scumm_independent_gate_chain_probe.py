@@ -52,7 +52,11 @@ def verify_independent_gate_actor_routes(gated: dict, control: dict,
                                        paths[("closed", "control")])]
         shortcut = [abs(a - b) for a, b in zip(paths[("open", "gated")],
                                               paths[("open", "control")])]
-        if sum(value >= 18 for value in detour) < 5:
+        # Two independent stock-ScummVM CI runs measured sustained 16-18 px
+        # deviations ([2,9,13,17,17,17,18,17,10] and
+        # [4,9,13,17,17,17,16,18,9]). Require >=15 px in at least five
+        # aligned native frames; sprite-only changes still produce 0 px.
+        if sum(value >= 15 for value in detour) < 5:
             raise RuntimeError(f"{room} native closed gate did not force detour: {detour}")
         if max(shortcut[:6]) > 22:
             raise RuntimeError(f"{room} native opened gate did not restore shortcut: {shortcut}")
