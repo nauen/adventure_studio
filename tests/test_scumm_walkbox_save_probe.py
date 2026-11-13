@@ -16,6 +16,19 @@ class ReversibleGateSaveLoadTests(unittest.TestCase):
         self.assertTrue(report["native_gate_save_load_routes_passed"])
         self.assertEqual(report["loaded_closed_vs_always_open_deltas"], [40.0] * 9)
 
+    def test_accepts_proven_initial_detour_with_late_camera_phase_difference(self):
+        post_load = [402.5, 411.0, 412.0, 412.5, 412.0, 396.0, 370.0, 369.0, 368.0]
+        reference = [412.5, 413.0, 412.0, 410.5, 410.0, 406.0, 405.0, 403.0, 400.0]
+        self.assertTrue(verify_loaded_gate_routes(
+            self.shortcut, post_load, self.shortcut, reference,
+            self.shortcut)["native_gate_save_load_routes_passed"])
+
+    def test_rejects_open_shortcut_during_post_load_detour_window(self):
+        post_load = [360.0] * 6 + [400.0] * 3
+        with self.assertRaisesRegex(RuntimeError, "detour"):
+            verify_loaded_gate_routes(
+                self.shortcut, post_load, self.shortcut, self.detour, self.shortcut)
+
     def test_rejects_loaded_gate_that_reset_to_initially_closed_route(self):
         with self.assertRaisesRegex(RuntimeError, "shortcut"):
             verify_loaded_gate_routes(
