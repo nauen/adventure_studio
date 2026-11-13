@@ -301,11 +301,15 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                  native_walkbox_gate_probe: bool = False,
                  native_reversible_walkbox_probe: bool = False,
-                 native_reversible_gate_save_probe: bool = False) -> None:
+                 native_reversible_gate_save_probe: bool = False,
+                  native_gate_room_return_probe: bool = False) -> None:
     if scene_walk_clicks and not scene_only:
         raise ValueError("Scene walking probes require scene-only mode")
     if native_reversible_gate_save_probe and not native_reversible_walkbox_probe:
         raise ValueError("Native gate Save/Load requires the reversible gameplay route")
+    if native_gate_room_return_probe and (
+            not native_reversible_walkbox_probe or native_reversible_gate_save_probe):
+        raise ValueError("Native gate room return requires its own reversible gameplay route")
     if native_reversible_walkbox_probe and not native_walkbox_gate_probe:
         raise ValueError("Reversible walkbox probe requires the native gate route")
     if native_walkbox_gate_probe and (scene_only or verify_recipe or verify_chain or scene_walk_clicks):
@@ -1140,6 +1144,11 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                         "saved_gate_state": "open-after-reopen",
                                         "saved_actor_endpoint": "left"}, indent=2) + "\n",
                             encoding="utf-8")
+                    if native_gate_room_return_probe:
+                        from .scumm_gate_room_return_probe import play_native_gate_room_return
+                        play_native_gate_room_return(
+                            output_directory, capture_frame, process,
+                            recipe_item_center or (552, 520))
                     (output_directory / "scummvm-native-reversible-walkbox-report.json").write_text(
                         json.dumps({"initial_open": door_opened,
                                     "transitions": transitions,
