@@ -960,10 +960,10 @@ class RoomNativePrimitiveTests(unittest.TestCase):
                          saved)
         story = (Path(__file__).resolve().parents[1] / "examples" /
                  "mini_story_chain.json").read_text(encoding="utf-8")
-        composed = parse_document(compose_story_project(story, raw))
-        self.assertEqual([(r.target_id, r.unlock_walkbox)
-                          for r in composed.rooms[0].use_rules],
-                         [("Door", 2), ("SideDoor", 3)])
+        # Story owns its scene content: it must reject a second native gate
+        # not represented by the source Story, instead of silently dropping it.
+        with self.assertRaisesRegex(ValueError, "Story removed native walkbox gate target"):
+            compose_story_project(story, raw)
         with tempfile.TemporaryDirectory() as directory:
             target = Path(directory)
             write_room_sources(saved, target)
