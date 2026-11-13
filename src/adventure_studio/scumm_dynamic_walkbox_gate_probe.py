@@ -88,9 +88,9 @@ def verify_reversible_native_walkbox_gate(results: dict[str, dict]) -> dict:
                                       control["closed_route_actor_y"])]
     reopened = [abs(a - b) for a, b in zip(changing["reopened_route_actor_y"],
                                            control["closed_route_actor_y"])]
-    if max(before) < 18 or max(reclosed) < 18:
+    if sum(x >= 18 for x in before) < 5 or sum(x >= 18 for x in reclosed) < 5:
         raise RuntimeError(f"Native reclosed box failed to restore detour: {before}, {reclosed}")
-    if min(reopened) > 22:
+    if max(reopened) > 22:
         raise RuntimeError(f"Reopened native box did not restore shortcut: {reopened}")
     return {"native_r09_reversible_walkbox_gate_passed": True,
             "initial_closed_detour_differences": before,
