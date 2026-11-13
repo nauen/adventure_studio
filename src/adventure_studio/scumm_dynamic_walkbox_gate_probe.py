@@ -176,10 +176,10 @@ def run_dynamic_walkbox_gate_probe(upstream: Path, generated: Path, output: Path
                 item["state"] for item in native["transitions"]
                 if item["door_state_verified"]]
             results[label]["reclosed_route_actor_y"] = [
-                actor_y_in_native_frame(images / p)
+                actor_y_in_native_frame(images / f"scummvm-{p}.png")
                 for p in native["transitions"][0]["actor_sample_frames"]]
             results[label]["reopened_route_actor_y"] = [
-                actor_y_in_native_frame(images / p)
+                actor_y_in_native_frame(images / f"scummvm-{p}.png")
                 for p in native["transitions"][1]["actor_sample_frames"]]
             results[label]["native_reversible_flags_executed"] = (
                 log.count("setBoxFlags(2, 0x80)") >= 2
