@@ -209,6 +209,24 @@ jobs:
             /tmp/native-r09-reversible-walkbox-gate/reversible-save-load/scummvm-*.png
             /tmp/native-r09-reversible-walkbox-gate/reversible-save-load/scummvm-load.log
           if-no-files-found: ignore
+      - name: Verify open and closed R09 gate across genuine native room exit and reentry
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dynamic_walkbox_gate_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r09-gate-room-return --reversible --room-return
+      - name: Retain native R09 room-return actor routes and distinct control games
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r09-gate-room-return
+          path: |
+            /tmp/native-r09-gate-room-return/native-r09-dynamic-walkbox-gate-report.json
+            /tmp/native-r09-gate-room-return/*-project.json
+            /tmp/native-r09-gate-room-return/*-screenshots/scummvm-*.png
+            /tmp/native-r09-gate-room-return/*-screenshots/scummvm-*.json
+            /tmp/native-r09-gate-room-return/*-screenshots/scummvm-launch.log
+          if-no-files-found: ignore
       - name: Verify native door-controlled R09 walkbox detour and shortcut in stock ScummVM
         env:
           PYTHONPATH: src
