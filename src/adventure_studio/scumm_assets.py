@@ -358,6 +358,7 @@ def _validate(room: RoomAsset) -> None:
                                       or not _IDENTIFIER.fullmatch(room.music_id)):
         raise ValueError("Invalid SCUMM music resource ID")
     targets: set[str] = set()
+    gated_walkboxes: set[int] = set()
     for rule in room.use_rules:
         if rule.item_id not in pickups or rule.target_id not in ids or rule.item_id == rule.target_id:
             raise ValueError("Use rule must connect an inventory pickup to another room hotspot")
@@ -376,6 +377,9 @@ def _validate(room: RoomAsset) -> None:
         if rule.reversible_walkbox and rule.unlock_walkbox is None:
             raise ValueError("Reversible door requires an authored walkbox gate")
         if rule.unlock_walkbox is not None:
+            if rule.unlock_walkbox in gated_walkboxes:
+                raise ValueError("Each native walkbox gate must have a distinct target box")
+            gated_walkboxes.add(rule.unlock_walkbox)
             if (type(rule.unlock_walkbox) is not int or not 1 <= rule.unlock_walkbox <= len(room.walkboxes)):
                 raise ValueError("Walkbox unlock must reference an authored native walkbox")
             if not rule.open_target or rule.destination_room is not None or rule.hide_target:
