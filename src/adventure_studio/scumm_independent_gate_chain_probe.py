@@ -84,13 +84,13 @@ def run_independent_gate_chain(upstream: Path, output: Path) -> dict:
                 raw = author_room_walkbox_gate(
                     raw, room_name, door_id, 2, reversible=True)
         authored = parse_document(compose_story_project(story, raw))
-        # The generic Story's Back2 passage at x=120 can be hit while a
-        # route probe walks to the left edge. Keep the actual room exit but
-        # place it outside the route-click corridor (x=220 in 1024px Xvfb).
+        # Back2's default y=100 overlaps the actor-route mouse clicks at
+        # y=390 in the fixed Xvfb viewport, causing accidental room exits.
+        # Keep the same real passage at its authored x, above the click lane.
         authored = replace(
             authored,
             rooms=tuple(replace(room, hotspots=tuple(
-                replace(hotspot, x=40) if hotspot.id == "Back2" else hotspot
+                replace(hotspot, y=75) if hotspot.id == "Back2" else hotspot
                 for hotspot in room.hotspots)) if room.name == "Cellar" else room
                 for room in authored.rooms))
         for room, door in (("Harbor", "Door"), ("Cellar", "Door2")):
