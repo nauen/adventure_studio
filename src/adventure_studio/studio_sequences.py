@@ -95,6 +95,33 @@ def author_room_walkbox_zplane(raw: str, room_name: str, box_index: int, zplane_
     return _checked(replace(document, rooms=rooms))
 
 
+
+def author_room_walkbox_gate(raw: str, room_name: str, door_id: str,
+                             box_index: int) -> str:
+    """Attach a real SCUMM-v6 box unlock to an existing authored door Use rule.
+
+    This is a persistent rule parameter, never user-supplied script source.
+    The door's existing successful inventory Use action changes the box state.
+    """
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    if type(box_index) is not int or not 1 <= box_index <= len(room.walkboxes):
+        raise ValueError("Eine vorhandene Walkbox-Nummer wählen")
+    matching = [rule for rule in room.use_rules if rule.target_id == door_id]
+    if len(matching) != 1 or not matching[0].open_target:
+        raise ValueError("Tür benötigt eine bestehende Use-Regel mit Open-State")
+    if any(rule.unlock_walkbox == box_index and rule.target_id != door_id
+           for rule in room.use_rules):
+        raise ValueError("Walkbox ist bereits einer anderen Tür zugeordnet")
+    rules = tuple(replace(rule, unlock_walkbox=box_index)
+                  if rule.target_id == door_id else rule for rule in room.use_rules)
+    rooms = tuple(replace(item, use_rules=rules) if item.name == room_name else item
+                  for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
+
+
 def author_room_box_connections(raw: str, room_name: str, connections: str) -> str:
     """Author touching box links and deterministic shortest-hop native BOXM routes.
 
