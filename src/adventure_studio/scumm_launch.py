@@ -302,7 +302,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_walkbox_gate_probe: bool = False,
                  native_reversible_walkbox_probe: bool = False,
                  native_reversible_gate_save_probe: bool = False,
-                  native_gate_room_return_probe: bool = False) -> None:
+                 native_gate_room_return_probe: bool = False,
+                 native_independent_gate_chain_probe: bool = False) -> None:
+    if native_independent_gate_chain_probe and not verify_chain:
+        raise ValueError("Independent native gates require the real two-room chain")
     if scene_walk_clicks and not scene_only:
         raise ValueError("Scene walking probes require scene-only mode")
     if native_reversible_gate_save_probe and not native_reversible_walkbox_probe:
@@ -423,7 +426,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
     with log_path.open("w", encoding="utf-8") as log:
         process = subprocess.Popen(
-            ["scummvm", *(["--debuglevel=3"] if native_walkbox_gate_probe else []),
+            ["scummvm", *(["--debuglevel=3"] if (native_walkbox_gate_probe or native_independent_gate_chain_probe) else []),
              *([f"--savepath={save_path.resolve()}"] if native_reversible_gate_save_probe else []),
              f"--path={game_directory.resolve()}", "tentacle"],
             stdout=log,
@@ -1319,6 +1322,27 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                 "returns_preserved": reached and len(return_checks) == 6 and all(return_checks.values())},
                                indent=2) + "\n", encoding="utf-8",
                 )
+                if native_independent_gate_chain_probe:
+                    if not (door_opened and arrived and opened and reached and
+                            len(return_checks) == 6 and all(return_checks.values())):
+                        raise RuntimeError("Native independent gates failed chain gameplay/return")
+                    # Each room entry restores its own box flags based on
+                    # persistent door state, using the unmodified interpreter.
+                    log.flush()
+                    native_log = log_path.read_text(encoding="utf-8")
+                    closed = native_log.count("setBoxFlags(2, 0x80)")
+                    open_ = native_log.count("setBoxFlags(2, 0x00)")
+                    if closed < 2 or open_ < 2:
+                        raise RuntimeError(
+                            f"Two native gate flag cycles not observed: closed={closed}, open={open_}")
+                    (output_directory / "scummvm-native-independent-gates-report.json").write_text(
+                        json.dumps({"native_two_room_gates_executed": True,
+                                    "first_door_use_opened": door_opened,
+                                    "second_door_use_opened": opened,
+                                    "return_preserved_both_states": all(return_checks.values()),
+                                    "native_box_flags_closed_calls": closed,
+                                    "native_box_flags_open_calls": open_},
+                                   indent=2) + "\n", encoding="utf-8")
                 if not reached:
                     raise RuntimeError("Chain did not reach its final story room")
                 print("Full chained story gameplay succeeded: both inventory doors opened and final room reached")
