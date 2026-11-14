@@ -198,9 +198,7 @@ def _read_log(output: Path, log) -> str:
 
 
 def _play_inventory_use(capture, output: Path, gate_index: int,
-                        key_slot: int, currently_open: bool, label: str) -> None:
-    # These fixed inventory positions belong to the documented stock road
-    # bootstrap: items sorted by ID CellarKey, Key, LatchKey.
+                        key_color: tuple[int, int, int], currently_open: bool, label: str) -> None:
     for _ in range(3):
         _click(790, 390)
         time.sleep(4)
@@ -209,8 +207,11 @@ def _play_inventory_use(capture, output: Path, gate_index: int,
     state = _observed_states(frame)
     if state[gate_index] != currently_open:
         raise RuntimeError(f"Wrong native gate state before Use: {state}")
+    from .scumm_launch import authored_item_center
     target_x, target_y = _find_target(frame, gate_index, currently_open)
-    for x, y in ((408, 506), (key_slot, 520), (target_x, target_y)):
+    key_x, key_y = authored_item_center(output, label + "-before", key_color,
+                                         inventory=True)
+    for x, y in ((408, 506), (key_x, key_y), (target_x, target_y)):
         _click(x, y)
         time.sleep(0.3)
     time.sleep(3)
@@ -221,7 +222,7 @@ def play_same_room_gates(plan: dict, output: Path, capture,
                          process: subprocess.Popen, log) -> dict:
     validate_native_same_room_plan(plan)
     from .scumm_launch import authored_item_center, colored_item_pixels
-    inventory_slots = {"CellarKey": 552, "Key": 592, "LatchKey": 632}
+    inventory_colors = dict(zip(("Key", *KEYS), PICKUP_COLORS))
     for pickup_index, key in enumerate(("Key", *KEYS)):
         _click(328, 506)
         time.sleep(0.3)
@@ -252,7 +253,7 @@ def play_same_room_gates(plan: dict, output: Path, capture,
         # Key belongs to the exit, not either local UseRule. It must not
         # change a door sprite OR its native box flags.
         before = _flag_counts(_read_log(output, log))
-        _play_inventory_use(capture, output, 0, inventory_slots["Key"],
+        _play_inventory_use(capture, output, 0, inventory_colors["Key"],
                             False, "wrong-key")
         negative = _observed_states(output / "scummvm-wrong-key-after.png")
         after = _flag_counts(_read_log(output, log))
@@ -276,7 +277,7 @@ def play_same_room_gates(plan: dict, output: Path, capture,
         before = _flag_counts(_read_log(output, log))
         target_open = not states[-1][gate]
         _play_inventory_use(capture, output, gate,
-                            inventory_slots[KEYS[gate]], states[-1][gate],
+                            inventory_colors[KEYS[gate]], states[-1][gate],
                             f"transition-{stage}-gate-{gate}")
         frame = output / f"scummvm-transition-{stage}-gate-{gate}-after.png"
         observed = _observed_states(frame)
