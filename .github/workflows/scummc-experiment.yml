@@ -13,6 +13,8 @@ on:
       - 'src/adventure_studio/scumm_sound_effect_probe.py'
       - 'src/adventure_studio/scumm_voc_fixture.py'
       - 'src/adventure_studio/scumm_launch.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'tests/test_story_to_scumm.py'
       - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_dynamic_walkbox_gate_probe.py'
