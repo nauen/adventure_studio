@@ -287,14 +287,16 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
     provider = image_provider if image_provider is not None else DeterministicStoryImageProvider()
     if story.recipes:
         return _compile_recipe_story(story, provider)
-    if (len(story.chapters) != 1 or not 1 <= len(story.puzzles) <= 2
-            or len(story.scenes) != len(story.puzzles) + 1):
+    route_puzzles = tuple(p for p in story.puzzles if p.opens_scene_id is not None)
+    local_puzzles = tuple(p for p in story.puzzles if p.opens_scene_id is None)
+    if (len(story.chapters) != 1 or not 1 <= len(route_puzzles) <= 2
+            or len(story.scenes) != len(route_puzzles) + 1):
         raise ValueError("Exporter supports one chapter and one or two sequential door puzzles")
     # Follow scene transitions, never incidental input ordering. Acyclic,
     # complete use of all puzzles and scenes is a strict export precondition.
     route = [story.starting_scene_id]
     ordered_puzzles = []
-    remaining = {p.id: p for p in story.puzzles}
+    remaining = {p.id: p for p in route_puzzles}
     while remaining:
         candidates = [p for p in remaining.values() if p.scene_id == route[-1]]
         if len(candidates) != 1:
@@ -313,12 +315,23 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
             *(i.id for i in story.items), *(p.id for p in story.puzzles),
             *(c.id for c in story.characters)]):
         raise ValueError("Story identifiers must be valid SCUMM identifiers")
-    if {"Door", "Door2", "Back2", "Back3"} & {i.id for i in story.items}:
+    if ({"Door", "Door2", "Back2", "Back3"} & {i.id for i in story.items}
+            or any(f"DoorLocal{p.id}" in {i.id for i in story.items}
+                   for p in local_puzzles)):
         raise ValueError("Story item conflicts with generated exit identifier")
     pickups_by_puzzle = [tuple(next(i for i in story.items if i.id == required)
                                for required in puzzle.requires) for puzzle in ordered_puzzles]
     if any(item.scene_id != puzzle.scene_id or item.role != "pickup"
            for puzzle, pickups in zip(ordered_puzzles, pickups_by_puzzle) for item in pickups):
+        raise ValueError("Each puzzle requires pickups from its own scene")
+    local_pickups = {
+        p.id: tuple(next(i for i in story.items if i.id == required) for required in p.requires)
+        for p in local_puzzles
+    }
+    if any(not 1 <= len(p.requires) <= 3
+           or any(item.scene_id != p.scene_id or item.role != "pickup"
+                  for item in local_pickups[p.id])
+           for p in local_puzzles):
         raise ValueError("Each puzzle requires pickups from its own scene")
     if any(i.role == "pickup" and sum(i.id in puzzle.requires for puzzle in ordered_puzzles) != 1
            for i in story.items):
@@ -327,12 +340,16 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
         if sum(i.role == "decoration" and i.scene_id == scene.id for i in story.items) > 4:
             raise ValueError("Too many decorations for the current automatic layout")
 
+    # Side locks are native room objects, not scene transitions. Preserve
+    # the linear exit route and author additional local UseRule targets in it.
     result = []
     pickup_number = 0
     for scene_index, scene_id in enumerate(route):
         goal = scene_index == len(ordered_puzzles)
         puzzle = ordered_puzzles[scene_index] if not goal else None
         pickups = pickups_by_puzzle[scene_index] if not goal else ()
+        room_local_puzzles = tuple(p for p in local_puzzles if p.scene_id == scene_id)
+        local_room_pickups = tuple(item for p in room_local_puzzles for item in local_pickups[p.id])
         width = 320 if goal else 640
         decorations = [i for i in story.items if i.role == "decoration" and i.scene_id == scene_id]
         hotspots = [RoomHotspot(i.id, _text(i.name), _text(i.description),
@@ -349,7 +366,7 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
                                         120, 100, 16, 16, False, _sprite(8, 1),
                                         exit_destination=route[scene_index - 1]))
         if not goal:
-            for index, item in enumerate(pickups):
+            for index, item in enumerate(pickups + local_room_pickups):
                 if pickup_number >= len(_PICKUP_COLORS):
                     raise ValueError("Current visual fixture supports at most three pickups across the route")
                 hotspots.append(RoomHotspot(item.id, _text(item.name), _text(item.description),
@@ -361,12 +378,27 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
                                         450, 100, 16, 16, False, _sprite(4, 1),
                                         open_sprite_pixels=_sprite(5, 2),
                                         exit_destination=puzzle.opens_scene_id))
+        if room_local_puzzles:
+            if goal:
+                raise ValueError("Local gate puzzles are not supported in the goal room")
+            for index, local in enumerate(room_local_puzzles):
+                x = 500 + index * 24
+                if x + 16 > width:
+                    raise ValueError("Too many local doors for automatic room layout")
+                hotspots.append(RoomHotspot(f"DoorLocal{local.id}", "the side door",
+                                            _text(local.title), x, 100, 16, 16,
+                                            False, _sprite(4, 1),
+                                            open_sprite_pixels=_sprite(5, 2)))
         image = _room_image(provider, scene_id, width, goal)
         result.append(RoomAsset(
             scene_id, RoomGeometry(width, 200, 320, 200), image.pixels, image.palette,
             hotspots=tuple(hotspots), demo_walk_to_x=540 if not goal and not actors else None,
-            use_rules=(UseRule(pickups[0].id, door_id, _text(puzzle.title), open_target=True,
-                               requires_inventory=tuple(item.id for item in pickups[1:])),) if not goal else (),
+            use_rules=((UseRule(pickups[0].id, door_id, _text(puzzle.title), open_target=True,
+                                requires_inventory=tuple(item.id for item in pickups[1:])),)
+                       + tuple(UseRule(local_pickups[p.id][0].id, f"DoorLocal{p.id}",
+                                       _text(p.title), open_target=True,
+                                       requires_inventory=tuple(item.id for item in local_pickups[p.id][1:]))
+                               for p in room_local_puzzles)) if not goal else (),
             goal_text=_text(ordered_puzzles[-1].title) if goal else None,
             talk_rules=talk_rules,
         ))
