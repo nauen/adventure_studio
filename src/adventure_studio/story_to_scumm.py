@@ -333,7 +333,7 @@ def compile_story_to_scumm(story: Story, image_provider: ImageProvider | None = 
                   for item in local_pickups[p.id])
            for p in local_puzzles):
         raise ValueError("Each puzzle requires pickups from its own scene")
-    if any(i.role == "pickup" and sum(i.id in puzzle.requires for puzzle in ordered_puzzles) != 1
+    if any(i.role == "pickup" and sum(i.id in puzzle.requires for puzzle in story.puzzles) != 1
            for i in story.items):
         raise ValueError("Unreferenced pickup mechanics are not yet supported")
     for scene in story.scenes:
