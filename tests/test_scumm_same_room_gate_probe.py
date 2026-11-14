@@ -71,6 +71,28 @@ class SameRoomNativeGateTests(unittest.TestCase):
             {"room_id": "Harbor", "item_id": "Key",
              "rgb": [240, 175, 95], "next_room_id": "Cellar"}])
 
+    def test_native_use_clicks_detected_inventory_icon_not_assumed_slot(self):
+        from unittest.mock import call
+        from adventure_studio.scumm_same_room_gate_probe import _play_inventory_use
+
+        captured = []
+        with patch("adventure_studio.scumm_same_room_gate_probe._click") as click, \
+             patch("adventure_studio.scumm_same_room_gate_probe.time.sleep"), \
+             patch("adventure_studio.scumm_same_room_gate_probe._observed_states",
+                   return_value=[False, False]), \
+             patch("adventure_studio.scumm_same_room_gate_probe._find_target",
+                   return_value=(700, 350)), \
+             patch("adventure_studio.scumm_launch.authored_item_center",
+                   return_value=(609, 521)) as item_center:
+            _play_inventory_use(captured.append, Path("/native"), 0,
+                                (255, 220, 75), False, "wrong-key")
+
+        item_center.assert_called_once_with(
+            Path("/native"), "wrong-key-before", (255, 220, 75), inventory=True)
+        self.assertEqual(click.call_args_list[-3:], [
+            call(408, 506), call(609, 521), call(700, 350)])
+        self.assertEqual(captured, ["wrong-key-before", "wrong-key-after"])
+
     def test_only_valid_two_gate_plans_are_accepted(self):
         plan = {"gates": list(GATES), "keys": ["LatchKey", "CellarKey"],
                 "order": list(ORDERS[0]), "control": False}
