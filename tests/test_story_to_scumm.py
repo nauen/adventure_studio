@@ -114,16 +114,21 @@ class StoryToScummTests(unittest.TestCase):
         story = small_story()
         story = replace(
             story,
-            items=story.items + (Item("LatchKey", "Riegelschluessel",
-                                      "Oeffnet die Nebentuer", "Tavern"),),
+            items=story.items + (
+                Item("LatchKey", "Riegelschluessel", "Oeffnet die Nebentuer", "Tavern"),
+                Item("CellarKey", "Kellerschluessel", "Oeffnet die Kellertuer", "Tavern"),
+            ),
             puzzles=story.puzzles + (
-                Puzzle("Side", "Nebentuer oeffnen", "Tavern", ("LatchKey",), None),),
+                Puzzle("Side", "Nebentuer oeffnen", "Tavern", ("LatchKey",), None),
+                Puzzle("Cellar", "Kellertuer oeffnen", "Tavern", ("CellarKey",), None),
+            ),
         )
         story_raw = canonical_story_json(story)
         original = compile_story_to_scumm(story)
         self.assertEqual(
             [(rule.item_id, rule.target_id) for rule in original.rooms[0].use_rules],
-            [("Key", "Door"), ("LatchKey", "DoorLocalSide")],
+            [("Key", "Door"), ("LatchKey", "DoorLocalSide"),
+             ("CellarKey", "DoorLocalCellar")],
         )
         raw = canonical_json(original)
         for box, corners in (
@@ -135,18 +140,22 @@ class StoryToScummTests(unittest.TestCase):
             raw = author_room_walkbox(raw, "Tavern", box, corners)
         raw = author_room_box_connections(raw, "Tavern",
                                           "1-2; 2-4; 1-3; 3-4")
-        raw = author_room_walkbox_gate(raw, "Tavern", "Door", 2, reversible=True)
-        raw = author_room_walkbox_gate(raw, "Tavern", "DoorLocalSide", 3, reversible=True)
+        raw = author_room_walkbox_gate(raw, "Tavern", "DoorLocalSide", 2, reversible=True)
+        raw = author_room_walkbox_gate(raw, "Tavern", "DoorLocalCellar", 3, reversible=True)
         composed = parse_document(compose_story_project(story_raw, raw))
         room = composed.rooms[0]
         self.assertEqual(
             [(rule.target_id, rule.unlock_walkbox, rule.reversible_walkbox)
              for rule in room.use_rules],
-            [("Door", 2, True), ("DoorLocalSide", 3, True)],
+            [("Door", None, False), ("DoorLocalSide", 2, True),
+             ("DoorLocalCellar", 3, True)],
         )
         self.assertEqual(parse_document(canonical_json(composed)), composed)
         source = scummc_room_source(room)
         self.assertIn("getObjectState(DoorLocalSide)", source)
+        self.assertIn("getObjectState(DoorLocalCellar)", source)
+        self.assertIn("if(objB == LatchKey", source)
+        self.assertIn("if(objB == CellarKey", source)
         self.assertIn("setBoxFlags([2],128);", source)
         self.assertIn("setBoxFlags([3],128);", source)
         with tempfile.TemporaryDirectory() as directory:
