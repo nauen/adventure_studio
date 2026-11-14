@@ -367,7 +367,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
     ):
         raise ValueError("Invalid fixture inventory gates")
     route = goal.get("fixture_route", [])
-    if not isinstance(route, list) or len(route) > 2 or any(
+    if not isinstance(route, list) or len(route) > (3 if native_same_room_gate_plan is not None else 2) or any(
         not isinstance(step, dict) or set(step) != {"room_id", "item_id", "rgb", "next_room_id"}
         or not all(isinstance(step[field], str) and step[field] for field in ("room_id", "item_id", "next_room_id"))
         or not isinstance(step["rgb"], list) or len(step["rgb"]) != 3
