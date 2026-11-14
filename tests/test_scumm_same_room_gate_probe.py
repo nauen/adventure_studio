@@ -69,7 +69,7 @@ class SameRoomNativeGateTests(unittest.TestCase):
             manifest = json.loads((directory / "game-goal.json").read_text())
         self.assertEqual(manifest["fixture_route"], [
             {"room_id": "Harbor", "item_id": "Key",
-             "rgb": [255, 220, 75], "next_room_id": "Cellar"}])
+             "rgb": [240, 175, 95], "next_room_id": "Cellar"}])
 
     def test_only_valid_two_gate_plans_are_accepted(self):
         plan = {"gates": list(GATES), "keys": ["LatchKey", "CellarKey"],
