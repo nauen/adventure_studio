@@ -55,7 +55,7 @@ class SameRoomNativeGateTests(unittest.TestCase):
         plan = {"gates": list(GATES), "keys": ["LatchKey", "CellarKey"],
                 "order": list(ORDERS[0]), "control": False}
         validate_native_same_room_plan(plan)
-        with self.assertRaisesRegex(ValueError, "same-room"):
+        with self.assertRaisesRegex(ValueError, "Same-room"):
             validate_native_same_room_plan({**plan, "order": [0, 0, 0, 0]})
 
     def test_both_orderings_require_independent_runtime_route_evidence(self):
