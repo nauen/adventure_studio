@@ -309,7 +309,14 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_reversible_gate_save_probe: bool = False,
                  native_gate_room_return_probe: bool = False,
                  native_independent_gate_chain_probe: bool = False,
-                 native_independent_gate_control: bool = False) -> None:
+                 native_independent_gate_control: bool = False,
+                 native_same_room_gate_plan: dict | None = None) -> None:
+    if native_same_room_gate_plan is not None:
+        if (native_independent_gate_chain_probe or native_walkbox_gate_probe or
+                verify_chain or verify_recipe or scene_only or sample_scene_frames):
+            raise ValueError("Same-room gate gameplay needs a separate native route")
+        from .scumm_same_room_gate_probe import validate_native_same_room_plan
+        validate_native_same_room_plan(native_same_room_gate_plan)
     if native_independent_gate_control and not native_independent_gate_chain_probe:
         raise ValueError("Native independent-gate control requires the same route capture")
     if native_independent_gate_chain_probe and not verify_chain:
@@ -458,7 +465,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
 
     with log_path.open("w", encoding="utf-8") as log:
         process = subprocess.Popen(
-            ["scummvm", *(["--debuglevel=3"] if (native_walkbox_gate_probe or native_independent_gate_chain_probe) else []),
+            ["scummvm", *(["--debuglevel=3"] if (native_walkbox_gate_probe or native_independent_gate_chain_probe or native_same_room_gate_plan is not None) else []),
              *([f"--savepath={save_path.resolve()}"] if native_reversible_gate_save_probe else []),
              f"--path={game_directory.resolve()}", "tentacle"],
             stdout=log,
@@ -476,7 +483,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 time.sleep(0.3)
             else:
                 raise RuntimeError("Blue initial room was not visible within 20 seconds")
-            deadline = time.monotonic() + seconds
+            deadline = time.monotonic() + (1.0 if native_same_room_gate_plan is not None else seconds)
             next_sample = time.monotonic()
             sample_number = 0
             while time.monotonic() < deadline:
@@ -491,7 +498,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
             final_snapshot = capture_frame("end")
             changed = compare_frames(output_directory,
-                                     minimum_changed_pixels=0 if allow_static_scene else 500,
+                                     minimum_changed_pixels=0 if (allow_static_scene or native_same_room_gate_plan is not None) else 500,
                                      expect_scroll=not allow_static_scene,
                                      initial_pickup_rgb=initial_rgb,
                                      require_key_sprite=not (allow_static_scene and scene_only))
@@ -508,6 +515,11 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     capture_frame(label)
                 print(f"Story-compiled SCUMM room rendered and scrolled: {changed} changed pixels")
                 print(f"Scene-only screenshots: {output_directory}")
+                return
+            if native_same_room_gate_plan is not None:
+                from .scumm_same_room_gate_probe import play_same_room_gates
+                play_same_room_gates(native_same_room_gate_plan, output_directory,
+                                     capture_frame, process, log)
                 return
             if native_independent_gate_chain_probe:
                 independent_gate_routes["first_closed"] = capture_independent_route(
