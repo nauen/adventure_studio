@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from adventure_studio.scumm_same_room_gate_probe import (
-    BOXES, GATES, ORDERS, validate_native_same_room_plan,
+    BOXES, GATES, ORDERS, _flag_counts, validate_native_same_room_plan,
     verify_same_room_gate_report,
 )
 
@@ -57,6 +57,15 @@ class SameRoomNativeGateTests(unittest.TestCase):
         validate_native_same_room_plan(plan)
         with self.assertRaisesRegex(ValueError, "Same-room"):
             validate_native_same_room_plan({**plan, "order": [0, 0, 0, 0]})
+
+    def test_native_flag_counter_reads_exact_two_box_opcodes(self):
+        log = ("setBoxFlags(2, 0x80)\nsetBoxFlags(2, 0x00)\n"
+               "setBoxFlags(3, 0x80)\nsetBoxFlags(3, 0x00)\n"
+               "setBoxFlags(4, 0x80)\n")
+        self.assertEqual(_flag_counts(log), {
+            "2": {"closed": 1, "open": 1},
+            "3": {"closed": 1, "open": 1},
+        })
 
     def test_both_orderings_require_independent_runtime_route_evidence(self):
         for name, order in (("first-order", ORDERS[0]),
