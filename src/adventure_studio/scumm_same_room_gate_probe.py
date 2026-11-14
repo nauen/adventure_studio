@@ -310,7 +310,7 @@ def play_same_room_gates(plan: dict, output: Path, capture,
               "native_transitions": transitions,
               "native_box_flags": counts, "route_samples": routes}
     (output / "scummvm-native-same-room-gates-report.json").write_text(
-        json.dumps(report, sort_keys=True, indent=2) + "\\n", encoding="utf-8")
+        json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return report
 
 
