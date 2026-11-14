@@ -19,7 +19,11 @@ from .story import Chapter, Item, Puzzle, Scene, Story
 from .story_document import build_story_document, canonical_story_json
 from .studio_sequences import (author_room_box_connections, author_room_walkbox,
                                author_room_walkbox_gate, compose_story_project)
-from .scumm_dynamic_walkbox_gate_probe import actor_y_in_native_frame
+def actor_y_in_native_frame(path: Path) -> float:
+    """Load the optional Pillow screenshot reader only in a native probe."""
+    from .scumm_dynamic_walkbox_gate_probe import actor_y_in_native_frame as sample
+    return sample(path)
+
 
 
 GATES = ("DoorLocalSide", "DoorLocalCellar")
