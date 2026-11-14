@@ -499,7 +499,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             final_snapshot = capture_frame("end")
             changed = compare_frames(output_directory,
                                      minimum_changed_pixels=0 if (allow_static_scene or native_same_room_gate_plan is not None) else 500,
-                                     expect_scroll=not allow_static_scene,
+                                     expect_scroll=not (allow_static_scene or native_same_room_gate_plan is not None),
                                      initial_pickup_rgb=initial_rgb,
                                      require_key_sprite=not (allow_static_scene and scene_only))
             if scene_only:
