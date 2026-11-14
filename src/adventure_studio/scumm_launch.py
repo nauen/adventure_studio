@@ -483,7 +483,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 time.sleep(0.3)
             else:
                 raise RuntimeError("Blue initial room was not visible within 20 seconds")
-            deadline = time.monotonic() + (1.0 if native_same_room_gate_plan is not None else seconds)
+            deadline = time.monotonic() + seconds
             next_sample = time.monotonic()
             sample_number = 0
             while time.monotonic() < deadline:
