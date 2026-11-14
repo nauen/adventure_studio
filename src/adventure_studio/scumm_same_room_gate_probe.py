@@ -27,7 +27,12 @@ KEYS = ("LatchKey", "CellarKey")
 BOXES = (2, 3)
 ORDERS = ((0, 1, 0, 1), (1, 0, 1, 0))
 # Two separate crossing lanes prevent the other open gate from masking a detour.
-ROUTES = ((220, 390, 790, 365), (220, 430, 790, 425))
+ROUTES = ((220, 350, 790, 350), (220, 450, 790, 450))
+# Reserved new palette colors; these cannot be confused with pickup items,
+# the goal room, or the existing exit. Both are normal authored object states.
+DOOR_COLORS = (((242, 50, 72), (50, 240, 160)),
+               ((75, 105, 240), (245, 155, 40)))
+PICKUP_COLORS = ((255, 220, 75), (225, 80, 180), (160, 230, 55))
 
 
 def validate_native_same_room_plan(plan: dict) -> None:
@@ -68,14 +73,17 @@ def verify_same_room_gate_report(gated: dict, control: dict,
             if not isinstance(sample, list) or len(sample) != 2 or any(
                     not isinstance(route, list) or len(route) != 9 for route in sample):
                 raise RuntimeError(f"Missing aligned {label} Actor routes")
-    # Stock VM must have executed each exact native opcode for both gates,
-    # rather than merely changing an object sprite.
-    expected_transitions = {str(box): {"closed": 1, "open": 1}
-                            for box in BOXES}
-    for gate_index in gated["order"]:
-        key = str(BOXES[gate_index])
-        opened = gated["states"][1 + gated["order"].index(gate_index)][gate_index]
-        # Each gate is used twice, therefore both directions must be observed.
+    # Stock VM must have executed each exact native opcode, rather than
+    # merely changing the door sprite. Every action checks that the other
+    # native box flag was not touched.
+    changes = gated.get("native_transitions", [])
+    if len(changes) != 4 or any(
+            item.get("gate") != gated["order"][index]
+            or item.get("observed_states") != expected_states[index + 1]
+            or item.get("native_flag_increment") != 1
+            or not item.get("other_box_untouched")
+            for index, item in enumerate(changes)):
+        raise RuntimeError("Native independent box flag transitions were not observed")
     for box in BOXES:
         counts = gated.get("native_box_flags", {}).get(str(box), {})
         if counts.get("closed", 0) < 2 or counts.get("open", 0) < 1:
@@ -127,30 +135,78 @@ def _capture_route(capture, label: str, gate_index: int) -> list[str]:
     return names
 
 
-def _play_inventory_use(capture, output: Path, gate_index: int,
-                        expect_open: bool, label: str) -> None:
-    from .scumm_launch import colored_item_center
-    # Each real pickup has an independent palette index in the Story fixture.
-    colors = ((60, 220, 90), (50, 220, 220))
-    capture(label + "-before")
-    image = output / ("scummvm-" + label + "-before.png")
+def _gate_pixels(image_path: Path, gate_index: int) -> tuple[int, int]:
     from PIL import Image
-    with Image.open(image) as source:
+    colors = DOOR_COLORS[gate_index]
+    counts = [0, 0]
+    with Image.open(image_path) as source:
         rgb = source.convert("RGB")
-        # In the stock 2x scaled game, Story door centers are world x=508/532,
-        # y=108. Camera offset must be measured by locating the visible sprites.
-        palette = ((60, 220, 90), (50, 220, 220))
-        target = palette[gate_index]
+        for y in range(184, 472):
+            for x in range(192, 832):
+                pixel = rgb.getpixel((x, y))
+                for index, expected in enumerate(colors):
+                    if all(abs(pixel[channel] - expected[channel]) <= 12
+                           for channel in range(3)):
+                        counts[index] += 1
+    return tuple(counts)
+
+
+def _observed_states(image_path: Path) -> list[bool]:
+    result = []
+    for gate_index in range(2):
+        closed, opened = _gate_pixels(image_path, gate_index)
+        if (closed >= 40 and opened < 10):
+            result.append(False)
+        elif opened >= 40 and closed < 10:
+            result.append(True)
+        else:
+            raise RuntimeError(
+                f"Native door {GATES[gate_index]} has ambiguous sprite state: "
+                f"closed={closed}, open={opened}")
+    return result
+
+
+def _find_target(image_path: Path, gate_index: int,
+                 currently_open: bool) -> tuple[int, int]:
+    from PIL import Image
+    expected = DOOR_COLORS[gate_index][int(currently_open)]
+    with Image.open(image_path) as source:
+        rgb = source.convert("RGB")
         points = [(x, y) for y in range(184, 472) for x in range(192, 832)
-                  if all(abs(rgb.getpixel((x, y))[i] - target[i]) <= 12 for i in range(3))]
+                  if all(abs(rgb.getpixel((x, y))[channel] - expected[channel]) <= 12
+                         for channel in range(3))]
     if len(points) < 40:
-        raise RuntimeError(f"Gate target {GATES[gate_index]} not visible in native screenshot")
-    cx = sorted(x for x, _ in points)[len(points) // 2]
-    cy = sorted(y for _, y in points)[len(points) // 2]
-    # Inventory contains 3 slots: Key, LatchKey, CellarKey (sorted by ID
-    # in compile_story_game). Use the actual native inventory GUI slots.
-    inventory_x = {"CellarKey": 552, "Key": 592, "LatchKey": 632}[KEYS[gate_index]]
-    for x, y in ((408, 506), (inventory_x, 520), (cx, cy)):
+        raise RuntimeError(f"Native target {GATES[gate_index]} not visible")
+    return (sorted(x for x, _ in points)[len(points) // 2],
+            sorted(y for _, y in points)[len(points) // 2])
+
+
+def _flag_counts(native_log: str) -> dict[str, dict[str, int]]:
+    return {str(box): {
+        "closed": len(re.findall(rf"setBoxFlags\\({box}, 0x80\\)", native_log)),
+        "open": len(re.findall(rf"setBoxFlags\\({box}, 0x00\\)", native_log))}
+        for box in BOXES}
+
+
+def _read_log(output: Path, log) -> str:
+    log.flush()
+    return (output / "scummvm-launch.log").read_text(encoding="utf-8")
+
+
+def _play_inventory_use(capture, output: Path, gate_index: int,
+                        key_slot: int, currently_open: bool, label: str) -> None:
+    # These fixed inventory positions belong to the documented stock road
+    # bootstrap: items sorted by ID CellarKey, Key, LatchKey.
+    for _ in range(3):
+        _click(790, 390)
+        time.sleep(4)
+    capture(label + "-before")
+    frame = output / f"scummvm-{label}-before.png"
+    state = _observed_states(frame)
+    if state[gate_index] != currently_open:
+        raise RuntimeError(f"Wrong native gate state before Use: {state}")
+    target_x, target_y = _find_target(frame, gate_index, currently_open)
+    for x, y in ((408, 506), (key_slot, 520), (target_x, target_y)):
         _click(x, y)
         time.sleep(0.3)
     time.sleep(3)
@@ -160,54 +216,97 @@ def _play_inventory_use(capture, output: Path, gate_index: int,
 def play_same_room_gates(plan: dict, output: Path, capture,
                          process: subprocess.Popen, log) -> dict:
     validate_native_same_room_plan(plan)
-    from .scumm_launch import colored_item_pixels
-    from PIL import Image
-    for gate_index, key in enumerate(KEYS):
+    from .scumm_launch import authored_item_center, colored_item_pixels
+    inventory_slots = {"CellarKey": 552, "Key": 592, "LatchKey": 632}
+    for pickup_index, key in enumerate(("Key", *KEYS)):
         _click(328, 506)
         time.sleep(0.3)
-        capture(f"pickup-{gate_index}-before")
-        # Story fixture colors are assigned in pickup order Key/LatchKey/CellarKey.
-        rgb = ((255, 220, 75), (60, 220, 90), (50, 220, 220))[gate_index + 1]
-        from .scumm_launch import authored_item_center
-        x, y = authored_item_center(output, f"pickup-{gate_index}-before", rgb)
+        capture(f"pickup-{pickup_index}-before")
+        color = PICKUP_COLORS[pickup_index]
+        x, y = authored_item_center(output, f"pickup-{pickup_index}-before", color)
         _click(x, y)
         acquired = False
-        for _ in range(35):
+        for attempt in range(40):
             time.sleep(0.4)
-            capture(f"pickup-{gate_index}-after")
-            if (colored_item_pixels(output, f"pickup-{gate_index}-after", rgb) < 10
-                    and colored_item_pixels(output, f"pickup-{gate_index}-after", rgb, inventory=True) >= 40):
+            capture(f"pickup-{pickup_index}-after")
+            if (colored_item_pixels(output, f"pickup-{pickup_index}-after", color) < 10
+                    and colored_item_pixels(output, f"pickup-{pickup_index}-after", color,
+                                             inventory=True) >= 40):
                 acquired = True
                 break
         if not acquired:
             raise RuntimeError(f"Real native pickup failed for {key}")
-    states = [[True, True]] if plan["control"] else [[False, False]]
-    uses = 0
+
+    capture("initial-gates")
+    initial = _observed_states(output / "scummvm-initial-gates.png")
+    if initial != [False, False]:
+        raise RuntimeError(f"Native Story doors must begin closed: {initial}")
+    states = [[True, True]] if plan["control"] else [initial]
+    rejected = True
+    transitions = []
+    if not plan["control"]:
+        # Key belongs to the exit, not either local UseRule. It must not
+        # change a door sprite OR its native box flags.
+        before = _flag_counts(_read_log(output, log))
+        _play_inventory_use(capture, output, 0, inventory_slots["Key"],
+                            False, "wrong-key")
+        negative = _observed_states(output / "scummvm-wrong-key-after.png")
+        after = _flag_counts(_read_log(output, log))
+        rejected = negative == [False, False] and after == before
+        if not rejected:
+            raise RuntimeError("Wrong key changed native gate or box flags")
+
     routes = []
     for stage in range(1 if plan["control"] else 5):
+        if process.poll() is not None:
+            raise RuntimeError("ScummVM stopped during same-room gate gameplay")
         routes.append([_capture_route(capture, f"state-{stage}-gate-{i}", i)
                        for i in range(2)])
         if plan["control"] or stage == 4:
             break
         gate = plan["order"][stage]
-        _play_inventory_use(capture, output, gate, not states[-1][gate],
+        before = _flag_counts(_read_log(output, log))
+        target_open = not states[-1][gate]
+        _play_inventory_use(capture, output, gate,
+                            inventory_slots[KEYS[gate]], states[-1][gate],
                             f"transition-{stage}-gate-{gate}")
-        next_state = list(states[-1])
-        next_state[gate] = not next_state[gate]
-        states.append(next_state)
-        uses += 1
-    log.flush()
-    native_log = (output / "scummvm-launch.log").read_text(encoding="utf-8")
-    counts = {str(box): {
-        "closed": len(re.findall(rf"setBoxFlags\({box}, 0x80\)", native_log)),
-        "open": len(re.findall(rf"setBoxFlags\({box}, 0x00\)", native_log))}
-        for box in BOXES}
+        frame = output / f"scummvm-transition-{stage}-gate-{gate}-after.png"
+        observed = _observed_states(frame)
+        wanted = list(states[-1])
+        wanted[gate] = target_open
+        if observed != wanted:
+            raise RuntimeError(f"Gate {gate} changed other state or did not toggle: "
+                               f"observed={observed}, wanted={wanted}")
+        key = "open" if target_open else "closed"
+        other = BOXES[1 - gate]
+        flag_verified = False
+        for _ in range(30):
+            after = _flag_counts(_read_log(output, log))
+            increment = after[str(BOXES[gate])][key] - before[str(BOXES[gate])][key]
+            untouched = after[str(other)] == before[str(other)]
+            if increment >= 1 and untouched:
+                flag_verified = True
+                break
+            if not untouched:
+                break
+            time.sleep(0.4)
+        if not flag_verified or increment != 1:
+            raise RuntimeError(f"Native Use did not independently toggle box {BOXES[gate]}: "
+                               f"before={before}, after={after}")
+        states.append(observed)
+        transitions.append({"gate": gate, "observed_states": observed,
+                            "native_flag_increment": increment,
+                            "other_box_untouched": untouched})
+
+    counts = _flag_counts(_read_log(output, log))
     report = {"room": "Tavern", "control": plan["control"],
               "order": plan["order"], "states": states,
-              "successful_uses": uses, "failed_wrong_key_use_rejected": True,
+              "successful_uses": len(transitions),
+              "failed_wrong_key_use_rejected": rejected,
+              "native_transitions": transitions,
               "native_box_flags": counts, "route_samples": routes}
     (output / "scummvm-native-same-room-gates-report.json").write_text(
-        json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        json.dumps(report, sort_keys=True, indent=2) + "\\n", encoding="utf-8")
     return report
 
 
@@ -233,17 +332,35 @@ def _export_game(story_raw: str, upstream: Path, root: Path, control: bool) -> N
     authored = built.project_json.read_text(encoding="utf-8")
     for box, corners in (
         (1, "0,70; 110,70; 110,150; 0,150"),
-        (2, "110,70; 240,70; 240,108; 110,108"),
-        (3, "110,112; 240,112; 240,150; 110,150"),
-        (4, "240,70; 639,70; 639,150; 240,150"),
+        (2, "110,70; 240,70; 240,94; 110,94"),
+        (3, "110,126; 240,126; 240,150; 110,150"),
+        (4, "110,98; 240,98; 240,122; 110,122"),
+        (5, "240,70; 639,70; 639,150; 240,150"),
     ):
         authored = author_room_walkbox(authored, "Tavern", box, corners)
     authored = author_room_box_connections(authored, "Tavern",
-                                            "1-2; 2-4; 1-3; 3-4")
+                                            "1-2; 2-5; 1-3; 3-5; 1-4; 4-5")
     if not control:
         authored = author_room_walkbox_gate(authored, "Tavern", GATES[0], BOXES[0], reversible=True)
         authored = author_room_walkbox_gate(authored, "Tavern", GATES[1], BOXES[1], reversible=True)
     document = parse_document(compose_story_project(story_raw, authored))
+    # Assign distinct authored door-image colors so screen captures identify
+    # each door even when the exit and the other door are also closed.
+    room = document.rooms[0]
+    palette = (*room.palette, *(rgb for states in DOOR_COLORS for rgb in states))
+    hotspots = tuple(
+        replace(hotspot, sprite_pixels=bytes((9 + 2 * index,)) * 256,
+                open_sprite_pixels=bytes((10 + 2 * index,)) * 256)
+        if hotspot.id == gate else hotspot
+        for hotspot in room.hotspots for index, gate in enumerate(GATES)
+        if hotspot.id == gate
+    )
+    # Preserve the remaining hotspots in their original order.
+    mapped = {hotspot.id: hotspot for hotspot in hotspots}
+    room = replace(room, palette=palette,
+                   hotspots=tuple(mapped.get(hotspot.id, hotspot)
+                                  for hotspot in room.hotspots))
+    document = replace(document, rooms=(room, *document.rooms[1:]))
     if parse_document(canonical_json(document)) != document:
         raise RuntimeError("Native gates lost on JSON-v1/Story roundtrip")
     rules = {rule.target_id: rule for rule in document.rooms[0].use_rules}
@@ -263,10 +380,8 @@ def run_same_room_gates(upstream: Path, output: Path) -> dict:
     raw = canonical_story_json(_story())
     results = {}
     for control in (True, False):
-        variants = (("control", ()) if control else
-                    ("first-order", ORDERS[0]), ("reverse-order", ORDERS[1]))
-        if control:
-            variants = (("control", ()),)
+        variants = (("control", ()),) if control else (
+            ("first-order", ORDERS[0]), ("reverse-order", ORDERS[1]))
         for name, order in variants:
             root = output / name
             _export_game(raw, upstream, root, control)
