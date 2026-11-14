@@ -258,7 +258,11 @@ def play_same_room_gates(plan: dict, output: Path, capture,
         after = _flag_counts(_read_log(output, log))
         rejected = negative == [False, False] and after == before
         if not rejected:
-            raise RuntimeError("Wrong key changed native gate or box flags")
+            raise RuntimeError(
+                "Wrong key changed native gate or box flags: "
+                f"observed={negative}, expected={[False, False]}, "
+                f"native_flags_before={before}, native_flags_after={after}"
+            )
 
     routes = []
     for stage in range(1 if plan["control"] else 5):
