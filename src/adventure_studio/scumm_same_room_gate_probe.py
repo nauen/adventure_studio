@@ -187,8 +187,8 @@ def _find_target(image_path: Path, gate_index: int,
 
 def _flag_counts(native_log: str) -> dict[str, dict[str, int]]:
     return {str(box): {
-        "closed": len(re.findall(rf"setBoxFlags\\({box}, 0x80\\)", native_log)),
-        "open": len(re.findall(rf"setBoxFlags\\({box}, 0x00\\)", native_log))}
+        "closed": len(re.findall(rf"setBoxFlags\({box}, 0x80\)", native_log)),
+        "open": len(re.findall(rf"setBoxFlags\({box}, 0x00\)", native_log))}
         for box in BOXES}
 
 
