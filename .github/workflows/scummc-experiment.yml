@@ -13,10 +13,14 @@ on:
       - 'src/adventure_studio/scumm_sound_effect_probe.py'
       - 'src/adventure_studio/scumm_voc_fixture.py'
       - 'src/adventure_studio/scumm_launch.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'tests/test_story_to_scumm.py'
       - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_dynamic_walkbox_gate_probe.py'
       - 'src/adventure_studio/scumm_independent_gate_chain_probe.py'
+      - 'src/adventure_studio/scumm_same_room_gate_probe.py'
+      - 'tests/test_scumm_same_room_gate_probe.py'
       - 'src/adventure_studio/scumm_walkbox_save_probe.py'
       - 'tests/test_scumm_walkbox_save_probe.py'
       - 'src/adventure_studio/scumm_authored_scal_probe.py'
@@ -39,6 +43,8 @@ on:
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_dynamic_walkbox_gate_probe.py'
       - 'src/adventure_studio/scumm_independent_gate_chain_probe.py'
+      - 'src/adventure_studio/scumm_same_room_gate_probe.py'
+      - 'tests/test_scumm_same_room_gate_probe.py'
       - 'src/adventure_studio/scumm_walkbox_save_probe.py'
       - 'tests/test_scumm_walkbox_save_probe.py'
       - 'src/adventure_studio/scumm_authored_scal_probe.py'
@@ -214,6 +220,27 @@ jobs:
             /tmp/native-r09-independent-gates/*/screenshots/scummvm-*.png
             /tmp/native-r09-independent-gates/*/screenshots/scummvm-*.json
             /tmp/native-r09-independent-gates/*/screenshots/scummvm-launch.log
+          if-no-files-found: ignore
+      - name: Prove two independent reversible R09 gates in the same stock-ScummVM room
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_same_room_gate_probe /tmp/scummc-upstream /tmp/native-r09-same-room-gates
+      - name: Retain native same-room two-gate Gameplay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r09-same-room-gates
+          path: |
+            /tmp/native-r09-same-room-gates/native-r09-same-room-gates-report.json
+            /tmp/native-r09-same-room-gates/*/build/project.json
+            /tmp/native-r09-same-room-gates/*/build/resources/*
+            /tmp/native-r09-same-room-gates/*/game/tentacle.000
+            /tmp/native-r09-same-room-gates/*/game/tentacle.001
+            /tmp/native-r09-same-room-gates/*/screenshots/scummvm-*.png
+            /tmp/native-r09-same-room-gates/*/screenshots/scummvm-*.json
+            /tmp/native-r09-same-room-gates/*/screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Verify reversible R09 door closes and reopens native walkbox in stock ScummVM
         env:

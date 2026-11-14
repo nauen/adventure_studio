@@ -1007,9 +1007,11 @@ def write_game_sources(rooms: tuple[RoomAsset, ...], directory: Path) -> tuple[t
             source = pickups[rule.item_id]
             assert source.sprite_pixels is not None
             destination = next(h.exit_destination for h in room.hotspots if h.id == rule.target_id)
-            fixture_route.append({"room_id": room.name, "item_id": rule.item_id,
-                                  "rgb": list(room.palette[source.sprite_pixels[0]]),
-                                  "next_room_id": destination})
+            # Local UseRules alter in-room objects, not room transitions.
+            if destination is not None:
+                fixture_route.append({"room_id": room.name, "item_id": rule.item_id,
+                                      "rgb": list(room.palette[source.sprite_pixels[0]]),
+                                      "next_room_id": destination})
             for item_id in rule.requires_inventory:
                 hotspot = pickups[item_id]
                 assert hotspot.sprite_pixels is not None

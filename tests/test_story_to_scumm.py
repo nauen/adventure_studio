@@ -103,6 +103,65 @@ class StoryToScummTests(unittest.TestCase):
             compile_story_to_scumm(replace(story, items=story.items +
                                            (Item("Coin", "Münze", "Gold", "Tavern"),)))
 
+    def test_r09_story_owns_two_independent_local_gate_targets(self):
+        from adventure_studio.story_document import canonical_story_json
+        from adventure_studio.studio_sequences import (
+            author_room_box_connections, author_room_walkbox,
+            author_room_walkbox_gate, compose_story_project,
+        )
+        from adventure_studio.scumm_assets import scummc_room_source
+
+        story = small_story()
+        story = replace(
+            story,
+            items=story.items + (
+                Item("LatchKey", "Riegelschluessel", "Oeffnet die Nebentuer", "Tavern"),
+                Item("CellarKey", "Kellerschluessel", "Oeffnet die Kellertuer", "Tavern"),
+            ),
+            puzzles=story.puzzles + (
+                Puzzle("Side", "Nebentuer oeffnen", "Tavern", ("LatchKey",), None),
+                Puzzle("Cellar", "Kellertuer oeffnen", "Tavern", ("CellarKey",), None),
+            ),
+        )
+        story_raw = canonical_story_json(story)
+        original = compile_story_to_scumm(story)
+        self.assertEqual(
+            [(rule.item_id, rule.target_id) for rule in original.rooms[0].use_rules],
+            [("Key", "Door"), ("LatchKey", "DoorLocalSide"),
+             ("CellarKey", "DoorLocalCellar")],
+        )
+        raw = canonical_json(original)
+        for box, corners in (
+            (1, "0,70; 110,70; 110,150; 0,150"),
+            (2, "110,70; 240,70; 240,108; 110,108"),
+            (3, "110,112; 240,112; 240,150; 110,150"),
+            (4, "240,70; 639,70; 639,150; 240,150"),
+        ):
+            raw = author_room_walkbox(raw, "Tavern", box, corners)
+        raw = author_room_box_connections(raw, "Tavern",
+                                          "1-2; 2-4; 1-3; 3-4")
+        raw = author_room_walkbox_gate(raw, "Tavern", "DoorLocalSide", 2, reversible=True)
+        raw = author_room_walkbox_gate(raw, "Tavern", "DoorLocalCellar", 3, reversible=True)
+        composed = parse_document(compose_story_project(story_raw, raw))
+        room = composed.rooms[0]
+        self.assertEqual(
+            [(rule.target_id, rule.unlock_walkbox, rule.reversible_walkbox)
+             for rule in room.use_rules],
+            [("Door", None, False), ("DoorLocalSide", 2, True),
+             ("DoorLocalCellar", 3, True)],
+        )
+        self.assertEqual(parse_document(canonical_json(composed)), composed)
+        source = scummc_room_source(room)
+        self.assertIn("getObjectState(DoorLocalSide)", source)
+        self.assertIn("getObjectState(DoorLocalCellar)", source)
+        self.assertIn("if(objB == LatchKey", source)
+        self.assertIn("if(objB == CellarKey", source)
+        self.assertIn("setBoxFlags([2],128);", source)
+        self.assertIn("setBoxFlags([3],128);", source)
+        with tempfile.TemporaryDirectory() as directory:
+            export_document(composed, Path(directory))
+            self.assertTrue((Path(directory) / "Tavern.scc").is_file())
+
     def test_branching_and_cross_room_pickups_fail_closed(self):
         from adventure_studio.story import verify_story
         story = small_story()
