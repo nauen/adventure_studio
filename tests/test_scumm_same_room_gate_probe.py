@@ -1,10 +1,14 @@
 """R09: strictly separate same-room native gameplay from source-only fixtures."""
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
+from adventure_studio.scumm_assets import UseRule, destination_fixture, scrolling_fixture, write_game_sources
 from adventure_studio.scumm_same_room_gate_probe import (
     BOXES, GATES, ORDERS, _flag_counts, validate_native_same_room_plan,
     verify_same_room_gate_report,
@@ -51,6 +55,22 @@ def measured(path: Path) -> float:
 
 
 class SameRoomNativeGateTests(unittest.TestCase):
+    def test_local_use_rule_does_not_create_null_room_transition(self):
+        room = scrolling_fixture()
+        door = next(h for h in room.hotspots if h.id == "Door")
+        local = replace(door, id="SideDoor", x=500, exit_destination=None)
+        room = replace(room, hotspots=(*room.hotspots, local),
+                       use_rules=(*room.use_rules,
+                                  UseRule("Key", "SideDoor", "Side gate opened.",
+                                          open_target=True)))
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            write_game_sources((room, destination_fixture()), directory)
+            manifest = json.loads((directory / "game-goal.json").read_text())
+        self.assertEqual(manifest["fixture_route"], [
+            {"room_id": "Harbor", "item_id": "Key",
+             "rgb": [255, 220, 75], "next_room_id": "Cellar"}])
+
     def test_only_valid_two_gate_plans_are_accepted(self):
         plan = {"gates": list(GATES), "keys": ["LatchKey", "CellarKey"],
                 "order": list(ORDERS[0]), "control": False}
