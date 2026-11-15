@@ -90,13 +90,30 @@ class CameraZP01EvidenceTests(unittest.TestCase):
                  "actor_dark_pixels": 0}
                 for index, camera in enumerate(camera_positions)
             ]}
-        # A 430->450 intermediate frame separation is only 40 screen
-        # pixels; a complete 160->450->160 roundtrip must still pass.
+        # A frame at camera 430 is 100 screen pixels from camera 480;
+        # completed native 160->480->160 travel must still be observed.
         from adventure_studio.scumm_camera_zp01_probe import select_phases
-        phases = select_phases(trace((160, 430, 450, 430, 160))["frames"])
+        phases = select_phases(trace((160, 430, 480, 430, 160))["frames"])
         self.assertEqual(phases["returned"]["camera_x"], 160)
         with self.assertRaisesRegex(RuntimeError, "completed-return"):
-            select_phases(trace((160, 430, 450, 430))["frames"])
+            select_phases(trace((160, 430, 480, 430))["frames"])
+
+    def test_native_camera_cannot_claim_roundtrip_without_authored_endpoints(self):
+        def samples(camera_positions):
+            return [{"world_x": 390, "camera_x": camera,
+                     "screen_x": 192 + 2 * (390 - camera + 160),
+                     "seconds": index, "frame": str(index),
+                     "actor_dark_pixels": 200}
+                    for index, camera in enumerate(camera_positions)]
+        with self.assertRaisesRegex(RuntimeError, "far side"):
+            select_phases(samples((160, 350, 450, 350, 160)))
+        with self.assertRaisesRegex(RuntimeError, "completed-return"):
+            select_phases(samples((160, 350, 480, 350, 185)))
+        with self.assertRaisesRegex(RuntimeError, "before"):
+            select_phases(samples((185, 350, 480, 350, 160)))
+        self.assertEqual(
+            select_phases(samples((160, 350, 480, 350, 160)))["far"]["camera_x"],
+            480)
 
     def test_return_selection_uses_distant_visible_actor_position(self):
         def trace(pixels):
@@ -106,7 +123,7 @@ class CameraZP01EvidenceTests(unittest.TestCase):
                  "seconds": index, "frame": str(index),
                  "actor_dark_pixels": pixels}
                 for index, camera in enumerate(
-                    (160, 330, 400, 450, 430, 340, 160))
+                    (160, 330, 400, 480, 430, 340, 160))
             ]}
         phases = select_phases(trace(200)["frames"])
         self.assertEqual(phases["outgoing"]["camera_x"], 330)
@@ -123,10 +140,10 @@ class CameraZP01EvidenceTests(unittest.TestCase):
                  "screen_x": 192 + 2 * (390 - camera + 160),
                  "seconds": index, "frame": str(index),
                  "actor_dark_pixels": pixels}
-                for index, camera in enumerate((160, 430, 450, 430, 160))
+                for index, camera in enumerate((160, 430, 480, 430, 160))
             ]}
         # The complete round-trip and offscreen-to-far displacement are
-        # genuine, but the visible Actor moved only 40 screen pixels.
+        # genuine, but the visible Actor moved only 100 screen pixels.
         # A stationary 110-pixel-wide mask could fake this comparison.
         variants = {"masked": trace(0), "transparent": trace(200),
                     "wrong-box": trace(200)}
