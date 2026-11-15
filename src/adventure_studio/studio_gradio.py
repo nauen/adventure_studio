@@ -31,7 +31,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
-                               import_room_sound, import_room_zplane, import_object_zplane, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_walkbox_gate, author_room_scale_curve,
+                               import_room_sound, import_room_zplane, import_object_zplane, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_walkbox_gate, author_room_scale_curve, author_room_camera_plan,
                                room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
@@ -518,6 +518,21 @@ def make_app():
         except (ValueError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
+    def native_camera_author(raw, room, x, y, cues):
+        if raw is None:
+            raise gr.Error("Bitte zuerst ein natives Projekt laden")
+        try:
+            values = (x, y)
+            if any(type(v) not in (int, float) or not isfinite(v) or v != int(v)
+                   for v in values):
+                raise ValueError("Ego-Weltkoordinaten müssen ganze Zahlen sein")
+            updated = author_room_camera_plan(raw, room, int(x), int(y), cues)
+            return (updated, *native_selectors(updated, selected_room=room),
+                    "Ego-Weltstart und native Kamerafolge übernommen. "
+                    "Zum dauerhaften Speichern natives Projekt-JSON exportieren.")
+        except (ValueError, TypeError) as error:
+            raise gr.Error(str(error)) from error
+
     def native_walkbox_zplane_author(raw, room, box_index, zplane_index):
         if raw is None:
             raise gr.Error("Bitte zuerst ein natives Projekt laden")
@@ -890,6 +905,20 @@ def make_app():
             with gr.Row():
                 native_box_routes_connections = gr.Textbox(label="Walkbox-Verbindungen", value="1-2", elem_id="native-box-routes-connections")
                 native_box_routes_add = gr.Button("BOXM-Verbindungen übernehmen", elem_id="native-box-routes-add")
+            gr.Markdown("**R06 Weltfeste Z-Maske bei Kamerafahrt:** Ego-Weltposition und native "
+                        "Kameracues für den ausgewählten Raum speichern. "
+                        "Beispiel: `set:160;pan:480;wait;pan:160;wait`. "
+                        "Die Eingabe wird im Projekt-JSON und ScummC-v6-Export erhalten.")
+            with gr.Row():
+                native_camera_ego_x = gr.Number(label="Ego-Start Welt-X", value=390,
+                                                precision=0, elem_id="native-camera-ego-x")
+                native_camera_ego_y = gr.Number(label="Ego-Start Welt-Y", value=100,
+                                                precision=0, elem_id="native-camera-ego-y")
+                native_camera_cues = gr.Textbox(
+                    label="Kameracues", value="set:160;pan:480;wait;pan:160;wait",
+                    elem_id="native-camera-cues")
+                native_camera_add = gr.Button("Native Kamerafolge übernehmen",
+                                               elem_id="native-camera-add")
             gr.Markdown("**Türgesteuerte Walkbox:** Eine vorhandene Tür mit einer Inventar-Use-Regel "
                         "und einem Open-State kann eine anfangs gesperrte Walkbox freischalten. "
                         "Die unveränderte SCUMM-v6-Runtime berechnet Wege beim Öffnen neu.")
@@ -1865,6 +1894,10 @@ def make_app():
         native_box_routes_add.click(native_box_routes_author,
                                     [native_state, native_room, native_box_routes_connections],
                                     [native_state, *native_outputs, native_report])
+        native_camera_add.click(native_camera_author,
+                                [native_state, native_room, native_camera_ego_x,
+                                 native_camera_ego_y, native_camera_cues],
+                                [native_state, *native_outputs, native_report])
         native_gate_add.click(native_walkbox_gate_author,
                               [native_state, native_room, native_gate_door, native_gate_box, native_gate_reversible],
                               [native_state, *native_outputs, native_report])
