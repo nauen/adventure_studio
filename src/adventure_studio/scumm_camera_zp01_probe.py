@@ -12,8 +12,6 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-from PIL import Image
-
 from .scumm_assets import CameraCue, destination_fixture, scrolling_fixture
 from .scumm_project import GameDocument, canonical_json, parse_document
 from .scumm_room_visual_probe import render_native_room
@@ -52,6 +50,7 @@ def costume_pixels(image: Image.Image, world_x: int, camera_x: float) -> int:
 
 
 def read_frames(directory: Path, world_x: int = 390) -> list[dict]:
+    from PIL import Image
     frames = json.loads((directory / "camera-frame-times.json").read_text(encoding="utf-8"))
     rows = []
     for entry in frames:
@@ -121,6 +120,7 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
 
 
 def run(upstream: Path, generated: Path, output: Path) -> dict:
+    from PIL import Image
     output.mkdir(parents=True, exist_ok=True)
     base = replace(scrolling_fixture(), demo_walk_to_x=None)
     expected_cues = (CameraCue("set", 160), CameraCue("pan", 480),
