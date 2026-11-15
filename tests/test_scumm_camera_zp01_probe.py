@@ -98,6 +98,23 @@ class CameraZP01EvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "completed-return"):
             select_phases(trace((160, 430, 450, 430))["frames"])
 
+    def test_visible_positions_must_disprove_a_screen_fixed_mask(self):
+        def trace(pixels):
+            return {"frames": [
+                {"world_x": 390, "camera_x": camera,
+                 "screen_x": 192 + 2 * (390 - camera + 160),
+                 "seconds": index, "frame": str(index),
+                 "actor_dark_pixels": pixels}
+                for index, camera in enumerate((160, 430, 450, 430, 160))
+            ]}
+        # The complete round-trip and offscreen-to-far displacement are
+        # genuine, but the visible Actor moved only 40 screen pixels.
+        # A stationary 110-pixel-wide mask could fake this comparison.
+        variants = {"masked": trace(0), "transparent": trace(200),
+                    "wrong-box": trace(200)}
+        with self.assertRaisesRegex(RuntimeError, "screen-fixed"):
+            verify_world_mask(variants)
+
     def test_wrong_walkbox_control_is_not_silently_accepted(self):
         def trace(pixels):
             return {"frames": [
