@@ -8,7 +8,7 @@ from adventure_studio.scumm_assets import CameraCue, _validate, destination_fixt
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room
 from adventure_studio.scumm_camera_probe import verify_camera_pan
-from adventure_studio.studio_sequences import compose_story_project
+from adventure_studio.studio_sequences import author_room_camera_plan, compose_story_project
 
 
 class CameraCueTests(unittest.TestCase):
@@ -71,6 +71,26 @@ class CameraCueTests(unittest.TestCase):
             self.assertIn(instruction, entry)
         self.assertLess(entry.index("putActorAt(VAR_EGO, 390, 100, Harbor);"),
                         entry.index("panCameraTo(480);"))
+
+    def test_studio_camera_authoring_roundtrip_and_rejects_bad_cues(self):
+        raw = canonical_json(GameDocument(
+            "CameraStudio", (native_room(), destination_fixture())))
+        authored = author_room_camera_plan(
+            raw, "Harbor", 390, 100,
+            "set:160;pan:480;wait;pan:160;wait")
+        room = parse_document(authored).rooms[0]
+        self.assertEqual((room.ego_start_x, room.ego_start_y), (390, 100))
+        self.assertEqual(
+            [(cue.operation, cue.x) for cue in room.camera_cues],
+            [("set", 160), ("pan", 480), ("wait", None),
+             ("pan", 160), ("wait", None)])
+        self.assertEqual(canonical_json(parse_document(authored)), authored)
+        self.assertIn("panCameraTo(480);", scummc_room_source(room))
+        for plan in ("set:160;;wait", "pan:640", "set:bad", "zoom:480"):
+            with self.subTest(plan=plan), self.assertRaises(ValueError):
+                author_room_camera_plan(raw, "Harbor", 390, 100, plan)
+        with self.assertRaisesRegex(ValueError, "Ego-Startkoordinaten"):
+            author_room_camera_plan(raw, "Harbor", 640, 100, "set:160")
 
     def test_legacy_ego_start_and_invalid_positions(self):
         room = native_room()
