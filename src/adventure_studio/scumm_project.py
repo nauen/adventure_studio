@@ -387,6 +387,8 @@ def document_dict(document: GameDocument) -> dict:
                                  for c in room.scale_curves]} if room.scale_curves else {}),
             **({"demo_walk_to_y": room.demo_walk_to_y}
                if room.demo_walk_to_y is not None else {}),
+            **({"ego_start_x": room.ego_start_x} if room.ego_start_x != 60 else {}),
+            **({"ego_start_y": room.ego_start_y} if room.ego_start_y != 100 else {}),
             **({"camera_cues": [{"operation": cue.operation,
                                   **({"x": cue.x} if cue.x is not None else {})}
                                  for cue in room.camera_cues]} if room.camera_cues else {}),
@@ -1048,7 +1050,7 @@ def parse_document(source: str) -> GameDocument:
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",
-                           "demo_walk_to_x", "demo_walk_to_y", "goal_text"},
+                           "demo_walk_to_x", "demo_walk_to_y", "ego_start_x", "ego_start_y", "goal_text"},
                      {"name", "geometry", "pixels", "palette", "hotspots", "use_rules",
                       "demo_walk_to_x", "goal_text"})
         g = _only(room["geometry"], {"width", "height", "viewport_width", "viewport_height"},
@@ -1243,6 +1245,7 @@ def parse_document(source: str) -> GameDocument:
             room.get("music_id"),
             tuple(talk_rules),
             tuple(planes), tuple(boxes), routes, scale, tuple(curves), room.get("demo_walk_to_y"), tuple(camera_cues),
+            room.get("ego_start_x", 60), room.get("ego_start_y", 100),
         ))
     raw_music = data.get("music_assets", [])
     if not isinstance(raw_music, list):
