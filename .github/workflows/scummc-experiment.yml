@@ -28,6 +28,7 @@ on:
       - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
       - 'src/adventure_studio/scumm_object_zmask_probe.py'
       - 'src/adventure_studio/scumm_camera_probe.py'
+      - 'src/adventure_studio/scumm_camera_zp01_probe.py'
       - 'tests/test_scumm_camera_cues.py'
   push:
     paths:
@@ -55,6 +56,7 @@ on:
       - 'src/adventure_studio/scumm_object_zmask_probe.py'
       - 'src/adventure_studio/scumm_scal_probe.py'
       - 'src/adventure_studio/scumm_camera_probe.py'
+      - 'src/adventure_studio/scumm_camera_zp01_probe.py'
       - 'src/adventure_studio/scumm_costume.py'
       - 'src/adventure_studio/scumm_costume_probe.py'
       - 'src/adventure_studio/scumm_actor_probe.py'
@@ -768,6 +770,28 @@ jobs:
           path: |
             /tmp/native-camera-pan/native-camera-pan-report.json
             /tmp/native-camera-pan/*-screenshots/scummvm-end.png
+          if-no-files-found: ignore
+      - name: Verify Studio-authored ZP01 occlusion during native pan and return
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_camera_zp01_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r06-camera-zp01
+      - name: Retain native R06 four-phase controls, source games and timestamps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r06-camera-zp01
+          path: |
+            /tmp/native-r06-camera-zp01/native-r06-camera-zp01-report.json
+            /tmp/native-r06-camera-zp01/*-project.json
+            /tmp/native-r06-camera-zp01/*-zp01.png
+            /tmp/native-r06-camera-zp01/*/Harbor.scc
+            /tmp/native-r06-camera-zp01/*/tentacle.000
+            /tmp/native-r06-camera-zp01/*/tentacle.001
+            /tmp/native-r06-camera-zp01/*-screenshots/scummvm-*.png
+            /tmp/native-r06-camera-zp01/*-screenshots/camera-frame-times.json
+            /tmp/native-r06-camera-zp01/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Produce ScummC documented compatibility-only detection fixture
         # Research fixture only: this uses the Day of the Tentacle game ID
