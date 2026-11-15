@@ -73,17 +73,19 @@ def read_frames(directory: Path, world_x: int = 390) -> list[dict]:
 
 def select_phases(rows: list[dict]) -> dict:
     """Use camera travel direction and observed world X, never guessed delays."""
-    far = next((i for i, row in enumerate(rows) if row["camera_x"] >= 450), None)
+    # waitForCamera() must complete the authored X=480 destination;
+    # getting merely near the far side does not establish a full pan.
+    far = next((i for i, row in enumerate(rows) if row["camera_x"] >= 475), None)
     if far is None:
         raise RuntimeError("Outgoing native camera pan never reached the far side")
-    pre = next((r for r in rows[:far] if r["camera_x"] <= 185), None)
+    pre = next((r for r in rows[:far] if r["camera_x"] <= 165), None)
     outward = next((r for r in rows[:far] if 330 <= r["camera_x"] <= 430), None)
     # On the return pan choose the last observed in-range frame (near 330),
     # not the first (near 430). Only widely separated *visible* positions
     # can distinguish a world-fixed occlusion from a screen-fixed overlay.
     inbound = next((r for r in reversed(rows[far + 1:])
                     if 330 <= r["camera_x"] <= 430), None)
-    returned = next((r for r in rows[far + 1:] if r["camera_x"] <= 185), None)
+    returned = next((r for r in rows[far + 1:] if r["camera_x"] <= 165), None)
     if pre is None or outward is None or inbound is None or returned is None:
         raise RuntimeError("Missing before/outgoing/returning/completed-return camera frame")
     return {"before": pre, "outgoing": outward, "far": rows[far],
@@ -97,6 +99,9 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
         for name, phase in ordered.items():
             if phase["world_x"] != 390 or not 160 <= phase["camera_x"] <= 480:
                 raise RuntimeError(f"Invalid world/camera coordinates: {label}/{name}")
+        if (ordered["before"]["camera_x"] > 165 or ordered["far"]["camera_x"] < 475
+                or ordered["returned"]["camera_x"] > 165):
+            raise RuntimeError(f"Native camera missed authored 160->480->160 endpoints: {label}")
         if not (ordered["before"]["seconds"] < ordered["outgoing"]["seconds"]
                 < ordered["far"]["seconds"] < ordered["returning"]["seconds"]
                 < ordered["returned"]["seconds"]):
