@@ -479,6 +479,18 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         try:
             camera_frame_times = []
             camera_capture_start = time.monotonic()
+
+            def retain_camera_frame(name: str) -> None:
+                # Persist native evidence after each successful screenshot:
+                # if ScummVM quits before the return, captured images still
+                # have usable timestamps in the uploaded failure artifact.
+                camera_frame_times.append({
+                    "frame": name,
+                    "elapsed_seconds": round(time.monotonic() - camera_capture_start, 3),
+                })
+                (output_directory / "camera-frame-times.json").write_text(
+                    json.dumps(camera_frame_times, indent=2) + "\n", encoding="utf-8")
+
             sample_number = 0
             readiness_deadline = time.monotonic() + 20.0
             while time.monotonic() < readiness_deadline:
@@ -488,8 +500,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 if camera_pan_capture:
                     name = f"sample-{sample_number:02d}"
                     shutil.copyfile(starting, output_directory / f"scummvm-{name}.png")
-                    camera_frame_times.append({"frame": name,
-                                               "elapsed_seconds": round(time.monotonic() - camera_capture_start, 3)})
+                    retain_camera_frame(name)
                     sample_number += 1
                 start_rgb = scene_pixel(output_directory, "start")
                 # The authored pan may advance before the first Xvfb frame.
@@ -511,10 +522,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
                 if (sample_scene_frames or camera_pan_capture) and time.monotonic() >= next_sample:
                     name = f"sample-{sample_number:02d}"
-                    captured_at = time.monotonic() - camera_capture_start
                     capture_frame(name)
                     if camera_pan_capture:
-                        camera_frame_times.append({"frame": name, "elapsed_seconds": round(captured_at, 3)})
+                        retain_camera_frame(name)
                     sample_number += 1
                     next_sample = time.monotonic() + (0.08 if camera_pan_capture else 0.15)
                 time.sleep(0.1)
@@ -522,9 +532,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
             final_snapshot = capture_frame("end")
             if camera_pan_capture:
-                camera_frame_times.append({"frame": "end", "elapsed_seconds": round(time.monotonic() - camera_capture_start, 3)})
-                (output_directory / "camera-frame-times.json").write_text(
-                    json.dumps(camera_frame_times, indent=2) + "\n", encoding="utf-8")
+                retain_camera_frame("end")
             changed = compare_frames(output_directory,
                                      minimum_changed_pixels=0 if (allow_static_scene or native_same_room_gate_plan is not None) else 500,
                                      expect_scroll=not (allow_static_scene or native_same_room_gate_plan is not None),
