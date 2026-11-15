@@ -171,9 +171,17 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
     report = {
         "product_path": "Studio PNG/Walkbox/Camera/Actor -> JSON-v1 -> Story -> ScummC-v6 -> stock ScummVM",
         "variants": variants,
-        "comparison": verify_world_mask(variants),
+        "comparison": {"status": "not_yet_verified"},
     }
-    (output / "native-r06-camera-zp01-report.json").write_text(
+    report_path = output / "native-r06-camera-zp01-report.json"
+    try:
+        report["comparison"] = verify_world_mask(variants)
+    except (RuntimeError, ValueError) as error:
+        report["comparison"] = {"status": "failed", "reason": str(error)}
+        report_path.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        raise
+    report_path.write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return report
 
