@@ -54,17 +54,21 @@ def read_frames(directory: Path, world_x: int = 390) -> list[dict]:
     frames = json.loads((directory / "camera-frame-times.json").read_text(encoding="utf-8"))
     rows = []
     for entry in frames:
-        image = Image.open(directory / f"scummvm-{entry['frame']}.png")
-        camera = camera_from_sky(image)
-        if camera is None:
-            continue
+        # Camera capture produces hundreds of PNGs across three native games.
+        # Close each file immediately, including unidentified loading frames,
+        # instead of retaining decoder/file handles during the next capture.
+        with Image.open(directory / f"scummvm-{entry['frame']}.png") as image:
+            camera = camera_from_sky(image)
+            if camera is None:
+                continue
+            actor_pixels = costume_pixels(image, world_x, camera)
         rows.append({
             "frame": entry["frame"],
             "seconds": entry["elapsed_seconds"],
             "camera_x": camera,
             "world_x": world_x,
             "screen_x": round(192 + 2 * (world_x - camera + 160)),
-            "actor_dark_pixels": costume_pixels(image, world_x, camera),
+            "actor_dark_pixels": actor_pixels,
         })
     if not rows:
         raise RuntimeError("No identifiable native camera frames")
