@@ -140,6 +140,8 @@ class RoomAsset:
     scale_curves: tuple[ScaleCurve, ...] = ()
     demo_walk_to_y: int | None = None
     camera_cues: tuple[CameraCue, ...] = ()
+    ego_start_x: int = 60
+    ego_start_y: int = 100
 
 
 def _scumm_string(value: str) -> str:
@@ -220,6 +222,9 @@ def _validate(room: RoomAsset) -> None:
         or not 0 <= room.demo_walk_to_y < height
     ):
         raise ValueError("Demo walk Y target requires a valid X target and room Y coordinate")
+    if (type(room.ego_start_x) is not int or type(room.ego_start_y) is not int
+            or not 0 <= room.ego_start_x < width or not 0 <= room.ego_start_y < height):
+        raise ValueError("Ego start position outside room bounds")
     for cue in room.camera_cues:
         if cue.operation not in ("set", "pan", "wait", "follow_ego"):
             raise ValueError("Unsupported native v6 camera operation")
@@ -818,7 +823,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
     parts.extend([
         "    local script entry() {\n",
         "        setCurrentActor(VAR_EGO);\n",
-        f"        putActorAt(VAR_EGO, 60, 100, {room.name});\n",
+        f"        putActorAt(VAR_EGO, {room.ego_start_x}, {room.ego_start_y}, {room.name});\n",
         "        setActorFollowBoxes();\n" if room.walkboxes else "        setActorIgnoreBoxes();\n",
         "        setActorStanding();\n",
         *[f"        if(getObjectState({rule.target_id}) == 2) setBoxFlags([{rule.unlock_walkbox}],0);\n"
