@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 try:
     from PIL import Image
@@ -10,7 +13,8 @@ except ImportError:
     Image = None
 
 from adventure_studio.scumm_camera_zp01_probe import (
-    camera_from_sky, costume_pixels, select_phases, verify_world_mask,
+    camera_from_sky, costume_pixels, export_actor_phase_crops,
+    read_frames, select_phases, verify_world_mask,
 )
 
 
@@ -39,6 +43,34 @@ class CameraZP01EvidenceTests(unittest.TestCase):
                 self.assertEqual(camera_from_sky(image), x)
                 if x >= 240:
                     self.assertGreater(costume_pixels(image, 390, x), 100)
+
+    @unittest.skipIf(Image is None, "Pillow is an optional Studio dependency")
+    def test_timestamped_native_frames_produce_inspectable_actor_phase_crops(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            times = []
+            for index, camera in enumerate((160, 350, 480, 350, 160)):
+                name = f"sample-{index:02d}"
+                sky_frame(camera, dark_actor=True).save(
+                    directory / f"scummvm-{name}.png")
+                times.append({"frame": name, "elapsed_seconds": index * 0.5})
+            (directory / "camera-frame-times.json").write_text(
+                json.dumps(times), encoding="utf-8")
+            frames = read_frames(directory)
+            self.assertEqual([row["camera_x"] for row in frames],
+                             [160, 350, 480, 350, 160])
+            phase_crops = export_actor_phase_crops(directory, frames)
+            self.assertEqual(set(phase_crops),
+                             {"before", "outgoing", "far", "returning", "returned"})
+            self.assertFalse(phase_crops["before"]["actor_in_viewport"])
+            self.assertFalse(phase_crops["returned"]["actor_in_viewport"])
+            for phase in ("outgoing", "far", "returning"):
+                evidence = phase_crops[phase]
+                self.assertTrue(evidence["actor_in_viewport"])
+                self.assertGreater(evidence["dark_pixels"], 100)
+                with Image.open(directory / evidence["actor_crop"]) as crop:
+                    self.assertEqual(crop.height, 88)
+                    self.assertGreater(crop.width, 0)
 
     def test_missing_return_phase_fails_closed(self):
         frames = [
