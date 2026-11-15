@@ -78,7 +78,11 @@ def select_phases(rows: list[dict]) -> dict:
         raise RuntimeError("Outgoing native camera pan never reached the far side")
     pre = next((r for r in rows[:far] if r["camera_x"] <= 185), None)
     outward = next((r for r in rows[:far] if 330 <= r["camera_x"] <= 430), None)
-    inbound = next((r for r in rows[far + 1:] if 330 <= r["camera_x"] <= 430), None)
+    # On the return pan choose the last observed in-range frame (near 330),
+    # not the first (near 430). Only widely separated *visible* positions
+    # can distinguish a world-fixed occlusion from a screen-fixed overlay.
+    inbound = next((r for r in reversed(rows[far + 1:])
+                    if 330 <= r["camera_x"] <= 430), None)
     returned = next((r for r in rows[far + 1:] if r["camera_x"] <= 185), None)
     if pre is None or outward is None or inbound is None or returned is None:
         raise RuntimeError("Missing before/outgoing/returning/completed-return camera frame")
