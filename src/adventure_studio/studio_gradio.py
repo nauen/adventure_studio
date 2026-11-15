@@ -2080,11 +2080,13 @@ def make_app():
                            [native_hotspot, native_target, native_actor, native_animation,
                             native_actor_initial])
         def native_camera_fields(raw, room):
-            if raw is None or room is None:
+            if raw is None:
                 return gr.skip(), gr.skip(), gr.skip(), gr.skip()
             try:
-                return room_camera_form_values(raw, room)
-            except ValueError as error:
+                rooms = parse_document(raw).rooms
+                selected = room if any(item.name == room for item in rooms) else rooms[0].name
+                return room_camera_form_values(raw, selected)
+            except (ValueError, IndexError) as error:
                 raise gr.Error(str(error)) from error
 
         native_room.change(native_camera_fields, [native_state, native_room],
