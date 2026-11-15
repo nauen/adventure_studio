@@ -139,9 +139,13 @@ def export_actor_phase_crops(directory: Path, frames: list[dict]) -> dict:
         # Same viewport projection as costume_pixels(), but preserve RGB
         # evidence so an independently inspected crop explains each count.
         center = frame["screen_x"]
-        left, right = max(192, center - 30), min(831, center + 30)
-        if left > right:
-            raise RuntimeError(f"Actor is outside the viewport at {phase}")
+        actor_in_view = 192 <= center <= 831
+        if center > 831:
+            left, right = 772, 831
+        elif center < 192:
+            left, right = 192, 251
+        else:
+            left, right = max(192, center - 30), min(831, center + 30)
         with Image.open(source) as screenshot:
             screenshot.convert("RGB").crop((left, 300, right + 1, 388)).save(target)
         crops[phase] = {
@@ -151,6 +155,7 @@ def export_actor_phase_crops(directory: Path, frames: list[dict]) -> dict:
             "world_x": frame["world_x"],
             "camera_x": frame["camera_x"],
             "screen_x": frame["screen_x"],
+            "actor_in_viewport": actor_in_view,
             "dark_pixels": frame["actor_dark_pixels"],
         }
     return crops
