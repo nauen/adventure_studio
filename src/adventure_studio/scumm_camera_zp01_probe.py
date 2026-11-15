@@ -232,6 +232,26 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
                               "walkbox_masks": expected}
             crops = export_actor_phase_crops(output / f"{name}-screenshots", frames)
         except Exception as error:
+            # ScummVM can quit after recording useful native frames but
+            # before render_native_room returns. Retain those measured
+            # screenshots in the readable report without accepting a
+            # partial camera round-trip.
+            images = output / f"{name}-screenshots"
+            times = images / "camera-frame-times.json"
+            if name not in variants and times.is_file():
+                try:
+                    partial_frames = read_frames(images)
+                    variants[name] = {
+                        "frames": partial_frames,
+                        "walkbox_masks": expected,
+                        "capture_incomplete": True,
+                    }
+                except (OSError, ValueError, RuntimeError) as capture_error:
+                    variants[name] = {
+                        "walkbox_masks": expected,
+                        "capture_incomplete": True,
+                        "frame_read_error": str(capture_error),
+                    }
             # Compilation/launch may fail before a complete three-game
             # comparison exists. Preserve the reached product path and
             # failure in CI, while keeping the native acceptance gate red.
