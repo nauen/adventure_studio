@@ -68,7 +68,7 @@ def main() -> None:
                 page.locator("#native-camera-ego-x input").fill("390")
                 page.locator("#native-camera-ego-y input").fill("100")
                 page.locator("#native-camera-cues textarea").fill(
-                    "set:160;pan:480;wait;pan:160;wait")
+                    "set:160;hold:120;pan:480;wait;pan:160;wait")
                 expect(page.locator("#native-camera-stationary input")).to_be_checked()
                 page.locator("#native-camera-add").click()
                 expect(report).to_have_value(re.compile(r"Ego-Weltstart und native Kamerafolge"),
@@ -90,8 +90,9 @@ def main() -> None:
                 assert (exported.ego_start_x, exported.ego_start_y) == (390, 100)
                 assert exported.demo_walk_to_x is None
                 assert [(cue.operation, cue.x) for cue in exported.camera_cues] == [
-                    ("set", 160), ("pan", 480), ("wait", None),
-                    ("pan", 160), ("wait", None)]
+                    ("set", 160), ("hold", None), ("pan", 480),
+                    ("wait", None), ("pan", 160), ("wait", None)]
+                assert exported.camera_cues[1].ticks == 120
                 page.screenshot(path=str(evidence / "authored-two-zplanes.png"),
                                 full_page=True)
                 (evidence / "result.json").write_text(json.dumps({
