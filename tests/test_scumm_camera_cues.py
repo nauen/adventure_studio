@@ -2,11 +2,13 @@
 
 import unittest
 from dataclasses import replace
+from pathlib import Path
 
-from adventure_studio.scumm_assets import CameraCue, _validate, destination_fixture, scummc_room_source
+from adventure_studio.scumm_assets import CameraCue, _validate, destination_fixture, scrolling_fixture, scummc_room_source
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room
 from adventure_studio.scumm_camera_probe import verify_camera_pan
+from adventure_studio.studio_sequences import compose_story_project
 
 
 class CameraCueTests(unittest.TestCase):
@@ -46,6 +48,29 @@ class CameraCueTests(unittest.TestCase):
         self.assertEqual(restored.rooms[0].ego_start_x, 390)
         self.assertEqual(canonical_json(restored), raw)
         self.assertIn("putActorAt(VAR_EGO, 390, 100,", scummc_room_source(restored.rooms[0]))
+
+    def test_story_composition_preserves_authored_pan_and_actor_world_position(self):
+        base = scrolling_fixture()
+        cues = (CameraCue("set", 160), CameraCue("pan", 480),
+                CameraCue("wait"), CameraCue("pan", 160), CameraCue("wait"))
+        room = replace(base, ego_start_x=390, ego_start_y=100, camera_cues=cues)
+        native_raw = canonical_json(GameDocument("MaskedPanStory", (room, destination_fixture())))
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        composed_raw = compose_story_project(story, native_raw)
+        restored = next(item for item in parse_document(composed_raw).rooms
+                        if item.name == "Harbor")
+        self.assertEqual((restored.ego_start_x, restored.ego_start_y), (390, 100))
+        self.assertEqual(restored.camera_cues, cues)
+        self.assertEqual(canonical_json(parse_document(composed_raw)), composed_raw)
+        source = scummc_room_source(restored)
+        entry = source[source.index("local script entry()"):]
+        for instruction in ("putActorAt(VAR_EGO, 390, 100, Harbor);",
+                            "setCameraAt(160);", "panCameraTo(480);",
+                            "waitForCamera();", "panCameraTo(160);"):
+            self.assertIn(instruction, entry)
+        self.assertLess(entry.index("putActorAt(VAR_EGO, 390, 100, Harbor);"),
+                        entry.index("panCameraTo(480);"))
 
     def test_legacy_ego_start_and_invalid_positions(self):
         room = native_room()
