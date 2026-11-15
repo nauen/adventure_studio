@@ -209,6 +209,10 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
             render = render_native_room(room, upstream, generated, output, name,
                                         allow_static_scene=True, camera_pan_capture=True)
             frames = read_frames(output / f"{name}-screenshots")
+            # Keep measurable native samples even if phase selection fails.
+            # A missing return is a failed acceptance, not missing evidence.
+            variants[name] = {"render": render, "frames": frames,
+                              "walkbox_masks": expected}
             crops = export_actor_phase_crops(output / f"{name}-screenshots", frames)
         except Exception as error:
             # Compilation/launch may fail before a complete three-game
