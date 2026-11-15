@@ -219,6 +219,11 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
             raise RuntimeError("Story composition changed world-anchored Ego into a walking actor")
         if len(room.zplanes) != 1 or len(room.walkboxes) != 2:
             raise RuntimeError("Story composition dropped ZP01/BOXD")
+        # A retained ZP01 slot is not enough: the authored PNG's actual
+        # world-space pixels must survive JSON-v1 and Story composition.
+        expected_mask = bytes(1 if pixel else 0 for pixel in pixels)
+        if room.zplanes[0].index != 1 or room.zplanes[0].pixels != expected_mask:
+            raise RuntimeError("Studio PNG ZP01 pixels changed during JSON/Story export")
         expected = [1, 0] if name == "wrong-box" else [0, 1]
         if [box.mask for box in room.walkboxes] != expected:
             raise RuntimeError("Wrong product-exported Z-plane assignment")
