@@ -2515,6 +2515,9 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                              box_routes=previous.box_routes if previous is not None else (),
                              scale_slots=previous.scale_slots if previous is not None else None,
                              scale_curves=previous.scale_curves if previous is not None else (),
+                             camera_cues=previous.camera_cues if previous is not None else (),
+                             ego_start_x=previous.ego_start_x if previous is not None else 60,
+                             ego_start_y=previous.ego_start_y if previous is not None else 100,
                              use_rules=tuple(story_rules)))
     composed = replace(project, rooms=tuple(rooms),
                        costumes=native.costumes, actors=native.actors,
