@@ -224,6 +224,15 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
         expected_mask = bytes(1 if pixel else 0 for pixel in pixels)
         if room.zplanes[0].index != 1 or room.zplanes[0].pixels != expected_mask:
             raise RuntimeError("Studio PNG ZP01 pixels changed during JSON/Story export")
+        occupied = [position for position, value in enumerate(room.zplanes[0].pixels) if value]
+        mask_extent = {
+            "opaque_pixels": len(occupied),
+            "world_bounds": ([min(pos % width for pos in occupied),
+                              min(pos // width for pos in occupied),
+                              max(pos % width for pos in occupied),
+                              max(pos // width for pos in occupied)]
+                             if occupied else None),
+        }
         expected = [1, 0] if name == "wrong-box" else [0, 1]
         if [box.mask for box in room.walkboxes] != expected:
             raise RuntimeError("Wrong product-exported Z-plane assignment")
@@ -234,7 +243,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
             # Keep measurable native samples even if phase selection fails.
             # A missing return is a failed acceptance, not missing evidence.
             variants[name] = {"render": render, "frames": frames,
-                              "walkbox_masks": expected}
+                              "walkbox_masks": expected, "zplane_mask": mask_extent}
             crops = export_actor_phase_crops(output / f"{name}-screenshots", frames)
         except Exception as error:
             # ScummVM can quit after recording useful native frames but
@@ -249,11 +258,13 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
                     variants[name] = {
                         "frames": partial_frames,
                         "walkbox_masks": expected,
+                        "zplane_mask": mask_extent,
                         "capture_incomplete": True,
                     }
                 except (OSError, ValueError, RuntimeError) as capture_error:
                     variants[name] = {
                         "walkbox_masks": expected,
+                        "zplane_mask": mask_extent,
                         "capture_incomplete": True,
                         "frame_read_error": str(capture_error),
                     }
@@ -271,7 +282,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
             raise
         variants[name] = {"render": render, "frames": frames,
                           "phase_actor_crops": crops,
-                          "walkbox_masks": expected}
+                          "walkbox_masks": expected, "zplane_mask": mask_extent}
     report = {
         "product_path": "Studio PNG/Walkbox/Camera/Actor -> JSON-v1 -> Story -> ScummC-v6 -> stock ScummVM",
         "variants": variants,
