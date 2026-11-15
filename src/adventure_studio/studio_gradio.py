@@ -908,7 +908,7 @@ def make_app():
                 native_box_routes_add = gr.Button("BOXM-Verbindungen übernehmen", elem_id="native-box-routes-add")
             gr.Markdown("**R06 Weltfeste Z-Maske bei Kamerafahrt:** Ego-Weltposition und native "
                         "Kameracues für den ausgewählten Raum speichern. "
-                        "Beispiel: `set:160;pan:480;wait;pan:160;wait`. "
+                        "Beispiel: `set:160;hold:120;pan:480;wait;pan:160;wait`. "
                         "Die Eingabe wird im Projekt-JSON und ScummC-v6-Export erhalten.")
             with gr.Row():
                 native_camera_ego_x = gr.Number(label="Ego-Start Welt-X", value=390,
@@ -916,7 +916,7 @@ def make_app():
                 native_camera_ego_y = gr.Number(label="Ego-Start Welt-Y", value=100,
                                                 precision=0, elem_id="native-camera-ego-y")
                 native_camera_cues = gr.Textbox(
-                    label="Kameracues", value="set:160;pan:480;wait;pan:160;wait",
+                    label="Kameracues", value="set:160;hold:120;pan:480;wait;pan:160;wait",
                     elem_id="native-camera-cues")
                 native_camera_stationary = gr.Checkbox(
                     label="Ego während der Kamerafahrt stehen lassen (Demo-Lauf entfernen)",
