@@ -30,6 +30,7 @@ on:
       - 'src/adventure_studio/scumm_camera_probe.py'
       - 'src/adventure_studio/scumm_camera_zp01_probe.py'
       - 'tests/test_scumm_camera_cues.py'
+      - 'tests/test_scumm_camera_zp01_probe.py'
   push:
     paths:
       - '.github/workflows/scummc-experiment.yml'
@@ -91,6 +92,7 @@ on:
       - 'tests/test_scumm_room_primitives.py'
       - 'tests/test_scumm_scal_probe.py'
       - 'tests/test_scumm_camera_cues.py'
+      - 'tests/test_scumm_camera_zp01_probe.py'
       - 'tests/test_scumm_costume.py'
       - 'tests/test_scumm_actor_bindings.py'
       - 'tests/test_scumm_actor_save_probe.py'
