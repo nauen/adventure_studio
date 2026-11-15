@@ -31,8 +31,8 @@ VERBS = ("Push", "Pull", "Open", "Close")
 
 
 def author_room_camera_plan(raw: str, room_name: str, start_x: int, start_y: int,
-                            instructions: str) -> str:
-    """Author a native world-coordinate Ego and ordered SCUMM-v6 camera cues."""
+                            instructions: str, stationary_actor: bool = False) -> str:
+    """Author the world-start, camera cues and optional explicit no-demo-walk."""
     document = parse_document(raw)
     room = next((item for item in document.rooms if item.name == room_name), None)
     if room is None:
@@ -54,8 +54,12 @@ def author_room_camera_plan(raw: str, room_name: str, start_x: int, start_y: int
             cues.append(CameraCue(step))
         else:
             raise ValueError(f"Ungültiger SCUMM-v6-Kamera-Cue: {step}")
+    if type(stationary_actor) is not bool:
+        raise ValueError("Stationärer Actor muss ein Wahrheitswert sein")
     updated = replace(room, ego_start_x=start_x, ego_start_y=start_y,
-                      camera_cues=tuple(cues))
+                      camera_cues=tuple(cues),
+                      demo_walk_to_x=None if stationary_actor else room.demo_walk_to_x,
+                      demo_walk_to_y=None if stationary_actor else room.demo_walk_to_y)
     rooms = tuple(updated if item.name == room_name else item for item in document.rooms)
     return _checked(replace(document, rooms=rooms))
 
