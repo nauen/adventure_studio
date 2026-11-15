@@ -47,9 +47,11 @@ def author_room_camera_plan(raw: str, room_name: str, start_x: int, start_y: int
             if instructions.strip():
                 raise ValueError("Leeren Kamera-Cue entfernen")
             continue
-        match = re.fullmatch(r"(set|pan)\s*:\s*(\d+)", step)
+        match = re.fullmatch(r"(set|pan|hold)\s*:\s*(\d+)", step)
         if match:
-            cues.append(CameraCue(match.group(1), int(match.group(2))))
+            operation, value = match.group(1), int(match.group(2))
+            cues.append(CameraCue("hold", ticks=value) if operation == "hold"
+                        else CameraCue(operation, value))
         elif step in ("wait", "follow_ego"):
             cues.append(CameraCue(step))
         else:
