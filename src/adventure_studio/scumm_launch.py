@@ -491,11 +491,19 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     camera_frame_times.append({"frame": name,
                                                "elapsed_seconds": round(time.monotonic() - camera_capture_start, 3)})
                     sample_number += 1
-                if close_rgb(scene_pixel(output_directory, "start"), (70, 130, 190)):
+                start_rgb = scene_pixel(output_directory, "start")
+                # The authored pan may advance before the first Xvfb frame.
+                # In isolated camera capture, either half of the known
+                # Harbor sky confirms the room has loaded. Four-phase
+                # acceptance still independently requires an initial blue
+                # view and the complete outward/return journey.
+                if (close_rgb(start_rgb, (70, 130, 190))
+                        or (camera_pan_capture and
+                            close_rgb(start_rgb, (240, 175, 95)))):
                     break
                 time.sleep(0.3)
             else:
-                raise RuntimeError("Blue initial room was not visible within 20 seconds")
+                raise RuntimeError("Expected authored room sky not visible within 20 seconds")
             deadline = time.monotonic() + seconds
             next_sample = time.monotonic()
             while time.monotonic() < deadline:
