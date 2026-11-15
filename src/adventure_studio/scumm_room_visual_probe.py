@@ -118,7 +118,8 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
     ], cwd=road, check=True, timeout=120)
     verify_room_binary((root / "tentacle.001").read_bytes(), xor_key=0x69)
     images = destination / f"{label}-screenshots"
-    launch_smoke(root, images, scene_only=not native_walkbox_gate_probe,
+    launch_smoke(root, images, seconds=12.0 if camera_pan_capture else 6.0,
+                 scene_only=not native_walkbox_gate_probe,
                  verify_return=False, allow_static_scene=allow_static_scene,
                  sample_scene_frames=native_walkbox_gate_probe,
                  native_walkbox_gate_probe=native_walkbox_gate_probe,
