@@ -31,7 +31,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
-                               import_room_sound, import_room_zplane, import_object_zplane, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_walkbox_gate, author_room_scale_curve, author_room_camera_plan,
+                               import_room_sound, import_room_zplane, import_object_zplane, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_walkbox_gate, author_room_scale_curve, author_room_camera_plan, room_camera_form_values,
                                room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
@@ -2079,6 +2079,20 @@ def make_app():
         native_room.change(native_room_update, [native_state, native_room],
                            [native_hotspot, native_target, native_actor, native_animation,
                             native_actor_initial])
+        def native_camera_fields(raw, room):
+            if raw is None or room is None:
+                return gr.skip(), gr.skip(), gr.skip(), gr.skip()
+            try:
+                return room_camera_form_values(raw, room)
+            except ValueError as error:
+                raise gr.Error(str(error)) from error
+
+        native_room.change(native_camera_fields, [native_state, native_room],
+                           [native_camera_ego_x, native_camera_ego_y,
+                            native_camera_cues, native_camera_stationary])
+        native_state.change(native_camera_fields, [native_state, native_room],
+                            [native_camera_ego_x, native_camera_ego_y,
+                             native_camera_cues, native_camera_stationary])
         def native_actor_update(raw, actor):
             animations = actor_animations(raw, actor) if raw is not None else ()
             initial = next((item.initial_animation for item in parse_document(raw).actors
