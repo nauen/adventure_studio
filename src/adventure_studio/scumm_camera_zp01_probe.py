@@ -186,7 +186,10 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
     from PIL import Image
     output.mkdir(parents=True, exist_ok=True)
     base = scrolling_fixture()
-    # Native 621d73ad evidence: first detectable sky at camera 200, and one\n    # control sampled the turn only at 472. Hold each endpoint in the authored\n    # room plan; never loosen the required 160/480/160 phase thresholds.\n    expected_cues = (CameraCue("set", 160), CameraCue("hold", ticks=360), CameraCue("pan", 480),
+    # Native 621d73ad evidence: first detectable sky at camera 200, and one
+    # control sampled the turn only at 472. Hold each endpoint in the authored
+    # room plan; never loosen the required 160/480/160 phase thresholds.
+    expected_cues = (CameraCue("set", 160), CameraCue("hold", ticks=360), CameraCue("pan", 480),
                      CameraCue("wait"), CameraCue("hold", ticks=120), CameraCue("pan", 160),
                      CameraCue("wait"))
     story = (Path(__file__).resolve().parents[2] / "examples" /
