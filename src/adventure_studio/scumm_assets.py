@@ -115,8 +115,9 @@ class ScaleCurve:
 @dataclass(frozen=True)
 class CameraCue:
     """One native v6 camera operation, ordered within room entry."""
-    operation: str  # set, pan, wait, follow_ego
+    operation: str  # set, pan, wait, follow_ego, hold
     x: int | None = None
+    ticks: int | None = None
 
 
 @dataclass(frozen=True)
@@ -226,13 +227,18 @@ def _validate(room: RoomAsset) -> None:
             or not 0 <= room.ego_start_x < width or not 0 <= room.ego_start_y < height):
         raise ValueError("Ego start position outside room bounds")
     for cue in room.camera_cues:
-        if cue.operation not in ("set", "pan", "wait", "follow_ego"):
+        if cue.operation not in ("set", "pan", "wait", "follow_ego", "hold"):
             raise ValueError("Unsupported native v6 camera operation")
         if cue.operation in ("set", "pan"):
             if type(cue.x) is not int or not 0 <= cue.x < width:
                 raise ValueError("Camera target X must be inside the room")
-        elif cue.x is not None:
-            raise ValueError("Camera wait/follow must not have an X parameter")
+            if cue.ticks is not None:
+                raise ValueError("Camera set/pan must not have hold ticks")
+        elif cue.operation == "hold":
+            if cue.x is not None or type(cue.ticks) is not int or not 1 <= cue.ticks <= 600:
+                raise ValueError("Camera hold needs 1..600 native delay ticks without an X target")
+        elif cue.x is not None or cue.ticks is not None:
+            raise ValueError("Camera wait/follow must not have X or tick parameters")
     if room.goal_text is not None:
         _scumm_string(room.goal_text)
     ids: set[str] = set()
@@ -836,6 +842,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
             "set": lambda cue: f"        setCameraAt({cue.x});\n",
             "pan": lambda cue: f"        panCameraTo({cue.x});\n",
             "wait": lambda cue: "        waitForCamera();\n",
+            "hold": lambda cue: f"        delay({cue.ticks});\n",
             "follow_ego": lambda cue: "        cameraFollowActor(VAR_EGO);\n",
         }[cue.operation](cue) for cue in room.camera_cues],
         *[localized_name(hotspot) for hotspot in room.hotspots],
