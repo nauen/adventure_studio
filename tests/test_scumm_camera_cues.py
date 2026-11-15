@@ -53,7 +53,8 @@ class CameraCueTests(unittest.TestCase):
         base = scrolling_fixture()
         cues = (CameraCue("set", 160), CameraCue("pan", 480),
                 CameraCue("wait"), CameraCue("pan", 160), CameraCue("wait"))
-        room = replace(base, ego_start_x=390, ego_start_y=100, camera_cues=cues)
+        room = replace(base, demo_walk_to_x=None,
+                       ego_start_x=390, ego_start_y=100, camera_cues=cues)
         native_raw = canonical_json(GameDocument("MaskedPanStory", (room, destination_fixture())))
         story = (Path(__file__).resolve().parents[1] / "examples" /
                  "mini_story_chain.json").read_text(encoding="utf-8")
@@ -62,6 +63,7 @@ class CameraCueTests(unittest.TestCase):
                         if item.name == "Harbor")
         self.assertEqual((restored.ego_start_x, restored.ego_start_y), (390, 100))
         self.assertEqual(restored.camera_cues, cues)
+        self.assertIsNone(restored.demo_walk_to_x)
         self.assertEqual(canonical_json(parse_document(composed_raw)), composed_raw)
         source = scummc_room_source(restored)
         entry = source[source.index("local script entry()"):]
