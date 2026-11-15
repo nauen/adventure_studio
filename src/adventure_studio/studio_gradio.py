@@ -518,7 +518,7 @@ def make_app():
         except (ValueError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
-    def native_camera_author(raw, room, x, y, cues):
+    def native_camera_author(raw, room, x, y, cues, stationary_actor):
         if raw is None:
             raise gr.Error("Bitte zuerst ein natives Projekt laden")
         try:
@@ -526,7 +526,8 @@ def make_app():
             if any(type(v) not in (int, float) or not isfinite(v) or v != int(v)
                    for v in values):
                 raise ValueError("Ego-Weltkoordinaten müssen ganze Zahlen sein")
-            updated = author_room_camera_plan(raw, room, int(x), int(y), cues)
+            updated = author_room_camera_plan(
+                raw, room, int(x), int(y), cues, stationary_actor=stationary_actor)
             return (updated, *native_selectors(updated, selected_room=room),
                     "Ego-Weltstart und native Kamerafolge übernommen. "
                     "Zum dauerhaften Speichern natives Projekt-JSON exportieren.")
@@ -917,6 +918,9 @@ def make_app():
                 native_camera_cues = gr.Textbox(
                     label="Kameracues", value="set:160;pan:480;wait;pan:160;wait",
                     elem_id="native-camera-cues")
+                native_camera_stationary = gr.Checkbox(
+                    label="Ego während der Kamerafahrt stehen lassen (Demo-Lauf entfernen)",
+                    value=True, elem_id="native-camera-stationary")
                 native_camera_add = gr.Button("Native Kamerafolge übernehmen",
                                                elem_id="native-camera-add")
             gr.Markdown("**Türgesteuerte Walkbox:** Eine vorhandene Tür mit einer Inventar-Use-Regel "
@@ -1896,7 +1900,8 @@ def make_app():
                                     [native_state, *native_outputs, native_report])
         native_camera_add.click(native_camera_author,
                                 [native_state, native_room, native_camera_ego_x,
-                                 native_camera_ego_y, native_camera_cues],
+                                 native_camera_ego_y, native_camera_cues,
+                                 native_camera_stationary],
                                 [native_state, *native_outputs, native_report])
         native_gate_add.click(native_walkbox_gate_author,
                               [native_state, native_room, native_gate_door, native_gate_box, native_gate_reversible],
