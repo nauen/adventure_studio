@@ -170,9 +170,23 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
         expected = [1, 0] if name == "wrong-box" else [0, 1]
         if [box.mask for box in room.walkboxes] != expected:
             raise RuntimeError("Wrong product-exported Z-plane assignment")
-        render = render_native_room(room, upstream, generated, output, name,
-                                    allow_static_scene=True, camera_pan_capture=True)
-        frames = read_frames(output / f"{name}-screenshots")
+        try:
+            render = render_native_room(room, upstream, generated, output, name,
+                                        allow_static_scene=True, camera_pan_capture=True)
+            frames = read_frames(output / f"{name}-screenshots")
+        except Exception as error:
+            # Compilation/launch may fail before a complete three-game
+            # comparison exists. Preserve the reached product path and
+            # failure in CI, while keeping the native acceptance gate red.
+            failure = {
+                "product_path": "Studio PNG/Walkbox/Camera/Actor -> JSON-v1 -> Story -> ScummC-v6 -> stock ScummVM",
+                "variants": variants,
+                "failed_variant": name,
+                "comparison": {"status": "failed", "reason": str(error)},
+            }
+            (output / "native-r06-camera-zp01-report.json").write_text(
+                json.dumps(failure, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            raise
         variants[name] = {"render": render, "frames": frames,
                           "walkbox_masks": expected}
     report = {
