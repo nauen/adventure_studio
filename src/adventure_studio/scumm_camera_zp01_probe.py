@@ -95,6 +95,11 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
         if not (ordered["before"]["seconds"] < ordered["outgoing"]["seconds"]
                 < ordered["far"]["seconds"] < ordered["returning"]["seconds"]):
             raise RuntimeError(f"Camera round-trip not time-ordered: {label}")
+    screen_positions = phases["masked"]
+    if abs(screen_positions["outgoing"]["screen_x"] - screen_positions["far"]["screen_x"]) < 80:
+        raise RuntimeError("Camera pan did not move the world Actor on screen")
+    if abs(screen_positions["returning"]["screen_x"] - screen_positions["far"]["screen_x"]) < 80:
+        raise RuntimeError("Camera return did not move the world Actor back on screen")
     comparisons = {}
     for name in ("outgoing", "far", "returning"):
         desired = phases["masked"][name]
