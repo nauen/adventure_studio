@@ -54,8 +54,6 @@ def author_room_camera_plan(raw: str, room_name: str, start_x: int, start_y: int
             cues.append(CameraCue(step))
         else:
             raise ValueError(f"Ungültiger SCUMM-v6-Kamera-Cue: {step}")
-    if len(cues) > 64:
-        raise ValueError("Kamerafolge überschreitet die unterstützte SCUMM-v6-Exportgrenze")
     updated = replace(room, ego_start_x=start_x, ego_start_y=start_y,
                       camera_cues=tuple(cues))
     rooms = tuple(updated if item.name == room_name else item for item in document.rooms)
