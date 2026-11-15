@@ -49,6 +49,23 @@ class CameraZP01EvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Missing"):
             select_phases(frames)
 
+    def test_full_return_is_required_even_with_mid_pan_samples(self):
+        def trace(camera_positions):
+            return {"frames": [
+                {"world_x": 390, "camera_x": camera,
+                 "screen_x": 192 + 2 * (390 - camera + 160),
+                 "seconds": index, "frame": str(index),
+                 "actor_dark_pixels": 0}
+                for index, camera in enumerate(camera_positions)
+            ]}
+        # A 430->450 intermediate frame separation is only 40 screen
+        # pixels; a complete 160->450->160 roundtrip must still pass.
+        from adventure_studio.scumm_camera_zp01_probe import select_phases
+        phases = select_phases(trace((160, 430, 450, 430, 160))["frames"])
+        self.assertEqual(phases["returned"]["camera_x"], 160)
+        with self.assertRaisesRegex(RuntimeError, "completed-return"):
+            select_phases(trace((160, 430, 450, 430))["frames"])
+
     def test_wrong_walkbox_control_is_not_silently_accepted(self):
         def trace(pixels):
             return {"frames": [
