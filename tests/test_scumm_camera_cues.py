@@ -29,6 +29,35 @@ class CameraCueTests(unittest.TestCase):
         raw = canonical_json(original)
         self.assertEqual(canonical_json(parse_document(raw)), raw)
 
+    def test_masked_pan_actor_start_is_native_and_roundtrips(self):
+        room = replace(native_room(), ego_start_x=390, ego_start_y=100,
+                       camera_cues=(CameraCue("set", 160), CameraCue("pan", 480),
+                                    CameraCue("wait"), CameraCue("pan", 160),
+                                    CameraCue("wait")))
+        source = scummc_room_source(room)
+        entry = source[source.index("local script entry()"):]
+        self.assertLess(entry.index("putActorAt(VAR_EGO, 390, 100,"),
+                        entry.index("panCameraTo(480);"))
+        self.assertLess(entry.index("panCameraTo(480);"),
+                        entry.index("panCameraTo(160);"))
+        document = GameDocument("MaskedPan", (room,))
+        raw = canonical_json(document)
+        restored = parse_document(raw)
+        self.assertEqual(restored.rooms[0].ego_start_x, 390)
+        self.assertEqual(canonical_json(restored), raw)
+        self.assertIn("putActorAt(VAR_EGO, 390, 100,", scummc_room_source(restored.rooms[0]))
+
+    def test_legacy_ego_start_and_invalid_positions(self):
+        room = native_room()
+        self.assertIn("putActorAt(VAR_EGO, 60, 100,", scummc_room_source(room))
+        raw = canonical_json(GameDocument("Legacy", (room,)))
+        self.assertNotIn('"ego_start_x"', raw)
+        self.assertNotIn('"ego_start_y"', raw)
+        self.assertEqual(canonical_json(parse_document(raw)), raw)
+        for x, y in ((-1, 100), (640, 100), (60, 200), (True, 100), (60, False)):
+            with self.subTest(x=x, y=y), self.assertRaisesRegex(ValueError, "Ego start"):
+                scummc_room_source(replace(room, ego_start_x=x, ego_start_y=y))
+
     def test_invalid_ops_or_coordinates_rejected(self):
         for cue in (CameraCue("zoom", 100), CameraCue("pan", -1),
                     CameraCue("set", 640), CameraCue("wait", 100),
