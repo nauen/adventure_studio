@@ -129,7 +129,7 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
 def run(upstream: Path, generated: Path, output: Path) -> dict:
     from PIL import Image
     output.mkdir(parents=True, exist_ok=True)
-    base = replace(scrolling_fixture(), demo_walk_to_x=None)
+    base = scrolling_fixture()
     expected_cues = (CameraCue("set", 160), CameraCue("pan", 480),
                      CameraCue("wait"), CameraCue("pan", 160), CameraCue("wait"))
     story = (Path(__file__).resolve().parents[2] / "examples" /
@@ -141,7 +141,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
                               (base, destination_fixture())))
         project = author_room_camera_plan(
             project, "Harbor", 390, 100,
-            "set:160;pan:480;wait;pan:160;wait")
+            "set:160;pan:480;wait;pan:160;wait", stationary_actor=True)
         project = author_room_walkbox(project, "Harbor", 1,
                                       "0,70; 320,70; 320,150; 0,150")
         project = author_room_walkbox(project, "Harbor", 2,
