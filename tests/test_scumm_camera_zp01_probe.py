@@ -2,7 +2,10 @@
 
 import unittest
 
-from PIL import Image
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 from adventure_studio.scumm_camera_zp01_probe import (
     camera_from_sky, costume_pixels, select_phases, verify_world_mask,
@@ -26,6 +29,7 @@ def sky_frame(camera_x: int, dark_actor: bool = False) -> Image.Image:
 
 
 class CameraZP01EvidenceTests(unittest.TestCase):
+    @unittest.skipIf(Image is None, "Pillow is an optional Studio dependency")
     def test_sky_boundary_recovers_world_camera_x(self):
         for x in (160, 240, 350, 400, 480):
             with self.subTest(camera=x):
