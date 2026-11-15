@@ -31,6 +31,38 @@ class CameraCueTests(unittest.TestCase):
         raw = canonical_json(original)
         self.assertEqual(canonical_json(parse_document(raw)), raw)
 
+    def test_authored_hold_is_native_and_roundtrips_with_bounded_ticks(self):
+        raw = canonical_json(GameDocument(
+            "CameraHold", (scrolling_fixture(), destination_fixture())))
+        authored = author_room_camera_plan(
+            raw, "Harbor", 390, 100,
+            "set:160;hold:120;pan:480;wait;pan:160;wait",
+            stationary_actor=True)
+        room = parse_document(authored).rooms[0]
+        self.assertEqual(
+            room.camera_cues,
+            (CameraCue("set", 160), CameraCue("hold", ticks=120),
+             CameraCue("pan", 480), CameraCue("wait"),
+             CameraCue("pan", 160), CameraCue("wait")))
+        source = scummc_room_source(room)
+        entry = source[source.index("local script entry()"):]
+        self.assertLess(entry.index("setCameraAt(160);"),
+                        entry.index("delay(120);"))
+        self.assertLess(entry.index("delay(120);"),
+                        entry.index("panCameraTo(480);"))
+        self.assertIsNone(room.demo_walk_to_x)
+        self.assertIn('"ticks": 120', authored)
+        self.assertEqual(canonical_json(parse_document(authored)), authored)
+        for invalid in ("hold:0", "hold:601", "hold:bad"):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                author_room_camera_plan(raw, "Harbor", 390, 100, invalid)
+        for cue in (CameraCue("hold", ticks=True),
+                    CameraCue("hold", ticks=120, x=160),
+                    CameraCue("pan", 480, ticks=120),
+                    CameraCue("wait", ticks=120)):
+            with self.subTest(cue=cue), self.assertRaises(ValueError):
+                _validate(replace(scrolling_fixture(), camera_cues=(cue,)))
+
     def test_masked_pan_actor_start_is_native_and_roundtrips(self):
         room = replace(native_room(), ego_start_x=390, ego_start_y=100,
                        camera_cues=(CameraCue("set", 160), CameraCue("pan", 480),
