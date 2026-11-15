@@ -30,7 +30,7 @@ class CameraCueTests(unittest.TestCase):
         self.assertEqual(canonical_json(parse_document(raw)), raw)
 
     def test_masked_pan_actor_start_is_native_and_roundtrips(self):
-        room = replace(native_room(), ego_start_x=390, ego_start_y=100,
+        room = replace(native_room(), hotspots=(), use_rules=(), combine_rules=(),\n                       goal_text="Masked pan", ego_start_x=390, ego_start_y=100,
                        camera_cues=(CameraCue("set", 160), CameraCue("pan", 480),
                                     CameraCue("wait"), CameraCue("pan", 160),
                                     CameraCue("wait")))
@@ -48,7 +48,7 @@ class CameraCueTests(unittest.TestCase):
         self.assertIn("putActorAt(VAR_EGO, 390, 100,", scummc_room_source(restored.rooms[0]))
 
     def test_legacy_ego_start_and_invalid_positions(self):
-        room = native_room()
+        room = replace(native_room(), hotspots=(), use_rules=(), combine_rules=(),\n                       goal_text="Legacy camera")
         self.assertIn("putActorAt(VAR_EGO, 60, 100,", scummc_room_source(room))
         raw = canonical_json(GameDocument("Legacy", (room,)))
         self.assertNotIn('"ego_start_x"', raw)
