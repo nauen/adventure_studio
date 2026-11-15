@@ -79,10 +79,11 @@ def select_phases(rows: list[dict]) -> dict:
     pre = next((r for r in rows[:far] if r["camera_x"] <= 185), None)
     outward = next((r for r in rows[:far] if 330 <= r["camera_x"] <= 430), None)
     inbound = next((r for r in rows[far + 1:] if 330 <= r["camera_x"] <= 430), None)
-    if pre is None or outward is None or inbound is None:
-        raise RuntimeError("Missing before/outgoing/returning camera frame")
+    returned = next((r for r in rows[far + 1:] if r["camera_x"] <= 185), None)
+    if pre is None or outward is None or inbound is None or returned is None:
+        raise RuntimeError("Missing before/outgoing/returning/completed-return camera frame")
     return {"before": pre, "outgoing": outward, "far": rows[far],
-            "returning": inbound}
+            "returning": inbound, "returned": returned}
 
 
 def verify_world_mask(variants: dict[str, dict]) -> dict:
@@ -93,12 +94,13 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
             if phase["world_x"] != 390 or not 160 <= phase["camera_x"] <= 480:
                 raise RuntimeError(f"Invalid world/camera coordinates: {label}/{name}")
         if not (ordered["before"]["seconds"] < ordered["outgoing"]["seconds"]
-                < ordered["far"]["seconds"] < ordered["returning"]["seconds"]):
+                < ordered["far"]["seconds"] < ordered["returning"]["seconds"]
+                < ordered["returned"]["seconds"]):
             raise RuntimeError(f"Camera round-trip not time-ordered: {label}")
     screen_positions = phases["masked"]
-    if abs(screen_positions["outgoing"]["screen_x"] - screen_positions["far"]["screen_x"]) < 80:
+    if abs(screen_positions["before"]["screen_x"] - screen_positions["far"]["screen_x"]) < 400:
         raise RuntimeError("Camera pan did not move the world Actor on screen")
-    if abs(screen_positions["returning"]["screen_x"] - screen_positions["far"]["screen_x"]) < 80:
+    if abs(screen_positions["returned"]["screen_x"] - screen_positions["far"]["screen_x"]) < 400:
         raise RuntimeError("Camera return did not move the world Actor back on screen")
     comparisons = {}
     for name in ("outgoing", "far", "returning"):
