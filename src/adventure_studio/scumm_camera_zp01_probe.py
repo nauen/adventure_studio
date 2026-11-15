@@ -156,6 +156,8 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
         room = next(r for r in parsed.rooms if r.name == "Harbor")
         if (room.ego_start_x, room.ego_start_y) != (390, 100) or room.camera_cues != expected_cues:
             raise RuntimeError("Story composition dropped authorable actor/camera fields")
+        if room.demo_walk_to_x is not None:
+            raise RuntimeError("Story composition changed world-anchored Ego into a walking actor")
         if len(room.zplanes) != 1 or len(room.walkboxes) != 2:
             raise RuntimeError("Story composition dropped ZP01/BOXD")
         expected = [1, 0] if name == "wrong-box" else [0, 1]
