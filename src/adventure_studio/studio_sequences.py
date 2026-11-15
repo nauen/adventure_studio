@@ -30,6 +30,24 @@ from .scumm_assets import CameraCue, ScaleCurve, Walkbox, ZPlane
 VERBS = ("Push", "Pull", "Open", "Close")
 
 
+def room_camera_form_values(raw: str, room_name: str) -> tuple[int, int, str, bool]:
+    """Read persisted native camera authoring into the Studio edit fields."""
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    cues = []
+    for cue in room.camera_cues:
+        if cue.operation in ("set", "pan"):
+            cues.append(f"{cue.operation}:{cue.x}")
+        elif cue.operation == "hold":
+            cues.append(f"hold:{cue.ticks}")
+        else:
+            cues.append(cue.operation)
+    return (room.ego_start_x, room.ego_start_y, ";".join(cues),
+            room.demo_walk_to_x is None)
+
+
 def author_room_camera_plan(raw: str, room_name: str, start_x: int, start_y: int,
                             instructions: str, stationary_actor: bool = False) -> str:
     """Author the world-start, camera cues and optional explicit no-demo-walk."""
