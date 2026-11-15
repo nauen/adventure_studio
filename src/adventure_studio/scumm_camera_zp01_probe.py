@@ -102,6 +102,14 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
         raise RuntimeError("Camera pan did not move the world Actor on screen")
     if abs(screen_positions["returned"]["screen_x"] - screen_positions["far"]["screen_x"]) < 400:
         raise RuntimeError("Camera return did not move the world Actor back on screen")
+    # The initial/returned Actor may be outside the viewport. Two visible
+    # world-anchored occlusions must instead be sufficiently far apart on
+    # screen that a 55-world-pixel (110-screen-pixel) stationary mask could
+    # not explain both. Check each travel direction independently.
+    for phase in ("outgoing", "returning"):
+        if abs(screen_positions[phase]["screen_x"] - screen_positions["far"]["screen_x"]) <= 110:
+            raise RuntimeError(
+                f"Visible Actor positions too close to disprove a screen-fixed ZP01 mask: {phase}")
     comparisons = {}
     for name in ("outgoing", "far", "returning"):
         desired = phases["masked"][name]
