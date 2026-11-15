@@ -1,5 +1,7 @@
 """Deterministic checks for world-X camera evidence interpretation."""
 
+from __future__ import annotations
+
 import unittest
 
 try:
