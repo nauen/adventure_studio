@@ -2546,6 +2546,13 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                              scale_slots=previous.scale_slots if previous is not None else None,
                              scale_curves=previous.scale_curves if previous is not None else (),
                              camera_cues=previous.camera_cues if previous is not None else (),
+                             # An explicit native camera plan must not silently re-enable
+                             # Story's synthetic entry-time demo walk. Preserve the
+                             # accompanying authored Actor movement choice instead.
+                             demo_walk_to_x=(previous.demo_walk_to_x if previous is not None
+                                             and previous.camera_cues else room.demo_walk_to_x),
+                             demo_walk_to_y=(previous.demo_walk_to_y if previous is not None
+                                             and previous.camera_cues else room.demo_walk_to_y),
                              ego_start_x=previous.ego_start_x if previous is not None else 60,
                              ego_start_y=previous.ego_start_y if previous is not None else 100,
                              use_rules=tuple(story_rules)))
