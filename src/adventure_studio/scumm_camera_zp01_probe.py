@@ -18,7 +18,7 @@ from .scumm_assets import CameraCue, destination_fixture, scrolling_fixture
 from .scumm_project import GameDocument, canonical_json, parse_document
 from .scumm_room_visual_probe import render_native_room
 from .studio_sequences import (
-    author_room_box_connections, author_room_walkbox, author_room_walkbox_zplane,
+    author_room_box_connections, author_room_camera_plan, author_room_walkbox, author_room_walkbox_zplane,
     compose_story_project, import_room_zplane,
 )
 
@@ -122,11 +122,9 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
 
 def run(upstream: Path, generated: Path, output: Path) -> dict:
     output.mkdir(parents=True, exist_ok=True)
-    base = replace(scrolling_fixture(), demo_walk_to_x=None,
-                   ego_start_x=390, ego_start_y=100,
-                   camera_cues=(CameraCue("set", 160), CameraCue("pan", 480),
-                                CameraCue("wait"), CameraCue("pan", 160),
-                                CameraCue("wait")))
+    base = replace(scrolling_fixture(), demo_walk_to_x=None)
+    expected_cues = (CameraCue("set", 160), CameraCue("pan", 480),
+                     CameraCue("wait"), CameraCue("pan", 160), CameraCue("wait"))
     story = (Path(__file__).resolve().parents[2] / "examples" /
              "mini_story_chain.json").read_text(encoding="utf-8")
     width, height = base.geometry.room_width, base.geometry.room_height
@@ -134,6 +132,9 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
     for name in ("masked", "transparent", "wrong-box"):
         project = canonical_json(GameDocument("R06CameraWorldMask",
                               (base, destination_fixture())))
+        project = author_room_camera_plan(
+            project, "Harbor", 390, 100,
+            "set:160;pan:480;wait;pan:160;wait")
         project = author_room_walkbox(project, "Harbor", 1,
                                       "0,70; 319,70; 319,150; 0,150")
         project = author_room_walkbox(project, "Harbor", 2,
@@ -153,7 +154,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
         if canonical_json(parsed) != project:
             raise RuntimeError("Studio native project changed on JSON roundtrip")
         room = next(r for r in parsed.rooms if r.name == "Harbor")
-        if (room.ego_start_x, room.ego_start_y) != (390, 100) or room.camera_cues != base.camera_cues:
+        if (room.ego_start_x, room.ego_start_y) != (390, 100) or room.camera_cues != expected_cues:
             raise RuntimeError("Story composition dropped authorable actor/camera fields")
         if len(room.zplanes) != 1 or len(room.walkboxes) != 2:
             raise RuntimeError("Story composition dropped ZP01/BOXD")
