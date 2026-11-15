@@ -165,7 +165,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
     from PIL import Image
     output.mkdir(parents=True, exist_ok=True)
     base = scrolling_fixture()
-    expected_cues = (CameraCue("set", 160), CameraCue("pan", 480),
+    expected_cues = (CameraCue("set", 160), CameraCue("hold", ticks=120), CameraCue("pan", 480),
                      CameraCue("wait"), CameraCue("pan", 160), CameraCue("wait"))
     story = (Path(__file__).resolve().parents[2] / "examples" /
              "mini_story_chain.json").read_text(encoding="utf-8")
@@ -176,7 +176,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
                               (base, destination_fixture())))
         project = author_room_camera_plan(
             project, "Harbor", 390, 100,
-            "set:160;pan:480;wait;pan:160;wait", stationary_actor=True)
+            "set:160;hold:120;pan:480;wait;pan:160;wait", stationary_actor=True)
         project = author_room_walkbox(project, "Harbor", 1,
                                       "0,70; 320,70; 320,150; 0,150")
         project = author_room_walkbox(project, "Harbor", 2,
