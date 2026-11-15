@@ -8,7 +8,7 @@ from adventure_studio.scumm_assets import CameraCue, _validate, destination_fixt
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room
 from adventure_studio.scumm_camera_probe import verify_camera_pan
-from adventure_studio.studio_sequences import author_room_camera_plan, compose_story_project
+from adventure_studio.studio_sequences import author_room_camera_plan, compose_story_project, room_camera_form_values
 
 
 class CameraCueTests(unittest.TestCase):
@@ -30,6 +30,27 @@ class CameraCueTests(unittest.TestCase):
         original = GameDocument("CameraDemo", (room,))
         raw = canonical_json(original)
         self.assertEqual(canonical_json(parse_document(raw)), raw)
+
+    def test_camera_form_restores_per_room_cues_and_stationary_choice(self):
+        source = canonical_json(GameDocument(
+            "SavedCamera", (scrolling_fixture(), destination_fixture())))
+        authored = author_room_camera_plan(
+            source, "Harbor", 390, 100,
+            "set:160;hold:120;pan:480;wait;pan:160;wait",
+            stationary_actor=True)
+        persisted = canonical_json(parse_document(authored))
+        self.assertEqual(room_camera_form_values(persisted, "Harbor"),
+                         (390, 100, "set:160;hold:120;pan:480;wait;pan:160;wait", True))
+        self.assertEqual(room_camera_form_values(persisted, "Cellar")[2], "")
+        self.assertEqual(room_camera_form_values(source, "Harbor")[3], False)
+        with self.assertRaisesRegex(ValueError, "vorhandenen Raum"):
+            room_camera_form_values(persisted, "Missing")
+        changed = author_room_camera_plan(
+            persisted, "Harbor", 390, 100,
+            "set:160;hold:60;pan:480;wait;pan:160;wait",
+            stationary_actor=True)
+        self.assertEqual(room_camera_form_values(changed, "Harbor")[2],
+                         "set:160;hold:60;pan:480;wait;pan:160;wait")
 
     def test_authored_hold_is_native_and_roundtrips_with_bounded_ticks(self):
         raw = canonical_json(GameDocument(
