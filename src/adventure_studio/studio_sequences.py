@@ -24,10 +24,42 @@ from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render
                             costume_timeline_images, render_costume_preview,
                             render_costume_frame_sequence_preview)
 from .scumm_costume import CostumeAnimation, CostumeDirection
-from .scumm_assets import ScaleCurve, Walkbox, ZPlane
+from .scumm_assets import CameraCue, ScaleCurve, Walkbox, ZPlane
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
+
+
+def author_room_camera_plan(raw: str, room_name: str, start_x: int, start_y: int,
+                            instructions: str) -> str:
+    """Author a native world-coordinate Ego and ordered SCUMM-v6 camera cues."""
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    if type(start_x) is not int or type(start_y) is not int:
+        raise ValueError("Ego-Startkoordinaten müssen ganze Zahlen sein")
+    if not 0 <= start_x < room.geometry.room_width or not 0 <= start_y < room.geometry.room_height:
+        raise ValueError("Ego-Startkoordinaten liegen außerhalb des Raums")
+    cues = []
+    for step in (piece.strip() for piece in instructions.split(";")):
+        if not step:
+            if instructions.strip():
+                raise ValueError("Leeren Kamera-Cue entfernen")
+            continue
+        match = re.fullmatch(r"(set|pan)\s*:\s*(\d+)", step)
+        if match:
+            cues.append(CameraCue(match.group(1), int(match.group(2))))
+        elif step in ("wait", "follow_ego"):
+            cues.append(CameraCue(step))
+        else:
+            raise ValueError(f"Ungültiger SCUMM-v6-Kamera-Cue: {step}")
+    if len(cues) > 64:
+        raise ValueError("Kamerafolge überschreitet die unterstützte SCUMM-v6-Exportgrenze")
+    updated = replace(room, ego_start_x=start_x, ego_start_y=start_y,
+                      camera_cues=tuple(cues))
+    rooms = tuple(updated if item.name == room_name else item for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
 
 
 def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str) -> str:
