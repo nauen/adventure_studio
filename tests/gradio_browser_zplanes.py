@@ -65,6 +65,13 @@ def main() -> None:
                 page.locator("#native-zplane-box-add").click()
                 expect(report).to_have_value(re.compile(r"Walkbox 2 verwendet Z-Ebene 2"),
                                              timeout=30000)
+                page.locator("#native-camera-ego-x input").fill("390")
+                page.locator("#native-camera-ego-y input").fill("100")
+                page.locator("#native-camera-cues textarea").fill(
+                    "set:160;pan:480;wait;pan:160;wait")
+                page.locator("#native-camera-add").click()
+                expect(report).to_have_value(re.compile(r"Ego-Weltstart und native Kamerafolge"),
+                                             timeout=30000)
                 page.locator("#native-project-export-button").click()
                 link = page.locator("#native-project-export-file a[download]")
                 expect(link.first).to_be_visible(timeout=30000)
@@ -79,11 +86,16 @@ def main() -> None:
                 assert sum(exported.zplanes[0].pixels) == 0
                 assert sum(exported.zplanes[1].pixels) > 0
                 assert exported.box_routes == room.box_routes
+                assert (exported.ego_start_x, exported.ego_start_y) == (390, 100)
+                assert [(cue.operation, cue.x) for cue in exported.camera_cues] == [
+                    ("set", 160), ("pan", 480), ("wait", None),
+                    ("pan", 160), ("wait", None)]
                 page.screenshot(path=str(evidence / "authored-two-zplanes.png"),
                                 full_page=True)
                 (evidence / "result.json").write_text(json.dumps({
                     "studio_two_zplanes": True, "walkbox_zplane": 2,
-                    "box_routes_preserved": True}, indent=2) + "\n", encoding="utf-8")
+                    "box_routes_preserved": True,
+                    "studio_camera_roundtrip": True}, indent=2) + "\n", encoding="utf-8")
                 print("Two Z-plane PNGs and native BOXD layer selected in real Chrome")
             except Exception:
                 if not page.is_closed():
