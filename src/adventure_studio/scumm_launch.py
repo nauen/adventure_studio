@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -476,11 +477,20 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             env=environment,
         )
         try:
+            camera_frame_times = []
+            camera_capture_start = time.monotonic()
+            sample_number = 0
             readiness_deadline = time.monotonic() + 20.0
             while time.monotonic() < readiness_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
-                capture_frame("start")
+                starting = capture_frame("start")
+                if camera_pan_capture:
+                    name = f"sample-{sample_number:02d}"
+                    shutil.copyfile(starting, output_directory / f"scummvm-{name}.png")
+                    camera_frame_times.append({"frame": name,
+                                               "elapsed_seconds": round(time.monotonic() - camera_capture_start, 3)})
+                    sample_number += 1
                 if close_rgb(scene_pixel(output_directory, "start"), (70, 130, 190)):
                     break
                 time.sleep(0.3)
@@ -488,9 +498,6 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 raise RuntimeError("Blue initial room was not visible within 20 seconds")
             deadline = time.monotonic() + seconds
             next_sample = time.monotonic()
-            sample_number = 0
-            camera_frame_times = []
-            camera_capture_start = time.monotonic()
             while time.monotonic() < deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
