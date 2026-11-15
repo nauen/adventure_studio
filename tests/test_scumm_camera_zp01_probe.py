@@ -98,6 +98,24 @@ class CameraZP01EvidenceTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "completed-return"):
             select_phases(trace((160, 430, 450, 430))["frames"])
 
+    def test_return_selection_uses_distant_visible_actor_position(self):
+        def trace(pixels):
+            return {"frames": [
+                {"world_x": 390, "camera_x": camera,
+                 "screen_x": 192 + 2 * (390 - camera + 160),
+                 "seconds": index, "frame": str(index),
+                 "actor_dark_pixels": pixels}
+                for index, camera in enumerate(
+                    (160, 330, 400, 450, 430, 340, 160))
+            ]}
+        phases = select_phases(trace(200)["frames"])
+        self.assertEqual(phases["outgoing"]["camera_x"], 330)
+        self.assertEqual(phases["returning"]["camera_x"], 340)
+        variants = {"masked": trace(0), "transparent": trace(200),
+                    "wrong-box": trace(200)}
+        result = verify_world_mask(variants)
+        self.assertTrue(result["native_world_anchored_zp01_pan_and_return_passed"])
+
     def test_visible_positions_must_disprove_a_screen_fixed_mask(self):
         def trace(pixels):
             return {"frames": [
