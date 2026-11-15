@@ -52,7 +52,8 @@ class CameraZP01EvidenceTests(unittest.TestCase):
     def test_wrong_walkbox_control_is_not_silently_accepted(self):
         def trace(pixels):
             return {"frames": [
-                {"world_x": 390, "camera_x": cam, "seconds": i,
+                {"world_x": 390, "camera_x": cam,
+                 "screen_x": 192 + 2 * (390 - cam + 160), "seconds": i,
                  "frame": str(i), "actor_dark_pixels": pixels}
                 for i, cam in enumerate((160, 350, 480, 350, 160))
             ]}
