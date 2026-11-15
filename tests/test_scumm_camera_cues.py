@@ -94,6 +94,27 @@ class CameraCueTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Ego-Startkoordinaten"):
             author_room_camera_plan(raw, "Harbor", 640, 100, "set:160")
 
+    def test_camera_studio_can_explicitly_hold_actor_without_losing_existing_motion(self):
+        base = scrolling_fixture()
+        self.assertEqual(base.demo_walk_to_x, 540)
+        raw = canonical_json(GameDocument("CameraMotionChoice", (base, destination_fixture())))
+        stationary = author_room_camera_plan(
+            raw, "Harbor", 390, 100, "set:160;pan:480;wait;pan:160;wait",
+            stationary_actor=True)
+        held = parse_document(stationary).rooms[0]
+        self.assertIsNone(held.demo_walk_to_x)
+        self.assertIsNone(held.demo_walk_to_y)
+        self.assertNotIn("walkActorTo(VAR_EGO, 540,", scummc_room_source(held))
+        self.assertIn("putActorAt(VAR_EGO, 390, 100,", scummc_room_source(held))
+        self.assertEqual(canonical_json(parse_document(stationary)), stationary)
+        preserved = author_room_camera_plan(
+            raw, "Harbor", 390, 100, "set:160;pan:480;wait",
+            stationary_actor=False)
+        self.assertEqual(parse_document(preserved).rooms[0].demo_walk_to_x, 540)
+        with self.assertRaisesRegex(ValueError, "Stationärer Actor"):
+            author_room_camera_plan(raw, "Harbor", 390, 100, "wait",
+                                    stationary_actor="yes")
+
     def test_legacy_ego_start_and_invalid_positions(self):
         room = native_room()
         self.assertIn("putActorAt(VAR_EGO, 60, 100,", scummc_room_source(room))
