@@ -71,6 +71,7 @@ def verify_visual_effects(masked: int, unmasked: int, fullscale: int) -> dict:
 def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                        destination: Path, label: str, *, crop: str = "140x105+535+305",
                        allow_static_scene: bool = False,
+                       camera_pan_capture: bool = False,
                        initial_object_state2: str | None = None,
                        scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                        native_walkbox_gate_probe: bool = False,
@@ -124,7 +125,8 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                  native_reversible_walkbox_probe=native_reversible_walkbox_probe,
                  native_reversible_gate_save_probe=native_reversible_gate_save_probe,
                  native_gate_room_return_probe=native_gate_room_return_probe,
-                 scene_walk_clicks=scene_walk_clicks)
+                 scene_walk_clicks=scene_walk_clicks,
+                 camera_pan_capture=camera_pan_capture)
     return {
         "dark_costume_pixels": black_costume_pixels(images / "scummvm-end.png", crop),
         "frame_report": json.loads((images / "scummvm-frame-report.json").read_text()),
