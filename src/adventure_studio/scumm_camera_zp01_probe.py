@@ -126,6 +126,36 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
             "four_phase_frames": phases, "pixel_comparisons": comparisons}
 
 
+
+def export_actor_phase_crops(directory: Path, frames: list[dict]) -> dict:
+    """Retain inspectable actor pixels from observed native camera phases."""
+    from PIL import Image
+
+    selected = select_phases(frames)
+    crops = {}
+    for phase, frame in selected.items():
+        source = directory / f"scummvm-{frame['frame']}.png"
+        target = directory / f"scummvm-phase-{phase}-actor-crop.png"
+        # Same viewport projection as costume_pixels(), but preserve RGB
+        # evidence so an independently inspected crop explains each count.
+        center = frame["screen_x"]
+        left, right = max(192, center - 30), min(831, center + 30)
+        if left > right:
+            raise RuntimeError(f"Actor is outside the viewport at {phase}")
+        with Image.open(source) as screenshot:
+            screenshot.convert("RGB").crop((left, 300, right + 1, 388)).save(target)
+        crops[phase] = {
+            "screenshot": source.name,
+            "actor_crop": target.name,
+            "elapsed_seconds": frame["seconds"],
+            "world_x": frame["world_x"],
+            "camera_x": frame["camera_x"],
+            "screen_x": frame["screen_x"],
+            "dark_pixels": frame["actor_dark_pixels"],
+        }
+    return crops
+
+
 def run(upstream: Path, generated: Path, output: Path) -> dict:
     from PIL import Image
     output.mkdir(parents=True, exist_ok=True)
@@ -174,6 +204,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
             render = render_native_room(room, upstream, generated, output, name,
                                         allow_static_scene=True, camera_pan_capture=True)
             frames = read_frames(output / f"{name}-screenshots")
+            crops = export_actor_phase_crops(output / f"{name}-screenshots", frames)
         except Exception as error:
             # Compilation/launch may fail before a complete three-game
             # comparison exists. Preserve the reached product path and
@@ -188,6 +219,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
                 json.dumps(failure, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             raise
         variants[name] = {"render": render, "frames": frames,
+                          "phase_actor_crops": crops,
                           "walkbox_masks": expected}
     report = {
         "product_path": "Studio PNG/Walkbox/Camera/Actor -> JSON-v1 -> Story -> ScummC-v6 -> stock ScummVM",
