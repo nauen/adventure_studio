@@ -136,7 +136,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
             project, "Harbor", 390, 100,
             "set:160;pan:480;wait;pan:160;wait")
         project = author_room_walkbox(project, "Harbor", 1,
-                                      "0,70; 319,70; 319,150; 0,150")
+                                      "0,70; 320,70; 320,150; 0,150")
         project = author_room_walkbox(project, "Harbor", 2,
                                       "320,70; 639,70; 639,150; 320,150")
         project = author_room_box_connections(project, "Harbor", "1-2")
