@@ -390,7 +390,8 @@ def document_dict(document: GameDocument) -> dict:
             **({"ego_start_x": room.ego_start_x} if room.ego_start_x != 60 else {}),
             **({"ego_start_y": room.ego_start_y} if room.ego_start_y != 100 else {}),
             **({"camera_cues": [{"operation": cue.operation,
-                                  **({"x": cue.x} if cue.x is not None else {})}
+                                  **({"x": cue.x} if cue.x is not None else {}),
+                                  **({"ticks": cue.ticks} if cue.ticks is not None else {})}
                                  for cue in room.camera_cues]} if room.camera_cues else {}),
             "hotspots": [{"id": h.id, "label": h.label, "description": h.description,
                           "x": h.x, "y": h.y, "width": h.width, "height": h.height,
@@ -1101,8 +1102,8 @@ def parse_document(source: str) -> GameDocument:
             raise ValueError("Camera cues must be a list")
         camera_cues = []
         for item in raw_camera:
-            cue = _only(item, {"operation", "x"}, {"operation"})
-            camera_cues.append(CameraCue(cue["operation"], cue.get("x")))
+            cue = _only(item, {"operation", "x", "ticks"}, {"operation"})
+            camera_cues.append(CameraCue(cue["operation"], cue.get("x"), cue.get("ticks")))
         raw_combinations = room.get("combine_rules", [])
         if not isinstance(raw_combinations, list) or len(raw_combinations) > 16:
             raise ValueError("Invalid combine rules")
