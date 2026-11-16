@@ -72,7 +72,7 @@ class CameraCueTests(unittest.TestCase):
         self.assertLess(entry.index("delay(120);"),
                         entry.index("panCameraTo(480);"))
         self.assertIsNone(room.demo_walk_to_x)
-        self.assertIn('"ticks": 120', authored)
+        self.assertIn('"ticks":120', authored)
         self.assertEqual(canonical_json(parse_document(authored)), authored)
         for invalid in ("hold:0", "hold:601", "hold:bad"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
