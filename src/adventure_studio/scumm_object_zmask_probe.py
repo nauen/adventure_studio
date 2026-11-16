@@ -110,19 +110,19 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
             raise RuntimeError("IM01 ZP02 PNG lost in JSON roundtrip")
         two_planes[label] = render_native_room(
             authored, upstream, generated, destination, label)
-    masked = two_planes["im01-zp02-masked"]["dark_costume_pixels"]
-    clear = two_planes["im01-zp02-clear"]["dark_costume_pixels"]
-    wrong = two_planes["im01-zp02-wrongbox"]["dark_costume_pixels"]
-    if min(clear, wrong) < 100 or masked > min(clear, wrong) // 3:
+    layer2_masked = two_planes["im01-zp02-masked"]["dark_costume_pixels"]
+    layer2_clear = two_planes["im01-zp02-clear"]["dark_costume_pixels"]
+    layer2_wrong = two_planes["im01-zp02-wrongbox"]["dark_costume_pixels"]
+    if min(layer2_clear, layer2_wrong) < 100 or layer2_masked > min(layer2_clear, layer2_wrong) // 3:
         raise RuntimeError(
-            f"IM01 ZP02 native actor occlusion failed: masked={masked}, "
-            f"transparent={clear}, wrongbox={wrong}")
+            f"IM01 ZP02 native actor occlusion failed: layer2_masked={layer2_masked}, "
+            f"transparent={layer2_clear}, wrongbox={layer2_wrong}")
     report = {
         "im01_second_zplane": {
             "variants": two_planes,
-            "masked_actor_pixels": masked,
-            "transparent_actor_pixels": clear,
-            "wrongbox_actor_pixels": wrong,
+            "masked_actor_pixels": layer2_masked,
+            "transparent_actor_pixels": layer2_clear,
+            "wrongbox_actor_pixels": layer2_wrong,
             "native_im01_zp02_passed": True,
         },
         "authoring": "Studio PNG -> project JSON -> object states IM01 ZP01 -> stock ScummVM",
