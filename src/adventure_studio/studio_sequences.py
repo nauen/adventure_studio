@@ -24,10 +24,64 @@ from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render
                             costume_timeline_images, render_costume_preview,
                             render_costume_frame_sequence_preview)
 from .scumm_costume import CostumeAnimation, CostumeDirection
-from .scumm_assets import ScaleCurve, Walkbox, ZPlane
+from .scumm_assets import CameraCue, ScaleCurve, Walkbox, ZPlane
 
 
 VERBS = ("Push", "Pull", "Open", "Close")
+
+
+def room_camera_form_values(raw: str, room_name: str) -> tuple[int, int, str, bool]:
+    """Read persisted native camera authoring into the Studio edit fields."""
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    cues = []
+    for cue in room.camera_cues:
+        if cue.operation in ("set", "pan"):
+            cues.append(f"{cue.operation}:{cue.x}")
+        elif cue.operation == "hold":
+            cues.append(f"hold:{cue.ticks}")
+        else:
+            cues.append(cue.operation)
+    return (room.ego_start_x, room.ego_start_y, ";".join(cues),
+            room.demo_walk_to_x is None)
+
+
+def author_room_camera_plan(raw: str, room_name: str, start_x: int, start_y: int,
+                            instructions: str, stationary_actor: bool = False) -> str:
+    """Author the world-start, camera cues and optional explicit no-demo-walk."""
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    if type(start_x) is not int or type(start_y) is not int:
+        raise ValueError("Ego-Startkoordinaten müssen ganze Zahlen sein")
+    if not 0 <= start_x < room.geometry.room_width or not 0 <= start_y < room.geometry.room_height:
+        raise ValueError("Ego-Startkoordinaten liegen außerhalb des Raums")
+    cues = []
+    for step in (piece.strip() for piece in instructions.split(";")):
+        if not step:
+            if instructions.strip():
+                raise ValueError("Leeren Kamera-Cue entfernen")
+            continue
+        match = re.fullmatch(r"(set|pan|hold)\s*:\s*(\d+)", step)
+        if match:
+            operation, value = match.group(1), int(match.group(2))
+            cues.append(CameraCue("hold", ticks=value) if operation == "hold"
+                        else CameraCue(operation, value))
+        elif step in ("wait", "follow_ego"):
+            cues.append(CameraCue(step))
+        else:
+            raise ValueError(f"Ungültiger SCUMM-v6-Kamera-Cue: {step}")
+    if type(stationary_actor) is not bool:
+        raise ValueError("Stationärer Actor muss ein Wahrheitswert sein")
+    updated = replace(room, ego_start_x=start_x, ego_start_y=start_y,
+                      camera_cues=tuple(cues),
+                      demo_walk_to_x=None if stationary_actor else room.demo_walk_to_x,
+                      demo_walk_to_y=None if stationary_actor else room.demo_walk_to_y)
+    rooms = tuple(updated if item.name == room_name else item for item in document.rooms)
+    return _checked(replace(document, rooms=rooms))
 
 
 def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str) -> str:
@@ -2515,6 +2569,16 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                              box_routes=previous.box_routes if previous is not None else (),
                              scale_slots=previous.scale_slots if previous is not None else None,
                              scale_curves=previous.scale_curves if previous is not None else (),
+                             camera_cues=previous.camera_cues if previous is not None else (),
+                             # An explicit native camera plan must not silently re-enable
+                             # Story's synthetic entry-time demo walk. Preserve the
+                             # accompanying authored Actor movement choice instead.
+                             demo_walk_to_x=(previous.demo_walk_to_x if previous is not None
+                                             and previous.camera_cues else room.demo_walk_to_x),
+                             demo_walk_to_y=(previous.demo_walk_to_y if previous is not None
+                                             and previous.camera_cues else room.demo_walk_to_y),
+                             ego_start_x=previous.ego_start_x if previous is not None else 60,
+                             ego_start_y=previous.ego_start_y if previous is not None else 100,
                              use_rules=tuple(story_rules)))
     composed = replace(project, rooms=tuple(rooms),
                        costumes=native.costumes, actors=native.actors,

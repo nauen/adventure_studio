@@ -65,6 +65,23 @@ def main() -> None:
                 page.locator("#native-zplane-box-add").click()
                 expect(report).to_have_value(re.compile(r"Walkbox 2 verwendet Z-Ebene 2"),
                                              timeout=30000)
+                # Finish the preceding state-driven form refresh before editing.
+                # The imported project initially retains its demo actor walk.
+                stationary = page.locator("#native-camera-stationary input")
+                expect(stationary).not_to_be_checked()
+                stationary.check()
+                expect(stationary).to_be_checked()
+                page.locator("#native-camera-ego-x input").fill("390")
+                page.locator("#native-camera-ego-y input").fill("100")
+                page.locator("#native-camera-cues textarea").fill(
+                    "set:160;hold:120;pan:480;wait;pan:160;wait")
+                expect(page.locator("#native-camera-ego-x input")).to_have_value("390")
+                expect(page.locator("#native-camera-ego-y input")).to_have_value("100")
+                expect(page.locator("#native-camera-cues textarea")).to_have_value(
+                    "set:160;hold:120;pan:480;wait;pan:160;wait")
+                page.locator("#native-camera-add").click()
+                expect(report).to_have_value(re.compile(r"Ego-Weltstart und native Kamerafolge"),
+                                             timeout=30000)
                 page.locator("#native-project-export-button").click()
                 link = page.locator("#native-project-export-file a[download]")
                 expect(link.first).to_be_visible(timeout=30000)
@@ -79,11 +96,61 @@ def main() -> None:
                 assert sum(exported.zplanes[0].pixels) == 0
                 assert sum(exported.zplanes[1].pixels) > 0
                 assert exported.box_routes == room.box_routes
+                assert (exported.ego_start_x, exported.ego_start_y) == (390, 100), (
+                    exported.ego_start_x, exported.ego_start_y)
+                assert exported.demo_walk_to_x is None
+                assert [(cue.operation, cue.x) for cue in exported.camera_cues] == [
+                    ("set", 160), ("hold", None), ("pan", 480),
+                    ("wait", None), ("pan", 160), ("wait", None)]
+                assert exported.camera_cues[1].ticks == 120
+
+                # Reopen the *exported* JSON in the actual Studio UI. The
+                # editor must restore stored camera fields, not demo defaults.
+                # Gradio replaces the uploader dropzone with a file row
+                # after the first import. Clear it before selecting the
+                # downloaded project again through the real browser UI.
+                page.locator("#native-project-file").locator("button").last.click()
+                expect(page.locator("#native-project-file")).to_contain_text(
+                    "Click to Upload")
+                with page.expect_file_chooser() as chooser:
+                    page.locator("#native-project-file").click()
+                chooser.value.set_files(str(saved))
+                expect(report).to_have_value("Natives Projekt geladen und validiert",
+                                             timeout=30000)
+                expect(page.locator("#native-camera-ego-x input")).to_have_value("390",
+                                                                                timeout=30000)
+                expect(page.locator("#native-camera-ego-y input")).to_have_value("100")
+                expect(page.locator("#native-camera-cues textarea")).to_have_value(
+                    "set:160;hold:120;pan:480;wait;pan:160;wait")
+                expect(page.locator("#native-camera-stationary input")).to_be_checked()
+
+                # The returned data must remain editable and survive another
+                # export without losing either of the previously authored masks.
+                page.locator("#native-camera-cues textarea").fill(
+                    "set:160;hold:60;pan:480;wait;pan:160;wait")
+                page.locator("#native-camera-add").click()
+                expect(report).to_have_value(re.compile(r"Ego-Weltstart und native Kamerafolge"),
+                                             timeout=30000)
+                page.locator("#native-project-export-button").click()
+                expect(link.first).to_be_visible(timeout=30000)
+                with page.expect_download() as edited_download:
+                    link.first.click()
+                edited = evidence / "authored-two-zplanes-camera-edited.json"
+                edited_download.value.save_as(str(edited))
+                revised = next(item for item in parse_document(edited.read_text()).rooms
+                               if item.name == "Harbor")
+                assert revised.camera_cues[1].ticks == 60
+                assert revised.demo_walk_to_x is None
+                assert revised.zplanes == exported.zplanes
+                assert revised.walkboxes == exported.walkboxes
+                assert revised.box_routes == exported.box_routes
                 page.screenshot(path=str(evidence / "authored-two-zplanes.png"),
                                 full_page=True)
                 (evidence / "result.json").write_text(json.dumps({
                     "studio_two_zplanes": True, "walkbox_zplane": 2,
-                    "box_routes_preserved": True}, indent=2) + "\n", encoding="utf-8")
+                    "box_routes_preserved": True,
+                    "studio_camera_roundtrip": True,
+                    "studio_camera_reload_and_edit": True}, indent=2) + "\n", encoding="utf-8")
                 print("Two Z-plane PNGs and native BOXD layer selected in real Chrome")
             except Exception:
                 if not page.is_closed():

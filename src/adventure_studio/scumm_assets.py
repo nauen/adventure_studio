@@ -115,8 +115,9 @@ class ScaleCurve:
 @dataclass(frozen=True)
 class CameraCue:
     """One native v6 camera operation, ordered within room entry."""
-    operation: str  # set, pan, wait, follow_ego
+    operation: str  # set, pan, wait, follow_ego, hold
     x: int | None = None
+    ticks: int | None = None
 
 
 @dataclass(frozen=True)
@@ -140,6 +141,8 @@ class RoomAsset:
     scale_curves: tuple[ScaleCurve, ...] = ()
     demo_walk_to_y: int | None = None
     camera_cues: tuple[CameraCue, ...] = ()
+    ego_start_x: int = 60
+    ego_start_y: int = 100
 
 
 def _scumm_string(value: str) -> str:
@@ -220,14 +223,22 @@ def _validate(room: RoomAsset) -> None:
         or not 0 <= room.demo_walk_to_y < height
     ):
         raise ValueError("Demo walk Y target requires a valid X target and room Y coordinate")
+    if (type(room.ego_start_x) is not int or type(room.ego_start_y) is not int
+            or not 0 <= room.ego_start_x < width or not 0 <= room.ego_start_y < height):
+        raise ValueError("Ego start position outside room bounds")
     for cue in room.camera_cues:
-        if cue.operation not in ("set", "pan", "wait", "follow_ego"):
+        if cue.operation not in ("set", "pan", "wait", "follow_ego", "hold"):
             raise ValueError("Unsupported native v6 camera operation")
         if cue.operation in ("set", "pan"):
             if type(cue.x) is not int or not 0 <= cue.x < width:
                 raise ValueError("Camera target X must be inside the room")
-        elif cue.x is not None:
-            raise ValueError("Camera wait/follow must not have an X parameter")
+            if cue.ticks is not None:
+                raise ValueError("Camera set/pan must not have hold ticks")
+        elif cue.operation == "hold":
+            if cue.x is not None or type(cue.ticks) is not int or not 1 <= cue.ticks <= 600:
+                raise ValueError("Camera hold needs 1..600 native delay ticks without an X target")
+        elif cue.x is not None or cue.ticks is not None:
+            raise ValueError("Camera wait/follow must not have X or tick parameters")
     if room.goal_text is not None:
         _scumm_string(room.goal_text)
     ids: set[str] = set()
@@ -818,7 +829,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
     parts.extend([
         "    local script entry() {\n",
         "        setCurrentActor(VAR_EGO);\n",
-        f"        putActorAt(VAR_EGO, 60, 100, {room.name});\n",
+        f"        putActorAt(VAR_EGO, {room.ego_start_x}, {room.ego_start_y}, {room.name});\n",
         "        setActorFollowBoxes();\n" if room.walkboxes else "        setActorIgnoreBoxes();\n",
         "        setActorStanding();\n",
         *[f"        if(getObjectState({rule.target_id}) == 2) setBoxFlags([{rule.unlock_walkbox}],0);\n"
@@ -831,6 +842,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
             "set": lambda cue: f"        setCameraAt({cue.x});\n",
             "pan": lambda cue: f"        panCameraTo({cue.x});\n",
             "wait": lambda cue: "        waitForCamera();\n",
+            "hold": lambda cue: f"        delay({cue.ticks});\n",
             "follow_ego": lambda cue: "        cameraFollowActor(VAR_EGO);\n",
         }[cue.operation](cue) for cue in room.camera_cues],
         *[localized_name(hotspot) for hotspot in room.hotspots],

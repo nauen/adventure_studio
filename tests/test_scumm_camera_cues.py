@@ -2,11 +2,13 @@
 
 import unittest
 from dataclasses import replace
+from pathlib import Path
 
-from adventure_studio.scumm_assets import CameraCue, _validate, scummc_room_source
+from adventure_studio.scumm_assets import CameraCue, _validate, destination_fixture, scrolling_fixture, scummc_room_source
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
 from adventure_studio.scumm_room_fixture import native_room
 from adventure_studio.scumm_camera_probe import verify_camera_pan
+from adventure_studio.studio_sequences import author_room_camera_plan, compose_story_project, room_camera_form_values
 
 
 class CameraCueTests(unittest.TestCase):
@@ -28,6 +30,154 @@ class CameraCueTests(unittest.TestCase):
         original = GameDocument("CameraDemo", (room,))
         raw = canonical_json(original)
         self.assertEqual(canonical_json(parse_document(raw)), raw)
+
+    def test_camera_form_restores_per_room_cues_and_stationary_choice(self):
+        source = canonical_json(GameDocument(
+            "SavedCamera", (scrolling_fixture(), destination_fixture())))
+        authored = author_room_camera_plan(
+            source, "Harbor", 390, 100,
+            "set:160;hold:120;pan:480;wait;pan:160;wait",
+            stationary_actor=True)
+        persisted = canonical_json(parse_document(authored))
+        self.assertEqual(room_camera_form_values(persisted, "Harbor"),
+                         (390, 100, "set:160;hold:120;pan:480;wait;pan:160;wait", True))
+        self.assertEqual(room_camera_form_values(persisted, "Cellar")[2], "")
+        self.assertEqual(room_camera_form_values(source, "Harbor")[3], False)
+        with self.assertRaisesRegex(ValueError, "vorhandenen Raum"):
+            room_camera_form_values(persisted, "Missing")
+        changed = author_room_camera_plan(
+            persisted, "Harbor", 390, 100,
+            "set:160;hold:60;pan:480;wait;pan:160;wait",
+            stationary_actor=True)
+        self.assertEqual(room_camera_form_values(changed, "Harbor")[2],
+                         "set:160;hold:60;pan:480;wait;pan:160;wait")
+
+    def test_authored_hold_is_native_and_roundtrips_with_bounded_ticks(self):
+        raw = canonical_json(GameDocument(
+            "CameraHold", (scrolling_fixture(), destination_fixture())))
+        authored = author_room_camera_plan(
+            raw, "Harbor", 390, 100,
+            "set:160;hold:120;pan:480;wait;pan:160;wait",
+            stationary_actor=True)
+        room = parse_document(authored).rooms[0]
+        self.assertEqual(
+            room.camera_cues,
+            (CameraCue("set", 160), CameraCue("hold", ticks=120),
+             CameraCue("pan", 480), CameraCue("wait"),
+             CameraCue("pan", 160), CameraCue("wait")))
+        source = scummc_room_source(room)
+        entry = source[source.index("local script entry()"):]
+        self.assertLess(entry.index("setCameraAt(160);"),
+                        entry.index("delay(120);"))
+        self.assertLess(entry.index("delay(120);"),
+                        entry.index("panCameraTo(480);"))
+        self.assertIsNone(room.demo_walk_to_x)
+        self.assertIn('"ticks":120', authored)
+        self.assertEqual(canonical_json(parse_document(authored)), authored)
+        for invalid in ("hold:0", "hold:601", "hold:bad"):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                author_room_camera_plan(raw, "Harbor", 390, 100, invalid)
+        for cue in (CameraCue("hold", ticks=True),
+                    CameraCue("hold", ticks=120, x=160),
+                    CameraCue("pan", 480, ticks=120),
+                    CameraCue("wait", ticks=120)):
+            with self.subTest(cue=cue), self.assertRaises(ValueError):
+                _validate(replace(scrolling_fixture(), camera_cues=(cue,)))
+
+    def test_masked_pan_actor_start_is_native_and_roundtrips(self):
+        room = replace(native_room(), ego_start_x=390, ego_start_y=100,
+                       camera_cues=(CameraCue("set", 160), CameraCue("pan", 480),
+                                    CameraCue("wait"), CameraCue("pan", 160),
+                                    CameraCue("wait")))
+        source = scummc_room_source(room)
+        entry = source[source.index("local script entry()"):]
+        self.assertLess(entry.index("putActorAt(VAR_EGO, 390, 100,"),
+                        entry.index("panCameraTo(480);"))
+        self.assertLess(entry.index("panCameraTo(480);"),
+                        entry.index("panCameraTo(160);"))
+        document = GameDocument("MaskedPan", (room, destination_fixture()))
+        raw = canonical_json(document)
+        restored = parse_document(raw)
+        self.assertEqual(restored.rooms[0].ego_start_x, 390)
+        self.assertEqual(canonical_json(restored), raw)
+        self.assertIn("putActorAt(VAR_EGO, 390, 100,", scummc_room_source(restored.rooms[0]))
+
+    def test_story_composition_preserves_authored_pan_and_actor_world_position(self):
+        base = scrolling_fixture()
+        cues = (CameraCue("set", 160), CameraCue("pan", 480),
+                CameraCue("wait"), CameraCue("pan", 160), CameraCue("wait"))
+        room = replace(base, demo_walk_to_x=None,
+                       ego_start_x=390, ego_start_y=100, camera_cues=cues)
+        native_raw = canonical_json(GameDocument("MaskedPanStory", (room, destination_fixture())))
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        composed_raw = compose_story_project(story, native_raw)
+        restored = next(item for item in parse_document(composed_raw).rooms
+                        if item.name == "Harbor")
+        self.assertEqual((restored.ego_start_x, restored.ego_start_y), (390, 100))
+        self.assertEqual(restored.camera_cues, cues)
+        self.assertIsNone(restored.demo_walk_to_x)
+        self.assertEqual(canonical_json(parse_document(composed_raw)), composed_raw)
+        source = scummc_room_source(restored)
+        entry = source[source.index("local script entry()"):]
+        for instruction in ("putActorAt(VAR_EGO, 390, 100, Harbor);",
+                            "setCameraAt(160);", "panCameraTo(480);",
+                            "waitForCamera();", "panCameraTo(160);"):
+            self.assertIn(instruction, entry)
+        self.assertLess(entry.index("putActorAt(VAR_EGO, 390, 100, Harbor);"),
+                        entry.index("panCameraTo(480);"))
+
+    def test_studio_camera_authoring_roundtrip_and_rejects_bad_cues(self):
+        raw = canonical_json(GameDocument(
+            "CameraStudio", (native_room(), destination_fixture())))
+        authored = author_room_camera_plan(
+            raw, "Harbor", 390, 100,
+            "set:160;pan:480;wait;pan:160;wait")
+        room = parse_document(authored).rooms[0]
+        self.assertEqual((room.ego_start_x, room.ego_start_y), (390, 100))
+        self.assertEqual(
+            [(cue.operation, cue.x) for cue in room.camera_cues],
+            [("set", 160), ("pan", 480), ("wait", None),
+             ("pan", 160), ("wait", None)])
+        self.assertEqual(canonical_json(parse_document(authored)), authored)
+        self.assertIn("panCameraTo(480);", scummc_room_source(room))
+        for plan in ("set:160;;wait", "pan:640", "set:bad", "zoom:480"):
+            with self.subTest(plan=plan), self.assertRaises(ValueError):
+                author_room_camera_plan(raw, "Harbor", 390, 100, plan)
+        with self.assertRaisesRegex(ValueError, "Ego-Startkoordinaten"):
+            author_room_camera_plan(raw, "Harbor", 640, 100, "set:160")
+
+    def test_camera_studio_can_explicitly_hold_actor_without_losing_existing_motion(self):
+        base = scrolling_fixture()
+        self.assertEqual(base.demo_walk_to_x, 540)
+        raw = canonical_json(GameDocument("CameraMotionChoice", (base, destination_fixture())))
+        stationary = author_room_camera_plan(
+            raw, "Harbor", 390, 100, "set:160;pan:480;wait;pan:160;wait",
+            stationary_actor=True)
+        held = parse_document(stationary).rooms[0]
+        self.assertIsNone(held.demo_walk_to_x)
+        self.assertIsNone(held.demo_walk_to_y)
+        self.assertNotIn("walkActorTo(VAR_EGO, 540,", scummc_room_source(held))
+        self.assertIn("putActorAt(VAR_EGO, 390, 100,", scummc_room_source(held))
+        self.assertEqual(canonical_json(parse_document(stationary)), stationary)
+        preserved = author_room_camera_plan(
+            raw, "Harbor", 390, 100, "set:160;pan:480;wait",
+            stationary_actor=False)
+        self.assertEqual(parse_document(preserved).rooms[0].demo_walk_to_x, 540)
+        with self.assertRaisesRegex(ValueError, "Stationärer Actor"):
+            author_room_camera_plan(raw, "Harbor", 390, 100, "wait",
+                                    stationary_actor="yes")
+
+    def test_legacy_ego_start_and_invalid_positions(self):
+        room = native_room()
+        self.assertIn("putActorAt(VAR_EGO, 60, 100,", scummc_room_source(room))
+        raw = canonical_json(GameDocument("Legacy", (room, destination_fixture())))
+        self.assertNotIn('"ego_start_x"', raw)
+        self.assertNotIn('"ego_start_y"', raw)
+        self.assertEqual(canonical_json(parse_document(raw)), raw)
+        for x, y in ((-1, 100), (640, 100), (60, 200), (True, 100), (60, False)):
+            with self.subTest(x=x, y=y), self.assertRaisesRegex(ValueError, "Ego start"):
+                scummc_room_source(replace(room, ego_start_x=x, ego_start_y=y))
 
     def test_invalid_ops_or_coordinates_rejected(self):
         for cue in (CameraCue("zoom", 100), CameraCue("pan", -1),

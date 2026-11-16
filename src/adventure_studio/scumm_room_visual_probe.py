@@ -71,6 +71,7 @@ def verify_visual_effects(masked: int, unmasked: int, fullscale: int) -> dict:
 def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                        destination: Path, label: str, *, crop: str = "140x105+535+305",
                        allow_static_scene: bool = False,
+                       camera_pan_capture: bool = False,
                        initial_object_state2: str | None = None,
                        scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                        native_walkbox_gate_probe: bool = False,
@@ -117,14 +118,19 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
     ], cwd=road, check=True, timeout=120)
     verify_room_binary((root / "tentacle.001").read_bytes(), xor_key=0x69)
     images = destination / f"{label}-screenshots"
-    launch_smoke(root, images, scene_only=not native_walkbox_gate_probe,
+    # The older native single-pan probe needs a six-second window. R06
+    # records two complete pans plus an explicitly authored initial hold,
+    # so twelve seconds can truncate the return before the final frame.
+    launch_smoke(root, images, seconds=20.0 if camera_pan_capture else 6.0,
+                 scene_only=not native_walkbox_gate_probe,
                  verify_return=False, allow_static_scene=allow_static_scene,
                  sample_scene_frames=native_walkbox_gate_probe,
                  native_walkbox_gate_probe=native_walkbox_gate_probe,
                  native_reversible_walkbox_probe=native_reversible_walkbox_probe,
                  native_reversible_gate_save_probe=native_reversible_gate_save_probe,
                  native_gate_room_return_probe=native_gate_room_return_probe,
-                 scene_walk_clicks=scene_walk_clicks)
+                 scene_walk_clicks=scene_walk_clicks,
+                 camera_pan_capture=camera_pan_capture)
     return {
         "dark_costume_pixels": black_costume_pixels(images / "scummvm-end.png", crop),
         "frame_report": json.loads((images / "scummvm-frame-report.json").read_text()),

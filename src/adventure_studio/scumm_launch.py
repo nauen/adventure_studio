@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -303,6 +304,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  verify_chain: bool = False, verify_recipe: bool = False,
                  allow_static_scene: bool = False, reverse_recipe: bool = False,
                  auto_recipe: bool = False, sample_scene_frames: bool = False,
+                 camera_pan_capture: bool = False,
                  scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                  native_walkbox_gate_probe: bool = False,
                  native_reversible_walkbox_probe: bool = False,
@@ -311,6 +313,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_independent_gate_chain_probe: bool = False,
                  native_independent_gate_control: bool = False,
                  native_same_room_gate_plan: dict | None = None) -> None:
+    if camera_pan_capture and (not scene_only or scene_walk_clicks or sample_scene_frames):
+        raise ValueError("Camera capture needs isolated scene mode without walking inputs")
     if native_same_room_gate_plan is not None:
         if (native_independent_gate_chain_probe or native_walkbox_gate_probe or
                 verify_chain or verify_recipe or scene_only or sample_scene_frames):
@@ -473,30 +477,62 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             env=environment,
         )
         try:
+            camera_frame_times = []
+            camera_capture_start = time.monotonic()
+
+            def retain_camera_frame(name: str) -> None:
+                # Persist native evidence after each successful screenshot:
+                # if ScummVM quits before the return, captured images still
+                # have usable timestamps in the uploaded failure artifact.
+                camera_frame_times.append({
+                    "frame": name,
+                    "elapsed_seconds": round(time.monotonic() - camera_capture_start, 3),
+                })
+                (output_directory / "camera-frame-times.json").write_text(
+                    json.dumps(camera_frame_times, indent=2) + "\n", encoding="utf-8")
+
+            sample_number = 0
             readiness_deadline = time.monotonic() + 20.0
             while time.monotonic() < readiness_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
-                capture_frame("start")
-                if close_rgb(scene_pixel(output_directory, "start"), (70, 130, 190)):
+                starting = capture_frame("start")
+                if camera_pan_capture:
+                    name = f"sample-{sample_number:02d}"
+                    shutil.copyfile(starting, output_directory / f"scummvm-{name}.png")
+                    retain_camera_frame(name)
+                    sample_number += 1
+                start_rgb = scene_pixel(output_directory, "start")
+                # The authored pan may advance before the first Xvfb frame.
+                # In isolated camera capture, either half of the known
+                # Harbor sky confirms the room has loaded. Four-phase
+                # acceptance still independently requires an initial blue
+                # view and the complete outward/return journey.
+                if (close_rgb(start_rgb, (70, 130, 190))
+                        or (camera_pan_capture and
+                            close_rgb(start_rgb, (240, 175, 95)))):
                     break
                 time.sleep(0.3)
             else:
-                raise RuntimeError("Blue initial room was not visible within 20 seconds")
+                raise RuntimeError("Expected authored room sky not visible within 20 seconds")
             deadline = time.monotonic() + seconds
             next_sample = time.monotonic()
-            sample_number = 0
             while time.monotonic() < deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
-                if sample_scene_frames and time.monotonic() >= next_sample:
-                    capture_frame(f"sample-{sample_number:02d}")
+                if (sample_scene_frames or camera_pan_capture) and time.monotonic() >= next_sample:
+                    name = f"sample-{sample_number:02d}"
+                    capture_frame(name)
+                    if camera_pan_capture:
+                        retain_camera_frame(name)
                     sample_number += 1
-                    next_sample = time.monotonic() + 0.15
+                    next_sample = time.monotonic() + (0.08 if camera_pan_capture else 0.15)
                 time.sleep(0.1)
             if process.poll() is not None:
                 raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
             final_snapshot = capture_frame("end")
+            if camera_pan_capture:
+                retain_camera_frame("end")
             changed = compare_frames(output_directory,
                                      minimum_changed_pixels=0 if (allow_static_scene or native_same_room_gate_plan is not None) else 500,
                                      expect_scroll=not (allow_static_scene or native_same_room_gate_plan is not None),
