@@ -10,11 +10,11 @@ Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
 
 ## Ein aktiver Produktpfad
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; Umfang in der [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** Nach R06/#242 und R08/#244 (beide gemergt) **einzig [R07-Objekt-IM01/ZP02 #245](https://github.com/nauen/adventure_studio/issues/245) aktiv**: unabhängiger zweiter PNG-Maskenimport für Grundbildzustand, ohne vorhandene IM01/ZP01 oder IM02/ZP01 zu überschreiben. Konsolidierter Vorgängerstand `1c7a265`; keine NPC-Komfortarbeit nach #190.
-- **Abnahme:** Offen bis vollständigem Studio/Chromium → JSON-v1/Story → produktivem ScummC-v6 → unverändertem ScummVM-Nachweis. Separate maskierte, transparente und falsch-BOXD-zugeordnete Objekt-ZP02-Spiele samt Actor-Pixelvergleich, Dateien und Screenshots erforderlich; relevante Core-/Gradio-/native Push-/PR-Gesamt-CI und Review vor Merge.
-- **Blocker:** Noch kein bestätigter IM01/ZP02-Runtime-Nachweis und keine vollständige finale CI. Stock-v6-ZP05+ nach wie vor fail-closed; komplexere R07/R08/R09-Kombinationen nicht allgemein abgenommen.
-- **Danach:** Nur #245 abnehmen/mergen/konsolidieren; dann genau ein weiteres natives Raumgrafik-/Z-Masken-/Walkbox-Paket. Kein paralleles Feature.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime, abgegrenzt durch die [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
+- **Jetzt:** Die einzelnen nativ bestätigten Pakete R06-Kamera [#242](https://github.com/nauen/adventure_studio/pull/242), R08-Dreiecks-Walkbox [#244](https://github.com/nauen/adventure_studio/pull/244) und R07-IM01/ZP02 [#245](https://github.com/nauen/adventure_studio/issues/245)/[#246](https://github.com/nauen/adventure_studio/pull/246) sind integriert (R07-Squash [`7b38872`](https://github.com/nauen/adventure_studio/commit/7b3887210c5df52e71062bc4e1c0eab5e4fcccbc)). **Konsolidierung vor dem nächsten Produktpaket**, keine NPC-Komfortarbeit nach #190.
+- **Abnahme:** Zweite unabhängig importierte Objektgrundbild-Z-Maske IM01/ZP02 vom echten Gradio-Chrome-Editor durch JSON-v1/Story-Reimport (IM01/ZP01 und IM02/ZP01 unverändert) bis produktivem ScummC-v6-Writer mit beiden Masken-BMPs und separaten echten stock-ScummVM-Kontrollspielen. Mit BOXD-Maskenindex 2 **0** sichtbare Actor-Pixel, mit transparenter ZP02 **1476**, mit falschem BOXD-Index 1 **1476**; [Native-PR-Evidenz](https://github.com/nauen/adventure_studio/actions/runs/43906300863/artifacts/14244672820). Core Push/PR, Gradio Push/PR, Inventar PR, Dialog PR nach unverändertem Retry und gesamter [nativer PR-Lauf](https://github.com/nauen/adventure_studio/actions/runs/43906300863) auf `fb83a41` erfolgreich (native **118/118**). PR-/Review/Diff-Gates und Merge erledigt; **R07 als Ganzes nur Teilfähigkeit**.
+- **Blocker:** Keine offenen Abnahmegates für #245. Nicht pauschal abgenommen: weitere IMnn-Zustände/Z-Ebenen, allgemeine R08-Polygone und R09-Netze. ZP05+ bleibt in stock-v6 inkompatibel, nativer Export fail-closed.
+- **Danach:** Verbleibende Raumgrafik-/Z-Masken-/Walkbox-Lücken priorisieren und genau **eine** noch fehlende nutzbare Fähigkeit bis echte stock-ScummVM-Evidenz entwickeln; erst danach die nächste. Keine parallele NPC-Komfortarbeit.
 
 ## Zuletzt tatsächlich geliefert
 
