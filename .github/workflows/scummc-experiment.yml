@@ -1,13 +1,20 @@
 name: Experimental SCUMM v6 compatibility probe
 
-# Experimental: upstream ScummC's detection in stock ScummVM is unproven.
-# Run for probe changes only; a red run is research, not a release regression.
+# Full stock-ScummVM gameplay regression is a mandatory merge gate.
+# Independent mask / room geometry / actor-audio / story gameplay groups
+# run on separate fresh runners and must each succeed. Experimental engine
+# detection assertions remain explicitly bounded inside their steps.
 on:
   workflow_call:
   workflow_dispatch:
 
 jobs:
   probe:
+    name: Native ScummVM – ${{ matrix.shard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [mask, geometry, actors, story]
     runs-on: ubuntu-24.04
     # ScummVM pulls a large data package. The Ubuntu mirror occasionally
     # stalls; give the full job enough time while bounding the install step.
@@ -21,7 +28,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: /tmp/scumm-experimental-apt
-          key: ubuntu-24.04-scumm-experimental-apt-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ubuntu-24.04-scumm-experimental-apt-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
           restore-keys: |
             ubuntu-24.04-scumm-experimental-apt-
       - name: Install compiler dependencies and stock ScummVM
@@ -35,7 +42,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: /tmp/scumm-experimental-apt
-          key: ubuntu-24.04-scumm-experimental-apt-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ubuntu-24.04-scumm-experimental-apt-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
       - name: Fetch unmodified ScummC
         run: git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
       - name: Fix legacy ScummC tool help paths in ephemeral checkout
@@ -55,12 +62,13 @@ jobs:
           make -j2
           find . -type f \( -name scc -o -name sld \) -print
       - name: Compile authored SCUMM v6 COST with two explicit COUNT events
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           python -m adventure_studio.scumm_costume_probe /tmp/scummc-upstream /tmp/native-costume
       - name: Retain generated native COST research evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-costume-count
@@ -110,13 +118,14 @@ jobs:
       # gates remain mandatory below, but cannot prevent this evidence from
       # running and uploading a failure report of its own.
       - name: Verify Studio-authored ZP01 occlusion during native pan and return
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_camera_zp01_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r06-camera-zp01
       - name: Retain native R06 four-phase controls, source games and timestamps
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-r06-camera-zp01
@@ -132,12 +141,13 @@ jobs:
             /tmp/native-r06-camera-zp01/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Verify R08 triangle BOXD walking boundary in stock ScummVM
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_triangle_walkbox_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r08-triangle-walkbox
       - name: Retain native R08 triangle gameplay and rectangular control
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-r08-triangle-walkbox
@@ -153,13 +163,14 @@ jobs:
             /tmp/native-r08-triangle-walkbox/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Verify Studio-authored object IM01 ZP01/ZP02 and second-state IM02 in stock ScummVM
+        if: ${{ matrix.shard == 'mask' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_object_zmask_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-object-zmask
       - name: Retain object Z-mask native screenshots
-        if: always()
+        if: ${{ always() && matrix.shard == 'mask' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-object-zmask
@@ -175,13 +186,14 @@ jobs:
             /tmp/native-object-zmask/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Play two independent native door gates and compare Actor routes with control
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_independent_gate_chain_probe /tmp/scummc-upstream /tmp/native-r09-independent-gates
       - name: Retain independent Story gate state and native ScummVM screenshots
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-r09-independent-gates
@@ -193,13 +205,14 @@ jobs:
             /tmp/native-r09-independent-gates/*/screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Prove two independent reversible R09 gates in the same stock-ScummVM room
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_same_room_gate_probe /tmp/scummc-upstream /tmp/native-r09-same-room-gates
       - name: Retain native same-room two-gate Gameplay evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-r09-same-room-gates
@@ -214,13 +227,14 @@ jobs:
             /tmp/native-r09-same-room-gates/*/screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Verify reversible R09 door closes and reopens native walkbox in stock ScummVM
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dynamic_walkbox_gate_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r09-reversible-walkbox-gate --reversible --save-load
       - name: Retain native reversible R09 gameplay and independent control
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-r09-reversible-walkbox-gate
@@ -237,13 +251,14 @@ jobs:
             /tmp/native-r09-reversible-walkbox-gate/reversible-save-load/scummvm-load.log
           if-no-files-found: ignore
       - name: Verify open and closed R09 gate across genuine native room exit and reentry
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dynamic_walkbox_gate_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r09-gate-room-return --reversible --room-return
       - name: Retain native R09 room-return actor routes and distinct control games
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-r09-gate-room-return
@@ -255,13 +270,14 @@ jobs:
             /tmp/native-r09-gate-room-return/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Verify native door-controlled R09 walkbox detour and shortcut in stock ScummVM
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_dynamic_walkbox_gate_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r09-dynamic-walkbox-gate
       - name: Retain real R09 walkbox door-route gameplay evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-r09-dynamic-walkbox-gate
@@ -273,12 +289,13 @@ jobs:
             /tmp/native-r09-dynamic-walkbox-gate/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Verify six-box cyclic BOXM detours and disconnected control in stock ScummVM
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_boxm_routing_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-boxm-routing
       - name: Retain native BOXM routing evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-boxm-routing
@@ -293,13 +310,14 @@ jobs:
             /tmp/native-boxm-routing/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify four independently selected Studio-authored Z-plane layers in stock ScummVM
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_multi_zplane_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-multi-zplanes
       - name: Retain multi-Z-plane native screenshot evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-four-zplanes
@@ -310,13 +328,14 @@ jobs:
             /tmp/native-multi-zplanes/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify simultaneous independently authored ZP01/ZP02 on adjacent walkboxes in stock ScummVM
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_simultaneous_zplane_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-simultaneous-zplanes
       - name: Retain simultaneous two-mask native gameplay and control evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-simultaneous-zplanes
@@ -329,13 +348,14 @@ jobs:
             /tmp/native-simultaneous-zplanes/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify three simultaneous Studio PNG Z-masks on connected native walkboxes
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_three_simultaneous_zplane_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-three-simultaneous-zplanes
       - name: Retain three-mask stock-ScummVM screenshots and control games
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-three-simultaneous-zplanes
@@ -346,13 +366,14 @@ jobs:
             /tmp/native-three-simultaneous-zplanes/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify four simultaneous Studio PNG Z-masks on connected native walkboxes
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_four_simultaneous_zplane_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-four-simultaneous-zplanes
       - name: Retain four-mask stock-ScummVM screenshots and independent control games
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-four-simultaneous-zplanes
@@ -363,12 +384,13 @@ jobs:
             /tmp/native-four-simultaneous-zplanes/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify Studio-authored SCAL perspective in stock ScummVM
+        if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_authored_scal_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-authored-scal
       - name: Retain Studio-authored SCAL gameplay evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-authored-scal
@@ -379,12 +401,13 @@ jobs:
             /tmp/native-authored-scal/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Link Studio COST actor and render in stock ScummVM
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_costume_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-costume-playback
       - name: Retain native Costume gameplay frame
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-costume-playback
@@ -394,12 +417,13 @@ jobs:
             /tmp/native-costume-playback/screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify two native COUNT events unlock object-state change
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_costume_probe --count /tmp/scummc-upstream /tmp/generated-room /tmp/native-costume-count-gameplay
       - name: Retain native Costume COUNT event evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-costume-count-gameplay
@@ -411,17 +435,19 @@ jobs:
             /tmp/native-costume-count-gameplay/three_count_control/screenshots/scummvm-end.png
           if-no-files-found: ignore
       - name: Link two authored Actor symbols with shared native COST in ScummVM
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe /tmp/scummc-upstream /tmp/native-actors
       - name: Play Studio-authored Actor choreography from a real hotspot click
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_sequence_probe /tmp/scummc-upstream /tmp/native-actors /tmp/native-actor-sequence
       - name: Retain native Studio interaction sequence gameplay evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-studio-actor-sequence
@@ -445,12 +471,13 @@ jobs:
             /tmp/native-actor-sequence/screenshots/scummvm.log
           if-no-files-found: ignore
       - name: Play imported VOC sound effect from Studio hotspot and stop via Escape
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_sound_effect_probe /tmp/scummc-upstream /tmp/native-voc-effects
       - name: Retain native VOC sound effect playback evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-studio-voc-sound-effect
@@ -466,13 +493,14 @@ jobs:
             /tmp/native-voc-effects/screenshots/scummvm.log
           if-no-files-found: ignore
       - name: Play Studio VOC voice line with native subtitle and Escape
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install Pillow fonttools
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_sound_effect_probe --voice /tmp/scummc-upstream /tmp/native-voc-voice
       - name: Retain native spoken VOC subtitle evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-studio-voc-voice-subtitle
@@ -487,12 +515,13 @@ jobs:
             /tmp/native-voc-voice/screenshots/scummvm.log
           if-no-files-found: ignore
       - name: Switch native VOC spoken-language variant and play German text and sound
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_sound_effect_probe --localized /tmp/scummc-upstream /tmp/native-voc-localized
       - name: Retain native localized VOC subtitle and audio evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-studio-voc-localized
@@ -508,12 +537,13 @@ jobs:
             /tmp/native-voc-localized/screenshots/scummvm.log
           if-no-files-found: ignore
       - name: Play localized story and spoken VOC using one native language selection
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_sound_effect_probe --localized-story /tmp/scummc-upstream /tmp/native-voc-story-localized
       - name: Retain combined native story and VOC language evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-studio-story-voc-localized
@@ -527,13 +557,14 @@ jobs:
             /tmp/native-voc-story-localized/screenshots/scummvm.log
           if-no-files-found: ignore
       - name: Compile Studio-imported PNG animation and launch native game
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install Pillow
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_studio_png_probe /tmp/scummc-upstream /tmp/native-studio-png
       - name: Retain native Studio PNG gameplay evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-studio-png-costume
@@ -547,7 +578,7 @@ jobs:
             /tmp/native-studio-png/screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Retain project-authored native Actor link evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-project-actors
@@ -558,23 +589,26 @@ jobs:
             /tmp/native-actors/screenshots/scummvm-end.png
           if-no-files-found: ignore
       - name: Verify project-authored Actor COUNT events in stock ScummVM
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe --count /tmp/scummc-upstream /tmp/native-actors /tmp/native-actor-count
       - name: Verify native Actor input repetition and room return state
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_probe --input /tmp/scummc-upstream /tmp/native-actors /tmp/native-actor-input
       - name: Verify Actor COUNT state and initialization guard across native Save/Load
+        if: ${{ matrix.shard == 'actors' }}
         env:
           PYTHONPATH: src
         run: |
           python -m pip install Pillow
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_save_probe /tmp/native-actor-input /tmp/native-actor-save
       - name: Retain Actor native Save/Load evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-actor-save-load
@@ -591,7 +625,7 @@ jobs:
             /tmp/native-actor-save/load.log
           if-no-files-found: ignore
       - name: Retain native Actor input window gameplay evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-actor-input-window
@@ -610,7 +644,7 @@ jobs:
             /tmp/native-actor-input/return/scummvm-return.png
           if-no-files-found: ignore
       - name: Retain authored Actor COUNT positive and negative evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'actors' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-v6-authored-actor-count
@@ -634,6 +668,7 @@ jobs:
             /tmp/native-actor-count/three_counts/screenshots/scummvm-end.png
           if-no-files-found: ignore
       - name: Compile and structurally verify generated Z-plane/BOXM/SCAL room
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src:tests
         run: |
@@ -646,13 +681,14 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           python -c 'from pathlib import Path; from adventure_studio.scumm_binary import verify_room_binary; binary=Path("/tmp/native-check/tentacle.001").read_bytes(); tree=verify_room_binary(binary,xor_key=0x69); rooms=[c for level in tree for group in level.children if group.tag=="LFLF" for c in group.children if c.tag=="ROOM"]; assert any(any(i.tag=="ZP01" for rmim in r.find("RMIM") for frame in rmim.find("IM00") for i in frame.children) and all(r.find(t) for t in ("BOXD","BOXM","SCAL")) for r in rooms), "native ZP01/BOXD/BOXM/SCAL chunks missing"; print("Native SCUMM v6 room resource chunks verified")'
       - name: Run native Z-plane and walkbox scene in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           cp /tmp/generated-room/game-goal.json /tmp/native-check/game-goal.json
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/native-check /tmp/native-room-smoke --scene-only
       - name: Retain native room screenshots
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-room-scummvm-screenshots
@@ -663,12 +699,13 @@ jobs:
             /tmp/native-room-smoke/scummvm-launch.log
           if-no-files-found: ignore
       - name: Compare native mask and scaling variants in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_room_visual_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-visual-comparison
       - name: Retain native mask and scaling comparison evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-room-comparison
@@ -678,12 +715,13 @@ jobs:
             /tmp/native-visual-comparison/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify freely authored BOXD walking boundary in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_walkbox_boundary_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-walkbox-boundary
       - name: Retain native walkbox boundary evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-walkbox-boundary
@@ -693,12 +731,13 @@ jobs:
             /tmp/native-walkbox-boundary/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Measure native SCAL perspective curve at three walking depths
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_scal_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-scal-perspective
       - name: Retain perspective SCAL comparison evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-scal-perspective
@@ -708,12 +747,13 @@ jobs:
             /tmp/native-scal-perspective/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Verify native SCUMM v6 horizontal camera pan in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_camera_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-camera-pan
       - name: Retain native camera composition evidence
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: native-camera-pan
@@ -722,6 +762,7 @@ jobs:
             /tmp/native-camera-pan/*-screenshots/scummvm-end.png
           if-no-files-found: ignore
       - name: Produce ScummC documented compatibility-only detection fixture
+        if: ${{ matrix.shard == 'story' }}
         # Research fixture only: this uses the Day of the Tentacle game ID
         # described by ScummC upstream. Never label it as native game support.
         run: |
@@ -731,6 +772,7 @@ jobs:
           cp /tmp/generated-room/tentacle.000 /tmp/generated-room/tentacle.001 /tmp/tentacle-fixture/
           cp /tmp/generated-room/game-goal.json /tmp/tentacle-fixture/
       - name: Rebuild the complete upstream demo using our generated background
+        if: ${{ matrix.shard == 'story' }}
         # This preserves upstream game logic and changes only the room art. It
         # tests image integration/linking, not our future game-script exporter.
         working-directory: /tmp/scummc-upstream/examples/road
@@ -741,11 +783,13 @@ jobs:
           test -s scummc6.000
           test -s scummc6.001
       - name: Verify linked SCUMM data pair
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           python -c 'from pathlib import Path; from adventure_studio.scumm_probe import check_game_files; result = check_game_files(Path("/tmp/studio-fixture")); print(result); assert result[0]'
       - name: Probe stock ScummVM detection (experimental, expected incompatibility possible)
+        if: ${{ matrix.shard == 'story' }}
         # A custom SCUMM v6 game is not guaranteed to appear in an unmodified
         # ScummVM detection table. Record this independently from compilation.
         continue-on-error: true
@@ -754,18 +798,21 @@ jobs:
         run: |
           python -m adventure_studio.scumm_probe /tmp/studio-fixture
       - name: Probe upstream SCUMM game detection (experimental)
+        if: ${{ matrix.shard == 'story' }}
         continue-on-error: true
         env:
           PYTHONPATH: src
         run: |
           python -m adventure_studio.scumm_probe /tmp/scummc-upstream/examples/road
       - name: Probe documented compatibility fixture (not production support)
+        if: ${{ matrix.shard == 'story' }}
         continue-on-error: true
         env:
           PYTHONPATH: src
         run: |
           python -m adventure_studio.scumm_probe /tmp/tentacle-fixture
       - name: Launch compatibility fixture in virtual X display (experimental)
+        if: ${{ matrix.shard == 'story' }}
         # This is an actual ScummVM process smoke test, not a gameplay test.
         # A failed visual gate must make this research workflow red; GitHub's
         # step conclusion otherwise reports "success" due to continue-on-error.
@@ -774,6 +821,7 @@ jobs:
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/tentacle-fixture /tmp/scummvm-smoke
       - name: Compile independent adventure directly from story JSON
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -783,6 +831,7 @@ jobs:
           test -s /tmp/story-fixture/tentacle.000
           test -s /tmp/story-fixture/tentacle.001
       - name: Compile experimental linear SCUMM v6 dialogue fixture
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -792,6 +841,7 @@ jobs:
           test -s /tmp/dialogue-fixture/tentacle.000
           test -s /tmp/dialogue-fixture/tentacle.001
       - name: Compile experimental clickable-answer dialogue fixture
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -803,6 +853,7 @@ jobs:
       # Independent media gates run before the longer gameplay interaction suite.
       # A flaky UI click in a puzzle must not prevent palette/audio evidence.
       - name: Compile indexed-water SCUMM v6 palette-cycle fixture
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -812,11 +863,13 @@ jobs:
           test -s /tmp/palette-fixture/tentacle.000
           test -s /tmp/palette-fixture/tentacle.001
       - name: Verify real palette animation and unaffected sky in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_palette_probe /tmp/palette-fixture /tmp/palette-smoke
       - name: Generate original MIDI and wrap as a ScummC GMD sound resource
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -829,12 +882,14 @@ jobs:
           test -s /tmp/music-fixture/tentacle.000
           test -s /tmp/music-fixture/tentacle.001
       - name: Experimental PCM capture from stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         continue-on-error: true
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_audio_probe /tmp/music-fixture /tmp/music-smoke /tmp/story-fixture
       - name: Compile two distinct MIDI themes for a room-entry music transition
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -850,6 +905,7 @@ jobs:
           test -s /tmp/music-transition-fixture/tentacle.000
           test -s /tmp/music-transition-fixture/tentacle.001
       - name: Play music-transition adventure through both rooms in ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -858,16 +914,19 @@ jobs:
           # palette changes have their own strict pixel-level probe below.
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/music-transition-fixture /tmp/music-transition-smoke --static-chain-only
       - name: Verify palette cycling in the same playable two-theme adventure
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_palette_probe /tmp/music-transition-fixture /tmp/music-transition-palette-smoke
       - name: Launch story-built adventure in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/story-fixture /tmp/story-smoke --puzzle-only
       - name: Compile two-item inventory puzzle from independent story JSON
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -877,11 +936,13 @@ jobs:
           test -s /tmp/two-item-fixture/tentacle.000
           test -s /tmp/two-item-fixture/tentacle.001
       - name: Reject premature unlock then solve two-item puzzle in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/two-item-fixture /tmp/two-item-smoke --puzzle-only
       - name: Compile three-item inventory puzzle from story JSON
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -891,11 +952,13 @@ jobs:
           test -s /tmp/three-item-fixture/tentacle.000
           test -s /tmp/three-item-fixture/tentacle.001
       - name: Reject two incomplete inventories then solve three-item puzzle in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/three-item-fixture /tmp/three-item-smoke --puzzle-only
       - name: Compile chained two-puzzle three-room adventure from story JSON
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -905,11 +968,13 @@ jobs:
           test -s /tmp/chain-fixture/tentacle.000
           test -s /tmp/chain-fixture/tentacle.001
       - name: Play both doors and reach final room of chained adventure in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/chain-fixture /tmp/chain-smoke --chain-only
       - name: Compile v2 recipe story and its inventory combination
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
@@ -919,17 +984,19 @@ jobs:
           test -s /tmp/recipe-fixture/tentacle.000
           test -s /tmp/recipe-fixture/tentacle.001
       - name: Combine inventory items and unlock door in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-fixture /tmp/recipe-smoke --recipe-only
       - name: Combine same inventory items in reverse order in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
         env:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/recipe-fixture /tmp/recipe-reverse-smoke --recipe-reverse-only
       - name: Publish visual probe summary
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         run: |
           {
             echo '## SCUMM-v6 graphics probe'
@@ -1021,7 +1088,7 @@ jobs:
             echo
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload compiler outputs for inspection
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: scummc-research-output
@@ -1081,7 +1148,7 @@ jobs:
             /tmp/scummc-upstream/examples/road/*.001
             /tmp/scummc-upstream/examples/road/*.sou
       - name: Upload story-playable preview for manual testing
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: story-playable-preview
@@ -1092,7 +1159,7 @@ jobs:
             /tmp/story-fixture/game-goal.json
             /tmp/story-fixture/README.txt
       - name: Upload experimental talkable-character preview
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: story-dialogue-playable-preview
@@ -1102,7 +1169,7 @@ jobs:
             /tmp/dialogue-fixture/tentacle.001
             /tmp/dialogue-fixture/story.json
       - name: Upload experimental clickable-answer preview
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: story-dialogue-choices-preview
@@ -1112,7 +1179,7 @@ jobs:
             /tmp/dialogue-choices-fixture/tentacle.001
             /tmp/dialogue-choices-fixture/story.json
       - name: Upload two-item story preview for manual testing
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: story-two-item-playable-preview
@@ -1123,7 +1190,7 @@ jobs:
             /tmp/two-item-fixture/game-goal.json
             /tmp/two-item-fixture/README.txt
       - name: Upload three-item story preview for manual testing
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: story-three-item-playable-preview
@@ -1134,7 +1201,7 @@ jobs:
             /tmp/three-item-fixture/game-goal.json
             /tmp/three-item-fixture/README.txt
       - name: Upload linked three-room chain fixture for development
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: story-three-room-chain-experimental
@@ -1144,7 +1211,7 @@ jobs:
             /tmp/chain-fixture/tentacle.001
             /tmp/chain-fixture/game-goal.json
       - name: Upload playable two-theme music transition game
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: music-two-theme-playable-preview
@@ -1154,7 +1221,7 @@ jobs:
             /tmp/music-transition-fixture/tentacle.001
             /tmp/music-transition-fixture/README.txt
       - name: Upload recipe story preview for manual testing
-        if: always()
+        if: ${{ always() && matrix.shard == 'story' }}
         uses: actions/upload-artifact@v4
         with:
           name: story-recipe-playable-preview
