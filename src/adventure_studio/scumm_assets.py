@@ -35,6 +35,7 @@ class RoomHotspot:
     object_zplane_pixels: bytes | None = None
     open_object_zplane_pixels: bytes | None = None
     object_zplane2_pixels: bytes | None = None  # IM01 ZP02; optional, ZP01 required
+    open_object_zplane2_pixels: bytes | None = None  # IM02 ZP02; ZP01 required
 
 
 @dataclass(frozen=True)
@@ -296,6 +297,12 @@ def _validate(room: RoomAsset) -> None:
                 raise ValueError("Open-state object Z-mask requires an open sprite with exact dimensions")
             if any(pixel not in (0, 1) for pixel in hotspot.open_object_zplane_pixels):
                 raise ValueError("Open-state object Z-mask pixels must be binary")
+        if hotspot.open_object_zplane2_pixels is not None:
+            if (hotspot.open_object_zplane_pixels is None or hotspot.open_sprite_pixels is None
+                    or len(hotspot.open_object_zplane2_pixels) != hotspot.width * hotspot.height):
+                raise ValueError("IM02 ZP02 requires existing IM02 ZP01 and exact open sprite dimensions")
+            if any(pixel not in (0, 1) for pixel in hotspot.open_object_zplane2_pixels):
+                raise ValueError("IM02 ZP02 mask pixels must be binary")
         if hotspot.open_sprite_pixels is not None:
             if hotspot.sprite_pixels is None or len(hotspot.open_sprite_pixels) != hotspot.width * hotspot.height:
                 raise ValueError("Open sprite dimensions do not match closed sprite")
@@ -693,7 +700,10 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                 first = (f'{{ 0, 0, "{hotspot.id}.bmp", {{ {masks} }} }}'
                          if hotspot.object_zplane_pixels is not None
                          else f'{{ 0, 0, "{hotspot.id}.bmp" }}')
-                second = (f'{{ 0, 0, "{hotspot.id}Open.bmp", {{ "{hotspot.id}OpenZ01.bmp" }} }}'
+                second_masks = (f'"{hotspot.id}OpenZ01.bmp", "{hotspot.id}OpenZ02.bmp"'
+                                if hotspot.open_object_zplane2_pixels is not None
+                                else f'"{hotspot.id}OpenZ01.bmp"')
+                second = (f'{{ 0, 0, "{hotspot.id}Open.bmp", {{ {second_masks} }} }}'
                           if hotspot.open_object_zplane_pixels is not None
                           else f'{{ 0, 0, "{hotspot.id}Open.bmp" }}')
                 parts.append(f'        states = {{ {first}, {second} }};\n')
@@ -909,6 +919,10 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
             if hotspot.open_object_zplane_pixels is not None:
                 (directory / f"{hotspot.id}OpenZ01.bmp").write_bytes(
                     _indexed_bmp(hotspot.width, hotspot.height, hotspot.open_object_zplane_pixels,
+                                 ((0, 0, 0), (255, 255, 255))))
+            if hotspot.open_object_zplane2_pixels is not None:
+                (directory / f"{hotspot.id}OpenZ02.bmp").write_bytes(
+                    _indexed_bmp(hotspot.width, hotspot.height, hotspot.open_object_zplane2_pixels,
                                  ((0, 0, 0), (255, 255, 255))))
             if hotspot.open_sprite_pixels is not None:
                 (directory / f"{hotspot.id}Open.bmp").write_bytes(

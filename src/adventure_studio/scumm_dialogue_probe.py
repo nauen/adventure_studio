@@ -107,7 +107,11 @@ def run(game_directory: Path, output: Path, voice: bool = False,
             ready = False
             before = 0
             actor_count = 0
-            for _ in range(35):
+            # An overloaded CI runner may map its first SDL frame after
+            # the previous ~15-second window. Keep the exact same actual
+            # scene, actor and absent-answer requirements before any click.
+            startup_deadline = time.monotonic() + 75
+            while time.monotonic() < startup_deadline:
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited before dialogue test")
                 _capture(output, "before")

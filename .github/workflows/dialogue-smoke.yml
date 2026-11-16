@@ -3,27 +3,11 @@ name: SCUMM dialogue gameplay smoke
 # Dialogue interaction is an independent compatibility gate. A music, palette
 # or unrelated puzzle failure must not hide a successful answer click test.
 on:
+  # Full VM/download-heavy checks only after a draft is marked ready.
+  # A subsequent commit to a ready PR must be fully revalidated.
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/dialogue-smoke.yml'
-      - 'src/adventure_studio/dialogue_demo.py'
-      - 'src/adventure_studio/scumm_dialogue_probe.py'
-      - 'src/adventure_studio/scumm_four_facing_probe.py'
-      - 'src/adventure_studio/scumm_dialogue_voice_fixture.py'
-      - 'src/adventure_studio/dialogue_animation_fixture.py'
-      - 'src/adventure_studio/studio_sequences.py'
-      - 'src/adventure_studio/scumm_assets.py'
-      - 'src/adventure_studio/scumm_project.py'
-      - 'src/adventure_studio/story_to_scumm.py'
-      - 'src/adventure_studio/scumm_toolchain.py'
-      - 'src/adventure_studio/scumm_launch.py'
-      - 'examples/recipe_story.json'
-      - 'examples/recipe_chain_story.json'
-      - 'examples/recipe_graph_story.json'
-      - 'tests/test_scumm_dialogue_probe.py'
-      - 'tests/test_story_v4.py'
   pull_request:
+    types: [ready_for_review, synchronize]
     paths:
       - '.github/workflows/dialogue-smoke.yml'
       - 'src/adventure_studio/dialogue_demo.py'
@@ -43,8 +27,13 @@ on:
       - 'tests/test_scumm_dialogue_probe.py'
       - 'tests/test_story_v4.py'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   dialogue:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:

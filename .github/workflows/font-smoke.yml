@@ -1,20 +1,11 @@
 name: SCUMM v6 multilingual CHAR resource probe
 
 on:
+  # Full VM/download-heavy checks only after a draft is marked ready.
+  # A subsequent commit to a ready PR must be fully revalidated.
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/font-smoke.yml'
-      - 'src/adventure_studio/localization.py'
-      - 'src/adventure_studio/scumm_font.py'
-      - 'src/adventure_studio/scumm_font_probe.py'
-      - 'src/adventure_studio/scumm_language_package.py'
-      - 'src/adventure_studio/scumm_toolchain.py'
-      - 'examples/language_probe.json'
-      - 'tests/test_localization.py'
-      - 'tests/test_scumm_font.py'
-      - 'tests/test_scumm_language_package.py'
   pull_request:
+    types: [ready_for_review, synchronize]
     paths:
       - '.github/workflows/font-smoke.yml'
       - 'src/adventure_studio/localization.py'
@@ -27,8 +18,13 @@ on:
       - 'tests/test_scumm_font.py'
       - 'tests/test_scumm_language_package.py'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   font:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:

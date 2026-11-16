@@ -1,20 +1,11 @@
 name: SCUMM inventory page gameplay smoke
 
 on:
+  # Full VM/download-heavy checks only after a draft is marked ready.
+  # A subsequent commit to a ready PR must be fully revalidated.
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/scumm-inventory-paging.yml'
-      - 'src/adventure_studio/scumm_bootstrap.py'
-      - 'src/adventure_studio/scumm_inventory_paging_demo.py'
-      - 'src/adventure_studio/scumm_inventory_paging_probe.py'
-      - 'src/adventure_studio/scumm_toolchain.py'
-      - 'src/adventure_studio/story_to_scumm.py'
-      - 'src/adventure_studio/scumm_project.py'
-      - 'examples/recipe_nine_items_story.json'
-      - 'tests/test_story_document.py'
-      - 'tests/test_scumm_bootstrap.py'
   pull_request:
+    types: [ready_for_review, synchronize]
     paths:
       - '.github/workflows/scumm-inventory-paging.yml'
       - 'src/adventure_studio/scumm_bootstrap.py'
@@ -27,8 +18,13 @@ on:
       - 'tests/test_story_document.py'
       - 'tests/test_scumm_bootstrap.py'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   inventory-pages:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
