@@ -113,6 +113,50 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         self.assertEqual(parse_document(rectangle).rooms[0].walkboxes[0].corners,
                          ((0, 70), (639, 70), (639, 150), (0, 150)))
 
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
+    def test_im01_second_zplane_independent_png_json_story_and_scummc(self):
+        from PIL import Image
+        from adventure_studio.studio_sequences import import_object_zplane
+
+        raw = canonical_json(GameDocument(
+            "im01_zp02", (scrolling_fixture(), destination_fixture())))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            first = root / "im01-zp01.png"
+            second = root / "im01-zp02.png"
+            Image.new("L", (16, 16), 0).save(first)
+            Image.new("L", (16, 16), 255).save(second)
+            with self.assertRaisesRegex(ValueError, "zunächst ZP01"):
+                import_object_zplane(raw, "Harbor", "Door", str(second), 1, 2)
+            first_json = import_object_zplane(raw, "Harbor", "Door", str(first), 1)
+            final_json = import_object_zplane(first_json, "Harbor", "Door", str(second), 1, 2)
+            Image.new("L", (16, 16), 0).save(second)
+            with self.assertRaisesRegex(ValueError, "nur für das Grundbild"):
+                import_object_zplane(final_json, "Harbor", "Door", str(second), 2, 2)
+            document = parse_document(final_json)
+            hotspot = next(h for h in document.rooms[0].hotspots if h.id == "Door")
+            self.assertEqual(hotspot.object_zplane_pixels, bytes(256))
+            self.assertEqual(hotspot.object_zplane2_pixels, bytes([1]) * 256)
+            self.assertIsNone(hotspot.open_object_zplane_pixels)
+            saved = parse_document(canonical_json(document))
+            self.assertEqual(saved.rooms[0].hotspots[1].object_zplane2_pixels, bytes([1]) * 256)
+            story = (Path(__file__).resolve().parents[1] / "examples" / "mini_story_chain.json").read_text()
+            composed = parse_document(compose_story_project(story, final_json))
+            door = next(h for r in composed.rooms if r.name == "Harbor"
+                        for h in r.hotspots if h.id == "Door")
+            self.assertEqual(door.object_zplane2_pixels, bytes([1]) * 256)
+            write_room_sources(composed.rooms[0], root)
+            script = (root / "Harbor.scc").read_text()
+            self.assertIn('"DoorZ01.bmp", "DoorZ02.bmp"', script)
+            self.assertTrue((root / "DoorZ01.bmp").is_file())
+            self.assertTrue((root / "DoorZ02.bmp").is_file())
+            no_second = parse_document(first_json)
+            self.assertIsNone(no_second.rooms[0].hotspots[1].object_zplane2_pixels)
+            with self.assertRaisesRegex(ValueError, "binary"):
+                broken = replace(hotspot, object_zplane2_pixels=bytes([2]) * 256)
+                write_room_sources(replace(document.rooms[0], hotspots=(
+                    document.rooms[0].hotspots[0], broken)), root / "invalid")
+
     def test_free_walkbox_polygon_authors_json_and_boxd(self):
         room = scrolling_fixture()
         raw = canonical_json(GameDocument("walkbox", (room, destination_fixture())))

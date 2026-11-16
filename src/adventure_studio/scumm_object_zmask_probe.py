@@ -7,7 +7,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-from .scumm_assets import RoomHotspot, destination_fixture
+from .scumm_assets import RoomHotspot, ZPlane, destination_fixture
 from .scumm_project import GameDocument, canonical_json, parse_document
 from .scumm_room_fixture import native_room
 from .scumm_room_visual_probe import render_native_room
@@ -81,7 +81,56 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
             "Native OBIM/IM02 second-state object Z-mask did not occlude actor: "
             f"clear={second_clear}, masked={second_masked}"
         )
+    # R07.3: two separate IM01 ZPxx planes, composed in the actual
+    # ScummC object sprite, against transparent and wrong-BOXD-index games.
+    # Keep the room's own ZP02 transparent to isolate object-image masking.
+    mask_room = replace(
+        room, zplanes=(room.zplanes[0],
+                        ZPlane(2, bytes(room.geometry.room_width * room.geometry.room_height))),
+        walkboxes=(room.walkboxes[0], replace(room.walkboxes[1], mask=2)))
+    z02_base = canonical_json(GameDocument(
+        "im01_second_zplane", (mask_room, destination_fixture())))
+    Image.new("L", (64, 48), 0).save(first_mask)
+    z02_base = import_object_zplane(z02_base, "Harbor", "Curtain", str(first_mask), 1)
+    two_planes = {}
+    for label, level, actor_mask in (("im01-zp02-masked", 255, 2),
+                                     ("im01-zp02-clear", 0, 2),
+                                     ("im01-zp02-wrongbox", 255, 1)):
+        Image.new("L", (64, 48), level).save(png)
+        raw = import_object_zplane(z02_base, "Harbor", "Curtain", str(png), 1, 2)
+        document = parse_document(raw)
+        authored = document.rooms[0]
+        if actor_mask == 1:
+            authored = replace(authored, walkboxes=(
+                authored.walkboxes[0], replace(authored.walkboxes[1], mask=1)))
+        # Store the exact final Studio project used by ScummC, including the
+        # negative control's changed BOXD index, never an earlier pre-edit JSON.
+        project = canonical_json(replace(document, rooms=(authored, *document.rooms[1:])))
+        (destination / f"{label}-project.json").write_text(project, encoding="utf-8")
+        if parse_document(project).rooms[0].walkboxes != authored.walkboxes:
+            raise RuntimeError("Object ZP02 negative-control JSON differs from linked BOXD")
+        obj = next(h for h in authored.hotspots if h.id == "Curtain")
+        if obj.object_zplane_pixels != bytes(64 * 48):
+            raise RuntimeError("IM01 ZP02 PNG import altered independent ZP01")
+        if obj.object_zplane2_pixels != bytes([int(level != 0)]) * (64 * 48):
+            raise RuntimeError("IM01 ZP02 PNG lost in JSON roundtrip")
+        two_planes[label] = render_native_room(
+            authored, upstream, generated, destination, label)
+    layer2_masked = two_planes["im01-zp02-masked"]["dark_costume_pixels"]
+    layer2_clear = two_planes["im01-zp02-clear"]["dark_costume_pixels"]
+    layer2_wrong = two_planes["im01-zp02-wrongbox"]["dark_costume_pixels"]
+    if min(layer2_clear, layer2_wrong) < 100 or layer2_masked > min(layer2_clear, layer2_wrong) // 3:
+        raise RuntimeError(
+            f"IM01 ZP02 native actor occlusion failed: layer2_masked={layer2_masked}, "
+            f"transparent={layer2_clear}, wrongbox={layer2_wrong}")
     report = {
+        "im01_second_zplane": {
+            "variants": two_planes,
+            "masked_actor_pixels": layer2_masked,
+            "transparent_actor_pixels": layer2_clear,
+            "wrongbox_actor_pixels": layer2_wrong,
+            "native_im01_zp02_passed": True,
+        },
         "authoring": "Studio PNG -> project JSON -> object states IM01 ZP01 -> stock ScummVM",
         "variants": variants,
         "second_image_state": {
