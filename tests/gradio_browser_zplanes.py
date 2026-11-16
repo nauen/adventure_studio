@@ -65,16 +65,20 @@ def main() -> None:
                 page.locator("#native-zplane-box-add").click()
                 expect(report).to_have_value(re.compile(r"Walkbox 2 verwendet Z-Ebene 2"),
                                              timeout=30000)
-                page.locator("#native-camera-ego-x input").fill("390")
-                page.locator("#native-camera-ego-y input").fill("100")
-                page.locator("#native-camera-cues textarea").fill(
-                    "set:160;hold:120;pan:480;wait;pan:160;wait")
-                # An imported legacy room still has its demo walk. The user
-                # explicitly switches to stationary mode before saving.
+                # Finish the preceding state-driven form refresh before editing.
+                # The imported project initially retains its demo actor walk.
                 stationary = page.locator("#native-camera-stationary input")
                 expect(stationary).not_to_be_checked()
                 stationary.check()
                 expect(stationary).to_be_checked()
+                page.locator("#native-camera-ego-x input").fill("390")
+                page.locator("#native-camera-ego-y input").fill("100")
+                page.locator("#native-camera-cues textarea").fill(
+                    "set:160;hold:120;pan:480;wait;pan:160;wait")
+                expect(page.locator("#native-camera-ego-x input")).to_have_value("390")
+                expect(page.locator("#native-camera-ego-y input")).to_have_value("100")
+                expect(page.locator("#native-camera-cues textarea")).to_have_value(
+                    "set:160;hold:120;pan:480;wait;pan:160;wait")
                 page.locator("#native-camera-add").click()
                 expect(report).to_have_value(re.compile(r"Ego-Weltstart und native Kamerafolge"),
                                              timeout=30000)
@@ -92,7 +96,7 @@ def main() -> None:
                 assert sum(exported.zplanes[0].pixels) == 0
                 assert sum(exported.zplanes[1].pixels) > 0
                 assert exported.box_routes == room.box_routes
-                assert (exported.ego_start_x, exported.ego_start_y) == (390, 100)
+                assert (exported.ego_start_x, exported.ego_start_y) == (390, 100), (\n                    exported.ego_start_x, exported.ego_start_y)
                 assert exported.demo_walk_to_x is None
                 assert [(cue.operation, cue.x) for cue in exported.camera_cues] == [
                     ("set", 160), ("hold", None), ("pan", 480),
