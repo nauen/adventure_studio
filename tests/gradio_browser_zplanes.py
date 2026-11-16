@@ -69,7 +69,12 @@ def main() -> None:
                 page.locator("#native-camera-ego-y input").fill("100")
                 page.locator("#native-camera-cues textarea").fill(
                     "set:160;hold:120;pan:480;wait;pan:160;wait")
-                expect(page.locator("#native-camera-stationary input")).to_be_checked()
+                # An imported legacy room still has its demo walk. The user
+                # explicitly switches to stationary mode before saving.
+                stationary = page.locator("#native-camera-stationary input")
+                expect(stationary).not_to_be_checked()
+                stationary.check()
+                expect(stationary).to_be_checked()
                 page.locator("#native-camera-add").click()
                 expect(report).to_have_value(re.compile(r"Ego-Weltstart und native Kamerafolge"),
                                              timeout=30000)
