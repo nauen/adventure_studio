@@ -98,11 +98,17 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
                                      ("im01-zp02-wrongbox", 255, 1)):
         Image.new("L", (64, 48), level).save(png)
         raw = import_object_zplane(z02_base, "Harbor", "Curtain", str(png), 1, 2)
-        (destination / f"{label}-project.json").write_text(raw, encoding="utf-8")
-        authored = parse_document(raw).rooms[0]
+        document = parse_document(raw)
+        authored = document.rooms[0]
         if actor_mask == 1:
             authored = replace(authored, walkboxes=(
                 authored.walkboxes[0], replace(authored.walkboxes[1], mask=1)))
+        # Store the exact final Studio project used by ScummC, including the
+        # negative control's changed BOXD index, never an earlier pre-edit JSON.
+        project = canonical_json(replace(document, rooms=(authored, *document.rooms[1:])))
+        (destination / f"{label}-project.json").write_text(project, encoding="utf-8")
+        if parse_document(project).rooms[0].walkboxes != authored.walkboxes:
+            raise RuntimeError("Object ZP02 negative-control JSON differs from linked BOXD")
         obj = next(h for h in authored.hotspots if h.id == "Curtain")
         if obj.object_zplane_pixels != bytes(64 * 48):
             raise RuntimeError("IM01 ZP02 PNG import altered independent ZP01")
