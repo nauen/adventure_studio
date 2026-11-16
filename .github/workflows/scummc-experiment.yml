@@ -454,7 +454,7 @@ jobs:
             /tmp/native-four-simultaneous-zplanes/*-screenshots/scummvm-*.png
             /tmp/native-four-simultaneous-zplanes/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
-      - name: Verify Studio-authored object IM01 and second-state IM02 Z-masks in stock ScummVM
+      - name: Verify Studio-authored object IM01 ZP01/ZP02 and second-state IM02 in stock ScummVM
         env:
           PYTHONPATH: src
         run: |
@@ -468,6 +468,11 @@ jobs:
           path: |
             /tmp/native-object-zmask/object-zmask-report.json
             /tmp/native-object-zmask/*-project.json
+            /tmp/native-object-zmask/*/Harbor.scc
+            /tmp/native-object-zmask/*/CurtainZ01.bmp
+            /tmp/native-object-zmask/*/CurtainZ02.bmp
+            /tmp/native-object-zmask/*/tentacle.000
+            /tmp/native-object-zmask/*/tentacle.001
             /tmp/native-object-zmask/*-screenshots/scummvm-end.png
             /tmp/native-object-zmask/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore

@@ -100,10 +100,39 @@ def main() -> None:
                            for h in room.hotspots if h.id == "Door")
                 assert obj.object_zplane_pixels == bytes([1]) * 256
                 assert obj.open_object_zplane_pixels == bytes(256)
+                # R07.3: choose base IM01 again and author an independent ZP02
+                # on the same object; preserve the previously authored IM02.
+                state_selection.click()
+                page.get_by_role("option", name="Grundbild (1)", exact=True).click(timeout=12000)
+                layer_selection = page.locator("#native-object-zplane-layer input[role=combobox]")
+                layer_selection.click()
+                page.get_by_role("option", name="ZP02 (2, nur Grundbild)", exact=True).click(timeout=12000)
+                with page.expect_file_chooser() as zp02_chooser:
+                    page.locator("#native-object-zplane-file").click()
+                zp02_chooser.value.set_files(str(mask))
+                page.locator("#native-object-zplane-add").click()
+                expect(report).to_have_value(re.compile(r"IM01 ZP02 importiert"),
+                                             timeout=30000)
+                page.locator("#native-project-export-button").click()
+                final_link = page.locator("#native-project-export-file a[download]")
+                expect(final_link.first).to_be_visible(timeout=30000)
+                with page.expect_download() as zp02_download:
+                    final_link.first.click()
+                zp02_saved = evidence / "authored-im01-two-zplanes.json"
+                zp02_download.value.save_as(str(zp02_saved))
+                merged = next(h for r in parse_document(zp02_saved.read_text()).rooms
+                              if r.name == "Harbor" for h in r.hotspots if h.id == "Door")
+                assert merged.object_zplane_pixels == bytes([1]) * 256
+                assert merged.object_zplane2_pixels == bytes([1]) * 256
+                assert merged.open_object_zplane_pixels == bytes(256)
+                page.screenshot(path=str(evidence / "authored-im01-zp02.png"),
+                                full_page=True)
                 page.screenshot(path=str(evidence / "authored-object-zmask.png"),
                                 full_page=True)
                 (evidence / "result.json").write_text(json.dumps(
-                    {"real_chrome_object_zmask": True, "object": "Door"},
+                    {"real_chrome_object_zmask": True,
+                     "real_chrome_im01_zp02": True,
+                     "im02_mask_preserved": True, "object": "Door"},
                     indent=2) + "\n", encoding="utf-8")
             except Exception:
                 if not page.is_closed():
