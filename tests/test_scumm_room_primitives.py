@@ -94,7 +94,7 @@ class RoomNativePrimitiveTests(unittest.TestCase):
         self.assertEqual(parse_document(authored).rooms[0].walkboxes[0].corners, triangle)
         self.assertEqual(parse_document(canonical_json(parse_document(authored)))
                          .rooms[0].walkboxes[0].corners, triangle)
-        story = (Path(__file__).parent / "fixtures" / "mini_story_chain.json").read_text()
+        story = (Path(__file__).resolve().parents[1] / "examples" / "mini_story_chain.json").read_text()
         composed = parse_document(compose_story_project(story, authored))
         harbor = next(item for item in composed.rooms if item.name == "Harbor")
         self.assertEqual(harbor.walkboxes[0].corners, triangle)
