@@ -94,11 +94,34 @@ def main() -> None:
                 assert room.box_routes[2][1] == 1
                 assert room.box_routes[1][3] == 2
                 assert room.box_routes[3][1] == 2
+                # The triangle replaces only the connected third box.
+                # Existing BOXM next hops must survive the real browser export.
+                corners.fill("240,70; 639,100; 240,150")
+                page.locator("#native-walkbox-add").click()
+                expect(report).to_have_value(re.compile(r"Walkbox 3.*gespeichert"),
+                                             timeout=30000)
+                page.locator("#native-project-export-button").click()
+                triangle_link = page.locator("#native-project-export-file a[download]")
+                expect(triangle_link.first).to_be_visible(timeout=30000)
+                with page.expect_download() as triangle_download:
+                    triangle_link.first.click()
+                triangle_file = evidence / "triangle-connected-project.json"
+                triangle_download.value.save_as(str(triangle_file))
+                triangle_room = next(item for item in
+                                     parse_document(triangle_file.read_text()).rooms
+                                     if item.name == "Harbor")
+                assert triangle_room.walkboxes[2].corners == (
+                    (240, 70), (639, 100), (240, 150), (240, 150))
+                assert triangle_room.box_routes == room.box_routes
+                page.screenshot(path=str(evidence / "authored-triangle.png"),
+                                full_page=True)
                 page.screenshot(path=str(evidence / "authored-boxm.png"), full_page=True)
                 (evidence / "result.json").write_text(
                     json.dumps({"boxm_studio_roundtrip": True,
                                 "existing_routes_preserved_on_append": True,
                                 "new_route_connected_explicitly": True,
+                                "triangle_studio_json_roundtrip": True,
+                                "triangle_preserves_connected_boxm": True,
                                 "routes": [list(row) for row in room.box_routes]},
                                sort_keys=True, indent=2) + "\n", encoding="utf-8")
                 print("Native BOXM Studio click-path and JSON roundtrip passed")

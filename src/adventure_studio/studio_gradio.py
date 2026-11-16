@@ -887,10 +887,10 @@ def make_app():
                 native_object_zplane_state = gr.Dropdown(label="Objektbildzustand", choices=[("Grundbild (1)", 1), ("Offenes Bild (2)", 2)], value=1, elem_id="native-object-zplane-state")
                 native_object_zplane_file = gr.File(label="Objekt-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-object-zplane-file")
                 native_object_zplane_add = gr.Button("Objekt-Z-Maske übernehmen", elem_id="native-object-zplane-add")
-            gr.Markdown("**Native Laufbereiche (BOXD):** Vier Eckpunkte im Uhrzeigersinn als UL;UR;LR;LL eingeben, z. B. `0,70; 120,70; 120,150; 0,150`. Vorhandene Walkboxen bleiben inklusive ihrer Wege/Skalierung erhalten; neue Boxen benötigen später eine gesonderte BOXM-Verbindung, wenn bereits Routen existieren.")
+            gr.Markdown("**Native Laufbereiche (BOXD):** Drei (Dreieck) oder vier (Viereck) Eckpunkte im Uhrzeigersinn eingeben, z. B. `0,70; 120,70; 120,150; 0,150`. Vorhandene Walkboxen bleiben inklusive ihrer Wege/Skalierung erhalten; neue Boxen benötigen später eine gesonderte BOXM-Verbindung, wenn bereits Routen existieren.")
             with gr.Row():
                 native_walkbox_index = gr.Number(label="Walkbox-Nummer (1–254)", value=1, precision=0, elem_id="native-walkbox-index")
-                native_walkbox_corners = gr.Textbox(label="Eckpunkte UL;UR;LR;LL", value="0,70; 120,70; 120,150; 0,150", elem_id="native-walkbox-corners")
+                native_walkbox_corners = gr.Textbox(label="3 oder 4 Eckpunkte im Uhrzeigersinn", value="0,70; 120,70; 120,150; 0,150", elem_id="native-walkbox-corners")
                 native_walkbox_add = gr.Button("Walkbox ins native Projekt übernehmen", elem_id="native-walkbox-add")
             gr.Markdown("**Z-Ebene pro Walkbox:** Nach dem PNG-Import eine vorhandene Z-Ebene "
                         "1–9 einer Walkbox zuweisen. Wert 0 deaktiviert die Verdeckung für "

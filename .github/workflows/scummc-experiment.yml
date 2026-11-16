@@ -16,6 +16,8 @@ on:
       - 'src/adventure_studio/story_to_scumm.py'
       - 'tests/test_story_to_scumm.py'
       - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
+      - 'src/adventure_studio/scumm_triangle_walkbox_probe.py'
+      - 'tests/test_scumm_triangle_walkbox_probe.py'
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_dynamic_walkbox_gate_probe.py'
       - 'src/adventure_studio/scumm_independent_gate_chain_probe.py'
@@ -47,6 +49,8 @@ on:
       - 'src/adventure_studio/scumm_room_fixture.py'
       - 'src/adventure_studio/scumm_room_visual_probe.py'
       - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
+      - 'src/adventure_studio/scumm_triangle_walkbox_probe.py'
+      - 'tests/test_scumm_triangle_walkbox_probe.py'
       - 'src/adventure_studio/scumm_boxm_routing_probe.py'
       - 'src/adventure_studio/scumm_dynamic_walkbox_gate_probe.py'
       - 'src/adventure_studio/scumm_independent_gate_chain_probe.py'
@@ -240,6 +244,27 @@ jobs:
             /tmp/native-r06-camera-zp01/*-screenshots/scummvm-*.png
             /tmp/native-r06-camera-zp01/*-screenshots/camera-frame-times.json
             /tmp/native-r06-camera-zp01/*-screenshots/scummvm-launch.log
+          if-no-files-found: ignore
+      - name: Verify R08 triangle BOXD walking boundary in stock ScummVM
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_triangle_walkbox_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r08-triangle-walkbox
+      - name: Retain native R08 triangle gameplay and rectangular control
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r08-triangle-walkbox
+          path: |
+            /tmp/native-r08-triangle-walkbox/native-r08-triangle-walkbox-report.json
+            /tmp/native-r08-triangle-walkbox/*-project.json
+            /tmp/native-r08-triangle-walkbox/*/Harbor.box
+            /tmp/native-r08-triangle-walkbox/*/Harbor.scc
+            /tmp/native-r08-triangle-walkbox/*/tentacle.000
+            /tmp/native-r08-triangle-walkbox/*/tentacle.001
+            /tmp/native-r08-triangle-walkbox/*-screenshots/scummvm-*.png
+            /tmp/native-r08-triangle-walkbox/*-screenshots/scummvm-*.json
+            /tmp/native-r08-triangle-walkbox/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
       - name: Play two independent native door gates and compare Actor routes with control
         env:
