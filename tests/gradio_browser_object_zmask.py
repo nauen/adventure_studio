@@ -104,9 +104,12 @@ def main() -> None:
                 # on the same object; preserve the previously authored IM02.
                 state_selection.click()
                 page.get_by_role("option", name="Grundbild (1)", exact=True).click(timeout=12000)
+                expect(state_selection).to_have_value("Grundbild (1)", timeout=12000)
                 layer_selection = page.locator("#native-object-zplane-layer input[role=combobox]")
                 layer_selection.click()
                 page.get_by_role("option", name="ZP02 (2, nur Grundbild)", exact=True).click(timeout=12000)
+                expect(layer_selection).to_have_value("ZP02 (2, nur Grundbild)",
+                                                      timeout=12000)
                 # Gradio swaps its upload input for a selected-file preview.
                 # The user must clear the previous PNG before selecting ZP02.
                 clear_upload = page.locator(
