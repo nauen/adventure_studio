@@ -107,9 +107,11 @@ def main() -> None:
                 layer_selection = page.locator("#native-object-zplane-layer input[role=combobox]")
                 layer_selection.click()
                 page.get_by_role("option", name="ZP02 (2, nur Grundbild)", exact=True).click(timeout=12000)
-                with page.expect_file_chooser() as zp02_chooser:
-                    page.locator("#native-object-zplane-file").click()
-                zp02_chooser.value.set_files(str(mask))
+                # Gradio keeps the previous selected file in its upload preview.
+                # Set the underlying input directly; a third wrapper click can
+                # target that preview rather than opening a file chooser.
+                page.locator("#native-object-zplane-file input[type=file]").set_input_files(
+                    str(mask))
                 page.locator("#native-object-zplane-add").click()
                 expect(report).to_have_value(re.compile(r"IM01 ZP02 importiert"),
                                              timeout=30000)
