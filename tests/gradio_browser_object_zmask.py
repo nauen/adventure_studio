@@ -100,25 +100,30 @@ def main() -> None:
                            for h in room.hotspots if h.id == "Door")
                 assert obj.object_zplane_pixels == bytes([1]) * 256
                 assert obj.open_object_zplane_pixels == bytes(256)
-                # R07.3: choose base IM01 again and author an independent ZP02
-                # on the same object; preserve the previously authored IM02.
-                state_selection.click()
-                page.get_by_role("option", name="Grundbild (1)", exact=True).click(timeout=12000)
+                # R07.3: a fresh editor session must reimport both existing
+                # image-state masks and allow a new independently chosen IM01
+                # ZP02 through the real upload control.
+                page.goto("http://127.0.0.1:7860/", wait_until="domcontentloaded",
+                          timeout=30000)
+                page.get_by_role("tab", name="Native Interaktionsabläufe").click()
+                page.locator("#native-project-file input[type=file]").set_input_files(str(saved))
+                report = page.locator("#native-project-report textarea, #native-project-report input")
+                expect(report).to_have_value("Natives Projekt geladen und validiert",
+                                             timeout=30000)
+                selection = page.locator("#native-hotspot input[role=combobox]")
+                selection.click()
+                selection.fill("Door")
+                page.get_by_role("option", name="Door", exact=True).click(timeout=12000)
+                state_selection = page.locator("#native-object-zplane-state input[role=combobox]")
                 expect(state_selection).to_have_value("Grundbild (1)", timeout=12000)
                 layer_selection = page.locator("#native-object-zplane-layer input[role=combobox]")
                 layer_selection.click()
                 page.get_by_role("option", name="ZP02 (2, nur Grundbild)", exact=True).click(timeout=12000)
                 expect(layer_selection).to_have_value("ZP02 (2, nur Grundbild)",
                                                       timeout=12000)
-                # Gradio swaps its upload input for a selected-file preview.
-                # The user must clear the previous PNG before selecting ZP02.
-                clear_upload = page.locator(
-                    "#native-object-zplane-file button[aria-label='Clear']")
-                expect(clear_upload).to_be_visible(timeout=15000)
-                clear_upload.click()
-                upload = page.locator("#native-object-zplane-file input[type=file]")
-                expect(upload).to_have_count(1, timeout=15000)
-                upload.set_input_files(str(mask))
+                with page.expect_file_chooser() as zp02_chooser:
+                    page.locator("#native-object-zplane-file").click()
+                zp02_chooser.value.set_files(str(mask))
                 page.locator("#native-object-zplane-add").click()
                 expect(report).to_have_value(re.compile(r"IM01 ZP02 importiert"),
                                              timeout=30000)
