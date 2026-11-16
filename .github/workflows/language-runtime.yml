@@ -1,27 +1,11 @@
 name: SCUMM v6 multilingual gameplay probe
 
 on:
-  # Full VM/download-heavy checks only after a draft is marked ready.
-  # A subsequent commit to a ready PR must be fully revalidated.
+  workflow_call:
   workflow_dispatch:
-  pull_request:
-    types: [ready_for_review, synchronize]
-    paths:
-      - '.github/workflows/language-runtime.yml'
-      - 'src/adventure_studio/scumm_bootstrap.py'
-      - 'src/adventure_studio/scumm_toolchain.py'
-      - 'src/adventure_studio/scumm_font.py'
-      - 'src/adventure_studio/scumm_language_package.py'
-      - 'src/adventure_studio/scumm_language_runtime_probe.py'
-      - 'src/adventure_studio/scumm_save_load_probe.py'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 
 jobs:
   language:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
