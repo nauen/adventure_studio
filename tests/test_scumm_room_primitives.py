@@ -85,6 +85,34 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "exakt"):
                 import_object_zplane(first, "Harbor", "Door", str(png), 2)
 
+    def test_triangle_walkbox_roundtrip_story_and_native_boxd(self):
+        room = scrolling_fixture()
+        raw = canonical_json(GameDocument("triangle_walkbox", (room, destination_fixture())))
+        authored = author_room_walkbox(raw, "Harbor", 1,
+                                      "0,70; 639,100; 0,150")
+        triangle = ((0, 70), (639, 100), (0, 150), (0, 150))
+        self.assertEqual(parse_document(authored).rooms[0].walkboxes[0].corners, triangle)
+        self.assertEqual(parse_document(canonical_json(parse_document(authored)))
+                         .rooms[0].walkboxes[0].corners, triangle)
+        story = (Path(__file__).parent / "fixtures" / "mini_story_chain.json").read_text()
+        composed = parse_document(compose_story_project(story, authored))
+        harbor = next(item for item in composed.rooms if item.name == "Harbor")
+        self.assertEqual(harbor.walkboxes[0].corners, triangle)
+        with tempfile.TemporaryDirectory() as directory:
+            write_room_sources(harbor, Path(directory))
+            payload = (Path(directory) / "Harbor.box").read_bytes()
+            self.assertEqual(struct.unpack_from("<8h", payload, 9),
+                             (0, 70, 639, 100, 0, 150, 0, 150))
+        for bad in ("0,70; 639,100", "0,70; 110,100; 220,130",
+                    "0,70; 0,150; 639,100", "0,70; 640,100; 0,150",
+                    "0,70; 639,100; 0,70"):
+            with self.subTest(corners=bad), self.assertRaises(ValueError):
+                author_room_walkbox(raw, "Harbor", 1, bad)
+        rectangle = author_room_walkbox(raw, "Harbor", 1,
+                                         "0,70; 639,70; 639,150; 0,150")
+        self.assertEqual(parse_document(rectangle).rooms[0].walkboxes[0].corners,
+                         ((0, 70), (639, 70), (639, 150), (0, 150)))
+
     def test_free_walkbox_polygon_authors_json_and_boxd(self):
         room = scrolling_fixture()
         raw = canonical_json(GameDocument("walkbox", (room, destination_fixture())))

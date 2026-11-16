@@ -95,24 +95,29 @@ def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str)
     if index > len(room.walkboxes) + 1:
         raise ValueError("Walkboxen müssen lückenlos ab 1 angelegt werden")
     parts = [part.strip() for part in corners_text.split(";")]
-    if len(parts) != 4:
-        raise ValueError("Vier Eckpunkte in der Reihenfolge UL;UR;LR;LL erforderlich")
+    if len(parts) not in (3, 4):
+        raise ValueError("Drei oder vier Eckpunkte im Uhrzeigersinn erforderlich")
     points = []
     for part in parts:
         if not re.fullmatch(r"\d+\s*,\s*\d+", part):
-            raise ValueError("Eckpunkte als x,y; x,y; x,y; x,y eingeben")
+            raise ValueError("Eckpunkte als x,y; x,y; x,y (optional x,y) eingeben")
         points.append(tuple(int(value.strip()) for value in part.split(",")))
     width, height = room.geometry.room_width, room.geometry.room_height
     if any(not 0 <= x < width or not 0 <= y < height for x, y in points):
         raise ValueError(f"Walkbox-Eckpunkte müssen innerhalb {width} × {height} liegen")
+    count = len(points)
     turns = []
-    for i in range(4):
+    for i in range(count):
         x1, y1 = points[i]
-        x2, y2 = points[(i + 1) % 4]
-        x3, y3 = points[(i + 2) % 4]
+        x2, y2 = points[(i + 1) % count]
+        x3, y3 = points[(i + 2) % count]
         turns.append((x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2))
     if any(turn <= 0 for turn in turns):
-        raise ValueError("Walkbox muss ein nicht entartetes, konvexes Polygon in UL/UR/LR/LL-Reihenfolge sein")
+        raise ValueError("Walkbox muss ein nicht entartetes, konvexes Polygon im Uhrzeigersinn sein")
+    if count == 3:
+        # SCUMM v6 BOXD always stores four vertices. Repeat the last triangle
+        # vertex rather than silently extending the authored walking area.
+        points.append(points[-1])
     boxes = list(room.walkboxes)
     if index <= len(boxes):
         boxes[index - 1] = replace(boxes[index - 1], corners=tuple(points))
