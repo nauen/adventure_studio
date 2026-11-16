@@ -96,7 +96,8 @@ def main() -> None:
                 assert sum(exported.zplanes[0].pixels) == 0
                 assert sum(exported.zplanes[1].pixels) > 0
                 assert exported.box_routes == room.box_routes
-                assert (exported.ego_start_x, exported.ego_start_y) == (390, 100), (\n                    exported.ego_start_x, exported.ego_start_y)
+                assert (exported.ego_start_x, exported.ego_start_y) == (390, 100), (
+                    exported.ego_start_x, exported.ego_start_y)
                 assert exported.demo_walk_to_x is None
                 assert [(cue.operation, cue.x) for cue in exported.camera_cues] == [
                     ("set", 160), ("hold", None), ("pan", 480),
