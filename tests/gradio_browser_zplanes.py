@@ -106,7 +106,15 @@ def main() -> None:
 
                 # Reopen the *exported* JSON in the actual Studio UI. The
                 # editor must restore stored camera fields, not demo defaults.
-                page.locator("#native-project-file input[type=file]").set_input_files(str(saved))
+                # Gradio replaces the uploader dropzone with a file row
+                # after the first import. Clear it before selecting the
+                # downloaded project again through the real browser UI.
+                page.locator("#native-project-file").locator("button").last.click()
+                expect(page.locator("#native-project-file")).to_contain_text(
+                    "Click to Upload")
+                with page.expect_file_chooser() as chooser:
+                    page.locator("#native-project-file").click()
+                chooser.value.set_files(str(saved))
                 expect(report).to_have_value("Natives Projekt geladen und validiert",
                                              timeout=30000)
                 expect(page.locator("#native-camera-ego-x input")).to_have_value("390",
