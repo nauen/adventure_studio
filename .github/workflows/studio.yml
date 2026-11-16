@@ -1,40 +1,11 @@
 name: Gradio Studio UI smoke
 
 on:
+  # Full VM/download-heavy checks only after a draft is marked ready.
+  # A subsequent commit to a ready PR must be fully revalidated.
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/studio.yml'
-      - '.devcontainer/devcontainer.json'
-      - '.devcontainer/start-studio.sh'
-      - '.devcontainer/setup.sh'
-      - '.devcontainer/install-scummc.sh'
-      - 'pyproject.toml'
-      - 'src/adventure_studio/studio_service.py'
-      - 'src/adventure_studio/story_ai.py'
-      - 'src/adventure_studio/studio_catalog.py'
-      - 'src/adventure_studio/ai_provider.py'
-      - 'src/adventure_studio/story_protocol.py'
-      - 'src/adventure_studio/story.py'
-      - 'src/adventure_studio/story_document.py'
-      - 'src/adventure_studio/story_changes.py'
-      - 'src/adventure_studio/studio_export.py'
-      - 'src/adventure_studio/studio_gradio.py'
-      - 'src/adventure_studio/studio_sequences.py'
-      - 'tests/test_studio_service.py'
-      - 'tests/test_story_ai.py'
-      - 'tests/test_studio_catalog.py'
-      - 'tests/test_story_protocol.py'
-      - 'tests/test_story_v4.py'
-      - 'tests/test_studio_export.py'
-      - 'tests/test_studio_position.py'
-      - 'tests/test_dialogue_animation.py'
-      - 'tests/gradio_browser_dialogue.py'
-      - 'tests/gradio_browser_boxm.py'
-      - 'tests/gradio_browser_scal.py'
-      - 'tests/gradio_browser_zplanes.py'
-      - 'tests/gradio_browser_object_zmask.py'
   pull_request:
+    types: [ready_for_review, synchronize]
     paths:
       - '.github/workflows/studio.yml'
       - '.devcontainer/devcontainer.json'
@@ -67,8 +38,13 @@ on:
       - 'tests/gradio_browser_zplanes.py'
       - 'tests/gradio_browser_object_zmask.py'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
     # Full Chrome regression includes the existing long NPC dialogue suite after BOXM.
     # Preserve all assertions; allow sufficient wall time for slower CI runners.

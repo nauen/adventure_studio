@@ -3,8 +3,11 @@ name: Experimental SCUMM v6 compatibility probe
 # Experimental: upstream ScummC's detection in stock ScummVM is unproven.
 # Run for probe changes only; a red run is research, not a release regression.
 on:
+  # Full VM/download-heavy checks only after a draft is marked ready.
+  # A subsequent commit to a ready PR must be fully revalidated.
   workflow_dispatch:
   pull_request:
+    types: [ready_for_review, synchronize]
     paths:
       - '.github/workflows/scummc-experiment.yml'
       - 'src/adventure_studio/scumm_sound_effect_probe.py'
@@ -36,92 +39,14 @@ on:
       - 'tests/gradio_browser_zplanes.py'
       - 'tests/test_scumm_camera_cues.py'
       - 'tests/test_scumm_camera_zp01_probe.py'
-  push:
-    paths:
-      - '.github/workflows/scummc-experiment.yml'
-      # Final R06/R09 evidence and acceptance documentation must not skip
-      # the native push gate merely because the last commit is documentation-only.
-      - 'docs/PROJECT_STATUS.md'
-      - 'docs/roadmap.md'
-      - 'docs/SCUMM_V6_CAPABILITIES.md'
-      - 'src/adventure_studio/scumm_assets.py'
-      - 'src/adventure_studio/scumm_binary.py'
-      - 'src/adventure_studio/scumm_room_fixture.py'
-      - 'src/adventure_studio/scumm_room_visual_probe.py'
-      - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
-      - 'src/adventure_studio/scumm_triangle_walkbox_probe.py'
-      - 'tests/test_scumm_triangle_walkbox_probe.py'
-      - 'src/adventure_studio/scumm_boxm_routing_probe.py'
-      - 'src/adventure_studio/scumm_dynamic_walkbox_gate_probe.py'
-      - 'src/adventure_studio/scumm_independent_gate_chain_probe.py'
-      - 'src/adventure_studio/scumm_same_room_gate_probe.py'
-      - 'tests/test_scumm_same_room_gate_probe.py'
-      - 'src/adventure_studio/scumm_walkbox_save_probe.py'
-      - 'tests/test_scumm_walkbox_save_probe.py'
-      - 'src/adventure_studio/scumm_authored_scal_probe.py'
-      - 'src/adventure_studio/scumm_multi_zplane_probe.py'
-      - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
-      - 'src/adventure_studio/scumm_object_zmask_probe.py'
-      - 'src/adventure_studio/scumm_scal_probe.py'
-      - 'src/adventure_studio/scumm_camera_probe.py'
-      - 'src/adventure_studio/scumm_camera_zp01_probe.py'
-      - 'src/adventure_studio/studio_sequences.py'
-      - 'src/adventure_studio/studio_gradio.py'
-      - 'tests/gradio_browser_zplanes.py'
-      - 'src/adventure_studio/scumm_costume.py'
-      - 'src/adventure_studio/scumm_costume_probe.py'
-      - 'src/adventure_studio/scumm_actor_probe.py'
-      - 'src/adventure_studio/scumm_actor_sequence_probe.py'
-      - 'src/adventure_studio/scumm_studio_png_probe.py'
-      - 'src/adventure_studio/scumm_actor_save_probe.py'
-      - 'src/adventure_studio/palette_animation.py'
-      - 'src/adventure_studio/palette_demo.py'
-      - 'src/adventure_studio/scumm_palette_probe.py'
-      - 'src/adventure_studio/scumm_bootstrap.py'
-      - 'src/adventure_studio/scumm_probe.py'
-      - 'src/adventure_studio/scumm_launch.py'
-      - 'src/adventure_studio/scumm_project.py'
-      - 'src/adventure_studio/scumm_toolchain.py'
-      - 'src/adventure_studio/story_document.py'
-      - 'src/adventure_studio/story_to_scumm.py'
-      - 'src/adventure_studio/dialogue_demo.py'
-      - 'tests/test_story_v4.py'
-      - 'src/adventure_studio/music_demo.py'
-      - 'src/adventure_studio/music_transition_demo.py'
-      - 'src/adventure_studio/music_director.py'
-      - 'src/adventure_studio/scumm_audio_probe.py'
-      - 'examples/mini_story.json'
-      - 'examples/mini_story_two_items.json'
-      - 'examples/mini_story_three_items.json'
-      - 'examples/mini_story_chain.json'
-      - 'examples/recipe_story.json'
-      - 'examples/PLAY_STORY_PREVIEW.txt'
-      - 'examples/PLAY_MUSIC_TRANSITION.txt'
-      - 'tests/test_scumm_assets.py'
-      - 'tests/test_scumm_binary.py'
-      - 'tests/test_scumm_room_primitives.py'
-      - 'tests/test_scumm_scal_probe.py'
-      - 'tests/test_scumm_camera_cues.py'
-      - 'tests/test_scumm_camera_zp01_probe.py'
-      - 'tests/test_scumm_costume.py'
-      - 'tests/test_scumm_actor_bindings.py'
-      - 'tests/test_scumm_actor_save_probe.py'
-      - 'tests/test_palette_animation.py'
-      - 'tests/test_palette_demo.py'
-      - 'tests/test_scumm_palette_probe.py'
-      - 'tests/test_scumm_bootstrap.py'
-      - 'tests/test_scumm_probe.py'
-      - 'tests/test_scumm_launch.py'
-      - 'tests/test_story_document.py'
-      - 'tests/test_story_to_scumm.py'
-      - 'tests/test_scumm_toolchain.py'
-      - 'tests/test_music_demo.py'
-      - 'tests/test_music_transition_demo.py'
-      - 'tests/test_music_director.py'
-      - 'tests/test_scumm_audio_probe.py'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   probe:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
     # ScummVM pulls a large data package. The Ubuntu mirror occasionally
     # stalls; give the full job enough time while bounding the install step.

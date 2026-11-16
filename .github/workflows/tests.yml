@@ -1,11 +1,18 @@
 name: Adventure core tests
 
+# Fast, dependency-free checks on every commit. PRs from this repository
+# already execute these via push; external forks still get PR validation.
 on:
   push:
   pull_request:
 
+concurrency:
+  group: core-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   tests:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
