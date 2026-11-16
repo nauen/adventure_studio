@@ -123,7 +123,63 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
         raise RuntimeError(
             f"IM01 ZP02 native actor occlusion failed: layer2_masked={layer2_masked}, "
             f"transparent={layer2_clear}, wrongbox={layer2_wrong}")
+    # R07.4: export actual opened-state IM02 with independent ZP02.
+    # Both room planes transparent, so only the object IM02 mask can
+    # occlude an Actor assigned to BOX plane 2.
+    open_room = replace(
+        second_room, zplanes=(room.zplanes[0],
+                               ZPlane(2, bytes(room.geometry.room_width *
+                                               room.geometry.room_height))),
+        walkboxes=(room.walkboxes[0], replace(room.walkboxes[1], mask=2)))
+    open_project = canonical_json(GameDocument(
+        "im02_second_zplane", (open_room, destination_fixture())))
+    Image.new("L", (64, 48), 0).save(first_mask)
+    open_project = import_object_zplane(open_project, "Harbor", "Curtain",
+                                        str(first_mask), 1, 1)
+    open_project = import_object_zplane(open_project, "Harbor", "Curtain",
+                                        str(first_mask), 2, 1)
+    open_variants = {}
+    for label, level, box_mask in (("im02-zp02-masked", 255, 2),
+                                    ("im02-zp02-clear", 0, 2),
+                                    ("im02-zp02-wrongbox", 255, 1)):
+        Image.new("L", (64, 48), level).save(png)
+        edited = import_object_zplane(open_project, "Harbor", "Curtain",
+                                       str(png), 2, 2)
+        document = parse_document(edited)
+        authored = document.rooms[0]
+        if box_mask == 1:
+            authored = replace(authored, walkboxes=(
+                authored.walkboxes[0], replace(authored.walkboxes[1], mask=1)))
+        exact = canonical_json(replace(document, rooms=(authored, *document.rooms[1:])))
+        (destination / f"{label}-project.json").write_text(exact, encoding="utf-8")
+        authored = parse_document(exact).rooms[0]
+        obj = next(h for h in authored.hotspots if h.id == "Curtain")
+        if obj.open_object_zplane_pixels != bytes(64 * 48):
+            raise RuntimeError("IM02 ZP02 changed existing IM02 ZP01")
+        if obj.open_object_zplane2_pixels != bytes([int(level != 0)]) * (64 * 48):
+            raise RuntimeError("IM02 ZP02 lost in Studio JSON roundtrip")
+        if obj.object_zplane_pixels != bytes(64 * 48):
+            raise RuntimeError("IM02 ZP02 changed independent IM01 mask")
+        if authored.walkboxes[1].mask != box_mask:
+            raise RuntimeError("IM02 ZP02 control JSON differs from native BOXD")
+        open_variants[label] = render_native_room(
+            authored, upstream, generated, destination, label,
+            initial_object_state2="Curtain")
+    im02_masked = open_variants["im02-zp02-masked"]["dark_costume_pixels"]
+    im02_clear = open_variants["im02-zp02-clear"]["dark_costume_pixels"]
+    im02_wrong = open_variants["im02-zp02-wrongbox"]["dark_costume_pixels"]
+    if min(im02_clear, im02_wrong) < 100 or im02_masked > min(im02_clear, im02_wrong) // 3:
+        raise RuntimeError(
+            f"IM02 ZP02 native occlusion failed: masked={im02_masked}, "
+            f"clear={im02_clear}, wrongbox={im02_wrong}")
     report = {
+        "im02_second_zplane": {
+            "variants": open_variants,
+            "masked_actor_pixels": im02_masked,
+            "transparent_actor_pixels": im02_clear,
+            "wrongbox_actor_pixels": im02_wrong,
+            "native_im02_zp02_passed": True,
+        },
         "im01_second_zplane": {
             "variants": two_planes,
             "masked_actor_pixels": layer2_masked,
