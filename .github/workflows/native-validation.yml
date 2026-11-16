@@ -1,0 +1,275 @@
+name: Native and Studio integration acceptance
+
+# One PR workflow run, six independent and still mandatory risk-based jobs.
+# Draft PRs run only fast Core push tests. No gameplay assertions are removed.
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [ready_for_review, synchronize, opened, reopened]
+    paths:
+      - '.devcontainer/devcontainer.json'
+      - '.devcontainer/install-scummc.sh'
+      - '.devcontainer/setup.sh'
+      - '.devcontainer/start-studio.sh'
+      - '.github/workflows/dialogue-smoke.yml'
+      - '.github/workflows/font-smoke.yml'
+      - '.github/workflows/language-runtime.yml'
+      - '.github/workflows/native-validation.yml'
+      - '.github/workflows/scumm-inventory-paging.yml'
+      - '.github/workflows/scummc-experiment.yml'
+      - '.github/workflows/studio.yml'
+      - 'examples/language_probe.json'
+      - 'examples/recipe_chain_story.json'
+      - 'examples/recipe_graph_story.json'
+      - 'examples/recipe_nine_items_story.json'
+      - 'examples/recipe_story.json'
+      - 'pyproject.toml'
+      - 'src/adventure_studio/ai_provider.py'
+      - 'src/adventure_studio/dialogue_animation_fixture.py'
+      - 'src/adventure_studio/dialogue_demo.py'
+      - 'src/adventure_studio/localization.py'
+      - 'src/adventure_studio/scumm_actor_sequence_probe.py'
+      - 'src/adventure_studio/scumm_assets.py'
+      - 'src/adventure_studio/scumm_authored_scal_probe.py'
+      - 'src/adventure_studio/scumm_bootstrap.py'
+      - 'src/adventure_studio/scumm_boxm_routing_probe.py'
+      - 'src/adventure_studio/scumm_camera_probe.py'
+      - 'src/adventure_studio/scumm_camera_zp01_probe.py'
+      - 'src/adventure_studio/scumm_dialogue_probe.py'
+      - 'src/adventure_studio/scumm_dialogue_voice_fixture.py'
+      - 'src/adventure_studio/scumm_dynamic_walkbox_gate_probe.py'
+      - 'src/adventure_studio/scumm_font.py'
+      - 'src/adventure_studio/scumm_font_probe.py'
+      - 'src/adventure_studio/scumm_four_facing_probe.py'
+      - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
+      - 'src/adventure_studio/scumm_independent_gate_chain_probe.py'
+      - 'src/adventure_studio/scumm_inventory_paging_demo.py'
+      - 'src/adventure_studio/scumm_inventory_paging_probe.py'
+      - 'src/adventure_studio/scumm_language_package.py'
+      - 'src/adventure_studio/scumm_language_runtime_probe.py'
+      - 'src/adventure_studio/scumm_launch.py'
+      - 'src/adventure_studio/scumm_multi_zplane_probe.py'
+      - 'src/adventure_studio/scumm_object_zmask_probe.py'
+      - 'src/adventure_studio/scumm_project.py'
+      - 'src/adventure_studio/scumm_same_room_gate_probe.py'
+      - 'src/adventure_studio/scumm_save_load_probe.py'
+      - 'src/adventure_studio/scumm_sound_effect_probe.py'
+      - 'src/adventure_studio/scumm_studio_png_probe.py'
+      - 'src/adventure_studio/scumm_toolchain.py'
+      - 'src/adventure_studio/scumm_triangle_walkbox_probe.py'
+      - 'src/adventure_studio/scumm_voc_fixture.py'
+      - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
+      - 'src/adventure_studio/scumm_walkbox_save_probe.py'
+      - 'src/adventure_studio/story.py'
+      - 'src/adventure_studio/story_ai.py'
+      - 'src/adventure_studio/story_changes.py'
+      - 'src/adventure_studio/story_document.py'
+      - 'src/adventure_studio/story_protocol.py'
+      - 'src/adventure_studio/story_to_scumm.py'
+      - 'src/adventure_studio/studio_catalog.py'
+      - 'src/adventure_studio/studio_export.py'
+      - 'src/adventure_studio/studio_gradio.py'
+      - 'src/adventure_studio/studio_sequences.py'
+      - 'src/adventure_studio/studio_service.py'
+      - 'tests/gradio_browser_boxm.py'
+      - 'tests/gradio_browser_dialogue.py'
+      - 'tests/gradio_browser_object_zmask.py'
+      - 'tests/gradio_browser_scal.py'
+      - 'tests/gradio_browser_zplanes.py'
+      - 'tests/test_dialogue_animation.py'
+      - 'tests/test_localization.py'
+      - 'tests/test_scumm_bootstrap.py'
+      - 'tests/test_scumm_camera_cues.py'
+      - 'tests/test_scumm_camera_zp01_probe.py'
+      - 'tests/test_scumm_dialogue_probe.py'
+      - 'tests/test_scumm_font.py'
+      - 'tests/test_scumm_language_package.py'
+      - 'tests/test_scumm_same_room_gate_probe.py'
+      - 'tests/test_scumm_triangle_walkbox_probe.py'
+      - 'tests/test_scumm_walkbox_save_probe.py'
+      - 'tests/test_story_ai.py'
+      - 'tests/test_story_document.py'
+      - 'tests/test_story_protocol.py'
+      - 'tests/test_story_to_scumm.py'
+      - 'tests/test_story_v4.py'
+      - 'tests/test_studio_catalog.py'
+      - 'tests/test_studio_export.py'
+      - 'tests/test_studio_position.py'
+      - 'tests/test_studio_service.py'
+
+concurrency:
+  group: native-acceptance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      studio: ${{ steps.filter.outputs.studio }}
+      dialogue: ${{ steps.filter.outputs.dialogue }}
+      inventory: ${{ steps.filter.outputs.inventory }}
+      font: ${{ steps.filter.outputs.font }}
+      language: ${{ steps.filter.outputs.language }}
+      native: ${{ steps.filter.outputs.native }}
+    steps:
+      - name: Check changed paths against existing PR test contracts
+        if: github.event_name == 'pull_request' && (github.event.action == 'ready_for_review' || github.event.pull_request.draft == false)
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            studio:
+              - '.github/workflows/studio.yml'
+              - '.devcontainer/devcontainer.json'
+              - '.devcontainer/start-studio.sh'
+              - '.devcontainer/setup.sh'
+              - '.devcontainer/install-scummc.sh'
+              - 'pyproject.toml'
+              - 'src/adventure_studio/studio_service.py'
+              - 'src/adventure_studio/story_ai.py'
+              - 'src/adventure_studio/studio_catalog.py'
+              - 'src/adventure_studio/ai_provider.py'
+              - 'src/adventure_studio/story_protocol.py'
+              - 'src/adventure_studio/story.py'
+              - 'src/adventure_studio/story_document.py'
+              - 'src/adventure_studio/story_changes.py'
+              - 'src/adventure_studio/studio_export.py'
+              - 'src/adventure_studio/studio_gradio.py'
+              - 'src/adventure_studio/studio_sequences.py'
+              - 'tests/test_studio_service.py'
+              - 'tests/test_story_ai.py'
+              - 'tests/test_studio_catalog.py'
+              - 'tests/test_story_protocol.py'
+              - 'tests/test_story_v4.py'
+              - 'tests/test_studio_export.py'
+              - 'tests/test_studio_position.py'
+              - 'tests/test_dialogue_animation.py'
+              - 'tests/gradio_browser_dialogue.py'
+              - 'tests/gradio_browser_boxm.py'
+              - 'tests/gradio_browser_scal.py'
+              - 'tests/gradio_browser_zplanes.py'
+              - 'tests/gradio_browser_object_zmask.py'
+            dialogue:
+              - '.github/workflows/dialogue-smoke.yml'
+              - 'src/adventure_studio/dialogue_demo.py'
+              - 'src/adventure_studio/scumm_dialogue_probe.py'
+              - 'src/adventure_studio/scumm_four_facing_probe.py'
+              - 'src/adventure_studio/scumm_dialogue_voice_fixture.py'
+              - 'src/adventure_studio/dialogue_animation_fixture.py'
+              - 'src/adventure_studio/studio_sequences.py'
+              - 'src/adventure_studio/scumm_assets.py'
+              - 'src/adventure_studio/scumm_project.py'
+              - 'src/adventure_studio/story_to_scumm.py'
+              - 'src/adventure_studio/scumm_toolchain.py'
+              - 'src/adventure_studio/scumm_launch.py'
+              - 'examples/recipe_story.json'
+              - 'examples/recipe_chain_story.json'
+              - 'examples/recipe_graph_story.json'
+              - 'tests/test_scumm_dialogue_probe.py'
+              - 'tests/test_story_v4.py'
+            inventory:
+              - '.github/workflows/scumm-inventory-paging.yml'
+              - 'src/adventure_studio/scumm_bootstrap.py'
+              - 'src/adventure_studio/scumm_inventory_paging_demo.py'
+              - 'src/adventure_studio/scumm_inventory_paging_probe.py'
+              - 'src/adventure_studio/scumm_toolchain.py'
+              - 'src/adventure_studio/story_to_scumm.py'
+              - 'src/adventure_studio/scumm_project.py'
+              - 'examples/recipe_nine_items_story.json'
+              - 'tests/test_story_document.py'
+              - 'tests/test_scumm_bootstrap.py'
+            font:
+              - '.github/workflows/font-smoke.yml'
+              - 'src/adventure_studio/localization.py'
+              - 'src/adventure_studio/scumm_font.py'
+              - 'src/adventure_studio/scumm_font_probe.py'
+              - 'src/adventure_studio/scumm_language_package.py'
+              - 'src/adventure_studio/scumm_toolchain.py'
+              - 'examples/language_probe.json'
+              - 'tests/test_localization.py'
+              - 'tests/test_scumm_font.py'
+              - 'tests/test_scumm_language_package.py'
+            language:
+              - '.github/workflows/language-runtime.yml'
+              - 'src/adventure_studio/scumm_bootstrap.py'
+              - 'src/adventure_studio/scumm_toolchain.py'
+              - 'src/adventure_studio/scumm_font.py'
+              - 'src/adventure_studio/scumm_language_package.py'
+              - 'src/adventure_studio/scumm_language_runtime_probe.py'
+              - 'src/adventure_studio/scumm_save_load_probe.py'
+            native:
+              - '.github/workflows/scummc-experiment.yml'
+              - 'src/adventure_studio/scumm_sound_effect_probe.py'
+              - 'src/adventure_studio/scumm_studio_png_probe.py'
+              - 'src/adventure_studio/scumm_actor_sequence_probe.py'
+              - 'src/adventure_studio/scumm_voc_fixture.py'
+              - 'src/adventure_studio/scumm_launch.py'
+              - 'src/adventure_studio/story_to_scumm.py'
+              - 'tests/test_story_to_scumm.py'
+              - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
+              - 'src/adventure_studio/scumm_triangle_walkbox_probe.py'
+              - 'tests/test_scumm_triangle_walkbox_probe.py'
+              - 'src/adventure_studio/scumm_boxm_routing_probe.py'
+              - 'src/adventure_studio/scumm_dynamic_walkbox_gate_probe.py'
+              - 'src/adventure_studio/scumm_independent_gate_chain_probe.py'
+              - 'src/adventure_studio/scumm_same_room_gate_probe.py'
+              - 'tests/test_scumm_same_room_gate_probe.py'
+              - 'src/adventure_studio/scumm_walkbox_save_probe.py'
+              - 'tests/test_scumm_walkbox_save_probe.py'
+              - 'src/adventure_studio/scumm_authored_scal_probe.py'
+              - 'src/adventure_studio/scumm_multi_zplane_probe.py'
+              - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
+              - 'src/adventure_studio/scumm_object_zmask_probe.py'
+              - 'src/adventure_studio/scumm_camera_probe.py'
+              - 'src/adventure_studio/scumm_camera_zp01_probe.py'
+              - 'src/adventure_studio/studio_sequences.py'
+              - 'src/adventure_studio/studio_gradio.py'
+              - 'tests/gradio_browser_zplanes.py'
+              - 'tests/test_scumm_camera_cues.py'
+              - 'tests/test_scumm_camera_zp01_probe.py'
+
+  studio:
+    needs: changes
+    if: ${{ github.event_name == 'workflow_dispatch' || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.studio == 'true') }}
+    uses: ./.github/workflows/studio.yml
+    permissions:
+      contents: read
+
+  dialogue:
+    needs: changes
+    if: ${{ github.event_name == 'workflow_dispatch' || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.dialogue == 'true') }}
+    uses: ./.github/workflows/dialogue-smoke.yml
+    permissions:
+      contents: read
+
+  inventory:
+    needs: changes
+    if: ${{ github.event_name == 'workflow_dispatch' || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.inventory == 'true') }}
+    uses: ./.github/workflows/scumm-inventory-paging.yml
+    permissions:
+      contents: read
+
+  font:
+    needs: changes
+    if: ${{ github.event_name == 'workflow_dispatch' || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.font == 'true') }}
+    uses: ./.github/workflows/font-smoke.yml
+    permissions:
+      contents: read
+
+  language:
+    needs: changes
+    if: ${{ github.event_name == 'workflow_dispatch' || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.language == 'true') }}
+    uses: ./.github/workflows/language-runtime.yml
+    permissions:
+      contents: read
+
+  native:
+    needs: changes
+    if: ${{ github.event_name == 'workflow_dispatch' || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.native == 'true') }}
+    uses: ./.github/workflows/scummc-experiment.yml
+    permissions:
+      contents: read

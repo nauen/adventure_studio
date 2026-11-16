@@ -3,50 +3,11 @@ name: Experimental SCUMM v6 compatibility probe
 # Experimental: upstream ScummC's detection in stock ScummVM is unproven.
 # Run for probe changes only; a red run is research, not a release regression.
 on:
-  # Full VM/download-heavy checks only after a draft is marked ready.
-  # A subsequent commit to a ready PR must be fully revalidated.
+  workflow_call:
   workflow_dispatch:
-  pull_request:
-    types: [ready_for_review, synchronize]
-    paths:
-      - '.github/workflows/scummc-experiment.yml'
-      - 'src/adventure_studio/scumm_sound_effect_probe.py'
-      - 'src/adventure_studio/scumm_studio_png_probe.py'
-      - 'src/adventure_studio/scumm_actor_sequence_probe.py'
-      - 'src/adventure_studio/scumm_sound_effect_probe.py'
-      - 'src/adventure_studio/scumm_voc_fixture.py'
-      - 'src/adventure_studio/scumm_launch.py'
-      - 'src/adventure_studio/story_to_scumm.py'
-      - 'tests/test_story_to_scumm.py'
-      - 'src/adventure_studio/scumm_walkbox_boundary_probe.py'
-      - 'src/adventure_studio/scumm_triangle_walkbox_probe.py'
-      - 'tests/test_scumm_triangle_walkbox_probe.py'
-      - 'src/adventure_studio/scumm_boxm_routing_probe.py'
-      - 'src/adventure_studio/scumm_dynamic_walkbox_gate_probe.py'
-      - 'src/adventure_studio/scumm_independent_gate_chain_probe.py'
-      - 'src/adventure_studio/scumm_same_room_gate_probe.py'
-      - 'tests/test_scumm_same_room_gate_probe.py'
-      - 'src/adventure_studio/scumm_walkbox_save_probe.py'
-      - 'tests/test_scumm_walkbox_save_probe.py'
-      - 'src/adventure_studio/scumm_authored_scal_probe.py'
-      - 'src/adventure_studio/scumm_multi_zplane_probe.py'
-      - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
-      - 'src/adventure_studio/scumm_object_zmask_probe.py'
-      - 'src/adventure_studio/scumm_camera_probe.py'
-      - 'src/adventure_studio/scumm_camera_zp01_probe.py'
-      - 'src/adventure_studio/studio_sequences.py'
-      - 'src/adventure_studio/studio_gradio.py'
-      - 'tests/gradio_browser_zplanes.py'
-      - 'tests/test_scumm_camera_cues.py'
-      - 'tests/test_scumm_camera_zp01_probe.py'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 
 jobs:
   probe:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.draft == false) }}
     runs-on: ubuntu-24.04
     # ScummVM pulls a large data package. The Ubuntu mirror occasionally
     # stalls; give the full job enough time while bounding the install step.
@@ -191,7 +152,7 @@ jobs:
             /tmp/native-r08-triangle-walkbox/*-screenshots/scummvm-*.json
             /tmp/native-r08-triangle-walkbox/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
-      - name: Verify Studio-authored IM01 and IM02 independent ZP01/ZP02 in stock ScummVM
+      - name: Verify Studio-authored object IM01 ZP01/ZP02 and second-state IM02 in stock ScummVM
         env:
           PYTHONPATH: src
         run: |
@@ -208,8 +169,6 @@ jobs:
             /tmp/native-object-zmask/*/Harbor.scc
             /tmp/native-object-zmask/*/CurtainZ01.bmp
             /tmp/native-object-zmask/*/CurtainZ02.bmp
-            /tmp/native-object-zmask/*/CurtainOpenZ01.bmp
-            /tmp/native-object-zmask/*/CurtainOpenZ02.bmp
             /tmp/native-object-zmask/*/tentacle.000
             /tmp/native-object-zmask/*/tentacle.001
             /tmp/native-object-zmask/*-screenshots/scummvm-end.png
