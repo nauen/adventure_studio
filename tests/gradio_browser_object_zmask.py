@@ -195,8 +195,8 @@ def main() -> None:
                 expect(state_selection).to_have_value("Grundbild (1)", timeout=12000)
                 layer_selection = page.locator("#native-object-zplane-layer input[role=combobox]")
                 layer_selection.click()
-                page.get_by_role("option", name="ZP03 (3, nur Grundbild)", exact=True).click(timeout=12000)
-                expect(layer_selection).to_have_value("ZP03 (3, nur Grundbild)", timeout=12000)
+                page.get_by_role("option", name="ZP03 (3)", exact=True).click(timeout=12000)
+                expect(layer_selection).to_have_value("ZP03 (3)", timeout=12000)
                 with page.expect_file_chooser() as zp03_chooser:
                     page.locator("#native-object-zplane-file").click()
                 zp03_chooser.value.set_files(str(mask))
@@ -216,6 +216,44 @@ def main() -> None:
                 assert result.object_zplane3_pixels == bytes([1]) * 256
                 assert result.open_object_zplane_pixels == bytes(256)
                 assert result.open_object_zplane2_pixels == bytes([1]) * 256
+                # R07.6: reimport five independent masks, author IM02/ZP03 in Chrome.
+                page.goto("http://127.0.0.1:7860/", wait_until="domcontentloaded",
+                          timeout=30000)
+                page.get_by_role("tab", name="Native Interaktionsabläufe").click()
+                page.locator("#native-project-file input[type=file]").set_input_files(str(zp03_saved))
+                report = page.locator("#native-project-report textarea, #native-project-report input")
+                expect(report).to_have_value("Natives Projekt geladen und validiert", timeout=30000)
+                selection = page.locator("#native-hotspot input[role=combobox]")
+                selection.click()
+                selection.fill("Door")
+                page.get_by_role("option", name="Door", exact=True).click(timeout=12000)
+                state_selection = page.locator("#native-object-zplane-state input[role=combobox]")
+                state_selection.click()
+                page.get_by_role("option", name="Offenes Bild (2)", exact=True).click(timeout=12000)
+                layer_selection = page.locator("#native-object-zplane-layer input[role=combobox]")
+                layer_selection.click()
+                page.get_by_role("option", name="ZP03 (3)", exact=True).click(timeout=12000)
+                with page.expect_file_chooser() as chooser:
+                    page.locator("#native-object-zplane-file").click()
+                chooser.value.set_files(str(mask))
+                page.locator("#native-object-zplane-add").click()
+                expect(report).to_have_value(re.compile(r"IM02 ZP03 importiert"), timeout=30000)
+                page.locator("#native-project-export-button").click()
+                link = page.locator("#native-project-export-file a[download]")
+                expect(link.first).to_be_visible(timeout=30000)
+                with page.expect_download() as exported:
+                    link.first.click()
+                final_file = evidence / "authored-im02-zp03.json"
+                exported.value.save_as(str(final_file))
+                final_obj = next(h for r in parse_document(final_file.read_text()).rooms
+                                 if r.name == "Harbor" for h in r.hotspots if h.id == "Door")
+                assert final_obj.object_zplane_pixels == bytes([1]) * 256
+                assert final_obj.object_zplane2_pixels == bytes([1]) * 256
+                assert final_obj.object_zplane3_pixels == bytes([1]) * 256
+                assert final_obj.open_object_zplane_pixels == bytes(256)
+                assert final_obj.open_object_zplane2_pixels == bytes([1]) * 256
+                assert final_obj.open_object_zplane3_pixels == bytes([1]) * 256
+                page.screenshot(path=str(evidence / "authored-im02-zp03.png"), full_page=True)
                 page.screenshot(path=str(evidence / "authored-im01-zp03.png"), full_page=True)
                 page.screenshot(path=str(evidence / "authored-im02-zp02.png"), full_page=True)
                 page.screenshot(path=str(evidence / "authored-im01-zp02.png"),
@@ -226,6 +264,7 @@ def main() -> None:
                     {"real_chrome_object_zmask": True,
                      "real_chrome_im01_zp02": True,
                      "real_chrome_im02_zp02": True,
+                     "real_chrome_im02_zp03": True,
                      "im02_mask_preserved": True, "object": "Door"},
                     indent=2) + "\n", encoding="utf-8")
             except Exception:
