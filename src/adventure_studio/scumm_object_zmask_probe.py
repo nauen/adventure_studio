@@ -172,6 +172,52 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
         raise RuntimeError(
             f"IM02 ZP02 native occlusion failed: masked={im02_masked}, "
             f"clear={im02_clear}, wrongbox={im02_wrong}")
+    # R07.6: native IM02/ZP03 with transparent room masks and independent images.
+    open3_room = replace(room, zplanes=(room.zplanes[0],
+        ZPlane(2, bytes(room.geometry.room_width * room.geometry.room_height)),
+        ZPlane(3, bytes(room.geometry.room_width * room.geometry.room_height))),
+        walkboxes=(room.walkboxes[0], replace(room.walkboxes[1], mask=3)))
+    open3_project = canonical_json(GameDocument(
+        "im02_third_zplane", (open3_room, destination_fixture())))
+    Image.new("L", (64, 48), 0).save(first_mask)
+    for state, layer in ((1, 1), (1, 2), (1, 3), (2, 1), (2, 2)):
+        open3_project = import_object_zplane(
+            open3_project, "Harbor", "Curtain", str(first_mask), state, layer)
+    open3_variants = {}
+    for label, level, box_mask in (("im02-zp03-masked", 255, 3),
+                                   ("im02-zp03-clear", 0, 3),
+                                   ("im02-zp03-wrongbox", 255, 2)):
+        Image.new("L", (64, 48), level).save(png)
+        edited = import_object_zplane(open3_project, "Harbor", "Curtain", str(png), 2, 3)
+        document = parse_document(edited)
+        authored = document.rooms[0]
+        if box_mask != 3:
+            authored = replace(authored, walkboxes=(
+                authored.walkboxes[0], replace(authored.walkboxes[1], mask=box_mask)))
+        exact = canonical_json(replace(document, rooms=(authored, *document.rooms[1:])))
+        (destination / f"{label}-project.json").write_text(exact, encoding="utf-8")
+        authored = parse_document(exact).rooms[0]
+        obj = next(h for h in authored.hotspots if h.id == "Curtain")
+        independent = (obj.object_zplane_pixels, obj.object_zplane2_pixels,
+                       obj.object_zplane3_pixels, obj.open_object_zplane_pixels,
+                       obj.open_object_zplane2_pixels)
+        if any(value != bytes(64 * 48) for value in independent):
+            raise RuntimeError("IM02 ZP03 modified independent ZP01/ZP02 or IM01")
+        if obj.open_object_zplane3_pixels != bytes([int(level != 0)]) * (64 * 48):
+            raise RuntimeError("IM02 ZP03 lost in JSON roundtrip")
+        if authored.walkboxes[1].mask != box_mask:
+            raise RuntimeError("IM02 ZP03 negative control disagrees with BOXD")
+        open3_variants[label] = render_native_room(
+            authored, upstream, generated, destination, label,
+            initial_object_state2="Curtain")
+    im02_zp03_masked = open3_variants["im02-zp03-masked"]["dark_costume_pixels"]
+    im02_zp03_clear = open3_variants["im02-zp03-clear"]["dark_costume_pixels"]
+    im02_zp03_wrong = open3_variants["im02-zp03-wrongbox"]["dark_costume_pixels"]
+    if (min(im02_zp03_clear, im02_zp03_wrong) < 100
+            or im02_zp03_masked > min(im02_zp03_clear, im02_zp03_wrong) // 3):
+        raise RuntimeError(
+            f"IM02 ZP03 native occlusion failed: masked={im02_zp03_masked}, "
+            f"transparent={im02_zp03_clear}, wrongbox={im02_zp03_wrong}")
     # R07.5: third independent base-image Z-plane; all room Z-planes are
     # transparent. Only the productive IM01/ZP03 can occlude BOX index 3.
     layer3_room = replace(
@@ -218,6 +264,13 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
             f"IM01 ZP03 native occlusion failed: masked={layer3_masked}, "
             f"transparent={layer3_clear}, wrongbox={layer3_wrong}")
     report = {
+        "im02_third_zplane": {
+            "variants": open3_variants,
+            "masked_actor_pixels": im02_zp03_masked,
+            "transparent_actor_pixels": im02_zp03_clear,
+            "wrongbox_actor_pixels": im02_zp03_wrong,
+            "native_im02_zp03_passed": True,
+        },
         "im01_third_zplane": {
             "variants": layer3_variants,
             "masked_actor_pixels": layer3_masked,

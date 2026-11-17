@@ -104,7 +104,7 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "ZP01 und ZP02"):
                 import_object_zplane(first, "Harbor", "Door", str(mask), 1, 3)
             second = import_object_zplane(first, "Harbor", "Door", str(clear), 1, 2)
-            with self.assertRaisesRegex(ValueError, "IM01 1 bis 3"):
+            with self.assertRaisesRegex(ValueError, "ZP01 und ZP02 im offenen Bild"):
                 import_object_zplane(second, "Harbor", "Door", str(mask), 2, 3)
             final = import_object_zplane(second, "Harbor", "Door", str(mask), 1, 3)
             document = parse_document(final)
@@ -132,6 +132,57 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "binary"):
                 write_room_sources(replace(document.rooms[0], hotspots=(
                     document.rooms[0].hotspots[0], bad)), root / "invalid")
+
+    @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires optional studio Pillow")
+    def test_im02_third_zplane_roundtrip_story_and_native_scummc(self):
+        from PIL import Image
+        from adventure_studio.studio_sequences import import_object_zplane
+
+        raw = canonical_json(GameDocument(
+            "im02_zp03", (scrolling_fixture(), destination_fixture())))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            clear, mask = root / "clear.png", root / "mask.png"
+            Image.new("L", (16, 16), 0).save(clear)
+            Image.new("L", (16, 16), 255).save(mask)
+            with self.assertRaisesRegex(ValueError, "ZP01 und ZP02 im offenen Bild"):
+                import_object_zplane(raw, "Harbor", "Door", str(mask), 2, 3)
+            first = import_object_zplane(raw, "Harbor", "Door", str(clear), 1, 1)
+            first = import_object_zplane(first, "Harbor", "Door", str(clear), 1, 2)
+            first = import_object_zplane(first, "Harbor", "Door", str(mask), 1, 3)
+            open_first = import_object_zplane(first, "Harbor", "Door", str(clear), 2, 1)
+            with self.assertRaisesRegex(ValueError, "ZP01 und ZP02 im offenen Bild"):
+                import_object_zplane(open_first, "Harbor", "Door", str(mask), 2, 3)
+            open_second = import_object_zplane(open_first, "Harbor", "Door", str(clear), 2, 2)
+            final = import_object_zplane(open_second, "Harbor", "Door", str(mask), 2, 3)
+            doc = parse_document(final)
+            door = next(h for h in doc.rooms[0].hotspots if h.id == "Door")
+            self.assertEqual(door.open_object_zplane_pixels, bytes(256))
+            self.assertEqual(door.open_object_zplane2_pixels, bytes(256))
+            self.assertEqual(door.open_object_zplane3_pixels, bytes([1]) * 256)
+            self.assertEqual(door.object_zplane3_pixels, bytes([1]) * 256)
+            self.assertEqual(parse_document(canonical_json(doc)).rooms[0]
+                             .hotspots[1].open_object_zplane3_pixels, bytes([1]) * 256)
+            story = (Path(__file__).resolve().parents[1] /
+                     "examples" / "mini_story_chain.json").read_text(encoding="utf-8")
+            composed = parse_document(compose_story_project(story, final))
+            saved = next(h for r in composed.rooms if r.name == "Harbor"
+                         for h in r.hotspots if h.id == "Door")
+            self.assertEqual(saved.open_object_zplane3_pixels, bytes([1]) * 256)
+            self.assertEqual(saved.object_zplane3_pixels, bytes([1]) * 256)
+            write_room_sources(doc.rooms[0], root)
+            scc = (root / "Harbor.scc").read_text(encoding="utf-8")
+            self.assertIn('"DoorOpenZ01.bmp", "DoorOpenZ02.bmp", "DoorOpenZ03.bmp"', scc)
+            self.assertIn('"DoorZ01.bmp", "DoorZ02.bmp", "DoorZ03.bmp"', scc)
+            self.assertTrue((root / "DoorOpenZ03.bmp").is_file())
+            self.assertNotIn("open_object_zplane3_pixels", canonical_json(parse_document(open_second)))
+            Image.new("L", (8, 8), 255).save(mask)
+            with self.assertRaisesRegex(ValueError, "exakt"):
+                import_object_zplane(open_second, "Harbor", "Door", str(mask), 2, 3)
+            bad = replace(door, open_object_zplane3_pixels=bytes([2]) * 256)
+            with self.assertRaisesRegex(ValueError, "binary"):
+                write_room_sources(replace(doc.rooms[0], hotspots=(
+                    doc.rooms[0].hotspots[0], bad)), root / "invalid")
 
     def test_triangle_walkbox_roundtrip_story_and_native_boxd(self):
         room = scrolling_fixture()
