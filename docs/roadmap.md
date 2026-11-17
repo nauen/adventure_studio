@@ -1,19 +1,19 @@
 # Adventure Studio – aktive Produktroadmap
 
-Stand: 2026-11-16. Diese Seite steuert **nur die nächsten Produktentscheidungen**.
+Stand: 2026-11-17. Diese Seite steuert **nur die nächsten Produktentscheidungen**.
 Das Hauptziel steht in [PRODUCT_VISION](PRODUCT_VISION.md), die einzige
 64-Fähigkeiten-Matrix in [SCUMM_V6_CAPABILITIES](SCUMM_V6_CAPABILITIES.md).
-Die frühere ausführliche Roadmap bleibt vollständig als
+Die frühere ausführliche Roadmap bleibt als
 [historisches Entwicklungsprotokoll](roadmap-history.md) erhalten;
-ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Aufträge**.
+historische Checkboxen sind keine aktiven Aufträge.
 
 ## Aktiver Entscheidungsstand
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix trennt native Belege und Lücken.
-- **Jetzt:** #248 R07-IM02/ZP02 nativ abgenommen (`6d23500`), [CI-Konsolidierung #249](https://github.com/nauen/adventure_studio/pull/249) nach grünem Inventar-Retry/allen sechs Integrationsjobs erfolgreich als [`5c0753d`](https://github.com/nauen/adventure_studio/commit/5c0753d2876ede66a6a415e0278a9af576760a33) gemergt. **Einziges aktives natives Produktpaket [#250](https://github.com/nauen/adventure_studio/issues/250): IM01 ZP03** als dritte unabhängig importierte Verdeckungsebene.
-- **Abnahme:** Echtes Studio-Chrome-Authoring und JSON-v1/Story mit erhaltenen vier Vorgängermasken, produktiver ScummC IM01/ZP01–03-Export und drei unabhängig exportierte unveränderte stock-ScummVM-Spiele mit BOXD3-Maske, transparenter und falsch-BOXD2-Kontrolle; Pixelreport, PNGs, native Binärdateien und vollständige relevante Core-/Browser-/Native-CI. **Noch nicht abgenommen.**
-- **Blocker:** Finaler IM01/ZP03-ScummVM-Spielverhaltensnachweis und Pflichtgates ausstehend. ZP05+ stock-v6-inkompatibel; allgemeine R07/R08/R09-Lücken weiter offen.
-- **Danach:** Nach erfolgreicher #250-Abnahme genau ein weiteres natives Raumgrafik-/Z-Masken-/Walkbox-Paket – kein paralleler Scope und kein NPC-Komfort.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix trennt bestätigte Fähigkeiten von echten Lücken.
+- **Jetzt:** NPC-Komfort nach [#190](https://github.com/nauen/adventure_studio/pull/190) beendet. CI-Konsolidierung [#249](https://github.com/nauen/adventure_studio/pull/249) und native Vierfach-CI [#252](https://github.com/nauen/adventure_studio/pull/252) nach **4/4 grünen nativen Teiljobs** sowie grünem Core auf Head `cbcbbe11` als Squash [`8fd1e71`](https://github.com/nauen/adventure_studio/commit/8fd1e71a67a581ba105333c8b6133726278a7181) integriert. **Genau eine aktive native Produktfähigkeit:** [#250](https://github.com/nauen/adventure_studio/issues/250)/[#251](https://github.com/nauen/adventure_studio/pull/251) – dritte unabhängige IM01/ZP03-Objektmaske.
+- **Abnahme:** Echtes Studio-Chrome-PNG-Authoring → RoomHotspot/JSON-v1/Story-Reimport → produktiver ScummC-Export mit getrennten IM01-ZP01/ZP02/ZP03-Dateien → drei unveränderte stock-ScummVM-Kontrollspiele (BOXD3 verdeckt, ZP03 transparent und falsche BOXD2 verdecken nicht), Pixelreport und native Binaries; **vollständige Core-/Browser-/Native-CI auf dem finalen #251-Head noch offen**. Die in #252 belegte grüne CI betrifft die CI-Infrastruktur, **nicht** die Abnahme von #251.
+- **Blocker:** Finaler IM01/ZP03-Gameplay-/Browser-Nachweis und alle relevanten Pflichtgates auf dem integrierten Produktbranch noch nicht grün bestätigt. Stock-v6-ZP05+ bleibt inkompatibel und fail-closed; R07/R08/R09 insgesamt unvollständig.
+- **Danach:** Erst nach kompletter vertikaler Abnahme und Merge von #251 exakt **eine** weitere native Raumgrafik-/Z-Masken-/Walkbox-Fähigkeit priorisieren; IM02/ZP03 ist ein Kandidat, noch kein aktives Paket. Kein NPC-Komfort.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
