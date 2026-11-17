@@ -173,7 +173,7 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
             f"IM02 ZP02 native occlusion failed: masked={im02_masked}, "
             f"clear={im02_clear}, wrongbox={im02_wrong}")
     # R07.6: native IM02/ZP03 with transparent room masks and independent images.
-    open3_room = replace(room, zplanes=(room.zplanes[0],
+    open3_room = replace(second_room, zplanes=(room.zplanes[0],
         ZPlane(2, bytes(room.geometry.room_width * room.geometry.room_height)),
         ZPlane(3, bytes(room.geometry.room_width * room.geometry.room_height))),
         walkboxes=(room.walkboxes[0], replace(room.walkboxes[1], mask=3)))
