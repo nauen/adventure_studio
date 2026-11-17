@@ -332,7 +332,7 @@ def import_room_zplane(raw: str, room_name: str, index: int, png_path: str) -> s
 
 def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: str,
                          image_state: int = 1, zplane_index: int = 1) -> str:
-    """Assign a PNG mask to IM01 ZP01–03 or IM02 ZP01–02 independently."""
+    """Assign a PNG mask to IM01 or IM02 ZP01–03 independently."""
     from PIL import Image
 
     document = parse_document(raw)
@@ -346,12 +346,16 @@ def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: st
         raise ValueError("Objekt-Z-Maske unterstützt Bildzustand 1 oder 2")
     if image_state == 2 and hotspot.open_sprite_pixels is None:
         raise ValueError("Bildzustand 2 benötigt ein vorhandenes offenes Objektbild")
-    if type(zplane_index) is not int or zplane_index not in (1, 2, 3) or (image_state == 2 and zplane_index == 3):
-        raise ValueError("Objekt-Z-Ebene muss für IM01 1 bis 3 oder für IM02 1 bis 2 sein")
+    if type(zplane_index) is not int or zplane_index not in (1, 2, 3):
+        raise ValueError("Objekt-Z-Ebene muss für IM01 oder IM02 1 bis 3 sein")
     if zplane_index == 2 and image_state == 1 and hotspot.object_zplane_pixels is None:
         raise ValueError("Objekt-Z-Ebene 2 benötigt zunächst ZP01 im Grundbild")
-    if zplane_index == 3 and (hotspot.object_zplane_pixels is None or hotspot.object_zplane2_pixels is None):
+    if zplane_index == 3 and image_state == 1 and (
+            hotspot.object_zplane_pixels is None or hotspot.object_zplane2_pixels is None):
         raise ValueError("IM01 ZP03 benötigt zunächst ZP01 und ZP02 im Grundbild")
+    if zplane_index == 3 and image_state == 2 and (
+            hotspot.open_object_zplane_pixels is None or hotspot.open_object_zplane2_pixels is None):
+        raise ValueError("IM02 ZP03 benötigt zunächst ZP01 und ZP02 im offenen Bild")
     if zplane_index == 2 and image_state == 2 and hotspot.open_object_zplane_pixels is None:
         raise ValueError("IM02 ZP02 benötigt zunächst ZP01 im offenen Bild")
     path = Path(png_path)
@@ -370,7 +374,9 @@ def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: st
             )
     except (OSError, Image.DecompressionBombError) as error:
         raise ValueError(f"PNG-Objekt-Z-Maske nicht lesbar: {error}") from error
-    updated = (replace(hotspot, object_zplane3_pixels=pixels)
+    updated = (replace(hotspot, open_object_zplane3_pixels=pixels)
+               if (image_state, zplane_index) == (2, 3)
+               else replace(hotspot, object_zplane3_pixels=pixels)
                if (image_state, zplane_index) == (1, 3)
                else replace(hotspot, object_zplane2_pixels=pixels)
                if (image_state, zplane_index) == (1, 2)
