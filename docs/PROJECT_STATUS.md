@@ -1,20 +1,19 @@
 # Adventure Studio – aktueller Arbeitsstand
 
-Stand: 2026-11-16. **Einstieg für die nächste Arbeitssitzung.**
-Produktziel: [PRODUCT_VISION](PRODUCT_VISION.md) · aktive
-[Roadmap](roadmap.md) · einzige [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md) ·
+Stand: 2026-11-17. **Einstieg für die nächste Arbeitssitzung.**
+Produktziel: [PRODUCT_VISION](PRODUCT_VISION.md) · aktive [Roadmap](roadmap.md) ·
+einzige [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md) ·
 [Referenzvertrag](scumm-v6-reference/README.md) · [Arbeitsvertrag](../AGENTS.md).
-Das frühere ausführliche Sitzungsprotokoll liegt unverändert in
-[PROJECT_HISTORY](PROJECT_HISTORY.md); dessen historische
-„Nächstes“-Anweisungen steuern die Entwicklung nicht mehr.
+Das frühere ausführliche Sitzungsprotokoll liegt in
+[PROJECT_HISTORY](PROJECT_HISTORY.md); historische „Nächstes“-Aufträge sind nicht aktiv.
 
 ## Ein aktiver Produktpfad
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime, abgegrenzt durch die [64-Fähigkeiten-Matrix](SCUMM_V6_CAPABILITIES.md).
-- **Jetzt:** R07-IM02/ZP02 am geöffneten Objektbild mit [#248](https://github.com/nauen/adventure_studio/pull/248) nach kompletter finaler CI und nativer Gameplay-Evidenz per Squash [`6d23500`](https://github.com/nauen/adventure_studio/commit/6d235004b168a71b42f1ce6f4d6715be9a177ce4) gemergt. **Konsolidierung**, keine weitere Produktfähigkeit parallel; [CI-Konsolidierung #249](https://github.com/nauen/adventure_studio/pull/249) separat in Abnahme. Kein NPC-Komfort seit #190.
-- **Abnahme:** IM02/ZP02 im Gradio-Chrome-Editor, unabhängige Masken nach JSON-v1/Story-Reimport, separater produktiver IM02-ZP01/ZP02-ScummC-Export; drei stock-ScummVM-Kontrollspiele mit geöffnetem Objekt: **0** Actor-Pixel maskiert (BOXD2), **1476** transparent, **1476** falscher BOXD1. [Nativer Produktbeleg](https://github.com/nauen/adventure_studio/actions/runs/43923787336/artifacts/14256040233); auf finalem Head `e377a25` sieben relevante Core-/Native-/Gradio-/Dialog-/Inventar-/CHAR-/Multilingual-Workflows erfolgreich, insbesondere [Native 43930792577](https://github.com/nauen/adventure_studio/actions/runs/43930792577). Reviewthreads leer, Merge erledigt.
-- **Blocker:** Keine offenen Pflichtgates für das konkrete IM02/ZP02-Paket. R07 insgesamt bleibt Teilfähigkeit; andere Objektbildzustände und Maskenkombinationen sind nicht pauschal bestätigt. ZP05+ in stock v6 inkompatibel/fail-closed; allgemeinere R08-Polygone und R09-Netze weiter offen. CI-Paket #249 noch nicht validiert/mergebereit.
-- **Danach:** Nach der separaten CI-Konsolidierung **genau ein** neues natives Raumgrafik-/Z-Masken-/Walkbox-Paket anhand der verbliebenen Matrixlücken priorisieren und bis ScummVM-Spielverhalten abnehmen; nicht parallel beginnen.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime, abgegrenzt durch die zentrale 64-Fähigkeiten-Matrix.
+- **Jetzt:** Kein NPC-Komfort mehr nach #190. R07-IM02/ZP02 [#248](https://github.com/nauen/adventure_studio/pull/248) abgeschlossen. CI-Konsolidierung #249 sowie native Vierfach-CI [#252](https://github.com/nauen/adventure_studio/pull/252) **gemergt** (Squash [`8fd1e71`](https://github.com/nauen/adventure_studio/commit/8fd1e71a67a581ba105333c8b6133726278a7181)); auf dem CI-Head `cbcbbe11` Core Push [44172191971](https://github.com/nauen/adventure_studio/actions/runs/44172191971) und [vier native Shards 44172203547](https://github.com/nauen/adventure_studio/actions/runs/44172203547) grün. **Genau ein Produktpaket aktiv:** IM01/ZP03 [#250](https://github.com/nauen/adventure_studio/issues/250)/[#251](https://github.com/nauen/adventure_studio/pull/251), jetzt auf die integrierte Vierfach-CI gebracht. Nicht als fertig markieren.
+- **Abnahme:** Reales Gradio-Chromium-Studio mit IM01/ZP03-PNG und erhaltenen IM01 ZP01/ZP02 und IM02 ZP01/ZP02, Modell → JSON-v1/Story-Reimport → produktiver ScummC mit `CurtainZ01.bmp`, `CurtainZ02.bmp`, `CurtainZ03.bmp` → drei **separate stock-ScummVM-v6-Games** (BOXD3 maskiert, ZP03-transparent und falsch-BOXD2 sichtbar), Actor-Pixelreport, Screenshots, Projekt-JSON, Compiler-/Game-Binaries sowie alle relevanten **finalen** Core-/Chromium-/Native-Gates. Auf finalem #251-Head **noch nicht abgenommen**.
+- **Blocker:** Vollständige IM01/ZP03-Spielverhaltens- und Browser-Evidenz sowie finale grüne Produkt-CI nach Branch-Integration offen; ZP05+ stock-v6-inkompatibel/fail-closed. Allgemeine R07/R08/R09-Fähigkeiten nicht pauschal belegt.
+- **Danach:** Erst nach erfolgreicher #251-Abnahme genau eine weitere native Raumgrafik-/Z-Masken-/Walkbox-Lücke priorisieren; kein NPC-Komfort.
 
 ## Zuletzt tatsächlich geliefert
 
