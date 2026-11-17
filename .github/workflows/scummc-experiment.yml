@@ -703,6 +703,8 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
+          # Each matrix shard has a fresh Python environment. This probe imports PIL.
+          python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_room_visual_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-visual-comparison
       - name: Retain native mask and scaling comparison evidence
         if: ${{ always() && matrix.shard == 'story' }}
