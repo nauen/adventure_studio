@@ -14,6 +14,9 @@ Fortschrittsstatus; die Referenzbibliothek wiederholt sie nicht.
 `tests/test_scumm_reference_contract.py` prüft den Quellenindex auf
 Vollständigkeit gegenüber den 64 IDs.
 
+**R07 – IM01/ZP03 Einzelpaket #250 (2026-11-16, noch nicht abgenommen):**
+Drittes unabhängig authorierbares Grundbild-ZP03 über RoomHotspot, Studio-PNG, optionales JSON-v1-Feld und produktiven IM01-ZP01/ZP02/ZP03-ScummC-Export implementiert. Chrome-Reimport sowie drei native stock-ScummVM-Gegenproben (BOXD3 maskiert, transparente ZP03, falscher BOXD2) sind als Abnahme vorbereitet; **Core-/Browser-/native Gesamt-CI auf finalem Head ausstehend, R07 weiterhin Teilfähigkeit**. Kein IM02/ZP03 in diesem Paket.
+
 **D03 – Editor-Ergänzung (2026-11-11, Abnahme ausstehend):**
 Mehrere ungespeicherte NPC-Sprechfolgen können über die vorhandene
 native Writer-/Validatorroutine gemeinsam in den Projektstand

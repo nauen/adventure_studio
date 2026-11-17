@@ -406,6 +406,8 @@ def document_dict(document: GameDocument) -> dict:
                              if h.object_zplane2_pixels is not None else {}),
                           **({"open_object_zplane2_pixels": _encode_pixels(h.open_object_zplane2_pixels)}
                              if h.open_object_zplane2_pixels is not None else {}),
+                          **({"object_zplane3_pixels": _encode_pixels(h.object_zplane3_pixels)}
+                             if h.object_zplane3_pixels is not None else {}),
                           **({"talk_lines": list(h.talk_lines)} if h.talk_lines else {}),
                           **({"talk_actor_lines": list(h.talk_actor_lines)}
                              if h.talk_actor_lines else {}),
@@ -1198,7 +1200,7 @@ def parse_document(source: str) -> GameDocument:
                              "sprite_pixels", "open_sprite_pixels", "exit_destination", "talk_lines",
                              "talk_actor_lines", "talk_face_directions", "object_zplane_pixels",
                              "open_object_zplane_pixels", "object_zplane2_pixels",
-                             "open_object_zplane2_pixels"},
+                             "open_object_zplane2_pixels", "object_zplane3_pixels"},
                       {"id", "label", "description", "x", "y", "width", "height", "pickup",
                        "sprite_pixels", "open_sprite_pixels", "exit_destination"})
             if type(h["pickup"]) is not bool:
@@ -1225,6 +1227,7 @@ def parse_document(source: str) -> GameDocument:
                 _decode_pixels(h["open_object_zplane_pixels"]) if h.get("open_object_zplane_pixels") is not None else None,
                 _decode_pixels(h["object_zplane2_pixels"]) if h.get("object_zplane2_pixels") is not None else None,
                 _decode_pixels(h["open_object_zplane2_pixels"]) if h.get("open_object_zplane2_pixels") is not None else None,
+                 _decode_pixels(h["object_zplane3_pixels"]) if h.get("object_zplane3_pixels") is not None else None,
             ))
         rules = []
         for item in room["use_rules"]:

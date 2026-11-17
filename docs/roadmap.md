@@ -9,11 +9,11 @@ ihre alten „Nächstes“-Abschnitte und Checkboxen sind **keine aktiven Auftr�
 
 ## Aktiver Entscheidungsstand
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix trennt native Nachweise und offene Lücken.
-- **Jetzt:** R06-Kamera #242, R08-Dreiecks-Walkbox #244, R07-IM01/ZP02 #246 und **R07-IM02/ZP02 [#248](https://github.com/nauen/adventure_studio/pull/248)** integriert. Letzteres mit Squash [`6d23500`](https://github.com/nauen/adventure_studio/commit/6d235004b168a71b42f1ce6f4d6715be9a177ce4) abgeschlossen. Jetzt nur CI-Konsolidierung [#249](https://github.com/nauen/adventure_studio/pull/249) abnehmen, keine zweite native Fähigkeit und kein NPC-Komfort.
-- **Abnahme:** IM02/ZP02 im geöffneten Objektzustand über echten Studio-PNG-Import, unabhängigen JSON-v1/Story-Roundtrip, produktiven ScummC-Writer bis stock ScummVM bestätigt: maskiert BOXD2 **0** Actor-Pixel, transparente ZP02 **1476**, falscher BOXD1 **1476**. [Gameplay-Artefakt](https://github.com/nauen/adventure_studio/actions/runs/43923787336/artifacts/14256040233). Finaler Head `e377a25`: sieben relevante Workflows grün inklusive [Native Gesamt-CI](https://github.com/nauen/adventure_studio/actions/runs/43930792577); PR #248 gemergt. **R07 als Ganzes bleibt Teilfähigkeit.**
-- **Blocker:** Für das einzelne IM02/ZP02-Paket keine offenen Pflichtgates. ZP05+ stock-v6-inkompatibel/fail-closed; zusätzliche Objektbildzustände und Ebenen, allgemeine R08-Polygone sowie komplexere R09-Netze nicht pauschal belegt. CI-Umstellung #249 separat prüfpflichtig.
-- **Danach:** Genau eine noch offene native Raumgrafik-/Z-Masken-/Walkbox-Fähigkeit nach Nutzerwert und Evidenzbedarf wählen und erst nach durchgängigem Modell→Studio→JSON/Story→ScummC→stock-ScummVM-Nachweis abnehmen. Keine parallele Produktimplementierung.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix trennt native Belege und Lücken.
+- **Jetzt:** #248 R07-IM02/ZP02 nativ abgenommen (`6d23500`), [CI-Konsolidierung #249](https://github.com/nauen/adventure_studio/pull/249) nach grünem Inventar-Retry/allen sechs Integrationsjobs erfolgreich als [`5c0753d`](https://github.com/nauen/adventure_studio/commit/5c0753d2876ede66a6a415e0278a9af576760a33) gemergt. **Einziges aktives natives Produktpaket [#250](https://github.com/nauen/adventure_studio/issues/250): IM01 ZP03** als dritte unabhängig importierte Verdeckungsebene.
+- **Abnahme:** Echtes Studio-Chrome-Authoring und JSON-v1/Story mit erhaltenen vier Vorgängermasken, produktiver ScummC IM01/ZP01–03-Export und drei unabhängig exportierte unveränderte stock-ScummVM-Spiele mit BOXD3-Maske, transparenter und falsch-BOXD2-Kontrolle; Pixelreport, PNGs, native Binärdateien und vollständige relevante Core-/Browser-/Native-CI. **Noch nicht abgenommen.**
+- **Blocker:** Finaler IM01/ZP03-ScummVM-Spielverhaltensnachweis und Pflichtgates ausstehend. ZP05+ stock-v6-inkompatibel; allgemeine R07/R08/R09-Lücken weiter offen.
+- **Danach:** Nach erfolgreicher #250-Abnahme genau ein weiteres natives Raumgrafik-/Z-Masken-/Walkbox-Paket – kein paralleler Scope und kein NPC-Komfort.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
