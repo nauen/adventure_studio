@@ -256,7 +256,8 @@ RETURN_RGB = (60, 220, 90)
 
 def _native_room_roundtrip(stage: int, expected: list[bool], output: Path,
                            capture, process: subprocess.Popen) -> dict:
-    from .scumm_launch import colored_item_center, colored_item_pixels
+    from .scumm_launch import (close_rgb, colored_item_center, colored_item_pixels,
+                               scene_pixel)
     for _ in range(3):
         _click(790, 390)
         time.sleep(4)
@@ -281,13 +282,22 @@ def _native_room_roundtrip(stage: int, expected: list[bool], output: Path,
     for _ in range(45):
         label = f"return-{stage}-tavern"
         capture(label)
-        if colored_item_pixels(output, label, PORTAL_RGB) >= 40:
+        # On room entry the camera can start at the left of the scrolling
+        # Tavern: its far-right Passage and both doors need not yet be visible.
+        if close_rgb(scene_pixel(output, label), (70, 130, 190)):
             break
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM exited before returning to Tavern")
         time.sleep(0.4)
     else:
         raise RuntimeError(f"Native Shed->Tavern transition failed at stage {stage}")
+    for _ in range(3):
+        _click(790, 390)
+        time.sleep(4)
+    label = f"return-{stage}-observed"
+    capture(label)
+    if colored_item_pixels(output, label, PORTAL_RGB) < 40:
+        raise RuntimeError(f"Native Passage absent after return at stage {stage}")
     returned = _observed_states(output / f"scummvm-{label}.png")
     if returned != expected:
         raise RuntimeError(
