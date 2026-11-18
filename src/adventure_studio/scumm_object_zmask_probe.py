@@ -172,6 +172,54 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
         raise RuntimeError(
             f"IM02 ZP02 native occlusion failed: masked={im02_masked}, "
             f"clear={im02_clear}, wrongbox={im02_wrong}")
+    # R07.7: four independent base-image masks in the productive IM01;
+    # all four RMIM masks transparent, BOXD4 is the only occlusion source.
+    layer4_room = replace(second_room,
+        zplanes=(room.zplanes[0],
+                 ZPlane(2, bytes(room.geometry.room_width * room.geometry.room_height)),
+                 ZPlane(3, bytes(room.geometry.room_width * room.geometry.room_height)),
+                 ZPlane(4, bytes(room.geometry.room_width * room.geometry.room_height))),
+        walkboxes=(room.walkboxes[0], replace(room.walkboxes[1], mask=4)))
+    layer4_project = canonical_json(GameDocument(
+        "im01_fourth_zplane", (layer4_room, destination_fixture())))
+    Image.new("L", (64, 48), 0).save(first_mask)
+    for state, layer in ((1, 1), (1, 2), (1, 3), (2, 1), (2, 2), (2, 3)):
+        layer4_project = import_object_zplane(
+            layer4_project, "Harbor", "Curtain", str(first_mask), state, layer)
+    layer4_variants = {}
+    for label, level, box_mask in (("im01-zp04-masked", 255, 4),
+                                   ("im01-zp04-clear", 0, 4),
+                                   ("im01-zp04-wrongbox", 255, 3)):
+        Image.new("L", (64, 48), level).save(png)
+        edited = import_object_zplane(layer4_project, "Harbor", "Curtain", str(png), 1, 4)
+        document = parse_document(edited)
+        authored = document.rooms[0]
+        if box_mask != 4:
+            authored = replace(authored, walkboxes=(
+                authored.walkboxes[0], replace(authored.walkboxes[1], mask=box_mask)))
+        exact = canonical_json(replace(document, rooms=(authored, *document.rooms[1:])))
+        (destination / f"{label}-project.json").write_text(exact, encoding="utf-8")
+        authored = parse_document(exact).rooms[0]
+        obj = next(h for h in authored.hotspots if h.id == "Curtain")
+        unaffected = (obj.object_zplane_pixels, obj.object_zplane2_pixels,
+                      obj.object_zplane3_pixels, obj.open_object_zplane_pixels,
+                      obj.open_object_zplane2_pixels, obj.open_object_zplane3_pixels)
+        if any(value != bytes(64 * 48) for value in unaffected):
+            raise RuntimeError("IM01 ZP04 changed any independent earlier image mask")
+        if obj.object_zplane4_pixels != bytes([int(level != 0)]) * (64 * 48):
+            raise RuntimeError("IM01 ZP04 lost in project JSON roundtrip")
+        if authored.walkboxes[1].mask != box_mask:
+            raise RuntimeError("IM01 ZP04 control game BOXD index differs from JSON")
+        layer4_variants[label] = render_native_room(
+            authored, upstream, generated, destination, label)
+    im01_zp04_masked = layer4_variants["im01-zp04-masked"]["dark_costume_pixels"]
+    im01_zp04_clear = layer4_variants["im01-zp04-clear"]["dark_costume_pixels"]
+    im01_zp04_wrong = layer4_variants["im01-zp04-wrongbox"]["dark_costume_pixels"]
+    if (min(im01_zp04_clear, im01_zp04_wrong) < 100
+            or im01_zp04_masked > min(im01_zp04_clear, im01_zp04_wrong) // 3):
+        raise RuntimeError(
+            f"IM01 ZP04 native occlusion failed: masked={im01_zp04_masked}, "
+            f"transparent={im01_zp04_clear}, wrongbox={im01_zp04_wrong}")
     # R07.6: native IM02/ZP03 with transparent room masks and independent images.
     open3_room = replace(second_room, zplanes=(room.zplanes[0],
         ZPlane(2, bytes(room.geometry.room_width * room.geometry.room_height)),
@@ -264,6 +312,13 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
             f"IM01 ZP03 native occlusion failed: masked={layer3_masked}, "
             f"transparent={layer3_clear}, wrongbox={layer3_wrong}")
     report = {
+        "im01_fourth_zplane": {
+            "variants": layer4_variants,
+            "masked_actor_pixels": im01_zp04_masked,
+            "transparent_actor_pixels": im01_zp04_clear,
+            "wrongbox_actor_pixels": im01_zp04_wrong,
+            "native_im01_zp04_passed": True,
+        },
         "im02_third_zplane": {
             "variants": open3_variants,
             "masked_actor_pixels": im02_zp03_masked,
