@@ -125,17 +125,47 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
                 f"Visible Actor positions too close to disprove a screen-fixed ZP01 mask: {phase}")
     comparisons = {}
     for name in ("outgoing", "far", "returning"):
-        desired = phases["masked"][name]
+        # Independent native ScummVM runs capture frames on different animation
+        # ticks. Select a *measured* masked position shared by both controls,
+        # rather than assuming the first frame of the outgoing pan is aligned.
+        # Preserve the original <=16-world-pixel tolerance and the >110-pixel
+        # screen-distance requirement; never synthesize/interpolate a frame.
+        if name == "far":
+            candidates = [phases["masked"][name]]
+        else:
+            far_seconds = phases["masked"]["far"]["seconds"]
+            candidates = [r for r in variants["masked"]["frames"]
+                          if (r["seconds"] < far_seconds) == (name == "outgoing")
+                          and 330 <= r["camera_x"] <= 430
+                          and abs(r["screen_x"] - screen_positions["far"]["screen_x"]) > 110]
+            # Prefer the furthest outgoing point, closest to a common control
+            # sample; on return prefer the last visible in-range position.
+            if name == "outgoing":
+                candidates.reverse()
+            else:
+                candidates = list(reversed(candidates))
+        aligned = None
+        for desired in candidates:
+            controls = {}
+            for label in ("transparent", "wrong-box"):
+                available = (r for r in variants[label]["frames"]
+                             if (r["seconds"] <= phases[label]["far"]["seconds"]) ==
+                                (name != "returning"))
+                closest = min(available,
+                              key=lambda r: abs(r["camera_x"] - desired["camera_x"]),
+                              default=None)
+                if closest is None or abs(closest["camera_x"] - desired["camera_x"]) > 16:
+                    break
+                controls[label] = closest
+            if len(controls) == 2:
+                aligned = (desired, controls)
+                break
+        if aligned is None:
+            raise RuntimeError(f"No coordinate-aligned native controls for {name}")
+        desired, controls = aligned
         row = {"camera_x": desired["camera_x"], "screen_x": desired["screen_x"],
                "masked_pixels": desired["actor_dark_pixels"]}
-        for label in ("transparent", "wrong-box"):
-            available = (r for r in variants[label]["frames"]
-                         if (r["seconds"] <= phases[label]["far"]["seconds"]) ==
-                            (name != "returning"))
-            closest = min(available, key=lambda r: abs(r["camera_x"] - desired["camera_x"]),
-                          default=None)
-            if closest is None or abs(closest["camera_x"] - desired["camera_x"]) > 16:
-                raise RuntimeError(f"No coordinate-aligned {label} control for {name}")
+        for label, closest in controls.items():
             row[f"{label}_pixels"] = closest["actor_dark_pixels"]
             row[f"{label}_frame"] = closest["frame"]
             if closest["actor_dark_pixels"] < 100:
