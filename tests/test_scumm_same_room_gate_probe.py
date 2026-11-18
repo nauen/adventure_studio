@@ -161,5 +161,40 @@ class SameRoomNativeGateTests(unittest.TestCase):
                 Path("/native/first-order"), Path("/native/control"))
 
 
+    def test_r09_room_return_plan_is_explicit_and_fail_closed(self):
+        from adventure_studio.scumm_same_room_gate_probe import validate_native_same_room_plan
+        valid = {"gates": list(GATES), "keys": ["LatchKey", "CellarKey"],
+                 "order": list(ORDERS[0]), "control": False, "room_return": True}
+        validate_native_same_room_plan(valid)
+        for invalid in ("yes", 1, None):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(ValueError, "plan"):
+                    validate_native_same_room_plan({**valid, "room_return": invalid})
+
+    def test_r09_two_independent_gates_require_each_real_room_reentry(self):
+        from adventure_studio.scumm_same_room_gate_probe import verify_same_room_return_evidence
+        gated = report()
+        control = report(control=True)
+        gated["room_returns"] = [
+            {"stage": stage, "transition": "Tavern->Shed->Tavern",
+             "returned_gate_states": state}
+            for stage, state in enumerate(gated["states"])]
+        control["room_returns"] = [
+            {"stage": 0, "transition": "Tavern->Shed->Tavern",
+             "returned_gate_states": [False, False]}]
+        self.assertTrue(verify_same_room_return_evidence(
+            gated, control)["native_r09_two_gate_room_return_passed"])
+        for corrupt in (
+            gated["room_returns"][:-1],
+            [{**gated["room_returns"][0], "transition": "Tavern->Tavern"},
+             *gated["room_returns"][1:]],
+            [gated["room_returns"][0], {**gated["room_returns"][1],
+                                       "returned_gate_states": [False, False]},
+             *gated["room_returns"][2:]],
+        ):
+            with self.assertRaisesRegex(RuntimeError, "room|gate state"):
+                verify_same_room_return_evidence(
+                    {**gated, "room_returns": corrupt}, control)
+
 if __name__ == "__main__":
     unittest.main()
