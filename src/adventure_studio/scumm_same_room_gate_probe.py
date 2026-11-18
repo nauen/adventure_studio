@@ -40,11 +40,14 @@ PICKUP_COLORS = ((255, 220, 75), (225, 80, 180), (160, 230, 55))
 
 
 def validate_native_same_room_plan(plan: dict) -> None:
-    if not isinstance(plan, dict) or set(plan) != {"gates", "keys", "order", "control"}:
+    if (not isinstance(plan, dict) or set(plan) not in (
+            {"gates", "keys", "order", "control"},
+            {"gates", "keys", "order", "control", "room_return"})):
         raise ValueError("Invalid same-room native gate plan")
     if (plan["gates"] != list(GATES) or plan["keys"] != list(KEYS)
             or plan["order"] not in [list(order) for order in ORDERS]
-            or type(plan["control"]) is not bool):
+            or type(plan["control"]) is not bool
+            or (("room_return" in plan) and type(plan["room_return"]) is not bool)):
         raise ValueError("Same-room native gate plan does not match two independent Story doors")
 
 
@@ -112,6 +115,33 @@ def verify_same_room_gate_report(gated: dict, control: dict,
             "state_sequence": expected_states, "actor_y_differences": differences,
             "both_independent_native_box_flags_verified": True,
             "sprite_only_false_positive_rejected": True}
+
+
+def verify_same_room_return_evidence(gated: dict, control: dict) -> dict:
+    """Require a real exit and reentry at every independently checked gate state."""
+    for name, report in (("gated", gated), ("control", control)):
+        expected = [[True, True]] if name == "control" else [[False, False]]
+        if name == "gated":
+            state = [False, False]
+            for gate in report.get("order", []):
+                state = list(state)
+                state[gate] = not state[gate]
+                expected.append(state)
+        if report.get("states") != expected:
+            raise RuntimeError(f"{name}: invalid independent gate state sequence")
+        returns = report.get("room_returns")
+        if not isinstance(returns, list) or len(returns) != len(expected):
+            raise RuntimeError(f"{name}: missing real room exit/reentry cycles")
+        for stage, entry in enumerate(returns):
+            # The control intentionally keeps both BOXD paths open while
+            # the ordinary un-gated door sprites remain visually closed.
+            expected_sprites = [False, False] if name == "control" else expected[stage]
+            if (entry != {"stage": stage, "transition": "Tavern->Shed->Tavern",
+                          "returned_gate_states": expected_sprites}):
+                raise RuntimeError(f"{name}: native gate state lost on return {stage}: {entry}")
+    return {"native_r09_two_gate_room_return_passed": True,
+            "gated_reentries": len(gated["room_returns"]),
+            "control_reentries": len(control["room_returns"])}
 
 
 def _click(x: int, y: int) -> None:
@@ -218,6 +248,55 @@ def _play_inventory_use(capture, output: Path, gate_index: int,
     capture(label + "-after")
 
 
+# The colors belong to ordinary authored native room sprites (not a probe-only
+# engine hook); the exit is separate from both reversible local gate targets.
+PORTAL_RGB = (175, 60, 210)
+RETURN_RGB = (60, 220, 90)
+
+
+def _native_room_roundtrip(stage: int, expected: list[bool], output: Path,
+                           capture, process: subprocess.Popen) -> dict:
+    from .scumm_launch import colored_item_center, colored_item_pixels
+    for _ in range(3):
+        _click(790, 390)
+        time.sleep(4)
+    label = f"return-{stage}-exit"
+    capture(label)
+    if colored_item_pixels(output, label, PORTAL_RGB) < 40:
+        raise RuntimeError(f"Native room exit sprite not visible at stage {stage}")
+    x, y = colored_item_center(output, label, PORTAL_RGB, fuzz_percent=4)
+    _click(x, y)
+    for _ in range(45):
+        label = f"return-{stage}-shed"
+        capture(label)
+        if colored_item_pixels(output, label, RETURN_RGB) >= 40:
+            break
+        if process.poll() is not None:
+            raise RuntimeError("Stock ScummVM exited before entering Shed")
+        time.sleep(0.4)
+    else:
+        raise RuntimeError(f"Native Tavern->Shed transition failed at stage {stage}")
+    x, y = colored_item_center(output, label, RETURN_RGB, fuzz_percent=4)
+    _click(x, y)
+    for _ in range(45):
+        label = f"return-{stage}-tavern"
+        capture(label)
+        if colored_item_pixels(output, label, PORTAL_RGB) >= 40:
+            break
+        if process.poll() is not None:
+            raise RuntimeError("Stock ScummVM exited before returning to Tavern")
+        time.sleep(0.4)
+    else:
+        raise RuntimeError(f"Native Shed->Tavern transition failed at stage {stage}")
+    returned = _observed_states(output / f"scummvm-{label}.png")
+    if returned != expected:
+        raise RuntimeError(
+            f"Independent native gate states lost on room return at {stage}: "
+            f"expected={expected}, observed={returned}")
+    return {"stage": stage, "transition": "Tavern->Shed->Tavern",
+            "returned_gate_states": returned}
+
+
 def play_same_room_gates(plan: dict, output: Path, capture,
                          process: subprocess.Popen, log) -> dict:
     validate_native_same_room_plan(plan)
@@ -266,9 +345,14 @@ def play_same_room_gates(plan: dict, output: Path, capture,
             )
 
     routes = []
+    room_returns = []
     for stage in range(1 if plan["control"] else 5):
         if process.poll() is not None:
             raise RuntimeError("ScummVM stopped during same-room gate gameplay")
+        if plan.get("room_return", False):
+            expected_sprites = [False, False] if plan["control"] else states[-1]
+            room_returns.append(_native_room_roundtrip(
+                stage, expected_sprites, output, capture, process))
         routes.append([_capture_route(capture, f"state-{stage}-gate-{i}", i)
                        for i in range(2)])
         if plan["control"] or stage == 4:
@@ -313,7 +397,8 @@ def play_same_room_gates(plan: dict, output: Path, capture,
               "successful_uses": len(transitions),
               "failed_wrong_key_use_rejected": rejected,
               "native_transitions": transitions,
-              "native_box_flags": counts, "route_samples": routes}
+              "native_box_flags": counts, "route_samples": routes,
+              **({"room_returns": room_returns} if plan.get("room_return") else {})}
     (output / "scummvm-native-same-room-gates-report.json").write_text(
         json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     return report
@@ -334,7 +419,8 @@ def _story() -> Story:
         starting_scene_id="Tavern", final_puzzle_id="Unlock")
 
 
-def _export_game(story_raw: str, upstream: Path, root: Path, control: bool) -> None:
+def _export_game(story_raw: str, upstream: Path, root: Path, control: bool,
+                 room_return: bool = False) -> None:
     build = root / "build"
     build.mkdir(parents=True, exist_ok=True)
     built = build_story_document(story_raw, build)
@@ -369,7 +455,26 @@ def _export_game(story_raw: str, upstream: Path, root: Path, control: bool) -> N
     room = replace(room, palette=palette,
                    hotspots=tuple(mapped.get(hotspot.id, hotspot)
                                   for hotspot in room.hotspots))
-    document = replace(document, rooms=(room, *document.rooms[1:]))
+    if room_return:
+        from .scumm_assets import RoomHotspot
+        # Both ordinary authored exits are intentionally separate from the
+        # independently keyed local doors. Persistence uses normal room state.
+        portal = RoomHotspot("Passage", "Passage to Shed", "A way outside.",
+                             568, 100, 16, 16,
+                             sprite_pixels=bytes([len(room.palette)]) * 256,
+                             exit_destination="Shed")
+        room = replace(room, palette=(*room.palette, PORTAL_RGB),
+                       hotspots=(*room.hotspots, portal))
+        shed = document.rooms[1]
+        stairs = RoomHotspot("Stairs", "Back to Tavern", "The way back.",
+                             125, 100, 16, 16,
+                             sprite_pixels=bytes([len(shed.palette)]) * 256,
+                             exit_destination="Tavern")
+        shed = replace(shed, palette=(*shed.palette, RETURN_RGB),
+                       hotspots=(*shed.hotspots, stairs))
+        document = replace(document, rooms=(room, shed, *document.rooms[2:]))
+    else:
+        document = replace(document, rooms=(room, *document.rooms[1:]))
     if parse_document(canonical_json(document)) != document:
         raise RuntimeError("Native gates lost on JSON-v1/Story roundtrip")
     rules = {rule.target_id: rule for rule in document.rooms[0].use_rules}
@@ -384,7 +489,8 @@ def _export_game(story_raw: str, upstream: Path, root: Path, control: bool) -> N
     compile_story_game(build, upstream, root / "game")
 
 
-def run_same_room_gates(upstream: Path, output: Path) -> dict:
+def run_same_room_gates(upstream: Path, output: Path,
+                        room_return: bool = False) -> dict:
     from .scumm_launch import launch_smoke
     raw = canonical_story_json(_story())
     results = {}
@@ -393,9 +499,10 @@ def run_same_room_gates(upstream: Path, output: Path) -> dict:
             ("first-order", ORDERS[0]), ("reverse-order", ORDERS[1]))
         for name, order in variants:
             root = output / name
-            _export_game(raw, upstream, root, control)
+            _export_game(raw, upstream, root, control, room_return=room_return)
             plan = {"gates": list(GATES), "keys": list(KEYS),
-                    "order": list(ORDERS[0] if control else order), "control": control}
+                    "order": list(ORDERS[0] if control else order), "control": control,
+                    **({"room_return": True} if room_return else {})}
             launch_smoke(root / "game", root / "screenshots",
                          native_same_room_gate_plan=plan)
             results[name] = json.loads((root / "screenshots" /
@@ -405,14 +512,19 @@ def run_same_room_gates(upstream: Path, output: Path) -> dict:
         checks[name] = verify_same_room_gate_report(
             results[name], results["control"], output / name / "screenshots",
             output / "control" / "screenshots")
+        if room_return:
+            checks[name].update(verify_same_room_return_evidence(
+                results[name], results["control"]))
     report = {"authoring": "Studio Story -> JSON-v1 -> ScummC-v6 -> stock ScummVM",
               "room": "Tavern", "checks": checks}
-    (output / "native-r09-same-room-gates-report.json").write_text(
+    (output / ("native-r09-two-gate-room-return-report.json" if room_return
+               else "native-r09-same-room-gates-report.json")).write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return report
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit("Usage: python -m adventure_studio.scumm_same_room_gate_probe SCUMMC_DIR OUTPUT")
-    print(json.dumps(run_same_room_gates(Path(sys.argv[1]), Path(sys.argv[2])), indent=2))
+    if len(sys.argv) not in (3, 4) or (len(sys.argv) == 4 and sys.argv[3] != "--room-return"):
+        raise SystemExit("Usage: python -m adventure_studio.scumm_same_room_gate_probe SCUMMC_DIR OUTPUT [--room-return]")
+    print(json.dumps(run_same_room_gates(Path(sys.argv[1]), Path(sys.argv[2]),
+                                   room_return=len(sys.argv) == 4), indent=2))
