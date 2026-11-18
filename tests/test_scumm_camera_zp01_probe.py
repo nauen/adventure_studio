@@ -133,6 +133,35 @@ class CameraZP01EvidenceTests(unittest.TestCase):
         result = verify_world_mask(variants)
         self.assertTrue(result["native_world_anchored_zp01_pan_and_return_passed"])
 
+    def test_uneven_native_camera_samples_align_without_loosening_thresholds(self):
+        # Geometry CI 44337930731 recorded masked 344/376/408,
+        # transparent 360/392/424, wrong-box only 400 on the outward pan.
+        # First-match selection incorrectly failed on 344 vs 400.
+        def trace(outward, inward, pixels):
+            cameras = (160, *outward, 480, *inward, 160)
+            return {"frames": [
+                {"world_x": 390, "camera_x": camera,
+                 "screen_x": 192 + 2 * (390 - camera + 160),
+                 "seconds": index, "frame": str(index),
+                 "actor_dark_pixels": pixels}
+                for index, camera in enumerate(cameras)
+            ]}
+        variants = {
+            "masked": trace((344, 376, 408), (400, 368), 0),
+            "transparent": trace((360, 392, 424), (416, 384, 352), 1540),
+            "wrong-box": trace((400,), (408, 376, 344), 1540),
+        }
+        report = verify_world_mask(variants)
+        self.assertTrue(report["native_world_anchored_zp01_pan_and_return_passed"])
+        self.assertEqual(report["pixel_comparisons"]["outgoing"]["camera_x"], 408)
+        self.assertEqual(report["pixel_comparisons"]["returning"]["camera_x"], 368)
+        variants["wrong-box"] = trace((400,), (408, 376, 344), 0)
+        with self.assertRaisesRegex(RuntimeError, "invisible"):
+            verify_world_mask(variants)
+        variants["wrong-box"] = trace((450,), (450,), 1540)
+        with self.assertRaisesRegex(RuntimeError, "coordinate-aligned"):
+            verify_world_mask(variants)
+
     def test_visible_positions_must_disprove_a_screen_fixed_mask(self):
         def trace(pixels):
             return {"frames": [
