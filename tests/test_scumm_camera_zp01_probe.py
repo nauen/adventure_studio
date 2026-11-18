@@ -158,7 +158,7 @@ class CameraZP01EvidenceTests(unittest.TestCase):
         variants["wrong-box"] = trace((400,), (408, 376, 344), 0)
         with self.assertRaisesRegex(RuntimeError, "invisible"):
             verify_world_mask(variants)
-        variants["wrong-box"] = trace((450,), (450,), 1540)
+        variants["wrong-box"] = trace((330,), (330,), 1540)
         with self.assertRaisesRegex(RuntimeError, "coordinate-aligned"):
             verify_world_mask(variants)
 
