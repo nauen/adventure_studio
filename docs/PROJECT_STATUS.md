@@ -9,11 +9,11 @@ Das frühere ausführliche Sitzungsprotokoll liegt in
 
 ## Ein aktiver Produktpfad
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime, nach der zentralen 64-Fähigkeiten-Matrix.
-- **Jetzt:** NPC-Komfort nach [#190](https://github.com/nauen/adventure_studio/pull/190) beendet. CI-Konsolidierung [#252](https://github.com/nauen/adventure_studio/pull/252) gemergt. **Einzelpaket IM01/ZP03 [PR #251](https://github.com/nauen/adventure_studio/pull/251) (Squash [`48ea235`](https://github.com/nauen/adventure_studio/commit/48ea23525e4f71b19e25a38ae407d9d86c17a17b)) vollständig abgenommen und gemergt; Issue [#250](https://github.com/nauen/adventure_studio/issues/250) geschlossen.** Keine parallele native Featurearbeit.
-- **Abnahme:** Finale [Core-CI 44181354103](https://github.com/nauen/adventure_studio/actions/runs/44181354103) sowie vollständige [native Vierfach-/Studio-CI 44181364538](https://github.com/nauen/adventure_studio/actions/runs/44181364538) grün. Gradio/Chromium → RoomHotspot/JSON-v1/Story → produktiver ScummC-IM01-ZP03-Export → drei getrennte stock-ScummVM-Games: **0 Actor-Pixel** (ZP03/BOXD3 maskiert), **1556** (ZP03 transparent), **1556** (falscher BOXD2). Native `native_im01_zp03_passed: true`; [native Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44181364538/artifacts/14372951461) und [Browser-Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44181364538/artifacts/14373241003).
-- **Blocker:** Für IM01/ZP03 keiner. R07 bleibt insgesamt Teilfähigkeit; andere Bildzustände/Z-Masken, R08/R09 und stock-v6-ZP05+ bleiben separat offen bzw. inkompatibel.
-- **Danach:** Genau eine native Raumgrafik-Lücke als nächstes Paket: **IM02/ZP03**, erst nach Abschluss dieser Konsolidierung aufgreifen. Keine NPC-Komfortentwicklung.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime, dokumentiert in der zentralen 64-Fähigkeiten-Matrix.
+- **Jetzt:** **Nur R07 IM02/ZP03**, [Issue #253](https://github.com/nauen/adventure_studio/issues/253), Branch `feature/r07-im02-zp03-253`. Vorgänger [#251](https://github.com/nauen/adventure_studio/pull/251) nativ abgenommen und gemergt; NPC-Komfort nach [#190](https://github.com/nauen/adventure_studio/pull/190) abgeschlossen.
+- **Abnahme:** PNG im echten Studio → optionales `RoomHotspot.open_object_zplane3_pixels` → JSON-v1/Story → produktiver ScummC-IM02-Export einschließlich `OpenZ03.bmp` → drei unabhängige stock-ScummVM-Spiele (BOXD3 maskiert / transparent / falscher BOXD2), Pixelreport, Screenshots, native Binaries und Chromium-Reimport. **Noch nicht abgenommen.**
+- **Blocker:** Finale Core-, Gradio-/Chromium- und vollständige native CI auf dem IM02/ZP03-Produkthead ausstehend. R07 insgesamt weiterhin Teilfähigkeit; stock-v6-ZP05+ fail-closed.
+- **Danach:** Erst nach vollständiger IM02/ZP03-Gameplay-Abnahme und Merge genau eine weitere native Raumgrafik-/Z-Masken-/Walkbox-Lücke wählen. Keine NPC-Komfortpakete.
 
 ## Zuletzt tatsächlich geliefert
 
