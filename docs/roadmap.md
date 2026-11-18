@@ -9,11 +9,11 @@ historische Checkboxen sind keine aktiven Aufträge.
 
 ## Aktiver Entscheidungsstand
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix bleibt die einzige Funktions- und Statusquelle.
-- **Jetzt:** **R09 / Issue #259** ist das einzige aktive Produktpaket: zwei unabhängig reversible Walkbox-Gates in einem Raum durch echten Raumwechsel und Rückkehr bewahren. Umsetzung auf Branch `feature/r09-two-gate-room-return-259`; #258 ist nativ bestätigt und gemergt, keine NPC-Komfortarbeit seit #190.
-- **Abnahme:** Zwei getrennte Studio-/Story-UseRules und Boxen → JSON-v1 → produktiver ScummC-Export → in stock ScummVM jeweils `Tavern → Shed → Tavern` bei den vier kombinierten Gate-Zuständen; native Actor-Routen gegen echtes always-open Kontrollspiel, beide Schaltreihenfolgen, Screenshot-/Ressourcenbeleg. **CI/ScummVM noch nicht abgenommen.**
-- **Blocker:** Finaler Core-/Studio-/Native-CI-Lauf und beobachtete echte Room-Reentry-Gameplay-Evidenz für #259 fehlen. R07/R08/R09 bleiben Teilfähigkeiten; ZP05+ stock-v6-fail-closed.
-- **Danach:** Erst #259 grün bis stock-ScummVM-Evidenz abnehmen, auf `main` mergen und die eine nächste native Lücke priorisieren. Keine parallelen Features.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix ist die einzige Funktions- und Statusquelle.
+- **Jetzt:** **R09 / Issue #259, PR #260** als einziges Produktpaket nach vollständiger stock-ScummVM-Abnahme in `main` integrieren. Kein NPC-Komfort seit #190.
+- **Abnahme:** Zwei Studio-/Story-UseRules und BOXD2/3 → JSON-v1 → produktiver ScummC-v6-Export → **stock ScummVM bestanden**: in beiden Schaltreihenfolgen je fünf echte `Tavern → Shed → Tavern`-Rückkehren, eine weitere im separat kompilierten always-open-Kontrollspiel; Zustände `00→10→11→01→00` bzw. `00→01→11→10→00`, unabhängige Native-Boxflags und gemessene Actor-Routen. [Core 44321882162](https://github.com/nauen/adventure_studio/actions/runs/44321882162) und [Integration 44321896779](https://github.com/nauen/adventure_studio/actions/runs/44321896779) **grün**, einschließlich 4/4 nativen Shards; [Spiel-/Screenshot-/Log-Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44321896779/artifacts/14438329342).
+- **Blocker:** Fachlich keiner für #259; PR #260 muss nach Prüfung des synchronisierten Dokumentations-Commits und der GitHub-Mergeregeln noch integriert werden. R07/R08/R09 bleiben insgesamt Teilfähigkeiten; ZP05+ wird für stock v6 weiterhin vor Export abgelehnt. Studio/Dialogue/Inventory waren im risikobasierten PR-Workflow für die unveränderten Pfade nicht betroffen und daher übersprungen.
+- **Danach:** Nach Merge genau **ein** natives Folgepaket priorisieren: R08, eine konvexe-zu-konkave Walkbox-Polygonvariante vom Studio-Modell über BOXD/BOXM bis zur echten ScummVM-Actor-Route gegen die konvexe Kontrolle. Kein paralleles Feature.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
