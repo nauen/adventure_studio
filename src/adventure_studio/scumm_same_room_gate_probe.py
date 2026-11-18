@@ -253,6 +253,9 @@ def _play_inventory_use(capture, output: Path, gate_index: int,
 PORTAL_RGB = (175, 60, 210)
 # Dedicated cyan return marker, distinct from Tavern's green Door and both keys.
 RETURN_RGB = (24, 242, 246)
+# The Tavern exit is at world x=568 and may be outside the reentry camera.
+# A separate authored entrance landmark identifies Tavern before scrolling.
+TAVERN_ENTRY_RGB = (247, 85, 220)
 
 
 def _confirmed_room_markers(output: Path, frame: str, room: str) -> bool:
@@ -260,11 +263,12 @@ def _confirmed_room_markers(output: Path, frame: str, room: str) -> bool:
     from .scumm_launch import colored_item_pixels
     if room not in ("Tavern", "Shed"):
         raise ValueError(f"Unknown native room {room!r}")
-    portal = colored_item_pixels(output, frame, PORTAL_RGB)
+    passage = colored_item_pixels(output, frame, PORTAL_RGB)
     stairs = colored_item_pixels(output, frame, RETURN_RGB)
+    entrance = colored_item_pixels(output, frame, TAVERN_ENTRY_RGB)
     if room == "Tavern":
-        return portal >= 40 and stairs < 10
-    return stairs >= 40 and portal < 10
+        return (entrance >= 40 or passage >= 40) and stairs < 10
+    return stairs >= 40 and entrance < 10 and passage < 10
 
 
 def _native_room_roundtrip(stage: int, expected: list[bool], output: Path,
@@ -294,13 +298,10 @@ def _native_room_roundtrip(stage: int, expected: list[bool], output: Path,
     for _ in range(45):
         label = f"return-{stage}-tavern"
         capture(label)
-        # Tavern's ordinary exit is on the right of a scrolling room.
-        # Move the Actor/camera without treating a shared background color
-        # as proof that the Shed->Tavern transition already completed.
+        # Confirm an authored Tavern-only entrance landmark before
+        # touching the screen. The far-right Passage can be off-camera.
         if _confirmed_room_markers(output, label, "Tavern"):
             break
-        if _ % 10 == 0:
-            _click(790, 390)
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM exited before returning to Tavern")
         time.sleep(0.4)
@@ -488,8 +489,14 @@ def _export_game(story_raw: str, upstream: Path, root: Path, control: bool,
                              568, 100, 16, 16,
                              sprite_pixels=bytes([len(room.palette)]) * 256,
                              exit_destination="Shed")
-        room = replace(room, palette=(*room.palette, PORTAL_RGB),
-                       hotspots=(*room.hotspots, portal))
+        # Normal authored sprite, not an interpreter hook. It is placed
+        # at the reentry side, where the scrolling Passage is off-camera.
+        entrance = RoomHotspot("TavernLandmark", "Tavern entrance",
+                               "A painted sign.", 90, 100, 16, 16,
+                               sprite_pixels=bytes([len(room.palette) + 1]) * 256)
+        room = replace(room,
+                       palette=(*room.palette, PORTAL_RGB, TAVERN_ENTRY_RGB),
+                       hotspots=(*room.hotspots, portal, entrance))
         shed = document.rooms[1]
         stairs = RoomHotspot("Stairs", "Back to Tavern", "The way back.",
                              125, 100, 16, 16,
