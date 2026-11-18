@@ -161,29 +161,38 @@ class SameRoomNativeGateTests(unittest.TestCase):
                 Path("/native/first-order"), Path("/native/control"))
 
 
-    def test_room_recognition_rejects_shared_colors_and_requires_exclusive_marker(self):
+    def test_room_recognition_requires_exclusive_visible_room_landmark(self):
         from adventure_studio.scumm_same_room_gate_probe import (
-            PORTAL_RGB, RETURN_RGB, _confirmed_room_markers,
+            PORTAL_RGB, RETURN_RGB, TAVERN_ENTRY_RGB, _confirmed_room_markers,
         )
-        from adventure_studio.scumm_launch import colored_item_pixels
+        colors = (PORTAL_RGB, RETURN_RGB, TAVERN_ENTRY_RGB)
+        self.assertEqual(len(set(colors)), 3)
 
-        self.assertNotEqual(PORTAL_RGB, RETURN_RGB)
         with patch("adventure_studio.scumm_launch.colored_item_pixels") as pixels:
-            def marker_counts(output, frame, color):
-                return {PORTAL_RGB: 50, RETURN_RGB: 45}[color]
-            pixels.side_effect = marker_counts
-            self.assertFalse(_confirmed_room_markers(Path("/native"), "frame", "Shed"))
-            self.assertFalse(_confirmed_room_markers(Path("/native"), "frame", "Tavern"))
-            pixels.side_effect = lambda output, frame, color: (
-                0 if color == PORTAL_RGB else 55
-            )
+            def set_visible(*active):
+                pixels.side_effect = lambda output, frame, color: (
+                    60 if color in active else 0
+                )
+
+            set_visible()
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "none", "Shed"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "none", "Tavern"))
+            set_visible(RETURN_RGB, TAVERN_ENTRY_RGB)
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "ambiguous", "Shed"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "ambiguous", "Tavern"))
+            set_visible(RETURN_RGB, PORTAL_RGB)
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "collision", "Shed"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "collision", "Tavern"))
+            set_visible(RETURN_RGB)
             self.assertTrue(_confirmed_room_markers(Path("/native"), "shed", "Shed"))
             self.assertFalse(_confirmed_room_markers(Path("/native"), "shed", "Tavern"))
-            pixels.side_effect = lambda output, frame, color: (
-                55 if color == PORTAL_RGB else 0
-            )
-            self.assertTrue(_confirmed_room_markers(Path("/native"), "tavern", "Tavern"))
-            self.assertFalse(_confirmed_room_markers(Path("/native"), "tavern", "Shed"))
+            # Tavern reentry camera sees the entrance, not the far-right Passage.
+            set_visible(TAVERN_ENTRY_RGB)
+            self.assertTrue(_confirmed_room_markers(Path("/native"), "entry", "Tavern"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "entry", "Shed"))
+            set_visible(PORTAL_RGB)
+            self.assertTrue(_confirmed_room_markers(Path("/native"), "right", "Tavern"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "right", "Shed"))
         with self.assertRaisesRegex(ValueError, "Unknown native room"):
             _confirmed_room_markers(Path("/native"), "frame", "Cellar")
 
