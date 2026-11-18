@@ -251,13 +251,25 @@ def _play_inventory_use(capture, output: Path, gate_index: int,
 # The colors belong to ordinary authored native room sprites (not a probe-only
 # engine hook); the exit is separate from both reversible local gate targets.
 PORTAL_RGB = (175, 60, 210)
-RETURN_RGB = (60, 220, 90)
+# Dedicated cyan return marker, distinct from Tavern's green Door and both keys.
+RETURN_RGB = (24, 242, 246)
+
+
+def _confirmed_room_markers(output: Path, frame: str, room: str) -> bool:
+    """Fail closed on collision: require the target marker and exclude its peer."""
+    from .scumm_launch import colored_item_pixels
+    if room not in ("Tavern", "Shed"):
+        raise ValueError(f"Unknown native room {room!r}")
+    portal = colored_item_pixels(output, frame, PORTAL_RGB)
+    stairs = colored_item_pixels(output, frame, RETURN_RGB)
+    if room == "Tavern":
+        return portal >= 40 and stairs < 10
+    return stairs >= 40 and portal < 10
 
 
 def _native_room_roundtrip(stage: int, expected: list[bool], output: Path,
                            capture, process: subprocess.Popen) -> dict:
-    from .scumm_launch import (close_rgb, colored_item_center, colored_item_pixels,
-                               scene_pixel)
+    from .scumm_launch import colored_item_center, colored_item_pixels
     for _ in range(3):
         _click(790, 390)
         time.sleep(4)
@@ -270,7 +282,7 @@ def _native_room_roundtrip(stage: int, expected: list[bool], output: Path,
     for _ in range(45):
         label = f"return-{stage}-shed"
         capture(label)
-        if colored_item_pixels(output, label, RETURN_RGB) >= 40:
+        if _confirmed_room_markers(output, label, "Shed"):
             break
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM exited before entering Shed")
@@ -282,10 +294,13 @@ def _native_room_roundtrip(stage: int, expected: list[bool], output: Path,
     for _ in range(45):
         label = f"return-{stage}-tavern"
         capture(label)
-        # On room entry the camera can start at the left of the scrolling
-        # Tavern: its far-right Passage and both doors need not yet be visible.
-        if close_rgb(scene_pixel(output, label), (70, 130, 190)):
+        # Tavern's ordinary exit is on the right of a scrolling room.
+        # Move the Actor/camera without treating a shared background color
+        # as proof that the Shed->Tavern transition already completed.
+        if _confirmed_room_markers(output, label, "Tavern"):
             break
+        if _ % 10 == 0:
+            _click(790, 390)
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM exited before returning to Tavern")
         time.sleep(0.4)
