@@ -161,6 +161,32 @@ class SameRoomNativeGateTests(unittest.TestCase):
                 Path("/native/first-order"), Path("/native/control"))
 
 
+    def test_room_recognition_rejects_shared_colors_and_requires_exclusive_marker(self):
+        from adventure_studio.scumm_same_room_gate_probe import (
+            PORTAL_RGB, RETURN_RGB, _confirmed_room_markers,
+        )
+        from adventure_studio.scumm_launch import colored_item_pixels
+
+        self.assertNotEqual(PORTAL_RGB, RETURN_RGB)
+        with patch("adventure_studio.scumm_launch.colored_item_pixels") as pixels:
+            def marker_counts(output, frame, color):
+                return {PORTAL_RGB: 50, RETURN_RGB: 45}[color]
+            pixels.side_effect = marker_counts
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "frame", "Shed"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "frame", "Tavern"))
+            pixels.side_effect = lambda output, frame, color: (
+                0 if color == PORTAL_RGB else 55
+            )
+            self.assertTrue(_confirmed_room_markers(Path("/native"), "shed", "Shed"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "shed", "Tavern"))
+            pixels.side_effect = lambda output, frame, color: (
+                55 if color == PORTAL_RGB else 0
+            )
+            self.assertTrue(_confirmed_room_markers(Path("/native"), "tavern", "Tavern"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "tavern", "Shed"))
+        with self.assertRaisesRegex(ValueError, "Unknown native room"):
+            _confirmed_room_markers(Path("/native"), "frame", "Cellar")
+
     def test_r09_room_return_plan_is_explicit_and_fail_closed(self):
         from adventure_studio.scumm_same_room_gate_probe import validate_native_same_room_plan
         valid = {"gates": list(GATES), "keys": ["LatchKey", "CellarKey"],
