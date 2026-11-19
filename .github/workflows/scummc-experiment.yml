@@ -16,9 +16,12 @@ jobs:
       matrix:
         shard: [mask, geometry, actors, story]
     runs-on: ubuntu-24.04
-    # ScummVM pulls a large data package. The Ubuntu mirror occasionally
-    # stalls; give the full job enough time while bounding the install step.
-    timeout-minutes: 75
+    # Geometry runs all native BOXD/BOXM, Z-mask, gate and room-return gameplay
+    # probes sequentially. Two independent attempts of PR #260 exhausted the
+    # old 75-minute job limit during R09 (not a test assertion failure).
+    # Keep all native assertions; give only this expensive shard more time.
+    # Ubuntu mirror stalls remain bounded by the 35-minute install step.
+    timeout-minutes: ${{ matrix.shard == 'geometry' && 180 || 75 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
