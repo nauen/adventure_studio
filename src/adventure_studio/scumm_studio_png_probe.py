@@ -24,7 +24,7 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
     # Distinguish authored frames from the upstream red/pink walking hero.
     # Screenshot evidence showed the former red test color on that hero too,
     # so it could overwhelm the second pose without measuring our PNG Actor.
-    colors = ((25, 220, 95), (180, 40, 245))
+    colors = ((13, 251, 197), (247, 19, 233))
     for name, color in zip(("pose", "wave"), colors):
         image = Image.new("RGBA", (24, 32), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
