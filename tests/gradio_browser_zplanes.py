@@ -24,7 +24,7 @@ def main() -> None:
         fixture.write_text(canonical_json(GameDocument("four_zplanes_camera", (
             scrolling_fixture(), destination_fixture()))), encoding="utf-8")
         masks = []
-        regions = ((160, 320), (320, 400), (400, 500), (500, 640))
+        regions = ((160, 320), (320, 400), (400, 480), (480, 640))
         for index, (start, end) in enumerate(regions, 1):
             image = Image.new("L", (640, 200), color=0)
             for y in range(60, 110):
@@ -54,8 +54,8 @@ def main() -> None:
                     (1, "0,70; 160,70; 160,150; 0,150"),
                     (2, "160,70; 320,70; 320,150; 160,150"),
                     (3, "320,70; 400,70; 400,150; 320,150"),
-                    (4, "400,70; 500,70; 500,150; 400,150"),
-                    (5, "500,70; 639,70; 639,150; 500,150"),
+                    (4, "400,70; 480,70; 480,150; 400,150"),
+                    (5, "480,70; 639,70; 639,150; 480,150"),
                 ):
                     page.locator("#native-walkbox-index input").fill(str(index))
                     corners.fill(shape)
