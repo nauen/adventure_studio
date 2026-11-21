@@ -26,7 +26,7 @@ class NativeScummVMShardingTests(unittest.TestCase):
             end = matches[index].start() if index < len(matches) else len(contents)
             block = contents[match.start():end]
             expected = (
-                "actors" if index in (7, 8) or 41 <= index <= 64 else
+                "actors" if index in (7, 8) or 43 <= index <= 66 else
                 "mask" if 19 <= index <= 20 else
                 "geometry" if 13 <= index <= 42 else
                 "actors" if 43 <= index <= 66 else
