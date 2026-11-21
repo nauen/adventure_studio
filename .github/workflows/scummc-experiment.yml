@@ -140,6 +140,29 @@ jobs:
             /tmp/native-r06-camera-zp01/*-screenshots/camera-frame-times.json
             /tmp/native-r06-camera-zp01/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
+      - name: Verify four simultaneous Studio Z-masks through native camera pan and return
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_four_mask_camera_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r06-four-mask-camera
+      - name: Retain four-mask camera-pan native gameplay evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r06-four-mask-camera
+          path: |
+            /tmp/native-r06-four-mask-camera/native-r06-four-mask-camera-report.json
+            /tmp/native-r06-four-mask-camera/*-project.json
+            /tmp/native-r06-four-mask-camera/*-zp*.png
+            /tmp/native-r06-four-mask-camera/*/Harbor.scc
+            /tmp/native-r06-four-mask-camera/*/tentacle.000
+            /tmp/native-r06-four-mask-camera/*/tentacle.001
+            /tmp/native-r06-four-mask-camera/*-screenshots/scummvm-*.png
+            /tmp/native-r06-four-mask-camera/*-screenshots/camera-frame-times.json
+            /tmp/native-r06-four-mask-camera/*-screenshots/scummvm-launch.log
+          if-no-files-found: ignore
       - name: Verify R08 triangle BOXD walking boundary in stock ScummVM
         if: ${{ matrix.shard == 'geometry' }}
         env:
