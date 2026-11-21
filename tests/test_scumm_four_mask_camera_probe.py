@@ -72,6 +72,7 @@ class FourMaskCameraProbeTests(unittest.TestCase):
                 world_x, outgoing_x, returning_x)
             self.assertGreaterEqual(phases["returning"]["screen_x"], 192, f"ZP{plane:02d}")
             self.assertLessEqual(phases["returning"]["screen_x"], 831, f"ZP{plane:02d}")
+        self.assertEqual(_TARGETS[2][4], 352)
 
     def test_missing_completed_return_fails_closed(self):
         rows = trace(360, 360, 300, 0)[:-1]
