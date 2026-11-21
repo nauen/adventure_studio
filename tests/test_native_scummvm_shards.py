@@ -21,7 +21,7 @@ class NativeScummVMShardingTests(unittest.TestCase):
         self.assertIn("fail-fast: false", contents)
         self.assertIn("shard: [mask, geometry, actors, story]", contents)
         matches = list(STEP.finditer(contents))
-        self.assertEqual(len(matches), 112)
+        self.assertEqual(len(matches), 114)
         for index, match in enumerate(matches, 1):
             end = matches[index].start() if index < len(matches) else len(contents)
             block = contents[match.start():end]
