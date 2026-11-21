@@ -25,10 +25,10 @@ from .studio_sequences import (
 )
 
 _TARGETS = (
-    (1, 2, 240, 240, 180),
-    (2, 3, 380, 380, 320),
-    (3, 4, 480, 460, 400),
-    (4, 5, 540, 460, 400),
+    (1, 2, 240, 380, 380),
+    (2, 3, 380, 380, 380),
+    (3, 4, 480, 380, 380),
+    (4, 5, 540, 400, 400),
 )
 _CAMERA_CUES = "set:160;hold:360;pan:480;wait;hold:120;pan:160;wait"
 _EXPECTED_CUES = (
@@ -78,8 +78,10 @@ def select_actor_phases(rows: list[dict], world_x: int,
     if (pre["camera_x"] > 165 or far["camera_x"] < 475
             or returned["camera_x"] > 165):
         raise RuntimeError("Native camera missed authored 160→480→160 endpoints")
-    if abs(outgoing["screen_x"] - returning["screen_x"]) <= 110:
-        raise RuntimeError("Visible Actor positions do not disprove a screen-fixed mask")
+    for phase in ("outgoing", "returning"):
+        if abs(phases[phase]["screen_x"] - far["screen_x"]) <= 110:
+            raise RuntimeError(
+                f"Visible Actor positions do not disprove a screen-fixed mask on {phase}")
     return phases
 
 
