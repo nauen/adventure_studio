@@ -226,7 +226,6 @@ jobs:
               - 'src/adventure_studio/scumm_multi_zplane_probe.py'
               - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
               - 'src/adventure_studio/scumm_four_mask_camera_probe.py'
-      - 'src/adventure_studio/scumm_four_mask_camera_probe.py'
               - 'src/adventure_studio/scumm_object_zmask_probe.py'
               - 'src/adventure_studio/scumm_camera_probe.py'
               - 'src/adventure_studio/scumm_camera_zp01_probe.py'
@@ -236,7 +235,6 @@ jobs:
               - 'tests/test_scumm_camera_cues.py'
               - 'tests/test_scumm_camera_zp01_probe.py'
               - 'tests/test_scumm_four_mask_camera_probe.py'
-      - 'tests/test_scumm_four_mask_camera_probe.py'
 
   studio:
     needs: changes
