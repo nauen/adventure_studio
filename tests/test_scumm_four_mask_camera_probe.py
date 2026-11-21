@@ -65,6 +65,14 @@ class FourMaskCameraProbeTests(unittest.TestCase):
         for plane in result["pixel_comparisons"].values():
             self.assertEqual(set(plane["pixel_comparisons"]), {"outgoing", "returning"})
 
+    def test_each_actor_target_stays_inside_viewport_on_return(self):
+        for plane, box, world_x, outgoing_x, returning_x in _TARGETS:
+            phases = select_actor_phases(
+                trace(world_x, outgoing_x, returning_x, 0),
+                world_x, outgoing_x, returning_x)
+            self.assertGreaterEqual(phases["returning"]["screen_x"], 192, f"ZP{plane:02d}")
+            self.assertLessEqual(phases["returning"]["screen_x"], 831, f"ZP{plane:02d}")
+
     def test_missing_completed_return_fails_closed(self):
         rows = trace(360, 360, 300, 0)[:-1]
         with self.assertRaisesRegex(RuntimeError, "completed camera-return"):
