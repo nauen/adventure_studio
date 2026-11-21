@@ -5,6 +5,7 @@ import unittest
 
 from adventure_studio.scumm_four_mask_camera_probe import (
     _TARGETS,
+    _save_phase_crops,
     select_actor_phases,
     verify_four_mask_camera,
 )
@@ -50,6 +51,12 @@ def complete_groups(masked_pixels: int = 0, control_pixels: int = 240) -> dict:
     return groups
 
 
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
+
 class FourMaskCameraProbeTests(unittest.TestCase):
     def test_four_independent_planes_are_measured_during_both_pan_directions(self):
         result = verify_four_mask_camera(complete_groups())
@@ -85,6 +92,30 @@ class FourMaskCameraProbeTests(unittest.TestCase):
         groups[2]["masked"]["walkbox_masks"][2] = 0
         with self.assertRaisesRegex(RuntimeError, "assignments changed"):
             verify_four_mask_camera(groups)
+
+    @unittest.skipIf(Image is None, "Pillow is an optional Studio dependency")
+    def test_offscreen_camera_phases_keep_valid_viewport_crops(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            phases = {}
+            for name, screen_x in (("before", 952), ("outgoing", 512),
+                                   ("far", 32), ("returning", 632),
+                                   ("returned", 952)):
+                frame = name
+                Image.new("RGB", (1024, 768), (20, 30, 40)).save(
+                    directory / f"scummvm-{frame}.png")
+                phases[name] = {
+                    "frame": frame, "screen_x": screen_x, "camera_x": 160,
+                    "world_x": 380, "actor_dark_pixels": 0, "seconds": 1.0,
+                }
+            crops = _save_phase_crops(directory, [], phases)
+            self.assertEqual(set(crops), set(phases))
+            for name in phases:
+                with Image.open(directory / crops[name]["actor_crop"]) as crop:
+                    self.assertEqual(crop.size, (60, 88))
 
 
 if __name__ == "__main__":
