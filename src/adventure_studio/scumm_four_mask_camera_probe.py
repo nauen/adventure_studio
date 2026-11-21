@@ -11,7 +11,7 @@ import json
 import sys
 from pathlib import Path
 
-from .scumm_assets import CameraCue, destination_fixture, scrolling_fixture
+from .scumm_assets import destination_fixture, scrolling_fixture
 from .scumm_project import GameDocument, canonical_json, parse_document
 from .scumm_room_visual_probe import render_native_room
 from .scumm_camera_zp01_probe import read_frames
