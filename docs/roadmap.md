@@ -1,6 +1,6 @@
 # Adventure Studio – aktive Produktroadmap
 
-Stand: 2026-11-18. Diese Seite steuert **nur die nächsten Produktentscheidungen**.
+Stand: 2026-11-21. Diese Seite steuert **nur die nächsten Produktentscheidungen**.
 Das Hauptziel steht in [PRODUCT_VISION](PRODUCT_VISION.md), die einzige
 64-Fähigkeiten-Matrix in [SCUMM_V6_CAPABILITIES](SCUMM_V6_CAPABILITIES.md).
 Die frühere ausführliche Roadmap bleibt als
@@ -9,13 +9,11 @@ historische Checkboxen sind keine aktiven Aufträge.
 
 ## Aktiver Entscheidungsstand
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix bleibt die einzige Funktions- und Statusquelle.
-- **Jetzt:** **R07 IM02/ZP04 abgeschlossen und auf `main` gemergt**: [PR #258](https://github.com/nauen/adventure_studio/pull/258), Squash [`7527b8d`](https://github.com/nauen/adventure_studio/commit/7527b8d06662de15450b2ab581d5688f74b9b9c8). Nächste Priorität ist **R09: zwei unabhängig reversible Walkbox-Gates im selben Raum über einen echten Raumwechsel hinweg erhalten**; noch nicht implementiert oder abgenommen. NPC-Komfort seit [#190](https://github.com/nauen/adventure_studio/pull/190) beendet.
-- **Abnahme:** IM02/ZP04: echtes Studio-/Chromium-PNG → `RoomHotspot.open_object_zplane4_pixels` → JSON-v1/Story → produktiver ScummC-IM02-Writer (`OpenZ01.bmp`–`OpenZ04.bmp`) → **drei** unveränderte stock-ScummVM-Spiele. BOXD4 **0**, transparente ZP04 **1476**, falsche BOXD3 **1476** Actor-Pixel; `native_im02_zp04_passed: true`. [Native Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44218026305/artifacts/14388748875) · [Browser-Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44218026305/artifacts/14388114712) · [Core 44217985572](https://github.com/nauen/adventure_studio/actions/runs/44217985572) · [vollständige Integration 44218026305](https://github.com/nauen/adventure_studio/actions/runs/44218026305): Studio, Dialogue, Inventory, 4/4 native Shards erfolgreich auf finalem Head `f0c990de`.
-- **Blocker:** Für #258 keiner. Für das **nächste** R09-Paket fehlt noch die vertikale Implementierung und eigenständige ScummVM-Evidenz für zwei unabhängig geschaltete Gates mit Raumverlassen/-wiederkehr; bisherige #231-Raumrückkehr betrifft nur ein Gate, #236 zwei Gates ohne diesen kombinierten Rückkehrnachweis. R07/R08/R09 bleiben insgesamt Teilfähigkeiten; stock-v6-ZP05+ bleibt fail-closed.
-- **Danach:** Erst das eine priorisierte R09-Raumrückkehrpaket Modell → Studio/JSON/Story → nativer ScummC → echte Actor-Routen und Kontrollspiel in stock ScummVM vollständig abnehmen, dann **ein** weiteres Paket wählen. Keine parallelen Features.
-
-
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix ist die einzige Funktions- und Statusquelle.
+- **Jetzt:** **R06 / Issue #261** – vier simultane Raum-Z-Masken ZP01–ZP04 müssen während einer expliziten horizontalen Kamerafahrt und vollständigem Rückweg weltfest bleiben. Das ist die neue Kombination aus den bereits getrennt bewiesenen Fähigkeiten #224 (vier Masken gleichzeitig) und #242 (weltfeste ZP01-Maske beim Pan).
+- **Abnahme:** Reales Studio-Authoring von vier PNG-Masken, fünf Walkboxen/BOXM-Verbindungen und Kamera-Cues; verlustfreier RoomAsset-/JSON-v1-/Story-Roundtrip; produktiver ScummC-v6-Export; unverändertes stock ScummVM. Vier Actor-Weltpositionen (je eine pro Maske) werden in jeweils drei getrennten Spielen geprüft: alle vier Masken aktiv, transparente Kontrolle und gezielte falsche Walkbox-Zuordnung. Pro Spiel Kamera X=160→480→160 mit zeitgestempelten Phasen vor Pan, sichtbarer Hinfahrt, Fernziel, sichtbarem Rückpan und abgeschlossenem Rückweg. Die Pixelvergleiche müssen für jede Maske bei beiden sichtbaren Panrichtungen die korrekte Verdeckung gegen beide Kontrollen beweisen. Projekt-JSONs, PNGs, ScummC-Ressourcen, native Spiele, Screenshots, Logs und Report als CI-Artefakte.
+- **Blocker:** Issue #261 ist auf Branch feature/r06-four-mask-camera-pan gestartet; Probe, Unit-Evidenztests, Browser-Authoring-Test und CI-Einbindung sind vorhanden, aber noch nicht auf CI/stock ScummVM ausgeführt. Bis zum nativen Ergebnis bleibt R06 Teilfähigkeit. ZP05–ZP09 bleiben fail-closed. Der separate R09-PR [#260](https://github.com/nauen/adventure_studio/pull/260) ist weiterhin offen; sein kombinierter Zwei-Gate-Raumrückkehrtest läuft in [Run 44959056163](https://github.com/nauen/adventure_studio/actions/runs/44959056163). Dieser offene Integrationslauf verhindert nicht den Start von R06.
+- **Danach:** Nach vollständiger R06-Evidenz und Integration genau ein weiteres natives Paket auswählen. Kein NPC-Komfort, keine parallelen R07-/R08-Erweiterungen.
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
 | Historisches Paket | Tatsächlicher Teilstand | Noch fehlender Abschluss |
