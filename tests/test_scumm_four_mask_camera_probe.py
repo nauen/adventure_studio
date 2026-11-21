@@ -113,9 +113,11 @@ class FourMaskCameraProbeTests(unittest.TestCase):
                 }
             crops = _save_phase_crops(directory, [], phases)
             self.assertEqual(set(crops), set(phases))
-            for name in phases:
+            for name, screen_x in (("before", 952), ("outgoing", 512),
+                                   ("far", 32), ("returning", 632),
+                                   ("returned", 952)):
                 with Image.open(directory / crops[name]["actor_crop"]) as crop:
-                    self.assertEqual(crop.size, (60, 88))
+                    self.assertEqual(crop.size, (61 if 192 <= screen_x <= 831 else 60, 88))
 
 
 if __name__ == "__main__":
