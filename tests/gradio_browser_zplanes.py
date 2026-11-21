@@ -129,7 +129,7 @@ def main() -> None:
                     plane = exported.zplanes[index]
                     assert plane.index == index + 1
                     assert plane.pixels == bytes(
-                        1 if start <= x < end and 60 < y < 110 else 0
+                        1 if start <= x < end and 60 <= y < 110 else 0
                         for y in range(200) for x in range(640))
 
                 # Reopen the exported project in the actual Studio UI. Edit one
