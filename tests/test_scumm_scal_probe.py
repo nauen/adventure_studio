@@ -18,8 +18,10 @@ class ScummScaleCurveMathTests(unittest.TestCase):
             expected_vertical_scale(100, y1=120, y2=90)
 
     def test_native_perspective_acceptance_bands(self):
+        self.assertTrue(verify_perspective_progression((704, 1020, 1068))["perspective_scaling_passed"])
         self.assertTrue(verify_perspective_progression((724, 1020, 1124))["perspective_scaling_passed"])
-        for counts in ((0, 286, 1016), (800, 800, 1200), (800, 1000, 1000)):
+        for counts in ((0, 286, 1016), (800, 800, 1200), (800, 1000, 1000),
+                       (704, 1020, 1059)):
             with self.subTest(counts=counts), self.assertRaises(RuntimeError):
                 verify_perspective_progression(counts)
         with self.assertRaises(ValueError):
