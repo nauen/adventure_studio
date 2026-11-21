@@ -27,9 +27,10 @@ class NativeScummVMShardingTests(unittest.TestCase):
             block = contents[match.start():end]
             expected = (
                 "actors" if index in (7, 8) or 41 <= index <= 64 else
-                "mask" if 17 <= index <= 18 else
-                "geometry" if 13 <= index <= 40 else
-                "story" if 65 <= index <= 112 else None
+                "mask" if 19 <= index <= 20 else
+                "geometry" if 13 <= index <= 42 else
+                "actors" if 43 <= index <= 66 else
+                "story" if 67 <= index <= 114 else None
             )
             with self.subTest(step=index, name=match.group(1)):
                 found = re.findall(r"matrix\.shard == '([^']+)'", block)
