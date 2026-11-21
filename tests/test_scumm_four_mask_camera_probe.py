@@ -76,7 +76,7 @@ class FourMaskCameraProbeTests(unittest.TestCase):
 
     def test_wrong_box_control_must_leave_actor_visible(self):
         groups = complete_groups()
-        groups[3]["wrong-box"]["frames"] = trace(450, 450, 390, 0)
+        groups[3]["wrong-box"]["frames"] = trace(480, 460, 400, 0)
         with self.assertRaisesRegex(RuntimeError, "ZP03/wrong-box"):
             verify_four_mask_camera(groups)
 
