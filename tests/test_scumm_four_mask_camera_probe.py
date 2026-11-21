@@ -77,9 +77,9 @@ class FourMaskCameraProbeTests(unittest.TestCase):
             select_actor_phases(rows, 360, 360, 300)
 
     def test_screen_fixed_mask_cannot_explain_both_visible_pan_positions(self):
-        rows = trace(360, 360, 320, 0)
-        with self.assertRaisesRegex(RuntimeError, "screen-fixed"):
-            select_actor_phases(rows, 360, 360, 320)
+        rows = trace(360, 460, 320, 0)
+        with self.assertRaisesRegex(RuntimeError, "screen-fixed mask on outgoing"):
+            select_actor_phases(rows, 360, 460, 320)
 
     def test_wrong_box_control_must_leave_actor_visible(self):
         groups = complete_groups()
