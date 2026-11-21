@@ -164,8 +164,12 @@ def _save_phase_crops(directory: Path, rows: list[dict],
         source = directory / f"scummvm-{frame['frame']}.png"
         target = directory / f"scummvm-phase-{name}-actor.png"
         center = frame["screen_x"]
-        left = max(192, center - 30)
-        right = min(831, center + 30)
+        if center > 831:
+            left, right = 772, 831
+        elif center < 192:
+            left, right = 192, 251
+        else:
+            left, right = max(192, center - 30), min(831, center + 30)
         with Image.open(source) as screenshot:
             screenshot.convert("RGB").crop((left, 300, right + 1, 388)).save(target)
         crops[name] = {
