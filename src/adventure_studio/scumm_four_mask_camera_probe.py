@@ -11,7 +11,7 @@ import json
 import sys
 from pathlib import Path
 
-from .scumm_assets import destination_fixture, scrolling_fixture
+from .scumm_assets import CameraCue, destination_fixture, scrolling_fixture
 from .scumm_project import GameDocument, canonical_json, parse_document
 from .scumm_room_visual_probe import render_native_room
 from .scumm_camera_zp01_probe import read_frames
@@ -234,12 +234,18 @@ def _author_project(output: Path, plane: int, variant: str,
     if canonical_json(parsed) != project:
         raise RuntimeError("Four-mask camera project changed during JSON-v1 roundtrip")
     room = next(item for item in parsed.rooms if item.name == "Harbor")
-    if (len(room.zplanes) != 4 or len(room.walkboxes) != 5
-            or room.camera_cues != tuple()):
-        # Story composition must preserve the camera sequence; checked below
-        # against the exact native dataclass values without duplicating model code.
-        if len(room.zplanes) != 4 or len(room.walkboxes) != 5:
-            raise RuntimeError("Story composition lost four Z-planes or five walkboxes")
+    actual_cues = tuple((cue.operation, cue.x, cue.ticks) for cue in room.camera_cues)
+    if actual_cues != _EXPECTED_CUES:
+        raise RuntimeError("Story composition changed the native camera cue sequence")
+    if len(room.zplanes) != 4 or len(room.walkboxes) != 5:
+        raise RuntimeError("Story composition lost four Z-planes or five walkboxes")
+    expected_planes = tuple(
+        bytes(1 if value else 0 for value in (
+            _mask_pixels(width, height, start, end)
+            if variant != "transparent" else bytes(width * height)))
+        for start, end in _MASK_REGIONS)
+    if tuple(plane.pixels for plane in room.zplanes) != expected_planes:
+        raise RuntimeError("Studio PNG pixels changed during JSON-v1/Story composition")
     if (room.ego_start_x, room.ego_start_y) != (world_x, 100) or room.demo_walk_to_x is not None:
         raise RuntimeError("Story composition lost the authored stationary Actor/world position")
     if [box.mask for box in room.walkboxes] != expected_masks:
