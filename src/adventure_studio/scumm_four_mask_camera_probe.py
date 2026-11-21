@@ -25,10 +25,10 @@ from .studio_sequences import (
 )
 
 _TARGETS = (
-    (1, 2, 240, 380, 380),
-    (2, 3, 380, 380, 380),
-    (3, 4, 480, 380, 380),
-    (4, 5, 540, 400, 400),
+    (1, 2, 240, 380, 280),
+    (2, 3, 380, 420, 320),
+    (3, 4, 480, 420, 330),
+    (4, 5, 485, 420, 330),
 )
 _CAMERA_CUES = "set:160;hold:360;pan:480;wait;hold:120;pan:160;wait"
 _EXPECTED_CUES = (
@@ -36,7 +36,7 @@ _EXPECTED_CUES = (
     ("wait", None, None), ("hold", None, 120), ("pan", 160, None),
     ("wait", None, None),
 )
-_MASK_REGIONS = ((160, 320), (320, 400), (400, 500), (500, 640))
+_MASK_REGIONS = ((160, 320), (320, 400), (400, 480), (480, 640))
 
 
 def select_actor_phases(rows: list[dict], world_x: int,
@@ -78,10 +78,8 @@ def select_actor_phases(rows: list[dict], world_x: int,
     if (pre["camera_x"] > 165 or far["camera_x"] < 475
             or returned["camera_x"] > 165):
         raise RuntimeError("Native camera missed authored 160→480→160 endpoints")
-    for phase in ("outgoing", "returning"):
-        if abs(phases[phase]["screen_x"] - far["screen_x"]) <= 110:
-            raise RuntimeError(
-                f"Visible Actor positions do not disprove a screen-fixed mask on {phase}")
+    if abs(outgoing["screen_x"] - returning["screen_x"]) <= 110:
+        raise RuntimeError("Visible Actor positions do not disprove a screen-fixed mask")
     return phases
 
 
@@ -197,8 +195,8 @@ def _author_project(output: Path, plane: int, variant: str,
         (1, "0,70; 160,70; 160,150; 0,150"),
         (2, "160,70; 320,70; 320,150; 160,150"),
         (3, "320,70; 400,70; 400,150; 320,150"),
-        (4, "400,70; 500,70; 500,150; 400,150"),
-        (5, "500,70; 639,70; 639,150; 500,150"),
+        (4, "400,70; 480,70; 480,150; 400,150"),
+        (5, "480,70; 639,70; 639,150; 480,150"),
     ):
         project = author_room_walkbox(project, "Harbor", index, corners)
     project = author_room_box_connections(project, "Harbor", "1-2; 2-3; 3-4; 4-5")
