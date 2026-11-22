@@ -45,6 +45,10 @@ class MovingActorEvidenceTests(unittest.TestCase):
             self.assertEqual(masks, [0, 1, 2, 3, 4])
             self.assertEqual(len(room.zplanes), 4)
             self.assertEqual(len(room.walkboxes), 5)
+            self.assertEqual(
+                [cue.operation for cue in room.camera_cues],
+                ["set", "follow_ego", "hold", "pan", "wait",
+                 "hold", "pan", "wait"])
             from adventure_studio.scumm_assets import scummc_room_source
             source = scummc_room_source(room)
             self.assertLess(
@@ -62,7 +66,7 @@ class MovingActorEvidenceTests(unittest.TestCase):
             self.assertEqual(source.count("walkActorTo(VAR_EGO, 535, 100);"), 1)
             self.assertLess(
                 source.index("walkActorTo(VAR_EGO, 535, 100);"),
-                source.index("delay(360);"))
+                source.index("delay(700);"))
             self.assertLess(
                 source.index("walkActorTo(VAR_EGO, 535, 100);"),
                 source.index("waitForCamera();"))
