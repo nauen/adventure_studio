@@ -113,6 +113,49 @@ def main() -> None:
                 assert triangle_room.walkboxes[2].corners == (
                     (240, 70), (639, 100), (240, 150), (240, 150))
                 assert triangle_room.box_routes == room.box_routes
+                # R08: author one concave aggregate using three convex BOXD
+                # walkboxes through the same real browser editing controls.
+                for index, geometry in (
+                    (1, "0,70; 220,70; 220,150; 0,150"),
+                    (2, "180,110; 260,110; 260,150; 180,150"),
+                    (3, "260,70; 639,70; 639,150; 260,150"),
+                ):
+                    page.locator("#native-walkbox-index input").fill(str(index))
+                    corners.fill(geometry)
+                    page.locator("#native-walkbox-add").click()
+                    expect(report).to_have_value(
+                        re.compile(rf"Walkbox {index}.*gespeichert"), timeout=30000)
+                route_input.fill("1-2; 2-3")
+                page.locator("#native-box-routes-add").click()
+                expect(report).to_have_value(
+                    re.compile(r"BOXM-Wege.*gespeichert"), timeout=30000)
+                page.locator("#native-project-export-button").click()
+                with page.expect_download() as concave_download:
+                    page.locator("#native-project-export-file a[download]").first.click()
+                concave_file = evidence / "concave-aggregate-project.json"
+                concave_download.value.save_as(str(concave_file))
+                concave_room = next(item for item in
+                                    parse_document(concave_file.read_text()).rooms
+                                    if item.name == "Harbor")
+                assert len(concave_room.walkboxes) == 3
+                assert concave_room.walkboxes[1].corners == (
+                    (180, 110), (260, 110), (260, 150), (180, 150))
+                assert concave_room.box_routes[1][3] == 2
+                assert concave_room.box_routes[3][1] == 2
+                page.locator("#native-project-file input[type=file]").set_input_files(
+                    str(concave_file))
+                expect(report).to_have_value(
+                    "Natives Projekt geladen und validiert", timeout=30000)
+                page.locator("#native-project-export-button").click()
+                with page.expect_download() as reloaded_download:
+                    page.locator("#native-project-export-file a[download]").first.click()
+                reloaded_file = evidence / "concave-reloaded-project.json"
+                reloaded_download.value.save_as(str(reloaded_file))
+                assert next(item for item in
+                            parse_document(reloaded_file.read_text()).rooms
+                            if item.name == "Harbor").box_routes == concave_room.box_routes
+                page.screenshot(path=str(evidence / "authored-concave.png"),
+                                full_page=True)
                 page.screenshot(path=str(evidence / "authored-triangle.png"),
                                 full_page=True)
                 page.screenshot(path=str(evidence / "authored-boxm.png"), full_page=True)
@@ -122,6 +165,7 @@ def main() -> None:
                                 "new_route_connected_explicitly": True,
                                 "triangle_studio_json_roundtrip": True,
                                 "triangle_preserves_connected_boxm": True,
+                                "r08_concave_chromium_roundtrip": True,
                                 "routes": [list(row) for row in room.box_routes]},
                                sort_keys=True, indent=2) + "\n", encoding="utf-8")
                 print("Native BOXM Studio click-path and JSON roundtrip passed")
