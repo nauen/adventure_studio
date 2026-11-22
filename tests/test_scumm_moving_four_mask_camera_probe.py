@@ -66,7 +66,7 @@ class MovingActorEvidenceTests(unittest.TestCase):
             self.assertEqual(source.count("walkActorTo(VAR_EGO, 535, 100);"), 1)
             self.assertLess(
                 source.index("walkActorTo(VAR_EGO, 535, 100);"),
-                source.index("delay(700);"))
+                source.index("delay(2100);"))
             self.assertLess(
                 source.index("walkActorTo(VAR_EGO, 535, 100);"),
                 source.index("waitForCamera();"))
