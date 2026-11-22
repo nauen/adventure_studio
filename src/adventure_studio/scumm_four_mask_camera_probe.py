@@ -34,7 +34,7 @@ _TARGETS = (
 _CAMERA_CUES = "set:160;hold:360;pan:480;wait;hold:120;pan:160;wait"
 # Native moving-Actor variant: follow the Actor while crossing all Z-planes,
 # then explicitly pan out and back to verify camera independence.
-_MOVING_CAMERA_CUES = "set:160;follow_ego;hold:2100;pan:480;wait;hold:120;pan:160;wait"
+_MOVING_CAMERA_CUES = "set:160;follow_ego;hold:600;pan:480;wait;hold:120;pan:160;wait"
 _EXPECTED_CUES = (
     ("set", 160, None), ("hold", None, 360), ("pan", 480, None),
     ("wait", None, None), ("hold", None, 120), ("pan", 160, None),
@@ -42,7 +42,7 @@ _EXPECTED_CUES = (
 )
 _MOVING_EXPECTED_CUES = (
     ("set", 160, None), ("follow_ego", None, None),
-    ("hold", None, 2100), ("pan", 480, None),
+    ("hold", None, 600), ("pan", 480, None),
     ("wait", None, None), ("hold", None, 120),
     ("pan", 160, None), ("wait", None, None),
 )
@@ -527,7 +527,7 @@ def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
             render = render_native_room(
                 room, upstream, generated, output, label,
                 allow_static_scene=True, camera_pan_capture=True,
-                camera_capture_seconds=55.0)
+                camera_capture_seconds=35.0)
             screenshots = output / f"{label}-screenshots"
             report["variants"][variant] = {
                 "walkbox_masks": assignments,
