@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - feat/r06-moving-actor-four-zmasks
+      - feature/r06-two-actors-four-world-masks-268
   pull_request:
     types: [ready_for_review, synchronize, opened, reopened]
     paths:
