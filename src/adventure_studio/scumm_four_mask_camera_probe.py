@@ -54,15 +54,24 @@ def select_actor_phases(rows: list[dict], world_x: int,
     returned = next((row for row in rows[far_index + 1:]
                      if row["camera_x"] <= 165), None)
 
-    def nearest(candidates: list[dict], target: int, phase: str) -> dict:
-        row = min(candidates, key=lambda item: abs(item["camera_x"] - target),
-                  default=None)
-        # ScummVM is captured at discrete times, and the native camera can
-        # move 40 world units between adjacent captured frames. A target
-        # between such frames must not be treated as absent, but we still
-        # reject a gap larger than one actual camera step.
-        if row is None or abs(row["camera_x"] - target) > 40:
+    def nearest(candidates: list[dict], target: int, phase: str,
+                separated_from: float | None = None) -> dict:
+        # Stock ScummVM captures advance by up to 40 world units per frame.
+        # Select among actually observed positions, never synthesize frames.
+        eligible = [row for row in candidates
+                    if abs(row["camera_x"] - target) <= 40]
+        if not eligible:
             raise RuntimeError(f"Missing camera sample for {phase} at X={target}")
+        if separated_from is not None:
+            # At 2x screen scale, >55 camera units establish >110 pixels
+            # of parallax. Independent games can sample different steps.
+            separated = [row for row in eligible
+                         if abs(row["camera_x"] - separated_from) > 55]
+            if not separated:
+                raise RuntimeError(
+                    "Visible Actor positions do not disprove a screen-fixed mask")
+            eligible = separated
+        row = min(eligible, key=lambda item: abs(item["camera_x"] - target))
         if row["world_x"] != world_x or not 192 <= row["screen_x"] <= 831:
             raise RuntimeError(f"Actor is not visible at the {phase} camera phase")
         return row
@@ -70,7 +79,8 @@ def select_actor_phases(rows: list[dict], world_x: int,
     if pre is None or returned is None:
         raise RuntimeError("Missing initial or completed camera-return endpoint")
     outgoing = nearest(rows[:far_index], outgoing_x, "outgoing")
-    returning = nearest(rows[far_index + 1:], returning_x, "returning")
+    returning = nearest(rows[far_index + 1:], returning_x, "returning",
+                        separated_from=outgoing["camera_x"])
     phases = {
         "before": pre, "outgoing": outgoing, "far": far,
         "returning": returning, "returned": returned,
