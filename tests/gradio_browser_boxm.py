@@ -142,8 +142,15 @@ def main() -> None:
                     (180, 110), (260, 110), (260, 150), (180, 150))
                 assert concave_room.box_routes[1][3] == 2
                 assert concave_room.box_routes[3][1] == 2
-                page.locator("#native-project-file input[type=file]").set_input_files(
-                    str(concave_file))
+                # Gradio's File component switches from upload input to a
+                # selected-file preview after the first load. Explicitly clear
+                # it and open the upload chooser, as in gradio_browser_zplanes.
+                page.locator("#native-project-file").locator("button").last.click()
+                expect(page.locator("#native-project-file")).to_contain_text(
+                    "Click to Upload", timeout=30000)
+                with page.expect_file_chooser() as chooser:
+                    page.locator("#native-project-file").click()
+                chooser.value.set_files(str(concave_file))
                 expect(report).to_have_value(
                     "Natives Projekt geladen und validiert", timeout=30000)
                 page.locator("#native-project-export-button").click()
