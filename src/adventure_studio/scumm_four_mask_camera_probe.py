@@ -526,7 +526,8 @@ def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
                         if item.name == "Harbor")
             render = render_native_room(
                 room, upstream, generated, output, label,
-                allow_static_scene=True, camera_pan_capture=True)
+                allow_static_scene=True, camera_pan_capture=True,
+                camera_capture_seconds=35.0)
             screenshots = output / f"{label}-screenshots"
             report["variants"][variant] = {
                 "walkbox_masks": assignments,
