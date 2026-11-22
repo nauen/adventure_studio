@@ -92,6 +92,18 @@ class FourMaskCameraProbeTests(unittest.TestCase):
                 abs(result["outgoing"]["screen_x"] - result["returning"]["screen_x"]),
                 110, f"ZP{plane:02d}")
 
+    def test_independent_native_capture_phases_allow_one_camera_step(self):
+        groups = complete_groups()
+        # Real captures of ZP01 used 368/384/392 on the outgoing pan.
+        # All three screen positions are valid and remain visible.
+        for name, camera in (("masked", 368), ("transparent", 384),
+                             ("wrong-box", 392)):
+            frame = groups[1][name]["frames"][1]
+            frame["camera_x"] = camera
+            frame["screen_x"] = round(192 + 2 * (240 - camera + 160))
+        self.assertTrue(verify_four_mask_camera(groups)[
+            "native_four_masks_world_anchored_camera_pan_and_return_passed"])
+
     def test_missing_native_camera_segment_still_fails_closed(self):
         world_x, outgoing_x, returning_x = 380, 420, 320
         rows = trace(world_x, 160, returning_x, 0)
