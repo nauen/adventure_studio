@@ -43,12 +43,18 @@ def complete_groups(masked_pixels: int = 0, control_pixels: int = 240) -> dict:
             "transparent": {
                 "frames": trace(world_x, outgoing_x, returning_x, control_pixels),
                 "world_x": world_x, "walkbox_masks": expected,
-                "frame_report": {"scroll_color_signature_passed": True},
+                "frame_report": {"scroll_expected": False,
+                                 "scroll_color_signature_passed": False,
+                                 "frame_variation_passed": True,
+                                 "changed_pixels": 3928},
             },
             "wrong-box": {
                 "frames": trace(world_x, outgoing_x, returning_x, control_pixels),
                 "world_x": world_x, "walkbox_masks": wrong,
-                "frame_report": {"scroll_color_signature_passed": True},
+                "frame_report": {"scroll_expected": False,
+                                 "scroll_color_signature_passed": False,
+                                 "frame_variation_passed": True,
+                                 "changed_pixels": 3928},
             },
         }
     return groups
