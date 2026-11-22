@@ -123,8 +123,13 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
     expected_steps = (
         WalkActorStep(ACTOR_IDS[0], 530, 85),
         WalkActorStep(ACTOR_IDS[1], 540, 135),
+        FollowActorCameraStep(ACTOR_IDS[0]),
         WaitActorStep(ACTOR_IDS[0]),
         WaitActorStep(ACTOR_IDS[1]),
+        PanCameraStep(480),
+        WaitCameraStep(),
+        PanCameraStep(160),
+        WaitCameraStep(),
     )
     if len(choreography) != 1 or choreography[0].steps != expected_steps:
         raise RuntimeError("Independent native Actor walk commands missing")
