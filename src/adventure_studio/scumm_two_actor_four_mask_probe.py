@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .scumm_costume_probe import gesture_fixture
 from .scumm_four_mask_camera_probe import _author_project
+from .studio_sequences import author_room_camera_plan
 from .scumm_launch import launch_smoke
 from .scumm_project import (ActorAsset, InteractionSequence, WalkActorStep, WaitActorStep,
                             canonical_json, export_document, parse_document)
@@ -22,22 +23,30 @@ from .scumm_toolchain import compile_story_game
 
 
 ACTOR_IDS = ("ForegroundWalker", "BackgroundWalker")
-ACTOR_STARTS = ((190, 100), (220, 115))
+ACTOR_STARTS = ((190, 85), (220, 135))
 
 
-def author_two_actor_four_mask_project(output: Path) -> str:
+def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked") -> str:
     """Use productive Studio Z-plane/camera authoring, then add typed Actors."""
     output.mkdir(parents=True, exist_ok=True)
-    raw, assignments, _ = _author_project(output, 1, "masked", 170,
+    if variant not in ("masked", "transparent"):
+        raise ValueError("R06 only allows independent native masked/transparent games")
+    raw, assignments, _ = _author_project(output, 1, variant, 170,
                                           moving_actor=True)
+    # Stabilize the click target before the later native camera round-trip.
+    # Follow-Ego during the click previously moved the target out of view.
+    raw = author_room_camera_plan(
+        raw, "Harbor", 170, 100,
+        "set:320;hold:900;pan:480;wait;hold:120;pan:160;wait",
+        stationary_actor=True)
     document = parse_document(raw)
     costume = replace(gesture_fixture(), name="R06TwoActorCostume")
     actors = tuple(ActorAsset(name, costume.name, "Harbor", x, y, "S", name)
                    for name, (x, y) in zip(ACTOR_IDS, ACTOR_STARTS))
     choreography = InteractionSequence(
         "Harbor", "Key", "Close", (
-            WalkActorStep(ACTOR_IDS[0], 530, 110),
-            WalkActorStep(ACTOR_IDS[1], 540, 115),
+            WalkActorStep(ACTOR_IDS[0], 530, 85),
+            WalkActorStep(ACTOR_IDS[1], 540, 135),
             WaitActorStep(ACTOR_IDS[0]),
             WaitActorStep(ACTOR_IDS[1]),
         ))
@@ -70,8 +79,10 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4)) 
     names = {costume.name for costume in document.costumes}
     if any(by_id[name].costume not in names for name in ACTOR_IDS):
         raise RuntimeError("R06 Actors have unresolved native COST bindings")
-    if room.demo_walk_to_x != 535 or len(room.camera_cues) != 8:
-        raise RuntimeError("R06 moving ego/camera plan was lost")
+    operations = tuple(cue.operation for cue in room.camera_cues)
+    if room.demo_walk_to_x is not None or operations != (
+            "set", "hold", "pan", "wait", "hold", "pan", "wait"):
+        raise RuntimeError("R06 stable-click camera round-trip plan was lost")
     choreography = [sequence for sequence in document.interaction_sequences
                     if (sequence.room, sequence.hotspot_id, sequence.verb) ==
                     ("Harbor", "Key", "Close")]
