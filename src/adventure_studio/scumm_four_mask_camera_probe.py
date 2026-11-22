@@ -57,7 +57,11 @@ def select_actor_phases(rows: list[dict], world_x: int,
     def nearest(candidates: list[dict], target: int, phase: str) -> dict:
         row = min(candidates, key=lambda item: abs(item["camera_x"] - target),
                   default=None)
-        if row is None or abs(row["camera_x"] - target) > 16:
+        # ScummVM is captured at discrete times, and the native camera can
+        # move 40 world units between adjacent captured frames. A target
+        # between such frames must not be treated as absent, but we still
+        # reject a gap larger than one actual camera step.
+        if row is None or abs(row["camera_x"] - target) > 40:
             raise RuntimeError(f"Missing camera sample for {phase} at X={target}")
         if row["world_x"] != world_x or not 192 <= row["screen_x"] <= 831:
             raise RuntimeError(f"Actor is not visible at the {phase} camera phase")
