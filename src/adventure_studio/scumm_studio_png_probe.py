@@ -52,7 +52,7 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
     export_document(parse_document(encoded), build / "resources")
     game = compile_story_game(build, upstream, destination / "game")
     screenshots = destination / "screenshots"
-    launch_smoke(game, screenshots, scene_only=True, sample_scene_frames=True)
+    launch_smoke(game, screenshots, seconds=12, scene_only=True, sample_scene_frames=True)
     observed = [False, False]
     samples = sorted(screenshots.glob("scummvm-sample-*.png"))
     for screenshot in samples:
