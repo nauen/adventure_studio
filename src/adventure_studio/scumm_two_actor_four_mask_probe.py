@@ -20,7 +20,7 @@ from .scumm_toolchain import compile_story_game
 
 
 ACTOR_IDS = ("ForegroundWalker", "BackgroundWalker")
-ACTOR_STARTS = ((270, 110), (430, 115))
+ACTOR_STARTS = ((190, 100), (220, 115))
 
 
 def author_two_actor_four_mask_project(output: Path) -> str:
@@ -35,7 +35,7 @@ def author_two_actor_four_mask_project(output: Path) -> str:
     choreography = InteractionSequence(
         "Harbor", "Key", "Close", (
             WalkActorStep(ACTOR_IDS[0], 530, 110),
-            WalkActorStep(ACTOR_IDS[1], 180, 115),
+            WalkActorStep(ACTOR_IDS[1], 540, 115),
             WaitActorStep(ACTOR_IDS[0]),
             WaitActorStep(ACTOR_IDS[1]),
         ))
@@ -85,6 +85,7 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4)) 
             "actor_ids": list(ACTOR_IDS), "distinct_actor_positions": True,
             "camera_roundtrip_authored": True,
             "two_native_actor_walks_authored": True,
+            "both_actor_routes_span_all_four_masks": True,
             "independent_actor_motion_verified": False,
             "per_actor_native_occlusion_verified": False}
 
