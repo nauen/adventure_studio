@@ -392,6 +392,52 @@ def _author_project(output: Path, plane: int, variant: str,
 
 
 
+def verify_moving_actor_native_occlusion(
+        control: list[dict], masked: list[dict],
+        wrong_box: dict[int, list[dict]]) -> dict:
+    """Compare observed native costume pixels at matching times/camera/positions."""
+    if set(wrong_box) != {1, 2, 3, 4}:
+        raise ValueError("Every Z-plane needs its own wrong-box native game")
+    regions = ((160, 320), (320, 400), (400, 500), (500, 640))
+    results = {}
+    for plane, (left, right) in enumerate(regions, 1):
+        matches = []
+        for reference in control:
+            if not left <= reference["world_x"] < right:
+                continue
+            def nearest(rows):
+                eligible = [
+                    row for row in rows
+                    if abs(row["seconds"] - reference["seconds"]) <= 0.3
+                    and abs(row["camera_x"] - reference["camera_x"]) <= 40
+                    and abs(row["world_x"] - reference["world_x"]) <= 12
+                ]
+                return min(eligible, key=lambda row: (
+                    abs(row["seconds"] - reference["seconds"]),
+                    abs(row["world_x"] - reference["world_x"]))) if eligible else None
+            actual = nearest(masked)
+            wrong = nearest(wrong_box[plane])
+            if actual is None or wrong is None:
+                continue
+            if (reference["actor_dark_pixels"] >= 100
+                    and wrong["actor_dark_pixels"] >= 100
+                    and actual["actor_dark_pixels"] <= reference["actor_dark_pixels"] // 3
+                    and actual["actor_dark_pixels"] <= wrong["actor_dark_pixels"] // 3):
+                matches.append({
+                    "frame": reference["frame"], "world_x": reference["world_x"],
+                    "seconds": reference["seconds"],
+                    "masked_pixels": actual["actor_dark_pixels"],
+                    "transparent_pixels": reference["actor_dark_pixels"],
+                    "wrong_box_pixels": wrong["actor_dark_pixels"],
+                })
+        if not matches:
+            raise RuntimeError(
+                f"ZP{plane:02d} lacks synchronized native masked/transparent/wrong-box occlusion")
+        results[f"ZP{plane:02d}"] = matches
+    return {"native_moving_actor_four_zplanes_occlusion_passed": True,
+            "per_plane": results}
+
+
 def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
     """Compile real moving-actor ScummVM games; preserve evidence on failure.
 
