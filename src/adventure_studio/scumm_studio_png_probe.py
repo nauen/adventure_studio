@@ -40,7 +40,7 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
     raw = create_costume(raw, str(png_paths[0]), "StudioPngCostume")
     raw = add_costume_frame(raw, "StudioPngCostume", str(png_paths[1]), "WavePose")
     for direction in ("N", "E", "S", "W"):
-        raw = set_costume_animation(raw, "StudioPngCostume", "wave", 12,
+        raw = set_costume_animation(raw, "StudioPngCostume", "wave", 28,
                                     direction, "Pose0, WavePose, Pose0, WavePose", True)
     raw = add_actor(raw, "StudioPngActor", "StudioPngCostume", "Harbor",
                     240, 110, "S", "Studio PNG Actor")
