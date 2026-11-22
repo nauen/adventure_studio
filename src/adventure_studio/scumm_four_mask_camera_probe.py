@@ -604,6 +604,13 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        raise SystemExit("Usage: python -m adventure_studio.scumm_four_mask_camera_probe UPSTREAM GENERATED OUTPUT")
-    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])), indent=2))
+    if len(sys.argv) == 5 and sys.argv[1] == "--moving":
+        result = run_moving_actor(
+            Path(sys.argv[2]), Path(sys.argv[3]), Path(sys.argv[4]))
+    elif len(sys.argv) == 4:
+        result = run(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]))
+    else:
+        raise SystemExit(
+            "Usage: python -m adventure_studio.scumm_four_mask_camera_probe "
+            "[--moving] UPSTREAM GENERATED OUTPUT")
+    print(json.dumps(result, indent=2))
