@@ -133,6 +133,25 @@ class CameraZP01EvidenceTests(unittest.TestCase):
         result = verify_world_mask(variants)
         self.assertTrue(result["native_world_anchored_zp01_pan_and_return_passed"])
 
+    def test_independently_captured_returning_control_at_one_camera_step(self):
+        # Stock ScummVM captured returning X=360 in the masked game but
+        # X=392 in the wrong-box game; both pixels are real frame samples.
+        def trace(cameras, dark):
+            return {"frames": [{
+                "world_x": 390, "camera_x": camera,
+                "screen_x": 192 + 2 * (390 - camera + 160),
+                "seconds": i, "frame": str(i),
+                "actor_dark_pixels": dark,
+            } for i, camera in enumerate(cameras)]}
+        variants = {
+            "masked": trace((160, 344, 480, 432, 400, 360, 328, 160), 0),
+            "transparent": trace((160, 360, 480, 416, 384, 344, 312, 160), 200),
+            "wrong-box": trace((160, 352, 480, 424, 392, 320, 160), 200),
+        }
+        report = verify_world_mask(variants)
+        self.assertTrue(report["native_world_anchored_zp01_pan_and_return_passed"])
+        self.assertEqual(report["pixel_comparisons"]["returning"]["camera_x"], 360)
+
     def test_visible_positions_must_disprove_a_screen_fixed_mask(self):
         def trace(pixels):
             return {"frames": [
