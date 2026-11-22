@@ -341,6 +341,76 @@ def _author_project(output: Path, plane: int, variant: str,
     }
 
 
+
+def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
+    """Compile real moving-actor ScummVM games; preserve evidence on failure.
+
+    A native screenshot's camera position is measurable from sky pixels, but
+    read_frames(world_x=...) assumes a *stationary* Actor. Never pass those
+    fabricated constant Actor positions to the moving-Actor verifier.
+    """
+    output.mkdir(parents=True, exist_ok=True)
+    report = {
+        "product_path": "Studio PNG → RoomAsset/JSON-v1/Story → ScummC-v6 → stock ScummVM",
+        "actor_start_x": 170,
+        "actor_walk_goal_x": 535,
+        "status": "in_progress",
+        "variants": {},
+    }
+    report_path = output / "native-r06-moving-four-mask-report.json"
+    try:
+        for variant in ("masked", "transparent", "wrong-box"):
+            label = f"moving-four-{variant}"
+            project, assignments, authoring = _author_project(
+                output, 1, variant, 170, moving_actor=True)
+            (output / f"{label}-project.json").write_text(project, encoding="utf-8")
+            room = next(item for item in parse_document(project).rooms
+                        if item.name == "Harbor")
+            render = render_native_room(
+                room, upstream, generated, output, label,
+                allow_static_scene=True, camera_pan_capture=True)
+            screenshots = output / f"{label}-screenshots"
+            from PIL import Image
+            from .scumm_camera_zp01_probe import camera_from_sky
+            captures = json.loads(
+                (screenshots / "camera-frame-times.json").read_text(encoding="utf-8"))
+            camera_rows = []
+            for entry in captures:
+                with Image.open(screenshots / f"scummvm-{entry['frame']}.png") as image:
+                    camera_x = camera_from_sky(image)
+                if camera_x is not None:
+                    camera_rows.append({
+                        "frame": entry["frame"],
+                        "seconds": entry["elapsed_seconds"],
+                        "camera_x": camera_x,
+                    })
+            if not camera_rows:
+                raise RuntimeError(f"No identifiable stock-ScummVM frames: {label}")
+            report["variants"][variant] = {
+                "walkbox_masks": assignments,
+                "authoring": authoring,
+                "frame_report": render["frame_report"],
+                "camera_frames": camera_rows,
+                "screenshot_directory": str(screenshots),
+            }
+            report_path.write_text(
+                json.dumps(report, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8")
+        # Camera movement is not Actor movement. The existing static-actor
+        # read_frames() cannot measure changing world coordinates. A positive
+        # verdict requires a genuine independent Actor tracker and controls.
+        raise RuntimeError(
+            "Native moving-actor games captured; Actor world-X tracking and "
+            "per-zone occlusion controls not yet implemented")
+    except Exception as error:
+        report["status"] = "failed"
+        report["failure"] = str(error)
+        report_path.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8")
+        raise
+
+
 def run(upstream: Path, generated: Path, output: Path) -> dict:
     output.mkdir(parents=True, exist_ok=True)
     groups = {}
