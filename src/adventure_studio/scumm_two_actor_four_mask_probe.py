@@ -19,6 +19,7 @@ from .studio_sequences import (author_room_camera_plan, import_room_zplane,
                                author_room_walkbox_zplane)
 from .scumm_launch import launch_smoke
 from .scumm_project import (ActorAsset, InteractionSequence, WalkActorStep, WaitActorStep,
+                            FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                             canonical_json, export_document, parse_document)
 from .scumm_toolchain import compile_story_game
 
@@ -65,8 +66,13 @@ def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked")
         "Harbor", "Key", "Close", (
             WalkActorStep(ACTOR_IDS[0], 530, 85),
             WalkActorStep(ACTOR_IDS[1], 540, 135),
+            FollowActorCameraStep(ACTOR_IDS[0]),
             WaitActorStep(ACTOR_IDS[0]),
             WaitActorStep(ACTOR_IDS[1]),
+            PanCameraStep(480),
+            WaitCameraStep(),
+            PanCameraStep(160),
+            WaitCameraStep(),
         ))
     document = replace(document, costumes=(*document.costumes, costume),
                        actors=(*document.actors, *actors),
@@ -129,6 +135,8 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
             "actor_ids": list(ACTOR_IDS), "distinct_actor_positions": True,
             "camera_roundtrip_authored": True,
             "two_native_actor_walks_authored": True,
+            "native_camera_follows_actor_during_walk": True,
+            "native_interaction_camera_roundtrip_authored": True,
             "both_actor_routes_span_all_four_masks": True,
             "independent_actor_motion_verified": False,
             "per_actor_native_occlusion_verified": False}
