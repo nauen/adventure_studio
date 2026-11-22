@@ -32,10 +32,19 @@ _TARGETS = (
     (4, 5, 505, 460, 380),
 )
 _CAMERA_CUES = "set:160;hold:360;pan:480;wait;hold:120;pan:160;wait"
+# Native moving-Actor variant: follow the Actor while crossing all Z-planes,
+# then explicitly pan out and back to verify camera independence.
+_MOVING_CAMERA_CUES = "set:160;follow_ego;hold:700;pan:480;wait;hold:120;pan:160;wait"
 _EXPECTED_CUES = (
     ("set", 160, None), ("hold", None, 360), ("pan", 480, None),
     ("wait", None, None), ("hold", None, 120), ("pan", 160, None),
     ("wait", None, None),
+)
+_MOVING_EXPECTED_CUES = (
+    ("set", 160, None), ("follow_ego", None, None),
+    ("hold", None, 700), ("pan", 480, None),
+    ("wait", None, None), ("hold", None, 120),
+    ("pan", 160, None), ("wait", None, None),
 )
 _MASK_REGIONS = ((160, 320), (320, 400), (400, 500), (500, 640))
 
@@ -310,7 +319,8 @@ def _author_project(output: Path, plane: int, variant: str,
     project = canonical_json(GameDocument(
         "R06FourMaskCamera", (base, destination_fixture())))
     project = author_room_camera_plan(
-        project, "Harbor", world_x, 100, _CAMERA_CUES,
+        project, "Harbor", world_x, 100,
+        _MOVING_CAMERA_CUES if moving_actor else _CAMERA_CUES,
         stationary_actor=not moving_actor)
     for index, corners in (
         (1, "0,70; 160,70; 160,150; 0,150"),
@@ -368,7 +378,7 @@ def _author_project(output: Path, plane: int, variant: str,
         raise RuntimeError("Four-mask camera project changed during JSON-v1 roundtrip")
     room = next(item for item in parsed.rooms if item.name == "Harbor")
     actual_cues = tuple((cue.operation, cue.x, cue.ticks) for cue in room.camera_cues)
-    if actual_cues != _EXPECTED_CUES:
+    if actual_cues != (_MOVING_EXPECTED_CUES if moving_actor else _EXPECTED_CUES):
         raise RuntimeError("Story composition changed the native camera cue sequence")
     if len(room.zplanes) != 4 or len(room.walkboxes) != 5:
         raise RuntimeError("Story composition lost four Z-planes or five walkboxes")
