@@ -1,5 +1,13 @@
 # Adventure Studio – aktive Produktroadmap
 
+## Aktueller integrierter Stand und nächste native Abnahme (2026-11-22)
+
+- **R06:** PR #266, native laufende Actor-Route über vier weltfeste ZP01–ZP04-Masken und vollständige Kamerarückfahrt, integriert.
+- **R08:** PR #264, konkaver L-förmiger Korridor aus verbundenen nativen Walkboxes, integriert.
+- **R09:** PR #267, zwei reversible native Walkbox-Gates einschließlich Raumwechsel und Rückkehr, integriert mit vollständiger nativer CI #45064059570 und Merge `b5c7cc28`.
+- **Jetzt aktiv:** R06 Folgepaket [#268](https://github.com/nauen/adventure_studio/issues/268): zwei voneinander unabhängige bewegte Actors hinter vier weltfesten Raum-Z-Masken im selben stock-ScummVM-Spiel. **Noch nicht implementiert oder abgenommen.** ZP05+ bleibt ausdrücklich fail-closed.
+
+
 ## Konsolidierung und unmittelbar gestartetes R06-Folgepaket (2026-11-22)
 
 - **Hauptziel:** vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
