@@ -48,7 +48,7 @@ def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked")
             raw = import_room_zplane(raw, "Harbor", plane, str(png))
     raw = author_room_camera_plan(
         raw, "Harbor", 170, 100,
-        "set:320;hold:900;pan:480;wait;hold:120;pan:160;wait",
+        "set:320;hold:600;hold:300;pan:480;wait;hold:120;pan:160;wait",
         stationary_actor=True)
     document = parse_document(raw)
     costume = replace(gesture_fixture(), name=f"R06TwoActor{variant.title()}Costume")
@@ -102,7 +102,7 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
         raise RuntimeError("R06 Actors have unresolved native COST bindings")
     operations = tuple(cue.operation for cue in room.camera_cues)
     if room.demo_walk_to_x is not None or operations != (
-            "set", "hold", "pan", "wait", "hold", "pan", "wait"):
+            "set", "hold", "hold", "pan", "wait", "hold", "pan", "wait"):
         raise RuntimeError("R06 stable-click camera round-trip plan was lost")
     choreography = [sequence for sequence in document.interaction_sequences
                     if (sequence.room, sequence.hotspot_id, sequence.verb) ==
