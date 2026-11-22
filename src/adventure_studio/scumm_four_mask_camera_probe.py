@@ -120,7 +120,9 @@ def verify_four_mask_camera(groups: dict[int, dict]) -> dict:
             transparent = phase_rows["transparent"][phase]
             wrong = phase_rows["wrong-box"][phase]
             for name, control in (("transparent", transparent), ("wrong-box", wrong)):
-                if abs(control["camera_x"] - masked["camera_x"]) > 16:
+                # Independent ScummVM runs are captured asynchronously.
+                # Their nearest frames can be one native camera step apart.
+                if abs(control["camera_x"] - masked["camera_x"]) > 40:
                     raise RuntimeError(f"Camera phase mismatch for ZP{plane:02d}/{name}/{phase}")
                 if control["actor_dark_pixels"] < 100:
                     raise RuntimeError(f"Actor is not visible in ZP{plane:02d}/{name}/{phase} control")
