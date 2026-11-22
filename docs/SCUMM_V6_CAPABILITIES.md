@@ -1,5 +1,8 @@
 # Adventure Studio – SCUMM-v6-Funktionsmatrix
 
+**R06 – Konsolidierung 2026-11-22:** [PR #262](https://github.com/nauen/adventure_studio/pull/262) ist nach vollständiger nativer CI gemergt (`128c9ff`): vier gleichzeitige weltfeste ZP01–ZP04-Masken bei Kamera-Hin-/Rückfahrt mit getrennten Actor-Positionen und unabhängigen Kontrollen sind eine belegte **Teilfähigkeit**. Die ältere R06-Zeile unten enthält den historischen Zwischenstand vor Merge und ist nicht als aktueller Merge-Status zu lesen. **Neu aktiv, nicht abgenommen:** [Issue #265](https://github.com/nauen/adventure_studio/issues/265) prüft die noch offene Kombination eines durchgehend *laufenden* Actors über alle vier Masken bei Kamerafahrt im echten stock ScummVM. Bis zu Gameplay-Evidenz und grünen Pflichtgates kein neuer V-Abschluss. ZP05+ bleibt fail-closed; R08 #264 und R09 #260 bleiben ungemergt.
+
+
 Stand: 2026-11-18. **Zentrale Liste der nativen Fähigkeiten, die wir für
 typische vollständige SCUMM-v6-Adventures benötigen.** Die Matrix ist
 ein fortzuschreibender Katalog und noch kein Anspruch, sämtliche
