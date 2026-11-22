@@ -104,6 +104,21 @@ class FourMaskCameraProbeTests(unittest.TestCase):
         self.assertTrue(verify_four_mask_camera(groups)[
             "native_four_masks_world_anchored_camera_pan_and_return_passed"])
 
+    def test_returning_uses_real_separated_frame_not_just_nearest(self):
+        world_x = 479
+        camera_positions = (160, 400, 440, 480, 472, 432, 400, 368, 336, 160)
+        rows = [{
+            "frame": str(i), "seconds": i * 0.5,
+            "camera_x": camera, "world_x": world_x,
+            "screen_x": round(192 + 2 * (world_x - camera + 160)),
+            "actor_dark_pixels": 0,
+        } for i, camera in enumerate(camera_positions)]
+        phases = select_actor_phases(rows, world_x, 420, 352)
+        self.assertEqual(phases["outgoing"]["camera_x"], 400)
+        self.assertEqual(phases["returning"]["camera_x"], 336)
+        self.assertGreater(abs(phases["outgoing"]["screen_x"]
+                               - phases["returning"]["screen_x"]), 110)
+
     def test_missing_native_camera_segment_still_fails_closed(self):
         world_x, outgoing_x, returning_x = 380, 420, 320
         rows = trace(world_x, 160, returning_x, 0)
