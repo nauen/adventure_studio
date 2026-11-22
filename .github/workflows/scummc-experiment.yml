@@ -185,6 +185,28 @@ jobs:
             /tmp/native-r08-triangle-walkbox/*-screenshots/scummvm-*.json
             /tmp/native-r08-triangle-walkbox/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
+      - name: Verify R08 concave connected Walkboxes in stock ScummVM
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_concave_walkbox_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-r08-concave-walkbox
+      - name: Retain native R08 concave route and independent control games
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r08-concave-walkbox
+          path: |
+            /tmp/native-r08-concave-walkbox/native-r08-concave-walkbox-report.json
+            /tmp/native-r08-concave-walkbox/*-project.json
+            /tmp/native-r08-concave-walkbox/*/Harbor.box
+            /tmp/native-r08-concave-walkbox/*/Harbor.scc
+            /tmp/native-r08-concave-walkbox/*/tentacle.000
+            /tmp/native-r08-concave-walkbox/*/tentacle.001
+            /tmp/native-r08-concave-walkbox/*-screenshots/scummvm-*.png
+            /tmp/native-r08-concave-walkbox/*-screenshots/scummvm-*.json
+            /tmp/native-r08-concave-walkbox/*-screenshots/scummvm-launch.log
+          if-no-files-found: ignore
       - name: Verify Studio-authored object IM01 ZP01/ZP02 and second-state IM02 in stock ScummVM
         if: ${{ matrix.shard == 'mask' }}
         env:
