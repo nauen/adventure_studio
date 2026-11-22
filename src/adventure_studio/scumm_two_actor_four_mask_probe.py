@@ -276,6 +276,99 @@ def verify_two_actor_native_walks(traces: dict) -> dict:
             "tracks": results}
 
 
+
+def verify_two_actor_four_mask_pixels(samples: list[dict]) -> dict:
+    """Require actual native occlusion and both independent positive controls.
+
+    The two controls use separate, linked ScummVM games. Merely authoring BOXD
+    assignments, walking, or taking four mask screenshots cannot pass here.
+    """
+    expected = {(name, plane) for name in ACTOR_IDS for plane in range(1, 5)}
+    observed = set()
+    results = {}
+    for sample in samples:
+        key = (sample["actor"], sample["zplane"])
+        if key not in expected or key in observed:
+            raise RuntimeError("Invalid or duplicate native two-Actor Z-plane sample")
+        observed.add(key)
+        values = [sample.get(label) for label in ("masked", "transparent", "wrong-box")]
+        if any(type(value) is not int or value < 0 for value in values):
+            raise RuntimeError("Missing valid native costume pixel counts")
+        masked, transparent, wrong_box = values
+        if transparent < 80 or wrong_box < 80:
+            raise RuntimeError(
+                f"Native R06 positive control missing for {key}: "
+                f"transparent={transparent}, wrong-box={wrong_box}")
+        if masked > min(transparent, wrong_box) // 3:
+            raise RuntimeError(
+                f"Native R06 mask failed for {key}: "
+                f"masked={masked}, transparent={transparent}, wrong-box={wrong_box}")
+        results[f"{key[0]}/ZP{key[1]:02d}"] = {
+            "masked_pixels": masked, "transparent_pixels": transparent,
+            "wrong_box_pixels": wrong_box}
+    if observed != expected:
+        raise RuntimeError(f"Missing native two-Actor Z-plane comparisons: "
+                           f"{sorted(expected - observed)}")
+    return {"two_actor_four_mask_native_occlusion_verified": True,
+            "per_actor_zplanes": results}
+
+
+def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict:
+    """Align camera and costume by timestamped transparent gameplay evidence."""
+    from PIL import Image
+    from .scumm_camera_zp01_probe import camera_from_sky
+    bands = {"ForegroundWalker": (312, 343), "BackgroundWalker": (418, 448)}
+    directories = {
+        variant: output / variant / "screenshots"
+        for variant in ("masked", "transparent", "wrong-box")
+    }
+    timelines = {}
+    for variant, directory in directories.items():
+        metadata = json.loads((directory / "r06-two-actor-walk-capture.json").read_text())
+        timelines[variant] = metadata["captured_frames"]
+    samples = []
+    for actor in ACTOR_IDS:
+        top, bottom = bands[actor]
+        for plane, (left, right) in enumerate(_MASK_REGIONS, 1):
+            candidates = [row for row in traces[actor] if left + 10 <= row["world_x"] < right - 10
+                          and 220 <= row["screen_x"] <= 803]
+            sample = None
+            for control in candidates:
+                values = {}
+                aligned = True
+                for variant, directory in directories.items():
+                    closest = min(timelines[variant],
+                                  key=lambda row: abs(row["seconds_since_native_input"]
+                                                      - control["seconds"]))
+                    if abs(closest["seconds_since_native_input"] - control["seconds"]) > 0.35:
+                        aligned = False
+                        break
+                    with Image.open(directory / f"scummvm-{closest['frame']}.png") as image:
+                        rgb = image.convert("RGB")
+                        camera = camera_from_sky(rgb)
+                        if camera is None or abs(camera - control["camera_x"]) > 35:
+                            aligned = False
+                            break
+                        projected_x = round(192 + 2 * (control["world_x"] - camera + 160))
+                        if not 220 <= projected_x <= 803:
+                            aligned = False
+                            break
+                        values[variant] = sum(
+                            1 for x in range(projected_x - 19, projected_x + 19)
+                            for y in range(top, bottom)
+                            if max(rgb.getpixel((x, y))) <= 24)
+                if aligned:
+                    sample = {"actor": actor, "zplane": plane,
+                              "world_x": control["world_x"],
+                              "seconds": control["seconds"], **values}
+                    break
+            if sample is None:
+                raise RuntimeError(f"No aligned native mask/control frame for {actor} ZP{plane:02d}")
+            samples.append(sample)
+    verdict = verify_two_actor_four_mask_pixels(samples)
+    return {"comparison": verdict, "measured_native_samples": samples}
+
+
 def run(upstream: Path, output: Path) -> dict:
     """Run separate masked and transparent stock-ScummVM gameplay controls."""
     output.mkdir(parents=True, exist_ok=True)
@@ -315,6 +408,11 @@ def run(upstream: Path, output: Path) -> dict:
                            encoding="utf-8")
     report["motion_comparison"] = verify_two_actor_native_walks(observed)
     report["independent_actor_motion_verified"] = True
+    report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n",
+                           encoding="utf-8")
+    report["native_mask_comparison"] = measure_two_actor_native_mask_comparison(output, observed)
+    report["per_actor_native_occlusion_verified"] = True
+    report["complete_r06_268_acceptance"] = True
     report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n",
                            encoding="utf-8")
     return report
