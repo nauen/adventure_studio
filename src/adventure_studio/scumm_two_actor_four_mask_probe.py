@@ -7,7 +7,9 @@ Those additional gameplay conditions require separate captured evidence.
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -93,6 +95,40 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4)) 
             "per_actor_native_occlusion_verified": False}
 
 
+
+def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
+    """Click real native Close/Key action; retain every frame without faking motion."""
+    from .scumm_launch import colored_item_center
+
+    capture_frame("r06-two-actor-before")
+    key_x, key_y = colored_item_center(
+        output, "r06-two-actor-before", (255, 220, 75))
+    if not (192 <= key_x <= 831 and 184 <= key_y <= 471):
+        raise RuntimeError("Authored Key is not visible for native R06 Actor input")
+    initiated = time.monotonic()
+    for x, y in ((234, 563), (key_x, key_y)):
+        subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
+                       check=True, timeout=10)
+        time.sleep(0.15)
+    captured = []
+    for index in range(24):
+        if process.poll() is not None:
+            raise RuntimeError("Stock ScummVM quit during two-Actor native walk")
+        label = f"r06-two-actor-walk-{index:02d}"
+        capture_frame(label)
+        captured.append({"frame": label,
+                         "seconds_since_native_input": round(time.monotonic() - initiated, 3)})
+        time.sleep(0.3)
+    result = {"click_verb": "Close", "click_hotspot": "Key",
+              "native_hotspot_screen_position": [key_x, key_y],
+              "captured_frames": captured,
+              "independent_actor_motion_verified": False,
+              "four_mask_per_actor_occlusion_verified": False}
+    (output / "r06-two-actor-walk-capture.json").write_text(
+        json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return result
+
+
 def run(upstream: Path, output: Path) -> dict:
     """Compile and launch the *same* authored room in stock ScummVM."""
     output.mkdir(parents=True, exist_ok=True)
@@ -105,9 +141,12 @@ def run(upstream: Path, output: Path) -> dict:
     authoring = assert_native_two_actor_authoring(document)
     export_document(document, resources)
     game = compile_story_game(build, upstream, output / "game")
-    launch_smoke(game, output / "screenshots", scene_only=True,
-                 allow_static_scene=True)
-    report = {"product_path": "Studio PNG -> JSON-v1/Story -> ScummC-v6 -> stock ScummVM",
+    launch_smoke(game, output / "screenshots", seconds=12,
+                 scene_only=True, allow_static_scene=True,
+                 native_two_actor_walk_probe=True)
+    native_input = json.loads((output / "screenshots" /
+        "r06-two-actor-walk-capture.json").read_text(encoding="utf-8"))
+    report = {"native_input_capture": native_input, "product_path": "Studio PNG -> JSON-v1/Story -> ScummC-v6 -> stock ScummVM",
               "native_link_and_launch_passed": True, "authoring": authoring,
               "complete_r06_268_acceptance": False}
     (output / "native-r06-two-actor-four-mask-report.json").write_text(
