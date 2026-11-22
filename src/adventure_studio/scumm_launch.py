@@ -512,7 +512,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 # acceptance still independently requires an initial blue
                 # view and the complete outward/return journey.
                 if (close_rgb(start_rgb, (70, 130, 190))
-                        or (camera_pan_capture and
+                        or ((camera_pan_capture or native_two_actor_walk_probe) and
                             close_rgb(start_rgb, (240, 175, 95)))):
                     break
                 time.sleep(0.3)
