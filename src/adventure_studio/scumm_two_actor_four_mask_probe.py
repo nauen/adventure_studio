@@ -122,7 +122,7 @@ def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
                        check=True, timeout=10)
         time.sleep(0.15)
     captured = []
-    for index in range(24):
+    for index in range(80):
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM quit during two-Actor native walk")
         label = f"r06-two-actor-walk-{index:02d}"
@@ -140,28 +140,120 @@ def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
     return result
 
 
+def track_native_actor_lanes(screenshots: Path) -> dict:
+    """Measure both costumes in separate vertical lanes of stock ScummVM frames.
+
+    This uses actual costume pixels, not the authored Actor destination.
+    The upper/lower ROIs exclude Ego and the toolbar by construction.
+    """
+    from PIL import Image
+    from .scumm_camera_zp01_probe import camera_from_sky
+    metadata = json.loads((screenshots / "r06-two-actor-walk-capture.json").read_text())
+    bands = {"ForegroundWalker": (312, 343),
+             "BackgroundWalker": (418, 448)}
+    observations = {name: [] for name in ACTOR_IDS}
+    for entry in metadata["captured_frames"]:
+        with Image.open(screenshots / f"scummvm-{entry['frame']}.png") as frame:
+            rgb = frame.convert("RGB")
+            camera_x = camera_from_sky(rgb)
+            if camera_x is None:
+                continue
+            for name, (top, bottom) in bands.items():
+                counts = [sum(1 for y in range(top, bottom)
+                              if max(rgb.getpixel((x, y))) <= 24)
+                          for x in range(192, 832)]
+                clusters = []
+                begin = None
+                for index, count in enumerate((*counts, 0)):
+                    active = count >= 6
+                    if active and begin is None:
+                        begin = index
+                    elif not active and begin is not None:
+                        end = index
+                        total = sum(counts[begin:end])
+                        if end - begin >= 5 and total >= 60:
+                            clusters.append((total, (begin + end) // 2))
+                        begin = None
+                if len(clusters) != 1:
+                    continue
+                _, screen = clusters[0]
+                screen_x = 192 + screen
+                world_x = round((screen_x - 192) / 2 + camera_x - 160)
+                observations[name].append({
+                    "frame": entry["frame"],
+                    "seconds": entry["seconds_since_native_input"],
+                    "camera_x": camera_x, "world_x": world_x,
+                    "screen_x": screen_x})
+    return observations
+
+
+def verify_two_actor_native_walks(traces: dict) -> dict:
+    """Reject stationary actors, camera-only motion and missing Z-mask zones."""
+    if set(traces) != set(ACTOR_IDS):
+        raise RuntimeError("Missing independently tracked native Actors")
+    zones = ((160, 320), (320, 400), (400, 500), (500, 640))
+    results = {}
+    for actor in ACTOR_IDS:
+        trace = sorted(traces[actor], key=lambda row: row["seconds"])
+        if len(trace) < 8 or len({row["frame"] for row in trace}) != len(trace):
+            raise RuntimeError(f"{actor} has too few native costume frames")
+        distinct_world = {row["world_x"] for row in trace}
+        if max(distinct_world) - min(distinct_world) < 250:
+            raise RuntimeError(f"{actor} did not independently walk across room")
+        visited = [next((row["seconds"] for row in trace
+                         if left <= row["world_x"] < right), None)
+                   for left, right in zones]
+        if any(value is None for value in visited):
+            raise RuntimeError(f"{actor} did not cross every native mask zone")
+        if visited != sorted(visited):
+            raise RuntimeError(f"{actor} visited native mask zones out of order")
+        results[actor] = {"observed_frame_count": len(trace),
+                          "world_x_bounds": [min(distinct_world), max(distinct_world)],
+                          "zone_first_seconds": visited}
+    if traces[ACTOR_IDS[0]] == traces[ACTOR_IDS[1]]:
+        raise RuntimeError("Two Actor traces are not independently measured")
+    return {"two_independent_native_actor_walks_verified": True,
+            "tracks": results}
+
+
 def run(upstream: Path, output: Path) -> dict:
-    """Compile and launch the *same* authored room in stock ScummVM."""
+    """Run separate masked and transparent stock-ScummVM gameplay controls."""
     output.mkdir(parents=True, exist_ok=True)
-    build = output / "build"
-    resources = build / "resources"
-    resources.mkdir(parents=True, exist_ok=True)
-    project = author_two_actor_four_mask_project(output)
-    (build / "project.json").write_text(project, encoding="utf-8")
-    document = parse_document(project)
-    authoring = assert_native_two_actor_authoring(document)
-    export_document(document, resources)
-    game = compile_story_game(build, upstream, output / "game")
-    launch_smoke(game, output / "screenshots", seconds=12,
-                 scene_only=True, allow_static_scene=True,
-                 native_two_actor_walk_probe=True)
-    native_input = json.loads((output / "screenshots" /
-        "r06-two-actor-walk-capture.json").read_text(encoding="utf-8"))
-    report = {"native_input_capture": native_input, "product_path": "Studio PNG -> JSON-v1/Story -> ScummC-v6 -> stock ScummVM",
-              "native_link_and_launch_passed": True, "authoring": authoring,
+    report = {"product_path": "Studio PNG -> JSON-v1/Story -> ScummC-v6 -> stock ScummVM",
+              "variants": {}, "independent_actor_motion_verified": False,
+              "per_actor_native_occlusion_verified": False,
               "complete_r06_268_acceptance": False}
-    (output / "native-r06-two-actor-four-mask-report.json").write_text(
-        json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    report_path = output / "native-r06-two-actor-four-mask-report.json"
+    for variant in ("masked", "transparent"):
+        root = output / variant
+        root.mkdir(parents=True, exist_ok=True)
+        build = root / "build"
+        resources = build / "resources"
+        resources.mkdir(parents=True, exist_ok=True)
+        project = author_two_actor_four_mask_project(root, variant=variant)
+        (build / "project.json").write_text(project, encoding="utf-8")
+        document = parse_document(project)
+        authoring = assert_native_two_actor_authoring(document)
+        export_document(document, resources)
+        game = compile_story_game(build, upstream, root / "game")
+        launch_smoke(game, root / "screenshots", seconds=6,
+                     scene_only=True, allow_static_scene=True,
+                     native_two_actor_walk_probe=True)
+        native_input = json.loads((root / "screenshots" /
+            "r06-two-actor-walk-capture.json").read_text(encoding="utf-8"))
+        report["variants"][variant] = {
+            "native_link_and_launch_passed": True,
+            "native_input_capture": native_input, "authoring": authoring}
+        report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n",
+                               encoding="utf-8")
+    observed = track_native_actor_lanes(output / "transparent" / "screenshots")
+    report["native_actor_tracks"] = observed
+    report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n",
+                           encoding="utf-8")
+    report["motion_comparison"] = verify_two_actor_native_walks(observed)
+    report["independent_actor_motion_verified"] = True
+    report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n",
+                           encoding="utf-8")
     return report
 
 
