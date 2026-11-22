@@ -14,7 +14,8 @@ from pathlib import Path
 from .scumm_costume_probe import gesture_fixture
 from .scumm_four_mask_camera_probe import _author_project
 from .scumm_launch import launch_smoke
-from .scumm_project import ActorAsset, canonical_json, export_document, parse_document
+from .scumm_project import (ActorAsset, InteractionSequence, WalkActorStep, WaitActorStep,
+                            canonical_json, export_document, parse_document)
 from .scumm_toolchain import compile_story_game
 
 
@@ -31,8 +32,16 @@ def author_two_actor_four_mask_project(output: Path) -> str:
     costume = replace(gesture_fixture(), name="R06TwoActorCostume")
     actors = tuple(ActorAsset(name, costume.name, "Harbor", x, y, "S", name)
                    for name, (x, y) in zip(ACTOR_IDS, ACTOR_STARTS))
+    choreography = InteractionSequence(
+        "Harbor", "Key", "Close", (
+            WalkActorStep(ACTOR_IDS[0], 530, 110),
+            WalkActorStep(ACTOR_IDS[1], 180, 115),
+            WaitActorStep(ACTOR_IDS[0]),
+            WaitActorStep(ACTOR_IDS[1]),
+        ))
     document = replace(document, costumes=(*document.costumes, costume),
-                       actors=(*document.actors, *actors))
+                       actors=(*document.actors, *actors),
+                       interaction_sequences=(*document.interaction_sequences, choreography))
     result = canonical_json(document)
     parsed = parse_document(result)
     assert_native_two_actor_authoring(parsed, assignments)
@@ -61,9 +70,21 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4)) 
         raise RuntimeError("R06 Actors have unresolved native COST bindings")
     if room.demo_walk_to_x != 535 or len(room.camera_cues) != 8:
         raise RuntimeError("R06 moving ego/camera plan was lost")
+    choreography = [sequence for sequence in document.interaction_sequences
+                    if (sequence.room, sequence.hotspot_id, sequence.verb) ==
+                    ("Harbor", "Key", "Close")]
+    expected_steps = (
+        WalkActorStep(ACTOR_IDS[0], 530, 110),
+        WalkActorStep(ACTOR_IDS[1], 180, 115),
+        WaitActorStep(ACTOR_IDS[0]),
+        WaitActorStep(ACTOR_IDS[1]),
+    )
+    if len(choreography) != 1 or choreography[0].steps != expected_steps:
+        raise RuntimeError("Independent native Actor walk commands missing")
     return {"four_zplanes": True, "native_actor_count": len(ACTOR_IDS),
             "actor_ids": list(ACTOR_IDS), "distinct_actor_positions": True,
             "camera_roundtrip_authored": True,
+            "two_native_actor_walks_authored": True,
             "independent_actor_motion_verified": False,
             "per_actor_native_occlusion_verified": False}
 
