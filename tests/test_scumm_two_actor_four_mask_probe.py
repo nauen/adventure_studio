@@ -10,6 +10,7 @@ from adventure_studio.scumm_project import parse_document, canonical_json
 from adventure_studio.scumm_two_actor_four_mask_probe import (
     ACTOR_IDS, author_two_actor_four_mask_project, assert_native_two_actor_authoring,
     verify_two_actor_native_walks, verify_two_actor_four_mask_pixels,
+    verify_two_actor_native_camera_roundtrip,
 )
 
 
@@ -90,6 +91,23 @@ class TwoActorFourMaskAuthoringTests(unittest.TestCase):
                 ACTOR_IDS[0]: trace(0),
                 ACTOR_IDS[1]: [{**row, "world_x": 550 if row["world_x"] >= 320
                                 else row["world_x"]} for row in trace(15)]})
+
+    def test_camera_roundtrip_requires_measured_far_and_return(self):
+        def trace(cameras):
+            return [{"frame": str(i), "seconds": i * 0.25, "camera_x": x}
+                    for i, x in enumerate(cameras)]
+        observed = trace([320, 320, 288, 256, 300, 400, 480, 480, 420, 320, 220, 160])
+        self.assertTrue(verify_two_actor_native_camera_roundtrip(
+            observed)["native_camera_roundtrip_verified"])
+        with self.assertRaisesRegex(RuntimeError, "far endpoint"):
+            verify_two_actor_native_camera_roundtrip(
+                trace([320, 320, 288, 256, 300, 400, 456, 456, 420, 320, 220, 160]))
+        with self.assertRaisesRegex(RuntimeError, "return to X=160"):
+            verify_two_actor_native_camera_roundtrip(
+                trace([320, 320, 288, 256, 300, 400, 480, 480, 420, 320, 280, 220]))
+        with self.assertRaisesRegex(RuntimeError, "follow the moving Actor"):
+            verify_two_actor_native_camera_roundtrip(
+                trace([320, 320, 320, 340, 360, 400, 480, 480, 420, 320, 220, 160]))
 
     def test_native_four_mask_pixels_require_both_real_controls(self):
         samples = [
