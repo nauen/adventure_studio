@@ -74,6 +74,30 @@ class FourMaskCameraProbeTests(unittest.TestCase):
             self.assertLessEqual(phases["returning"]["screen_x"], 831, f"ZP{plane:02d}")
         self.assertEqual(_TARGETS[2][4], 352)
 
+    def test_discrete_native_camera_samples_between_requested_targets(self):
+        # Recorded stock-ScummVM camera positions have ~40-unit gaps.
+        # A target between adjacent observed frames is valid evidence if
+        # the actor remains visible and both directions are separated.
+        for plane, box, world_x, outgoing_x, returning_x in _TARGETS:
+            cameras = (160, 176, 208, 248, 288, 328, 368, 400, 440,
+                       480, 456, 416, 384, 344, 304, 264, 224, 160)
+            rows = [{
+                "frame": str(i), "seconds": i * 0.5,
+                "camera_x": camera, "world_x": world_x,
+                "screen_x": round(192 + 2 * (world_x - camera + 160)),
+                "actor_dark_pixels": 0,
+            } for i, camera in enumerate(cameras)]
+            result = select_actor_phases(rows, world_x, outgoing_x, returning_x)
+            self.assertGreater(
+                abs(result["outgoing"]["screen_x"] - result["returning"]["screen_x"]),
+                110, f"ZP{plane:02d}")
+
+    def test_missing_native_camera_segment_still_fails_closed(self):
+        world_x, outgoing_x, returning_x = 380, 420, 320
+        rows = trace(world_x, 160, returning_x, 0)
+        with self.assertRaisesRegex(RuntimeError, "Missing camera sample for outgoing"):
+            select_actor_phases(rows, world_x, outgoing_x, returning_x)
+
     def test_missing_completed_return_fails_closed(self):
         rows = trace(360, 360, 300, 0)[:-1]
         with self.assertRaisesRegex(RuntimeError, "completed camera-return"):
