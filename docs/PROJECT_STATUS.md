@@ -1,23 +1,19 @@
 # Adventure Studio – aktueller Arbeitsstand
 
-Stand: 2026-11-18. **Einstieg für die nächste Arbeitssitzung.**
-Produktziel: [PRODUCT_VISION](PRODUCT_VISION.md) · aktive [Roadmap](roadmap.md) ·
-einzige [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md) ·
-[Referenzvertrag](scumm-v6-reference/README.md) · [Arbeitsvertrag](../AGENTS.md).
-Das frühere ausführliche Sitzungsprotokoll liegt in
-[PROJECT_HISTORY](PROJECT_HISTORY.md); historische „Nächstes“-Aufträge sind nicht aktiv.
+Stand: 2026-11-22. Produktziel: [PRODUCT_VISION](PRODUCT_VISION.md) ·
+aktive [Roadmap](roadmap.md) · einzige [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md) ·
+[Referenzvertrag](scumm-v6-reference/README.md) · [AGENTS](../AGENTS.md).
+Historische Detailprotokolle: [PROJECT_HISTORY](PROJECT_HISTORY.md).
 
 ## Ein aktiver Produktpfad
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix bleibt die einzige Funktions- und Statusquelle.
-- **Jetzt:** **R07 IM02/ZP04 abgeschlossen und auf `main` gemergt**: [PR #258](https://github.com/nauen/adventure_studio/pull/258), Squash [`7527b8d`](https://github.com/nauen/adventure_studio/commit/7527b8d06662de15450b2ab581d5688f74b9b9c8). Nächste Priorität ist **R09: zwei unabhängig reversible Walkbox-Gates im selben Raum über einen echten Raumwechsel hinweg erhalten**; noch nicht implementiert oder abgenommen. NPC-Komfort seit [#190](https://github.com/nauen/adventure_studio/pull/190) beendet.
-- **Abnahme:** IM02/ZP04: echtes Studio-/Chromium-PNG → `RoomHotspot.open_object_zplane4_pixels` → JSON-v1/Story → produktiver ScummC-IM02-Writer (`OpenZ01.bmp`–`OpenZ04.bmp`) → **drei** unveränderte stock-ScummVM-Spiele. BOXD4 **0**, transparente ZP04 **1476**, falsche BOXD3 **1476** Actor-Pixel; `native_im02_zp04_passed: true`. [Native Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44218026305/artifacts/14388748875) · [Browser-Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44218026305/artifacts/14388114712) · [Core 44217985572](https://github.com/nauen/adventure_studio/actions/runs/44217985572) · [vollständige Integration 44218026305](https://github.com/nauen/adventure_studio/actions/runs/44218026305): Studio, Dialogue, Inventory, 4/4 native Shards erfolgreich auf finalem Head `f0c990de`.
-- **Blocker:** Für #258 keiner. Für das **nächste** R09-Paket fehlt noch die vertikale Implementierung und eigenständige ScummVM-Evidenz für zwei unabhängig geschaltete Gates mit Raumverlassen/-wiederkehr; bisherige #231-Raumrückkehr betrifft nur ein Gate, #236 zwei Gates ohne diesen kombinierten Rückkehrnachweis. R07/R08/R09 bleiben insgesamt Teilfähigkeiten; stock-v6-ZP05+ bleibt fail-closed.
-- **Danach:** Erst das eine priorisierte R09-Raumrückkehrpaket Modell → Studio/JSON/Story → nativer ScummC → echte Actor-Routen und Kontrollspiel in stock ScummVM vollständig abnehmen, dann **ein** weiteres Paket wählen. Keine parallelen Features.
-
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix ist einzige Statusquelle.
+- **Jetzt:** **R06 / [#261](https://github.com/nauen/adventure_studio/issues/261), [PR #262](https://github.com/nauen/adventure_studio/pull/262)** – vier unabhängige gleichzeitige ZP01–ZP04-Masken mit fünf BOXD/BOXM-Walkboxen, die bei stock-ScummVM-Kamerafahrt X=160→480→160 weltfest verdecken. Der reale Produktpfad ist Studio-PNG → RoomAsset → JSON-v1/Story → produktiver ScummC-v6-Export → Stock-ScummVM. NPC-Komfort nach #190 beendet.
+- **Abnahme:** Vier getrennte Actor-Weltpositionen; je drei echte native Spiele (maskiert, transparent, falsche Walkbox). Verdeckung auf Hin- **und** Rückfahrt gegen beide Kontrollen, sichtbare Actor-Positionen, vollständige Kamera-Endpunkte, eindeutige Welt-/Bildschirmkoordinaten und Screenshot-/Zeitstempelbelege. Echtes Chromium-Studio-Authoring mit Reload-/Edit-Roundtrip muss bestehen.
+- **Blocker:** [Native 45019052534](https://github.com/nauen/adventure_studio/actions/runs/45019052534) erzeugte alle **zwölf separaten stock-ScummVM-Spiele** mitsamt PNGs/JSON/ScummC, Zeitstempeln und Screenshots ([Artefakt 14752699463](https://github.com/nauen/adventure_studio/actions/runs/45019052534/artifacts/14752699463)). Der tatsächliche Pixelbericht zeigt ZP01/ZP02/ZP03 je 0 dunkle Actor-Pixel gegen sichtbare Kontrollen, ZP04 296 gegen 1540 Kontrollpixel in beiden Panrichtungen. Der finale Verify-Aufruf stoppte fälschlich auf `scroll_color_signature_passed=false`, obwohl der Renderbericht ausdrücklich `scroll_expected=false` meldet: dieselbe Sky-Farbe vor und nach dem vollständigen Kamera-Rückweg ist **korrekt**. Der Produktpfad wird deshalb jetzt durch native Frame-Variation und den gemessenen zeitgeordneten Kamera-X-Verlauf 160→480→160 verifiziert; keine Masken-/Kontroll-/Parallaxeschwelle wurde gelockert. Letzte erforderliche CI auf korrigiertem Head noch offen; keine R06-Fertigmeldung vor grünem Native/Studio-Gate.
+- **Danach:** Erst bei vollständiger R06-Evidenz genau ein weiteres natives Paket wählen: R09 zwei unabhängig reversible Walkbox-Gates über echte Raumrückkehr, bestehender [PR #260](https://github.com/nauen/adventure_studio/pull/260) offen. Dessen letzter Integration-Run [44959056163](https://github.com/nauen/adventure_studio/actions/runs/44959056163) ist erfolgreich, aber noch nicht mit R06 integriert. ZP05–ZP09 bleiben stock-v6-limitiert und fail-closed.
 
 ## Zuletzt tatsächlich geliefert
-
 | PR | Nutzerfunktion | Evidenz/Grenze |
 | --- | --- | --- |
 | [#258](https://github.com/nauen/adventure_studio/pull/258) | Vierte unabhängige IM02-Objekt-Z-Maske ZP04 im echten Studio-PNG, JSON-v1/Story und produktivem ScummC-Export | [Core 44217985572](https://github.com/nauen/adventure_studio/actions/runs/44217985572), [vollständige CI 44218026305](https://github.com/nauen/adventure_studio/actions/runs/44218026305) mit Studio/Dialogue/Inventory und vier nativen Shards grün; [native Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44218026305/artifacts/14388748875): BOXD4 0 / transparent 1476 / BOXD3 1476 Actor-Pixel; [Browser](https://github.com/nauen/adventure_studio/actions/runs/44218026305/artifacts/14388114712); Squash `7527b8d`. R07 bleibt Teilfähigkeit |

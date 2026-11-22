@@ -21,15 +21,16 @@ class NativeScummVMShardingTests(unittest.TestCase):
         self.assertIn("fail-fast: false", contents)
         self.assertIn("shard: [mask, geometry, actors, story]", contents)
         matches = list(STEP.finditer(contents))
-        self.assertEqual(len(matches), 112)
+        self.assertEqual(len(matches), 114)
         for index, match in enumerate(matches, 1):
             end = matches[index].start() if index < len(matches) else len(contents)
             block = contents[match.start():end]
             expected = (
-                "actors" if index in (7, 8) or 41 <= index <= 64 else
-                "mask" if 17 <= index <= 18 else
-                "geometry" if 13 <= index <= 40 else
-                "story" if 65 <= index <= 112 else None
+                "actors" if index in (7, 8) or 43 <= index <= 66 else
+                "mask" if 19 <= index <= 20 else
+                "geometry" if 13 <= index <= 42 else
+                "actors" if 43 <= index <= 66 else
+                "story" if 67 <= index <= 114 else None
             )
             with self.subTest(step=index, name=match.group(1)):
                 found = re.findall(r"matrix\.shard == '([^']+)'", block)

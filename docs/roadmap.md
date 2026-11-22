@@ -1,20 +1,15 @@
 # Adventure Studio – aktive Produktroadmap
 
-Stand: 2026-11-18. Diese Seite steuert **nur die nächsten Produktentscheidungen**.
-Das Hauptziel steht in [PRODUCT_VISION](PRODUCT_VISION.md), die einzige
-64-Fähigkeiten-Matrix in [SCUMM_V6_CAPABILITIES](SCUMM_V6_CAPABILITIES.md).
-Die frühere ausführliche Roadmap bleibt als
-[historisches Entwicklungsprotokoll](roadmap-history.md) erhalten;
-historische Checkboxen sind keine aktiven Aufträge.
+Stand: 2026-11-22. Nur die nächste Produktentscheidung wird hier gesteuert;
+die einzige 64-Fähigkeiten-Matrix ist [SCUMM_V6_CAPABILITIES](SCUMM_V6_CAPABILITIES.md).
 
 ## Aktiver Entscheidungsstand
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix bleibt die einzige Funktions- und Statusquelle.
-- **Jetzt:** **R07 IM02/ZP04 abgeschlossen und auf `main` gemergt**: [PR #258](https://github.com/nauen/adventure_studio/pull/258), Squash [`7527b8d`](https://github.com/nauen/adventure_studio/commit/7527b8d06662de15450b2ab581d5688f74b9b9c8). Nächste Priorität ist **R09: zwei unabhängig reversible Walkbox-Gates im selben Raum über einen echten Raumwechsel hinweg erhalten**; noch nicht implementiert oder abgenommen. NPC-Komfort seit [#190](https://github.com/nauen/adventure_studio/pull/190) beendet.
-- **Abnahme:** IM02/ZP04: echtes Studio-/Chromium-PNG → `RoomHotspot.open_object_zplane4_pixels` → JSON-v1/Story → produktiver ScummC-IM02-Writer (`OpenZ01.bmp`–`OpenZ04.bmp`) → **drei** unveränderte stock-ScummVM-Spiele. BOXD4 **0**, transparente ZP04 **1476**, falsche BOXD3 **1476** Actor-Pixel; `native_im02_zp04_passed: true`. [Native Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44218026305/artifacts/14388748875) · [Browser-Evidenz](https://github.com/nauen/adventure_studio/actions/runs/44218026305/artifacts/14388114712) · [Core 44217985572](https://github.com/nauen/adventure_studio/actions/runs/44217985572) · [vollständige Integration 44218026305](https://github.com/nauen/adventure_studio/actions/runs/44218026305): Studio, Dialogue, Inventory, 4/4 native Shards erfolgreich auf finalem Head `f0c990de`.
-- **Blocker:** Für #258 keiner. Für das **nächste** R09-Paket fehlt noch die vertikale Implementierung und eigenständige ScummVM-Evidenz für zwei unabhängig geschaltete Gates mit Raumverlassen/-wiederkehr; bisherige #231-Raumrückkehr betrifft nur ein Gate, #236 zwei Gates ohne diesen kombinierten Rückkehrnachweis. R07/R08/R09 bleiben insgesamt Teilfähigkeiten; stock-v6-ZP05+ bleibt fail-closed.
-- **Danach:** Erst das eine priorisierte R09-Raumrückkehrpaket Modell → Studio/JSON/Story → nativer ScummC → echte Actor-Routen und Kontrollspiel in stock ScummVM vollständig abnehmen, dann **ein** weiteres Paket wählen. Keine parallelen Features.
-
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne zusätzliche Adventure-Studio-Runtime.
+- **Jetzt:** **R06 / [Issue #261](https://github.com/nauen/adventure_studio/issues/261), [PR #262](https://github.com/nauen/adventure_studio/pull/262)**: vier gleichzeitig authorierte Raum-Z-Masken ZP01–ZP04 plus fünf Walkboxen bleiben bei nativer Kamerafahrt X=160→480→160 weltfest. Keine NPC-Komfortarbeit seit #190; kein paralleles R07/R08/R09-Paket.
+- **Abnahme:** Vier echte Studio-PNGs → RoomAsset/JSON-v1/Story → produktiver ScummC-v6-/BOXD-Export → **zwölf separat kompilierte Spiele** in unverändertem stock ScummVM (für jede Z-Ebene: maskiert, transparent, falsche Walkbox). Jede Ebene muss den Actor auf Hin- und Rückfahrt verdecken; beide Kontrollen müssen ihn zeigen, der vollständige Kamera-Rückweg muss beobachtet werden. Native Logs, JSON-Report, Screenshots und Browser-Authoring-Evidenz als Artefakte.
+- **Blocker:** [Native 45019052534](https://github.com/nauen/adventure_studio/actions/runs/45019052534) hat **alle zwölf echten stock-ScummVM-Spiele** kompiliert, gestartet und mit Zeitstempeln dokumentiert: ZP01–ZP03 je 0 verdeckte Actor-Pixel, ZP04 296 gegenüber 1540 in beiden Kontrollen, jeweils auf Hin-/Rückfahrt. [Artefakt](https://github.com/nauen/adventure_studio/actions/runs/45019052534/artifacts/14752699463). Das abschließende CI-Gate war trotzdem rot, weil der statische Start-/Endbild-Vergleich `scroll_color_signature_passed` bei beabsichtigter X=160→480→160-Rückkehr definitionsgemäß falsch ist (`scroll_expected=false`). Der Selektor verlangt jetzt **echte Frame-Variation plus gemessenen vollständigen Kameraverlauf**; der separate ZP01-Basistest berücksichtigt den belegten 32er-Kamera-Samplingversatz. Finales Core/Native/Studio-Gate nach dem Fix noch offen. ZP05+ bleibt stock-v6-fail-closed.
+- **Danach:** Erst nach R06-ScummVM-Nachweis und grünen Pflichtgates das einzelne R09-Walkbox-Raumrückkehrpaket [PR #260](https://github.com/nauen/adventure_studio/pull/260) konsolidieren und abnehmen. Keine anderen parallelen Features.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 

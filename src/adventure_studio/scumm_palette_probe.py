@@ -53,12 +53,18 @@ def run(game_directory: Path, output_directory: Path) -> None:
                                    env={**os.environ, "SDL_AUDIODRIVER": "dummy"})
         try:
             samples = []
+            # Capture several independently indexed water pixels. A static
+            # water texture can contain four different colors without
+            # cycling: only variation of one fixed pixel over time counts.
+            water_positions = ((352, 454), (384, 454), (416, 454))
             # 320x200 game viewport is scaled 2x and centered on 1024x768.
             # World (80,135) is in our water ramp; (200,70) is static sky.
             for index in range(20):
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM terminated; inspect scummvm.log")
-                time.sleep(0.35)
+                # Do not sample at a uniform rate: a periodic palette cycle
+                # can alias to a constant color at a fixed screenshot cadence.
+                time.sleep(0.20 + (index % 5) * 0.07)
                 xwd = output_directory / f"palette-{index:02d}.xwd"
                 png = output_directory / f"palette-{index:02d}.png"
                 capture = subprocess.run(["xwd", "-root", "-silent", "-out", str(xwd)],
@@ -70,10 +76,24 @@ def run(game_directory: Path, output_directory: Path) -> None:
                 if converted.returncode:
                     raise RuntimeError(f"Frame conversion failed: {converted.stderr}")
                 xwd.unlink()
-                samples.append((pixel_from_frame(png, 352, 454), pixel_from_frame(png, 592, 324)))
-            report = analyze_palette_frames(samples[4:])  # ignore startup/splash frames
-            report["sample_count"] = len(samples[4:])
-            report["water_rgb_samples"] = [list(w) for w, _ in samples[4:]]
+                samples.append((
+                    tuple(pixel_from_frame(png, x, y) for x, y in water_positions),
+                    pixel_from_frame(png, 592, 324),
+                ))
+            observed = samples[4:]  # ignore startup/splash frames
+            distinct = [len(set(waters[i] for waters, _ in observed))
+                        for i in range(len(water_positions))]
+            # Pick a single fixed water pixel with the most observed temporal
+            # variation. Spatially different colors never count as animation.
+            sampled_pixel = max(range(len(water_positions)), key=distinct.__getitem__)
+            report = analyze_palette_frames(
+                [(waters[sampled_pixel], sky) for waters, sky in observed])
+            report["sample_count"] = len(observed)
+            report["water_probe_positions"] = [list(position) for position in water_positions]
+            report["water_probe_distinct_colors"] = distinct
+            report["selected_probe_position"] = list(water_positions[sampled_pixel])
+            report["water_rgb_samples"] = [
+                list(waters[sampled_pixel]) for waters, _ in observed]
             (output_directory / "palette-report.json").write_text(
                 json.dumps(report, indent=2) + "\n", encoding="utf-8")
             if not report["passed"]:
