@@ -108,8 +108,8 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
                     if (sequence.room, sequence.hotspot_id, sequence.verb) ==
                     ("Harbor", "Key", "Close")]
     expected_steps = (
-        WalkActorStep(ACTOR_IDS[0], 530, 110),
-        WalkActorStep(ACTOR_IDS[1], 540, 115),
+        WalkActorStep(ACTOR_IDS[0], 530, 85),
+        WalkActorStep(ACTOR_IDS[1], 540, 135),
         WaitActorStep(ACTOR_IDS[0]),
         WaitActorStep(ACTOR_IDS[1]),
     )
