@@ -99,7 +99,30 @@ def track_native_actor(directory: Path) -> list[dict]:
     return rows
 
 
-def verify_moving_actor_crosses_four_masks(frames: list[dict]) -> dict:
+def track_native_camera(directory: Path) -> list[dict]:
+    """Measure native camera position even when the walking Actor is offscreen."""
+    from PIL import Image
+    from .scumm_camera_zp01_probe import camera_from_sky
+
+    entries = json.loads(
+        (directory / "camera-frame-times.json").read_text(encoding="utf-8"))
+    rows = []
+    for entry in entries:
+        with Image.open(directory / f"scummvm-{entry['frame']}.png") as image:
+            camera_x = camera_from_sky(image)
+        if camera_x is not None:
+            rows.append({
+                "seconds": entry["elapsed_seconds"],
+                "camera_x": camera_x,
+                "frame": entry["frame"],
+            })
+    if not rows:
+        raise RuntimeError("No measurable native camera frames")
+    return rows
+
+
+def verify_moving_actor_crosses_four_masks(
+        frames: list[dict], camera_frames: list[dict] | None = None) -> dict:
     """Fail closed unless *observed* native frames prove walking through four zones.
 
     Camera movement alone is insufficient: unlike the earlier stationary-actor
@@ -133,7 +156,8 @@ def verify_moving_actor_crosses_four_masks(frames: list[dict]) -> dict:
     if [row["first_seconds"] for row in visited] != sorted(
             row["first_seconds"] for row in visited):
         raise RuntimeError("Actor did not cross the four mask regions in order")
-    camera = [row["camera_x"] for row in ordered]
+    camera = [row["camera_x"] for row in (
+        camera_frames if camera_frames is not None else ordered)]
     far = next((i for i, x in enumerate(camera) if x >= 475), None)
     if (far is None or not any(x <= 165 for x in camera[:far])
             or not any(x <= 165 for x in camera[far + 1:])):
@@ -533,7 +557,14 @@ def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
         report_path.write_text(
             json.dumps(report, indent=2, sort_keys=True) + "\n",
             encoding="utf-8")
-        report["motion"] = verify_moving_actor_crosses_four_masks(control)
+        camera_observations = track_native_camera(
+            output / "moving-four-transparent-screenshots")
+        report["camera_tracking"] = camera_observations
+        report_path.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8")
+        report["motion"] = verify_moving_actor_crosses_four_masks(
+            control, camera_observations)
         masked = measure_native_costume_at_control_positions(
             output / "moving-four-masked-screenshots", control)
         wrong = {
