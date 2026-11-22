@@ -40,6 +40,56 @@ _EXPECTED_CUES = (
 _MASK_REGIONS = ((160, 320), (320, 400), (400, 500), (500, 640))
 
 
+def track_native_actor(directory: Path) -> list[dict]:
+    """Locate the dark costume from actual native screenshots, not scripted X.
+
+    Only a visible costume can be tracked: run this on the transparent-control
+    game. Consecutive frames are not interpolated or assigned guessed X.
+    """
+    from PIL import Image
+    from .scumm_camera_zp01_probe import camera_from_sky
+
+    entries = json.loads(
+        (directory / "camera-frame-times.json").read_text(encoding="utf-8"))
+    rows = []
+    for entry in entries:
+        with Image.open(directory / f"scummvm-{entry['frame']}.png") as image:
+            camera_x = camera_from_sky(image)
+            if camera_x is None:
+                continue
+            rgb = image.convert("RGB")
+            # Count dark pixels in each viewport column at costume height.
+            # Require a compact high-density peak; reject loading screens,
+            # text, or scattered background artifacts rather than guessing.
+            columns = [
+                sum(1 for y in range(305, 388)
+                    if max(rgb.getpixel((x, y))) <= 12)
+                for x in range(192, 832)
+            ]
+        peaks = []
+        for center in range(15, len(columns) - 15):
+            score = sum(columns[center - 15:center + 16])
+            if score >= 100:
+                peaks.append((score, center))
+        if not peaks:
+            continue
+        peak, center = max(peaks)
+        # Reject equally strong, spatially separated costume candidates.
+        if any(score >= peak * 0.85 and abs(other - center) > 50
+               for score, other in peaks):
+            continue
+        screen_x = 192 + center
+        world_x = round((screen_x - 192) / 2 + camera_x - 160)
+        rows.append({
+            "frame": entry["frame"], "seconds": entry["elapsed_seconds"],
+            "camera_x": camera_x, "screen_x": screen_x,
+            "world_x": world_x, "actor_dark_pixels": peak,
+        })
+    if not rows:
+        raise RuntimeError("No independently identifiable native Actor pixels")
+    return rows
+
+
 def verify_moving_actor_crosses_four_masks(frames: list[dict]) -> dict:
     """Fail closed unless *observed* native frames prove walking through four zones.
 
