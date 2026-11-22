@@ -134,7 +134,9 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
                             (name != "returning"))
             closest = min(available, key=lambda r: abs(r["camera_x"] - desired["camera_x"]),
                           default=None)
-            if closest is None or abs(closest["camera_x"] - desired["camera_x"]) > 16:
+            # Independently captured native games can differ by one
+            # 40-world-unit camera step at equal gameplay phases.
+            if closest is None or abs(closest["camera_x"] - desired["camera_x"]) > 40:
                 raise RuntimeError(f"No coordinate-aligned {label} control for {name}")
             row[f"{label}_pixels"] = closest["actor_dark_pixels"]
             row[f"{label}_frame"] = closest["frame"]
