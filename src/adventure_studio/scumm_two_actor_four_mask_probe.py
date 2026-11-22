@@ -15,7 +15,8 @@ from pathlib import Path
 
 from .scumm_costume_probe import gesture_fixture
 from .scumm_four_mask_camera_probe import _author_project, _MASK_REGIONS
-from .studio_sequences import author_room_camera_plan, import_room_zplane
+from .studio_sequences import (author_room_camera_plan, import_room_zplane,
+                               author_room_walkbox_zplane)
 from .scumm_launch import launch_smoke
 from .scumm_project import (ActorAsset, InteractionSequence, WalkActorStep, WaitActorStep,
                             canonical_json, export_document, parse_document)
@@ -29,8 +30,8 @@ ACTOR_STARTS = ((190, 85), (220, 135))
 def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked") -> str:
     """Use productive Studio Z-plane/camera authoring, then add typed Actors."""
     output.mkdir(parents=True, exist_ok=True)
-    if variant not in ("masked", "transparent"):
-        raise ValueError("R06 only allows independent native masked/transparent games")
+    if variant not in ("masked", "transparent", "wrong-box"):
+        raise ValueError("R06 only allows independent native masked/transparent/wrong-box games")
     raw, assignments, _ = _author_project(output, 1, variant, 170,
                                           moving_actor=True)
     # Stabilize the click target before the later native camera round-trip.
@@ -46,12 +47,18 @@ def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked")
             png = output / f"r06-two-actor-zp{plane:02d}.png"
             Image.frombytes("L", (640, 200), pixels).save(png)
             raw = import_room_zplane(raw, "Harbor", plane, str(png))
+    if variant == "wrong-box":
+        # Keep four real opaque PNGs, but disconnect all four relevant boxes
+        # from their Z-planes. The first plane is assigned to wrong box 1.
+        for box_index in (3, 4, 5):
+            raw = author_room_walkbox_zplane(raw, "Harbor", box_index, 0)
+        assignments = [1, 0, 0, 0, 0]
     raw = author_room_camera_plan(
         raw, "Harbor", 170, 100,
         "set:320;hold:30;pan:480;wait;hold:120;pan:160;wait;set:320",
         stationary_actor=True)
     document = parse_document(raw)
-    costume = replace(gesture_fixture(), name=f"R06TwoActor{variant.title()}Costume")
+    costume = replace(gesture_fixture(), name="R06TwoActor" + variant.replace("-", "").title() + "Costume")
     actors = tuple(ActorAsset(name, costume.name, "Harbor", x, y, "S", name)
                    for name, (x, y) in zip(ACTOR_IDS, ACTOR_STARTS))
     choreography = InteractionSequence(
@@ -78,9 +85,9 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
         raise RuntimeError("R06 requires four Z-planes and five connected walkboxes")
     if [box.mask for box in room.walkboxes] != list(expected_masks):
         raise RuntimeError("R06 four native BOXD mask assignments changed")
-    if variant not in ("masked", "transparent"):
+    if variant not in ("masked", "transparent", "wrong-box"):
         raise ValueError("Unknown R06 native mask-control variant")
-    if variant == "masked":
+    if variant != "transparent":
         for plane, (left, right) in zip(room.zplanes, _MASK_REGIONS):
             center_x = (left + right) // 2
             if any(plane.pixels[y * 640 + center_x] == 0 for y in (80, 125)):
@@ -264,7 +271,7 @@ def run(upstream: Path, output: Path) -> dict:
               "per_actor_native_occlusion_verified": False,
               "complete_r06_268_acceptance": False}
     report_path = output / "native-r06-two-actor-four-mask-report.json"
-    for variant in ("masked", "transparent"):
+    for variant in ("masked", "transparent", "wrong-box"):
         root = output / variant
         root.mkdir(parents=True, exist_ok=True)
         build = root / "build"
@@ -273,7 +280,10 @@ def run(upstream: Path, output: Path) -> dict:
         project = author_two_actor_four_mask_project(root, variant=variant)
         (build / "project.json").write_text(project, encoding="utf-8")
         document = parse_document(project)
-        authoring = assert_native_two_actor_authoring(document, variant=variant)
+        expected_masks = ([1, 0, 0, 0, 0] if variant == "wrong-box"
+                          else [0, 1, 2, 3, 4])
+        authoring = assert_native_two_actor_authoring(
+            document, expected_masks=expected_masks, variant=variant)
         export_document(document, resources)
         game = compile_story_game(build, upstream, root / "game")
         launch_smoke(game, root / "screenshots", seconds=6,
