@@ -446,12 +446,20 @@ def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
             report_path.write_text(
                 json.dumps(report, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8")
-        # Camera movement is not Actor movement. The existing static-actor
-        # read_frames() cannot measure changing world coordinates. A positive
-        # verdict requires a genuine independent Actor tracker and controls.
+        # Track the costume independently in the transparent game. A constant
+        # start coordinate fed to read_frames() would fabricate movement.
+        control = track_native_actor(
+            output / "moving-four-transparent-screenshots")
+        report["actor_tracking"] = {
+            "source": "transparent stock-ScummVM screenshot pixels",
+            "observations": control,
+        }
+        report["comparison"] = verify_moving_actor_crosses_four_masks(control)
+        # Per-mask occlusion still needs frame-aligned masked/wrong-box
+        # comparisons; a moving control alone is not four-plane acceptance.
         raise RuntimeError(
-            "Native moving-actor games captured; Actor world-X tracking and "
-            "per-zone occlusion controls not yet implemented")
+            "Native Actor motion measured; four-zone frame-aligned "
+            "masked/transparent/wrong-box occlusion not yet verified")
     except Exception as error:
         report["status"] = "failed"
         report["failure"] = str(error)
