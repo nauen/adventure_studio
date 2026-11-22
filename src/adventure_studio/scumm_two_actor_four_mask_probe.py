@@ -332,7 +332,7 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
     for actor in ACTOR_IDS:
         top, bottom = bands[actor]
         for plane, (left, right) in enumerate(_MASK_REGIONS, 1):
-            candidates = [row for row in traces[actor] if left + 10 <= row["world_x"] < right - 10
+            candidates = [row for row in traces[actor] if left + 5 <= row["world_x"] < right - 5
                           and 220 <= row["screen_x"] <= 803]
             sample = None
             for control in candidates:
