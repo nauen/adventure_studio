@@ -81,6 +81,15 @@ class MovingActorEvidenceTests(unittest.TestCase):
         self.assertEqual([x["zplane"] for x in result["visited_zplanes"]],
                          [1, 2, 3, 4])
 
+    def test_camera_return_is_observable_after_actor_leaves_viewport(self):
+        actor = [frame(0, 170, 160), frame(1, 245, 210),
+                 frame(2, 345, 320), frame(3, 435, 430),
+                 frame(4, 530, 480)]
+        camera = [frame(0, 170, 160), frame(4, 530, 480),
+                  frame(5, 535, 380), frame(6, 535, 160)]
+        result = verify_moving_actor_crosses_four_masks(actor, camera)
+        self.assertTrue(result["native_moving_actor_four_mask_path_observed"])
+
     def test_stationary_actor_is_not_walking(self):
         rows = [frame(0, 240, 160), frame(1, 240, 480),
                 frame(2, 240, 160)]
