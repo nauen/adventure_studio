@@ -116,8 +116,16 @@ def verify_four_mask_camera(groups: dict[int, dict]) -> dict:
             row = variants[name]
             if row["walkbox_masks"] != expected:
                 raise RuntimeError(f"Native BOXD assignments changed: ZP{plane:02d}/{name}")
-            if not row["frame_report"]["scroll_color_signature_passed"]:
-                raise RuntimeError(f"Native camera did not render the scrolling room: ZP{plane:02d}/{name}")
+            # render_native_room compares the *first and last* scene frames.
+            # This authored pan deliberately returns to camera X=160, so the
+            # two sky colors must be identical (scroll_expected=False).
+            # Require real frame variation here; select_actor_phases below
+            # independently proves the entire observed 160→480→160 journey.
+            frame_report = row["frame_report"]
+            if (not frame_report["frame_variation_passed"]
+                    or frame_report["changed_pixels"] <= 0):
+                raise RuntimeError(
+                    f"Native room has no rendered frame variation: ZP{plane:02d}/{name}")
             if row["world_x"] != world_x:
                 raise RuntimeError(f"Wrong Actor world position: ZP{plane:02d}/{name}")
         phase_rows = {
