@@ -256,6 +256,7 @@ jobs:
             /tmp/native-object-zmask/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
       - name: Play two independent native door gates and compare Actor routes with control
+        timeout-minutes: 35
         if: ${{ matrix.shard == 'geometry' }}
         env:
           PYTHONPATH: src
