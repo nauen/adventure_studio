@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from .scumm_assets import destination_fixture, scrolling_fixture
@@ -251,7 +252,7 @@ def _save_phase_crops(directory: Path, rows: list[dict],
 
 
 def _author_project(output: Path, plane: int, variant: str,
-                    world_x: int) -> tuple[str, list[int], dict]:
+                    world_x: int, *, moving_actor: bool = False) -> tuple[str, list[int], dict]:
     from PIL import Image
 
     base = scrolling_fixture()
@@ -259,7 +260,8 @@ def _author_project(output: Path, plane: int, variant: str,
     project = canonical_json(GameDocument(
         "R06FourMaskCamera", (base, destination_fixture())))
     project = author_room_camera_plan(
-        project, "Harbor", world_x, 100, _CAMERA_CUES, stationary_actor=True)
+        project, "Harbor", world_x, 100, _CAMERA_CUES,
+        stationary_actor=not moving_actor)
     for index, corners in (
         (1, "0,70; 160,70; 160,150; 0,150"),
         (2, "160,70; 320,70; 320,150; 160,150"),
@@ -303,6 +305,14 @@ def _author_project(output: Path, plane: int, variant: str,
     story = (Path(__file__).resolve().parents[2] / "examples" /
              "mini_story_chain.json").read_text(encoding="utf-8")
     project = compose_story_project(story, project)
+    if moving_actor:
+        # Use the product's existing demo-walk SCUMM opcode, not a probe-only
+        # scripted Actor teleport or a second runtime.
+        document = parse_document(project)
+        rooms = tuple(
+            replace(room, demo_walk_to_x=535) if room.name == "Harbor" else room
+            for room in document.rooms)
+        project = canonical_json(replace(document, rooms=rooms))
     parsed = parse_document(project)
     if canonical_json(parsed) != project:
         raise RuntimeError("Four-mask camera project changed during JSON-v1 roundtrip")
@@ -319,8 +329,9 @@ def _author_project(output: Path, plane: int, variant: str,
         for start, end in _MASK_REGIONS)
     if tuple(plane.pixels for plane in room.zplanes) != expected_planes:
         raise RuntimeError("Studio PNG pixels changed during JSON-v1/Story composition")
-    if (room.ego_start_x, room.ego_start_y) != (world_x, 100) or room.demo_walk_to_x is not None:
-        raise RuntimeError("Story composition lost the authored stationary Actor/world position")
+    if ((room.ego_start_x, room.ego_start_y) != (world_x, 100)
+            or room.demo_walk_to_x != (535 if moving_actor else None)):
+        raise RuntimeError("Story composition lost the authored Actor walk/world position")
     if [box.mask for box in room.walkboxes] != expected_masks:
         raise RuntimeError("Story composition changed four independent BOXD mask assignments")
     return project, expected_masks, {
