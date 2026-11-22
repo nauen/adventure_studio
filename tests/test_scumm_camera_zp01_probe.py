@@ -158,8 +158,11 @@ class CameraZP01EvidenceTests(unittest.TestCase):
         variants["wrong-box"] = trace((400,), (408, 376, 344), 0)
         with self.assertRaisesRegex(RuntimeError, "invisible"):
             verify_world_mask(variants)
+        # A control without a valid visible pan/return phase must fail
+        # before any mask pixel comparison, even at the wider native
+        # screenshot-cadence tolerance required by R06.
         variants["wrong-box"] = trace((280,), (280,), 1540)
-        with self.assertRaisesRegex(RuntimeError, "coordinate-aligned"):
+        with self.assertRaisesRegex(RuntimeError, "Missing before/outgoing/returning/completed-return"):
             verify_world_mask(variants)
 
     def test_independently_captured_returning_control_at_one_camera_step(self):
