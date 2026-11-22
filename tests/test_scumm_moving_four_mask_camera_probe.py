@@ -51,6 +51,22 @@ class MovingActorEvidenceTests(unittest.TestCase):
                 source.index("walkActorTo(VAR_EGO, 535, 100);"),
                 source.index("panCameraTo(480);"))
 
+    def test_native_walk_is_emitted_once_with_camera_cues(self):
+        with TemporaryDirectory() as temporary:
+            project, _, _ = _author_project(
+                Path(temporary), 2, "transparent", 170, moving_actor=True)
+            room = next(room for room in parse_document(project).rooms
+                        if room.name == "Harbor")
+            from adventure_studio.scumm_assets import scummc_room_source
+            source = scummc_room_source(room)
+            self.assertEqual(source.count("walkActorTo(VAR_EGO, 535, 100);"), 1)
+            self.assertLess(
+                source.index("walkActorTo(VAR_EGO, 535, 100);"),
+                source.index("delay(360);"))
+            self.assertLess(
+                source.index("walkActorTo(VAR_EGO, 535, 100);"),
+                source.index("waitForCamera();"))
+
     def test_observed_four_zones_and_camera_return(self):
         rows = [frame(0, 170, 160), frame(1, 245, 210),
                 frame(2, 345, 320), frame(3, 435, 430),
