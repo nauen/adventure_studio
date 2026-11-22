@@ -14,8 +14,8 @@ from dataclasses import replace
 from pathlib import Path
 
 from .scumm_costume_probe import gesture_fixture
-from .scumm_four_mask_camera_probe import _author_project
-from .studio_sequences import author_room_camera_plan
+from .scumm_four_mask_camera_probe import _author_project, _MASK_REGIONS
+from .studio_sequences import author_room_camera_plan, import_room_zplane
 from .scumm_launch import launch_smoke
 from .scumm_project import (ActorAsset, InteractionSequence, WalkActorStep, WaitActorStep,
                             canonical_json, export_document, parse_document)
@@ -35,6 +35,17 @@ def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked")
                                           moving_actor=True)
     # Stabilize the click target before the later native camera round-trip.
     # Follow-Ego during the click previously moved the target out of view.
+    # Both distinct costume lanes must intersect every Z-plane: the original
+    # single-Ego R06 mask ends at Y=110 and cannot occlude our second Actor.
+    # Re-author taller masks as real Studio PNGs through the production API.
+    if variant == "masked":
+        from PIL import Image
+        for plane, (left, right) in enumerate(_MASK_REGIONS, 1):
+            pixels = bytes(255 if left <= x < right and 60 < y < 140 else 0
+                           for y in range(200) for x in range(640))
+            png = output / f"r06-two-actor-zp{plane:02d}.png"
+            Image.frombytes("L", (640, 200), pixels).save(png)
+            raw = import_room_zplane(raw, "Harbor", plane, str(png))
     raw = author_room_camera_plan(
         raw, "Harbor", 170, 100,
         "set:320;hold:900;pan:480;wait;hold:120;pan:160;wait",
