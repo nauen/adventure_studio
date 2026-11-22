@@ -207,9 +207,42 @@ def select_actor_phases(rows: list[dict], world_x: int,
 
     if pre is None or returned is None:
         raise RuntimeError("Missing initial or completed camera-return endpoint")
-    outgoing = nearest(rows[:far_index], outgoing_x, "outgoing")
-    returning = nearest(rows[far_index + 1:], returning_x, "returning",
-                        separated_from=outgoing["camera_x"])
+    # Native captures are asynchronous: selecting the single closest outgoing
+    # frame can accidentally rule out a valid returning frame. Select a pair
+    # of *actual* captured frames, preserving both target tolerances and the
+    # strict >110 screen-pixel separation required to exclude screen-fixed masks.
+    outgoing_candidates = [
+        row for row in rows[:far_index]
+        if abs(row["camera_x"] - outgoing_x) <= 40
+    ]
+    returning_candidates = [
+        row for row in rows[far_index + 1:]
+        if abs(row["camera_x"] - returning_x) <= 40
+    ]
+    if not outgoing_candidates:
+        raise RuntimeError(f"Missing camera sample for outgoing at X={outgoing_x}")
+    if not returning_candidates:
+        raise RuntimeError(f"Missing camera sample for returning at X={returning_x}")
+    pairs = [
+        (out_row, return_row)
+        for out_row in outgoing_candidates
+        for return_row in returning_candidates
+        if abs(out_row["camera_x"] - return_row["camera_x"]) > 55
+    ]
+    if not pairs:
+        raise RuntimeError("Visible Actor positions do not disprove a screen-fixed mask")
+    outgoing, returning = min(
+        pairs,
+        key=lambda pair: (
+            abs(pair[0]["camera_x"] - outgoing_x)
+            + abs(pair[1]["camera_x"] - returning_x),
+            abs(pair[0]["camera_x"] - outgoing_x),
+            pair[0]["seconds"],
+        ),
+    )
+    for phase, row in (("outgoing", outgoing), ("returning", returning)):
+        if row["world_x"] != world_x or not 192 <= row["screen_x"] <= 831:
+            raise RuntimeError(f"Actor is not visible at the {phase} camera phase")
     phases = {
         "before": pre, "outgoing": outgoing, "far": far,
         "returning": returning, "returned": returned,
