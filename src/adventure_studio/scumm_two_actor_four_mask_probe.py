@@ -11,7 +11,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-from .scumm_actor_fixture import gesture_fixture
+from .scumm_costume_probe import gesture_fixture
 from .scumm_four_mask_camera_probe import _author_project
 from .scumm_launch import launch_smoke
 from .scumm_project import ActorAsset, canonical_json, export_document, parse_document
