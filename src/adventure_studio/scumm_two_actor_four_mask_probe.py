@@ -18,7 +18,7 @@ from .scumm_four_mask_camera_probe import _author_project, _MASK_REGIONS
 from .studio_sequences import (author_room_camera_plan, import_room_zplane,
                                author_room_walkbox_zplane)
 from .scumm_launch import launch_smoke
-from .scumm_project import (ActorAsset, InteractionSequence, WalkActorStep, WaitActorStep,
+from .scumm_project import (ActorAsset, InteractionSequence, WalkActorStep, WaitActorStep, DelayStep,
                             FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                             canonical_json, export_document, parse_document)
 from .scumm_toolchain import compile_story_game
@@ -71,6 +71,7 @@ def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked")
             WaitActorStep(ACTOR_IDS[1]),
             PanCameraStep(480),
             WaitCameraStep(),
+            DelayStep(2),
             PanCameraStep(160),
             WaitCameraStep(),
         ))
@@ -128,6 +129,7 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
         WaitActorStep(ACTOR_IDS[1]),
         PanCameraStep(480),
         WaitCameraStep(),
+        DelayStep(2),
         PanCameraStep(160),
         WaitCameraStep(),
     )
