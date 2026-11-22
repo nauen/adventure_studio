@@ -9,7 +9,7 @@ from pathlib import Path
 from adventure_studio.scumm_project import parse_document, canonical_json
 from adventure_studio.scumm_two_actor_four_mask_probe import (
     ACTOR_IDS, author_two_actor_four_mask_project, assert_native_two_actor_authoring,
-    verify_two_actor_native_walks,
+    verify_two_actor_native_walks, verify_two_actor_four_mask_pixels,
 )
 
 
@@ -90,6 +90,25 @@ class TwoActorFourMaskAuthoringTests(unittest.TestCase):
                 ACTOR_IDS[0]: trace(0),
                 ACTOR_IDS[1]: [{**row, "world_x": 550 if row["world_x"] >= 320
                                 else row["world_x"]} for row in trace(15)]})
+
+    def test_native_four_mask_pixels_require_both_real_controls(self):
+        samples = [
+            {"actor": actor, "zplane": plane, "masked": 0,
+             "transparent": 240, "wrong-box": 240}
+            for actor in ACTOR_IDS for plane in range(1, 5)
+        ]
+        result = verify_two_actor_four_mask_pixels(samples)
+        self.assertTrue(result["two_actor_four_mask_native_occlusion_verified"])
+        with self.assertRaisesRegex(RuntimeError, "positive control missing"):
+            verify_two_actor_four_mask_pixels([
+                {**row, "wrong-box": 0} if row["zplane"] == 2 else row
+                for row in samples])
+        with self.assertRaisesRegex(RuntimeError, "mask failed"):
+            verify_two_actor_four_mask_pixels([
+                {**row, "masked": 120} if row["zplane"] == 3 else row
+                for row in samples])
+        with self.assertRaisesRegex(RuntimeError, "Missing native two-Actor"):
+            verify_two_actor_four_mask_pixels(samples[:-1])
 
     def test_wrong_box_mask_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
