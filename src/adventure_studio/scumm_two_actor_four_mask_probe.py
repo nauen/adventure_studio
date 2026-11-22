@@ -51,7 +51,7 @@ def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked")
         "set:320;hold:900;pan:480;wait;hold:120;pan:160;wait",
         stationary_actor=True)
     document = parse_document(raw)
-    costume = replace(gesture_fixture(), name="R06TwoActorCostume")
+    costume = replace(gesture_fixture(), name=f"R06TwoActor{variant.title()}Costume")
     actors = tuple(ActorAsset(name, costume.name, "Harbor", x, y, "S", name)
                    for name, (x, y) in zip(ACTOR_IDS, ACTOR_STARTS))
     choreography = InteractionSequence(
@@ -66,17 +66,27 @@ def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked")
                        interaction_sequences=(*document.interaction_sequences, choreography))
     result = canonical_json(document)
     parsed = parse_document(result)
-    assert_native_two_actor_authoring(parsed, assignments)
+    assert_native_two_actor_authoring(parsed, assignments, variant=variant)
     return result
 
 
-def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4)) -> dict:
+def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
+                                      *, variant: str = "masked") -> dict:
     """Fail closed before export if the independent actor bindings are lost."""
     room = next((room for room in document.rooms if room.name == "Harbor"), None)
     if room is None or len(room.zplanes) != 4 or len(room.walkboxes) != 5:
         raise RuntimeError("R06 requires four Z-planes and five connected walkboxes")
     if [box.mask for box in room.walkboxes] != list(expected_masks):
         raise RuntimeError("R06 four native BOXD mask assignments changed")
+    if variant not in ("masked", "transparent"):
+        raise ValueError("Unknown R06 native mask-control variant")
+    if variant == "masked":
+        for plane, (left, right) in zip(room.zplanes, _MASK_REGIONS):
+            center_x = (left + right) // 2
+            if any(plane.pixels[y * 640 + center_x] == 0 for y in (80, 125)):
+                raise RuntimeError("R06 mask does not cover both Actor costume lanes")
+    elif any(any(plane.pixels) for plane in room.zplanes):
+        raise RuntimeError("Transparent two-Actor control still contains opaque masks")
     by_id = {actor.id: actor for actor in document.actors}
     if any(name not in by_id for name in ACTOR_IDS):
         raise RuntimeError("R06 independent Actors missing from JSON-v1")
@@ -244,7 +254,7 @@ def run(upstream: Path, output: Path) -> dict:
         project = author_two_actor_four_mask_project(root, variant=variant)
         (build / "project.json").write_text(project, encoding="utf-8")
         document = parse_document(project)
-        authoring = assert_native_two_actor_authoring(document)
+        authoring = assert_native_two_actor_authoring(document, variant=variant)
         export_document(document, resources)
         game = compile_story_game(build, upstream, root / "game")
         launch_smoke(game, root / "screenshots", seconds=6,
