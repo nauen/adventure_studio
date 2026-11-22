@@ -140,6 +140,27 @@ jobs:
             /tmp/native-r06-camera-zp01/*-screenshots/camera-frame-times.json
             /tmp/native-r06-camera-zp01/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
+      - name: Build and launch two authored native Actors with four room Z-masks (R06 stage 1)
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          python -m unittest discover -s tests -p 'test_scumm_two_actor_four_mask_probe.py' -v
+          xvfb-run -a -s '-screen 0 1024x768x24' python -u -m adventure_studio.scumm_two_actor_four_mask_probe /tmp/scummc-upstream /tmp/native-r06-two-actors-four-mask
+      - name: Retain two-Actor native link and launch evidence (motion not yet accepted)
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r06-two-actors-four-mask
+          path: |
+            /tmp/native-r06-two-actors-four-mask/native-r06-two-actor-four-mask-report.json
+            /tmp/native-r06-two-actors-four-mask/build/project.json
+            /tmp/native-r06-two-actors-four-mask/game/tentacle.000
+            /tmp/native-r06-two-actors-four-mask/game/tentacle.001
+            /tmp/native-r06-two-actors-four-mask/screenshots/scummvm-*.png
+            /tmp/native-r06-two-actors-four-mask/screenshots/scummvm-launch.log
+          if-no-files-found: ignore
       - name: Verify moving Actor crosses four native Z-masks with camera round-trip
         if: ${{ matrix.shard == 'geometry' }}
         env:
