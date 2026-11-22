@@ -4,6 +4,10 @@ name: Native and Studio integration acceptance
 # Draft PRs run only fast Core push tests. No gameplay assertions are removed.
 on:
   workflow_dispatch:
+  # R06 branch-level native gate also runs when PR events are unavailable.
+  push:
+    branches:
+      - feat/r06-moving-actor-four-zmasks
   pull_request:
     types: [ready_for_review, synchronize, opened, reopened]
     paths:
@@ -275,7 +279,7 @@ jobs:
 
   native:
     needs: changes
-    if: ${{ github.event_name == 'workflow_dispatch' || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.native == 'true') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.native == 'true') }}
     uses: ./.github/workflows/scummc-experiment.yml
     permissions:
       contents: read
