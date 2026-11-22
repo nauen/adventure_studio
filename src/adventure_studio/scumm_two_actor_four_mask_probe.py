@@ -81,6 +81,9 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4)) 
     )
     if len(choreography) != 1 or choreography[0].steps != expected_steps:
         raise RuntimeError("Independent native Actor walk commands missing")
+    if any(not (160 <= by_id[name].x < 320 and 500 <= target.x < 640)
+           for name, target in zip(ACTOR_IDS, expected_steps[:2])):
+        raise RuntimeError("Each Actor must walk through all four Z-plane regions")
     return {"four_zplanes": True, "native_actor_count": len(ACTOR_IDS),
             "actor_ids": list(ACTOR_IDS), "distinct_actor_positions": True,
             "camera_roundtrip_authored": True,
