@@ -196,7 +196,9 @@ def track_native_actor_lanes(screenshots: Path) -> dict:
                 clusters = []
                 begin = None
                 for index, count in enumerate((*counts, 0)):
-                    active = count >= 6
+                    # Studio COST renders an opaque vertical costume rectangle;
+                    # Ego is a scattered silhouette in the same upper lane.
+                    active = count >= 22
                     if active and begin is None:
                         begin = index
                     elif not active and begin is not None:
