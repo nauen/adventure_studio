@@ -132,17 +132,24 @@ def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
     """Click real native Close/Key action; retain every frame without faking motion."""
     from .scumm_launch import colored_item_center
 
-    capture_frame("r06-two-actor-before")
-    # Room entry finishes all camera cues before showing native verbs.
-    # Never send the UI click while showVerbs/showCursor are still blocked.
+    # The native room entry runs the camera cues before showing verbs.
+    # Wait for actual toolbar pixels rather than an elapsed-time guess.
     from PIL import Image
-    with Image.open(output / "scummvm-r06-two-actor-before.png") as image:
-        pixels = image.convert("RGB")
-        toolbar_pixels = sum(1 for y in range(535, 635, 4)
-                             for x in range(200, 820, 4)
-                             if max(pixels.getpixel((x, y))) > 35)
-    if toolbar_pixels < 15:
-        raise RuntimeError("Native verbs are not visible; camera entry script still active")
+    toolbar_deadline = time.monotonic() + 20
+    while True:
+        if process.poll() is not None:
+            raise RuntimeError("ScummVM exited before native verbs were visible")
+        capture_frame("r06-two-actor-before")
+        with Image.open(output / "scummvm-r06-two-actor-before.png") as image:
+            pixels = image.convert("RGB")
+            toolbar_pixels = sum(1 for y in range(535, 635, 4)
+                                 for x in range(200, 820, 4)
+                                 if max(pixels.getpixel((x, y))) > 35)
+        if toolbar_pixels >= 15:
+            break
+        if time.monotonic() >= toolbar_deadline:
+            raise RuntimeError("Native verbs never appeared after camera entry sequence")
+        time.sleep(0.25)
     key_x, key_y = colored_item_center(
         output, "r06-two-actor-before", (255, 220, 75))
     if not (192 <= key_x <= 831 and 184 <= key_y <= 471):
