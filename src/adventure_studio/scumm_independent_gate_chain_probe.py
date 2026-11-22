@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import sys
+import time
+from datetime import datetime, timezone
 from dataclasses import replace
 from pathlib import Path
 
@@ -70,11 +72,19 @@ def verify_independent_gate_actor_routes(gated: dict, control: dict,
             "room_routes": differences}
 
 
+def _progress(stage: str, started: float) -> None:
+    print(f"[R09 {datetime.now(timezone.utc).isoformat(timespec='seconds')}] "
+          f"+{time.monotonic() - started:.1f}s {stage}", file=sys.stderr, flush=True)
+
+
 def run_independent_gate_chain(upstream: Path, output: Path) -> dict:
+    started = time.monotonic()
+    _progress("start native independent-gate chain", started)
     story = (Path(__file__).resolve().parents[2] / "examples" /
              "mini_story_chain.json").read_text(encoding="utf-8")
     results = {}
     for variant in ("gated", "always-open"):
+        _progress(f"{variant}: build Story document", started)
         build = output / variant / "build"
         build.mkdir(parents=True, exist_ok=True)
         built = build_story_document(story, build)
@@ -91,6 +101,7 @@ def run_independent_gate_chain(upstream: Path, output: Path) -> dict:
             if variant == "gated":
                 raw = author_room_walkbox_gate(
                     raw, room_name, door_id, 2, reversible=True)
+        _progress(f"{variant}: compose and validate Story", started)
         authored = parse_document(compose_story_project(story, raw))
         # Back2's default y=100 overlaps the actor-route mouse clicks at
         # y=390 in the fixed Xvfb viewport, causing accidental room exits.
@@ -112,13 +123,17 @@ def run_independent_gate_chain(upstream: Path, output: Path) -> dict:
                 raise RuntimeError("Control Story must not have gated walkboxes")
         built.project_json.write_text(canonical_json(authored), encoding="utf-8")
         export_document(authored, built.resource_directory)
+        _progress(f"{variant}: compile native SCUMM game", started)
         game = compile_story_game(build, upstream, output / variant / "game")
+        _progress(f"{variant}: native compilation complete; launch ScummVM", started)
         frames = output / variant / "screenshots"
         launch_smoke(game, frames, verify_chain=True,
                      native_independent_gate_chain_probe=True,
                      native_independent_gate_control=(variant == "always-open"))
+        _progress(f"{variant}: ScummVM returned; parse gameplay report", started)
         results[variant] = json.loads(
             (frames / "scummvm-native-independent-gates-report.json").read_text())
+    _progress("compare native actor routes", started)
     comparison = verify_independent_gate_actor_routes(
         results["gated"], results["always-open"],
         output / "gated" / "screenshots", output / "always-open" / "screenshots")
@@ -127,6 +142,7 @@ def run_independent_gate_chain(upstream: Path, output: Path) -> dict:
               "authoring": "Studio UseRule -> JSON-v1/Story -> ScummC-v6 -> stock ScummVM"}
     (output / "native-r09-independent-gates-report.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _progress("native independent-gate chain completed", started)
     return report
 
 
