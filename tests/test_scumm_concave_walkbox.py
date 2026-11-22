@@ -21,9 +21,9 @@ class ConcaveWalkboxCompositionTests(unittest.TestCase):
         raw = canonical_json(GameDocument(
             "r08_concave", (scrolling_fixture(), destination_fixture())))
         polygons = (
-            "0,110; 220,110; 220,150; 0,150",
-            "180,70; 260,70; 260,150; 180,150",
-            "260,70; 639,70; 639,110; 260,110",
+            "0,70; 220,70; 220,150; 0,150",
+            "180,110; 260,110; 260,150; 180,150",
+            "260,70; 639,70; 639,150; 260,150",
         )
         for index, polygon in enumerate(polygons, 1):
             raw = author_room_walkbox(raw, "Harbor", index, polygon)
@@ -50,7 +50,7 @@ class ConcaveWalkboxCompositionTests(unittest.TestCase):
 
         native = _native_box_file(story_room)
         self.assertEqual(struct.unpack_from("<8h", native, 9),
-                         (0, 110, 220, 110, 220, 150, 0, 150))
+                         (0, 70, 220, 70, 220, 150, 0, 150))
         self.assertIn(b"BOXM", native)
         self.assertNotEqual(native, _native_box_file(parse_document(disconnected).rooms[0]))
         with tempfile.TemporaryDirectory() as directory:
