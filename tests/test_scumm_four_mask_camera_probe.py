@@ -151,6 +151,25 @@ class FourMaskCameraProbeTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "not visible"):
             select_actor_phases(rows, 360, 360, 300)
 
+    def test_native_camera_pair_uses_second_valid_outbound_sample(self):
+        # Closest outgoing X=360 is too close to returning X=312.
+        # The next *real* outgoing frame X=392 gives 80 world units
+        # of parallax while satisfying the ±40 target window.
+        rows = trace(380, 360, 312, 0)
+        rows.insert(1, {
+            "frame": "alternative-outbound",
+            "seconds": 0.25, "camera_x": 392, "world_x": 380,
+            "screen_x": round(192 + 2 * (380 - 392 + 160)),
+            "actor_dark_pixels": 0,
+        })
+        chosen = select_actor_phases(rows, 380, 360, 312)
+        self.assertEqual(chosen["outgoing"]["camera_x"], 392)
+        self.assertEqual(chosen["returning"]["camera_x"], 312)
+        self.assertGreater(
+            abs(chosen["outgoing"]["screen_x"] - chosen["returning"]["screen_x"]),
+            110,
+        )
+
     def test_screen_fixed_mask_cannot_explain_both_visible_pan_positions(self):
         rows = trace(360, 420, 400, 0)
         with self.assertRaisesRegex(RuntimeError, "screen-fixed"):
