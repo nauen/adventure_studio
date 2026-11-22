@@ -9,6 +9,7 @@ from pathlib import Path
 from adventure_studio.scumm_project import parse_document, canonical_json
 from adventure_studio.scumm_two_actor_four_mask_probe import (
     ACTOR_IDS, author_two_actor_four_mask_project, assert_native_two_actor_authoring,
+    verify_two_actor_native_walks,
 )
 
 
@@ -67,6 +68,28 @@ class TwoActorFourMaskAuthoringTests(unittest.TestCase):
             *document.interaction_sequences[:-1], short_route))
         with self.assertRaisesRegex(RuntimeError, "walk commands missing"):
             assert_native_two_actor_authoring(changed)
+
+    def test_native_tracks_require_both_independent_costume_routes(self):
+        def trace(start):
+            return [{"frame": str(i), "seconds": i * 0.2,
+                     "world_x": x, "camera_x": 320, "screen_x": x + start}
+                    for i, x in enumerate((190, 220, 270, 330, 380,
+                                           410, 460, 520, 540))]
+        valid = {ACTOR_IDS[0]: trace(0), ACTOR_IDS[1]: trace(15)}
+        result = verify_two_actor_native_walks(valid)
+        self.assertTrue(result["two_independent_native_actor_walks_verified"])
+        with self.assertRaisesRegex(RuntimeError, "independently measured"):
+            verify_two_actor_native_walks({
+                ACTOR_IDS[0]: trace(0), ACTOR_IDS[1]: trace(0)})
+        with self.assertRaisesRegex(RuntimeError, "did not independently walk"):
+            verify_two_actor_native_walks({
+                ACTOR_IDS[0]: trace(0),
+                ACTOR_IDS[1]: [{**row, "world_x": 220} for row in trace(15)]})
+        with self.assertRaisesRegex(RuntimeError, "every native mask zone"):
+            verify_two_actor_native_walks({
+                ACTOR_IDS[0]: trace(0),
+                ACTOR_IDS[1]: [{**row, "world_x": 550 if row["world_x"] >= 320
+                                else row["world_x"]} for row in trace(15)]})
 
     def test_wrong_box_mask_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
