@@ -35,7 +35,10 @@ def complete_groups(masked_pixels: int = 0, control_pixels: int = 240) -> dict:
             "masked": {
                 "frames": trace(world_x, outgoing_x, returning_x, masked_pixels),
                 "world_x": world_x, "walkbox_masks": expected,
-                "frame_report": {"scroll_color_signature_passed": True},
+                "frame_report": {"scroll_expected": False,
+                                 "scroll_color_signature_passed": False,
+                                 "frame_variation_passed": True,
+                                 "changed_pixels": 3928},
             },
             "transparent": {
                 "frames": trace(world_x, outgoing_x, returning_x, control_pixels),
@@ -118,6 +121,12 @@ class FourMaskCameraProbeTests(unittest.TestCase):
         self.assertEqual(phases["returning"]["camera_x"], 336)
         self.assertGreater(abs(phases["outgoing"]["screen_x"]
                                - phases["returning"]["screen_x"]), 110)
+
+    def test_native_roundtrip_requires_real_frame_variation(self):
+        groups = complete_groups()
+        groups[1]["masked"]["frame_report"]["changed_pixels"] = 0
+        with self.assertRaisesRegex(RuntimeError, "no rendered frame variation"):
+            verify_four_mask_camera(groups)
 
     def test_missing_native_camera_segment_still_fails_closed(self):
         world_x, outgoing_x, returning_x = 380, 420, 320
