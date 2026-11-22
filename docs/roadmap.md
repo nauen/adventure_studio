@@ -1,19 +1,16 @@
 # Adventure Studio – aktive Produktroadmap
 
-Stand: 2026-11-21. Diese Seite steuert **nur die nächsten Produktentscheidungen**.
-Das Hauptziel steht in [PRODUCT_VISION](PRODUCT_VISION.md), die einzige
-64-Fähigkeiten-Matrix in [SCUMM_V6_CAPABILITIES](SCUMM_V6_CAPABILITIES.md).
-Die frühere ausführliche Roadmap bleibt als
-[historisches Entwicklungsprotokoll](roadmap-history.md) erhalten;
-historische Checkboxen sind keine aktiven Aufträge.
+Stand: 2026-11-22. Nur die nächste Produktentscheidung wird hier gesteuert;
+die einzige 64-Fähigkeiten-Matrix ist [SCUMM_V6_CAPABILITIES](SCUMM_V6_CAPABILITIES.md).
 
 ## Aktiver Entscheidungsstand
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix ist die einzige Funktions- und Statusquelle.
-- **Jetzt:** **R06 / Issue #261** – vier simultane Raum-Z-Masken ZP01–ZP04 müssen während einer expliziten horizontalen Kamerafahrt und vollständigem Rückweg weltfest bleiben. Das ist die neue Kombination aus den bereits getrennt bewiesenen Fähigkeiten #224 (vier Masken gleichzeitig) und #242 (weltfeste ZP01-Maske beim Pan).
-- **Abnahme:** Reales Studio-Authoring von vier PNG-Masken, fünf Walkboxen/BOXM-Verbindungen und Kamera-Cues; verlustfreier RoomAsset-/JSON-v1-/Story-Roundtrip; produktiver ScummC-v6-Export; unverändertes stock ScummVM. Vier Actor-Weltpositionen (je eine pro Maske) werden in jeweils drei getrennten Spielen geprüft: alle vier Masken aktiv, transparente Kontrolle und gezielte falsche Walkbox-Zuordnung. Pro Spiel Kamera X=160→480→160 mit zeitgestempelten Phasen vor Pan, sichtbarer Hinfahrt, Fernziel, sichtbarem Rückpan und abgeschlossenem Rückweg. Die Pixelvergleiche müssen für jede Maske bei beiden sichtbaren Panrichtungen die korrekte Verdeckung gegen beide Kontrollen beweisen. Projekt-JSONs, PNGs, ScummC-Ressourcen, native Spiele, Screenshots, Logs und Report als CI-Artefakte.
-- **Blocker:** Issue #261 ist auf Branch feature/r06-four-mask-camera-pan gestartet; Probe, Unit-Evidenztests, Browser-Authoring-Test und CI-Einbindung sind vorhanden. Core 44962800291 ist mit 423 Tests grün; Native/Studio 44962802852 läuft auf Head b3cf138. Mask-Shard ist grün, Studio-Smoke ist im echten Chrome-Authoring, Actors und Geometry laufen; Geometry hat den kombinierten Vier-Masken-/Pan-/Rückweg-Probe gestartet. Story-Shard ist separat am bestehenden Palette-Animations-Probe gescheitert (keine sichtbare Wasserfarbänderung in 16 Samples). Der vollständige R06-Gameplay-Nachweis bleibt offen. Bis zum nativen Ergebnis bleibt R06 Teilfähigkeit. ZP05–ZP09 bleiben fail-closed. Der separate R09-PR [#260](https://github.com/nauen/adventure_studio/pull/260) ist weiterhin offen; sein kombinierter Zwei-Gate-Raumrückkehrtest läuft in [Run 44959056163](https://github.com/nauen/adventure_studio/actions/runs/44959056163). Dieser offene Integrationslauf verhindert nicht den Start von R06.
-- **Danach:** Nach vollständiger R06-Evidenz und Integration genau ein weiteres natives Paket auswählen. Kein NPC-Komfort, keine parallelen R07-/R08-Erweiterungen.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne zusätzliche Adventure-Studio-Runtime.
+- **Jetzt:** **R06 / [Issue #261](https://github.com/nauen/adventure_studio/issues/261), [PR #262](https://github.com/nauen/adventure_studio/pull/262)**: vier gleichzeitig authorierte Raum-Z-Masken ZP01–ZP04 plus fünf Walkboxen bleiben bei nativer Kamerafahrt X=160→480→160 weltfest. Keine NPC-Komfortarbeit seit #190; kein paralleles R07/R08/R09-Paket.
+- **Abnahme:** Vier echte Studio-PNGs → RoomAsset/JSON-v1/Story → produktiver ScummC-v6-/BOXD-Export → **zwölf separat kompilierte Spiele** in unverändertem stock ScummVM (für jede Z-Ebene: maskiert, transparent, falsche Walkbox). Jede Ebene muss den Actor auf Hin- und Rückfahrt verdecken; beide Kontrollen müssen ihn zeigen, der vollständige Kamera-Rückweg muss beobachtet werden. Native Logs, JSON-Report, Screenshots und Browser-Authoring-Evidenz als Artefakte.
+- **Blocker:** Der Core-Lauf [45018144249](https://github.com/nauen/adventure_studio/actions/runs/45018144249) war grün (427 Tests). [Native 45018146224](https://github.com/nauen/adventure_studio/actions/runs/45018146224) zeigte echte Maskenverdeckung bis ZP03, stoppte aber an einem ungeeigneten, zeitdiskret aufgenommenen ZP03-Kontrollframe. [Native 45018715190](https://github.com/nauen/adventure_studio/actions/runs/45018715190) meldete zusätzlich im bestehenden ZP01-Basistest 32 Weltkoordinaten Versatz eines unabhängigen Kontrollspiels. Beide selektierenden Tests sind jetzt auf die belegte native Bildabtastung angepasst, ohne Parallaxe/Pixelschwellen/Negative zu lockern. **Neue CI auf aktuellem Head noch nicht abgenommen.** ZP05+ bleibt für stock v6 fail-closed.
+- **Danach:** Erst nach R06-ScummVM-Nachweis und grünen Pflichtgates das einzelne R09-Walkbox-Raumrückkehrpaket [PR #260](https://github.com/nauen/adventure_studio/pull/260) konsolidieren und abnehmen. Keine anderen parallelen Features.
+
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 
 | Historisches Paket | Tatsächlicher Teilstand | Noch fehlender Abschluss |
