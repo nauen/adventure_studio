@@ -72,6 +72,7 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                        destination: Path, label: str, *, crop: str = "140x105+535+305",
                        allow_static_scene: bool = False,
                        camera_pan_capture: bool = False,
+                       camera_capture_seconds: float | None = None,
                        initial_object_state2: str | None = None,
                        scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                        native_walkbox_gate_probe: bool = False,
@@ -121,7 +122,11 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
     # The older native single-pan probe needs a six-second window. R06
     # records two complete pans plus an explicitly authored initial hold,
     # so twelve seconds can truncate the return before the final frame.
-    launch_smoke(root, images, seconds=20.0 if camera_pan_capture else 6.0,
+    if camera_capture_seconds is not None and not 6.0 <= camera_capture_seconds <= 90.0:
+        raise ValueError("Native camera capture must last 6..90 seconds")
+    launch_smoke(root, images, seconds=(
+        camera_capture_seconds if camera_capture_seconds is not None
+        else 20.0 if camera_pan_capture else 6.0),
                  scene_only=not native_walkbox_gate_probe,
                  verify_return=False, allow_static_scene=allow_static_scene,
                  sample_scene_frames=native_walkbox_gate_probe,
