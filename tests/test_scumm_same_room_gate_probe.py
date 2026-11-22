@@ -161,5 +161,75 @@ class SameRoomNativeGateTests(unittest.TestCase):
                 Path("/native/first-order"), Path("/native/control"))
 
 
+    def test_room_recognition_requires_exclusive_visible_room_landmark(self):
+        from adventure_studio.scumm_same_room_gate_probe import (
+            PORTAL_RGB, RETURN_RGB, TAVERN_ENTRY_RGB, _confirmed_room_markers,
+        )
+        colors = (PORTAL_RGB, RETURN_RGB, TAVERN_ENTRY_RGB)
+        self.assertEqual(len(set(colors)), 3)
+
+        with patch("adventure_studio.scumm_launch.colored_item_pixels") as pixels:
+            def set_visible(*active):
+                pixels.side_effect = lambda output, frame, color: (
+                    60 if color in active else 0
+                )
+
+            set_visible()
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "none", "Shed"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "none", "Tavern"))
+            set_visible(RETURN_RGB, TAVERN_ENTRY_RGB)
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "ambiguous", "Shed"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "ambiguous", "Tavern"))
+            set_visible(RETURN_RGB, PORTAL_RGB)
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "collision", "Shed"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "collision", "Tavern"))
+            set_visible(RETURN_RGB)
+            self.assertTrue(_confirmed_room_markers(Path("/native"), "shed", "Shed"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "shed", "Tavern"))
+            # Tavern reentry camera sees the entrance, not the far-right Passage.
+            set_visible(TAVERN_ENTRY_RGB)
+            self.assertTrue(_confirmed_room_markers(Path("/native"), "entry", "Tavern"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "entry", "Shed"))
+            set_visible(PORTAL_RGB)
+            self.assertTrue(_confirmed_room_markers(Path("/native"), "right", "Tavern"))
+            self.assertFalse(_confirmed_room_markers(Path("/native"), "right", "Shed"))
+        with self.assertRaisesRegex(ValueError, "Unknown native room"):
+            _confirmed_room_markers(Path("/native"), "frame", "Cellar")
+
+    def test_r09_room_return_plan_is_explicit_and_fail_closed(self):
+        from adventure_studio.scumm_same_room_gate_probe import validate_native_same_room_plan
+        valid = {"gates": list(GATES), "keys": ["LatchKey", "CellarKey"],
+                 "order": list(ORDERS[0]), "control": False, "room_return": True}
+        validate_native_same_room_plan(valid)
+        for invalid in ("yes", 1, None):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(ValueError, "plan"):
+                    validate_native_same_room_plan({**valid, "room_return": invalid})
+
+    def test_r09_two_independent_gates_require_each_real_room_reentry(self):
+        from adventure_studio.scumm_same_room_gate_probe import verify_same_room_return_evidence
+        gated = report()
+        control = report(control=True)
+        gated["room_returns"] = [
+            {"stage": stage, "transition": "Tavern->Shed->Tavern",
+             "returned_gate_states": state}
+            for stage, state in enumerate(gated["states"])]
+        control["room_returns"] = [
+            {"stage": 0, "transition": "Tavern->Shed->Tavern",
+             "returned_gate_states": [False, False]}]
+        self.assertTrue(verify_same_room_return_evidence(
+            gated, control)["native_r09_two_gate_room_return_passed"])
+        for corrupt in (
+            gated["room_returns"][:-1],
+            [{**gated["room_returns"][0], "transition": "Tavern->Tavern"},
+             *gated["room_returns"][1:]],
+            [gated["room_returns"][0], {**gated["room_returns"][1],
+                                       "returned_gate_states": [False, False]},
+             *gated["room_returns"][2:]],
+        ):
+            with self.assertRaisesRegex(RuntimeError, "room|gate state"):
+                verify_same_room_return_evidence(
+                    {**gated, "room_returns": corrupt}, control)
+
 if __name__ == "__main__":
     unittest.main()
