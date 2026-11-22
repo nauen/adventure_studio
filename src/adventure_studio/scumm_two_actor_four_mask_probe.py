@@ -371,12 +371,56 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
     return {"comparison": verdict, "measured_native_samples": samples}
 
 
+
+def verify_two_actor_native_camera_roundtrip(frames: list[dict]) -> dict:
+    """Require measured full native camera travel, not just authored cue commands."""
+    if len(frames) < 8:
+        raise RuntimeError("Not enough native R06 camera samples")
+    frames = sorted(frames, key=lambda row: row["seconds"])
+    times = [row["seconds"] for row in frames]
+    if len(set(times)) != len(times):
+        raise RuntimeError("Duplicate native camera screenshot timestamps")
+    if not 300 <= frames[0]["camera_x"] <= 340:
+        raise RuntimeError("Native R06 camera did not begin near X=320")
+    far = next((i for i, row in enumerate(frames)
+                if row["camera_x"] >= 475), None)
+    if far is None:
+        raise RuntimeError("Native R06 camera never reached X=480 far endpoint")
+    returned = next((i for i in range(far + 1, len(frames))
+                     if frames[i]["camera_x"] <= 165), None)
+    if returned is None:
+        raise RuntimeError("Native R06 camera did not complete the return to X=160")
+    if not any(row["camera_x"] <= 290 for row in frames[:far]):
+        raise RuntimeError("Native R06 camera did not follow the moving Actor before far pan")
+    return {"native_camera_roundtrip_verified": True,
+            "start": frames[0], "far": frames[far], "returned": frames[returned]}
+
+
+def measure_two_actor_native_camera_trace(screenshots: Path) -> list[dict]:
+    """Read camera locations exclusively from genuine time-stamped native frames."""
+    from PIL import Image
+    from .scumm_camera_zp01_probe import camera_from_sky
+    entries = json.loads(
+        (screenshots / "r06-two-actor-walk-capture.json").read_text(encoding="utf-8")
+    )["captured_frames"]
+    observations = []
+    for entry in entries:
+        with Image.open(screenshots / f"scummvm-{entry['frame']}.png") as image:
+            camera = camera_from_sky(image)
+        if camera is not None:
+            observations.append({"frame": entry["frame"],
+                                 "seconds": entry["seconds_since_native_input"],
+                                 "camera_x": camera})
+    return observations
+
+
 def run(upstream: Path, output: Path) -> dict:
     """Run separate masked and transparent stock-ScummVM gameplay controls."""
     output.mkdir(parents=True, exist_ok=True)
     report = {"product_path": "Studio PNG -> JSON-v1/Story -> ScummC-v6 -> stock ScummVM",
               "variants": {}, "independent_actor_motion_verified": False,
               "per_actor_native_occlusion_verified": False,
+              "native_camera_roundtrip_verified": False,
               "complete_r06_268_acceptance": False}
     report_path = output / "native-r06-two-actor-four-mask-report.json"
     for variant in ("masked", "transparent", "wrong-box"):
@@ -409,6 +453,12 @@ def run(upstream: Path, output: Path) -> dict:
     report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n",
                            encoding="utf-8")
     report["motion_comparison"] = verify_two_actor_native_walks(observed)
+    report["native_camera_roundtrip"] = {
+        variant: verify_two_actor_native_camera_roundtrip(
+            measure_two_actor_native_camera_trace(output / variant / "screenshots"))
+        for variant in ("masked", "transparent", "wrong-box")
+    }
+    report["native_camera_roundtrip_verified"] = True
     report["independent_actor_motion_verified"] = True
     report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n",
                            encoding="utf-8")
