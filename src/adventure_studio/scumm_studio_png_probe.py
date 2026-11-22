@@ -40,7 +40,7 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
     raw = create_costume(raw, str(png_paths[0]), "StudioPngCostume")
     raw = add_costume_frame(raw, "StudioPngCostume", str(png_paths[1]), "WavePose")
     for direction in ("N", "E", "S", "W"):
-        raw = set_costume_animation(raw, "StudioPngCostume", "wave", 28,
+        raw = set_costume_animation(raw, "StudioPngCostume", "wave", 12,
                                     direction, "Pose0, WavePose, Pose0, WavePose", True)
     raw = add_actor(raw, "StudioPngActor", "StudioPngCostume", "Harbor",
                     240, 110, "S", "Studio PNG Actor")
@@ -52,7 +52,7 @@ def run_studio_png_probe(upstream: Path, destination: Path) -> dict:
     export_document(parse_document(encoded), build / "resources")
     game = compile_story_game(build, upstream, destination / "game")
     screenshots = destination / "screenshots"
-    launch_smoke(game, screenshots, scene_only=True, sample_scene_frames=True)
+    launch_smoke(game, screenshots, seconds=12, scene_only=True, sample_scene_frames=True)
     observed = [False, False]
     samples = sorted(screenshots.glob("scummvm-sample-*.png"))
     for screenshot in samples:
