@@ -48,7 +48,7 @@ def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked")
             raw = import_room_zplane(raw, "Harbor", plane, str(png))
     raw = author_room_camera_plan(
         raw, "Harbor", 170, 100,
-        "set:320;hold:600;hold:300;pan:480;wait;hold:120;pan:160;wait",
+        "set:320;hold:30;pan:480;wait;hold:120;pan:160;wait;set:320",
         stationary_actor=True)
     document = parse_document(raw)
     costume = replace(gesture_fixture(), name=f"R06TwoActor{variant.title()}Costume")
@@ -102,7 +102,7 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
         raise RuntimeError("R06 Actors have unresolved native COST bindings")
     operations = tuple(cue.operation for cue in room.camera_cues)
     if room.demo_walk_to_x is not None or operations != (
-            "set", "hold", "hold", "pan", "wait", "hold", "pan", "wait"):
+            "set", "hold", "pan", "wait", "hold", "pan", "wait", "set"):
         raise RuntimeError("R06 stable-click camera round-trip plan was lost")
     choreography = [sequence for sequence in document.interaction_sequences
                     if (sequence.room, sequence.hotspot_id, sequence.verb) ==
@@ -133,6 +133,16 @@ def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
     from .scumm_launch import colored_item_center
 
     capture_frame("r06-two-actor-before")
+    # Room entry finishes all camera cues before showing native verbs.
+    # Never send the UI click while showVerbs/showCursor are still blocked.
+    from PIL import Image
+    with Image.open(output / "scummvm-r06-two-actor-before.png") as image:
+        pixels = image.convert("RGB")
+        toolbar_pixels = sum(1 for y in range(535, 635, 4)
+                             for x in range(200, 820, 4)
+                             if max(pixels.getpixel((x, y))) > 35)
+    if toolbar_pixels < 15:
+        raise RuntimeError("Native verbs are not visible; camera entry script still active")
     key_x, key_y = colored_item_center(
         output, "r06-two-actor-before", (255, 220, 75))
     if not (192 <= key_x <= 831 and 184 <= key_y <= 471):
