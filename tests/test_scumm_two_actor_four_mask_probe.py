@@ -54,6 +54,20 @@ class TwoActorFourMaskAuthoringTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "walk commands missing"):
             assert_native_two_actor_authoring(changed)
 
+    def test_short_actor_route_rejected(self):
+        from adventure_studio.scumm_project import WalkActorStep
+        with tempfile.TemporaryDirectory() as tmp:
+            document = parse_document(
+                author_two_actor_four_mask_project(Path(tmp)))
+        sequence = document.interaction_sequences[-1]
+        short_route = replace(sequence, steps=(
+            sequence.steps[0], WalkActorStep(ACTOR_IDS[1], 390, 115),
+            *sequence.steps[2:]))
+        changed = replace(document, interaction_sequences=(
+            *document.interaction_sequences[:-1], short_route))
+        with self.assertRaisesRegex(RuntimeError, "walk commands missing"):
+            assert_native_two_actor_authoring(changed)
+
     def test_wrong_box_mask_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             document = parse_document(
