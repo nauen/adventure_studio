@@ -508,7 +508,21 @@ def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
         report["actor_tracking"] = {
             "source": "transparent stock-ScummVM screenshot pixels",
             "observations": control,
+            "world_x_range": [
+                min(row["world_x"] for row in control),
+                max(row["world_x"] for row in control),
+            ],
+            "camera_x_range": [
+                min(row["camera_x"] for row in control),
+                max(row["camera_x"] for row in control),
+            ],
         }
+        # Persist raw observations *before* the fail-closed motion assertion.
+        # Otherwise a red CI job hides whether the native Actor did not walk
+        # or the screenshot detector rejected valid positions.
+        report_path.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8")
         report["motion"] = verify_moving_actor_crosses_four_masks(control)
         masked = measure_native_costume_at_control_positions(
             output / "moving-four-masked-screenshots", control)
