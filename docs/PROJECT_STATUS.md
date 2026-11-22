@@ -1,5 +1,16 @@
 # Adventure Studio – aktueller Arbeitsstand
 
+## Konsolidierter Arbeitsstand und aktives R06-Paket (2026-11-22)
+
+- **Hauptziel:** vollständiger nativer SCUMM-v6-Generator, keine Zusatzruntime.
+- **Gemergt:** R06 PR #262 (`128c9ff`), vier gleichzeitige weltfeste ZP01–ZP04-Masken während Kamera X=160→480→160; nur begrenzte R06-Teilabnahme.
+- **Offen:** R09 PR #260 – native Room-Return-Gameplay-Evidenz, aber nach Integration noch roter Story-Shard; R08 PR #264 – L-Walkbox-Authoring begonnen, finale Actor-Knickroute/Chromium-/Native-CI nicht belegt.
+- **Jetzt:** [R06 Issue #265](https://github.com/nauen/adventure_studio/issues/265) – laufender Actor durch vier Z-Maskenbereiche bei Kamera-Hin-/Rückfahrt; neuer Arbeitsbranch `feat/r06-moving-actor-four-zmasks`. Der native Gameplay-Nachweis für diese Kombination fehlt noch.
+- **Abnahme:** Studio-PNG/Walkboxen → RoomAsset → JSON-v1/Story → produktiver ScummC-v6-Export → stock ScummVM; Bewegung, Welt-/Bildschirmkoordinaten und Verdeckung gegen unabhängig kompilierte Kontrollen, Core/Chromium/Native CI grün.
+- **Blocker:** #265 bisher nur fachlich gestartet, kein Code-/CI-Erfolg; offene Integrationsgates #260/#264 bleiben sichtbar. Keine ZP05+-Freigabe, kein NPC-Komfort.
+- **Danach:** nach nachgewiesener vollständiger Teilabnahme genau ein nächstes natives Paket, keine Demo- oder Testspirale.
+
+
 Stand: 2026-11-22. Produktziel: [PRODUCT_VISION](PRODUCT_VISION.md) ·
 aktive [Roadmap](roadmap.md) · einzige [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md) ·
 [Referenzvertrag](scumm-v6-reference/README.md) · [AGENTS](../AGENTS.md).
