@@ -182,14 +182,14 @@ def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
                        check=True, timeout=10)
         time.sleep(0.15)
     captured = []
-    for index in range(80):
+    for index in range(140):
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM quit during two-Actor native walk")
         label = f"r06-two-actor-walk-{index:02d}"
         capture_frame(label)
         captured.append({"frame": label,
                          "seconds_since_native_input": round(time.monotonic() - initiated, 3)})
-        time.sleep(0.3)
+        time.sleep(0.12)
     result = {"click_verb": "Close", "click_hotspot": "Key",
               "native_hotspot_screen_position": [key_x, key_y],
               "captured_frames": captured,
@@ -332,7 +332,7 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
     for actor in ACTOR_IDS:
         top, bottom = bands[actor]
         for plane, (left, right) in enumerate(_MASK_REGIONS, 1):
-            candidates = [row for row in traces[actor] if left + 5 <= row["world_x"] < right - 5
+            candidates = [row for row in traces[actor] if left + 9 <= row["world_x"] < right - 9
                           and 220 <= row["screen_x"] <= 803]
             sample = None
             for control in candidates:
@@ -359,11 +359,17 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
                             1 for x in range(projected_x - 19, projected_x + 19)
                             for y in range(top, bottom)
                             if max(rgb.getpixel((x, y))) <= 24)
-                if aligned:
-                    sample = {"actor": actor, "zplane": plane,
-                              "world_x": control["world_x"],
-                              "seconds": control["seconds"], **values}
-                    break
+                if aligned and min(values.get("transparent", 0),
+                                   values.get("wrong-box", 0)) >= 80:
+                    # A sprite straddling a mask boundary is not a valid
+                    # full-occlusion sample. Keep examining genuinely captured
+                    # interior frames; do NOT loosen the native pixel threshold.
+                    if values["masked"] <= min(
+                            values["transparent"], values["wrong-box"]) // 3:
+                        sample = {"actor": actor, "zplane": plane,
+                                  "world_x": control["world_x"],
+                                  "seconds": control["seconds"], **values}
+                        break
             if sample is None:
                 raise RuntimeError(f"No aligned native mask/control frame for {actor} ZP{plane:02d}")
             samples.append(sample)
