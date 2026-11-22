@@ -43,6 +43,17 @@ class TwoActorFourMaskAuthoringTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "world positions changed"):
             assert_native_two_actor_authoring(changed)
 
+    def test_missing_independent_walk_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            document = parse_document(
+                author_two_actor_four_mask_project(Path(tmp)))
+        sequence = document.interaction_sequences[-1]
+        changed = replace(document, interaction_sequences=(
+            *document.interaction_sequences[:-1],
+            replace(sequence, steps=sequence.steps[1:])))
+        with self.assertRaisesRegex(RuntimeError, "walk commands missing"):
+            assert_native_two_actor_authoring(changed)
+
     def test_wrong_box_mask_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             document = parse_document(
