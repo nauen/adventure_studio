@@ -87,7 +87,7 @@ on:
       - 'tests/test_scumm_camera_cues.py'
       - 'tests/test_scumm_camera_zp01_probe.py'
       - 'tests/test_scumm_four_mask_camera_probe.py'
-              - 'tests/test_scumm_moving_four_mask_camera_probe.py'
+      - 'tests/test_scumm_moving_four_mask_camera_probe.py'
       - 'tests/test_scumm_dialogue_probe.py'
       - 'tests/test_scumm_font.py'
       - 'tests/test_scumm_language_package.py'
@@ -240,7 +240,7 @@ jobs:
               - 'tests/test_scumm_camera_cues.py'
               - 'tests/test_scumm_camera_zp01_probe.py'
               - 'tests/test_scumm_four_mask_camera_probe.py'
-              - 'tests/test_scumm_moving_four_mask_camera_probe.py'
+      - 'tests/test_scumm_moving_four_mask_camera_probe.py'
 
   studio:
     needs: changes
