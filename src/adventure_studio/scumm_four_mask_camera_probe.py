@@ -438,13 +438,38 @@ def verify_moving_actor_native_occlusion(
             "per_plane": results}
 
 
-def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
-    """Compile real moving-actor ScummVM games; preserve evidence on failure.
+def measure_native_costume_at_control_positions(
+        directory: Path, control: list[dict]) -> list[dict]:
+    """Sample a masked game where the transparent game actually saw the Actor."""
+    from PIL import Image
+    from .scumm_camera_zp01_probe import camera_from_sky, costume_pixels
 
-    A native screenshot's camera position is measurable from sky pixels, but
-    read_frames(world_x=...) assumes a *stationary* Actor. Never pass those
-    fabricated constant Actor positions to the moving-Actor verifier.
-    """
+    entries = json.loads(
+        (directory / "camera-frame-times.json").read_text(encoding="utf-8"))
+    rows = []
+    for entry in entries:
+        reference = min(control, key=lambda row: abs(
+            row["seconds"] - entry["elapsed_seconds"]))
+        if abs(reference["seconds"] - entry["elapsed_seconds"]) > 0.3:
+            continue
+        with Image.open(directory / f"scummvm-{entry['frame']}.png") as image:
+            camera_x = camera_from_sky(image)
+            if camera_x is None or abs(camera_x - reference["camera_x"]) > 40:
+                continue
+            pixels = costume_pixels(image, reference["world_x"], camera_x)
+        rows.append({
+            "frame": entry["frame"], "seconds": entry["elapsed_seconds"],
+            "camera_x": camera_x, "world_x": reference["world_x"],
+            "screen_x": round(192 + 2 * (reference["world_x"] - camera_x + 160)),
+            "actor_dark_pixels": pixels,
+        })
+    if not rows:
+        raise RuntimeError("No synchronized native costume samples")
+    return rows
+
+
+def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
+    """Run native moving-Actor export, with independent control per Z-plane."""
     output.mkdir(parents=True, exist_ok=True)
     report = {
         "product_path": "Studio PNG → RoomAsset/JSON-v1/Story → ScummC-v6 → stock ScummVM",
@@ -454,11 +479,14 @@ def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
         "variants": {},
     }
     report_path = output / "native-r06-moving-four-mask-report.json"
+    variants = [("transparent", 1), ("masked", 1)] + [
+        (f"wrong-box-zp{plane:02d}", plane) for plane in range(1, 5)]
     try:
-        for variant in ("masked", "transparent", "wrong-box"):
+        for variant, plane in variants:
             label = f"moving-four-{variant}"
+            authored_variant = "wrong-box" if variant.startswith("wrong-box") else variant
             project, assignments, authoring = _author_project(
-                output, 1, variant, 170, moving_actor=True)
+                output, plane, authored_variant, 170, moving_actor=True)
             (output / f"{label}-project.json").write_text(project, encoding="utf-8")
             room = next(item for item in parse_document(project).rooms
                         if item.name == "Harbor")
@@ -466,46 +494,37 @@ def run_moving_actor(upstream: Path, generated: Path, output: Path) -> dict:
                 room, upstream, generated, output, label,
                 allow_static_scene=True, camera_pan_capture=True)
             screenshots = output / f"{label}-screenshots"
-            from PIL import Image
-            from .scumm_camera_zp01_probe import camera_from_sky
-            captures = json.loads(
-                (screenshots / "camera-frame-times.json").read_text(encoding="utf-8"))
-            camera_rows = []
-            for entry in captures:
-                with Image.open(screenshots / f"scummvm-{entry['frame']}.png") as image:
-                    camera_x = camera_from_sky(image)
-                if camera_x is not None:
-                    camera_rows.append({
-                        "frame": entry["frame"],
-                        "seconds": entry["elapsed_seconds"],
-                        "camera_x": camera_x,
-                    })
-            if not camera_rows:
-                raise RuntimeError(f"No identifiable stock-ScummVM frames: {label}")
             report["variants"][variant] = {
                 "walkbox_masks": assignments,
                 "authoring": authoring,
                 "frame_report": render["frame_report"],
-                "camera_frames": camera_rows,
                 "screenshot_directory": str(screenshots),
             }
             report_path.write_text(
                 json.dumps(report, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8")
-        # Track the costume independently in the transparent game. A constant
-        # start coordinate fed to read_frames() would fabricate movement.
         control = track_native_actor(
             output / "moving-four-transparent-screenshots")
         report["actor_tracking"] = {
             "source": "transparent stock-ScummVM screenshot pixels",
             "observations": control,
         }
-        report["comparison"] = verify_moving_actor_crosses_four_masks(control)
-        # Per-mask occlusion still needs frame-aligned masked/wrong-box
-        # comparisons; a moving control alone is not four-plane acceptance.
-        raise RuntimeError(
-            "Native Actor motion measured; four-zone frame-aligned "
-            "masked/transparent/wrong-box occlusion not yet verified")
+        report["motion"] = verify_moving_actor_crosses_four_masks(control)
+        masked = measure_native_costume_at_control_positions(
+            output / "moving-four-masked-screenshots", control)
+        wrong = {
+            plane: measure_native_costume_at_control_positions(
+                output / f"moving-four-wrong-box-zp{plane:02d}-screenshots",
+                control)
+            for plane in range(1, 5)
+        }
+        report["comparison"] = verify_moving_actor_native_occlusion(
+            control, masked, wrong)
+        report["status"] = "passed"
+        report_path.write_text(
+            json.dumps(report, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8")
+        return report
     except Exception as error:
         report["status"] = "failed"
         report["failure"] = str(error)
