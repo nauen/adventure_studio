@@ -8,6 +8,7 @@ from adventure_studio.scumm_project import parse_document
 from adventure_studio.scumm_four_mask_camera_probe import (
     verify_moving_actor_crosses_four_masks,
     _author_project,
+    verify_moving_actor_native_occlusion,
 )
 
 
@@ -16,6 +17,23 @@ def frame(seconds, world_x, camera_x):
 
 
 class MovingActorEvidenceTests(unittest.TestCase):
+    def test_four_plane_native_controls_are_independent(self):
+        positions = [170, 245, 345, 435, 530]
+        control = [
+            dict(frame=i, seconds=i, camera_x=160, world_x=x,
+                 actor_dark_pixels=300)
+            for i, x in enumerate(positions)
+        ]
+        masked = [dict(row, actor_dark_pixels=0) for row in control]
+        wrong = {plane: [dict(row, actor_dark_pixels=300)
+                         for row in control] for plane in range(1, 5)}
+        result = verify_moving_actor_native_occlusion(control, masked, wrong)
+        self.assertEqual(set(result["per_plane"]),
+                         {"ZP01", "ZP02", "ZP03", "ZP04"})
+        wrong[3][3]["actor_dark_pixels"] = 0
+        with self.assertRaisesRegex(RuntimeError, "ZP03"):
+            verify_moving_actor_native_occlusion(control, masked, wrong)
+
     def test_product_authoring_preserves_native_walk_and_four_masks(self):
         with TemporaryDirectory() as temporary:
             project, masks, _ = _author_project(
