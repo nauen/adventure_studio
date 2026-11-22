@@ -1,19 +1,15 @@
 # Adventure Studio – aktive Produktroadmap
 
-Stand: 2026-11-21. Diese Seite steuert **nur die nächsten Produktentscheidungen**.
-Das Hauptziel steht in [PRODUCT_VISION](PRODUCT_VISION.md), die einzige
-64-Fähigkeiten-Matrix in [SCUMM_V6_CAPABILITIES](SCUMM_V6_CAPABILITIES.md).
-Die frühere ausführliche Roadmap bleibt als
-[historisches Entwicklungsprotokoll](roadmap-history.md) erhalten;
-historische Checkboxen sind keine aktiven Aufträge.
+Stand: 2026-11-22. Die vollständige native Funktionsmatrix steht in
+[SCUMM_V6_CAPABILITIES](SCUMM_V6_CAPABILITIES.md).
 
 ## Aktiver Entscheidungsstand
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; die 64-Fähigkeiten-Matrix ist die einzige Funktions- und Statusquelle.
-- **Jetzt:** **R09 / Issue #259, PR #260** bleibt das einzige aktive Produktpaket: zwei unabhängig reversible Walkbox-Gates im selben Raum müssen nach echten Raumwechseln ihren Zustand behalten. Kein NPC-Komfort seit #190.
-- **Abnahme:** Erforderlich ist die vollständige Kette Studio/Story → JSON-v1 → produktiver ScummC-v6-Export → stock ScummVM mit beiden Reihenfolgen `00→10→11→01→00` / `00→01→11→10→00`, je fünf echten `Tavern→Shed→Tavern`-Rückkehren plus einer always-open-Kontrolle, getrennten BOXD2/3-Flags und Actor-Routen gegen die Kontrolle. **Die bisherigen Artefakte belegen diese Kombination noch nicht:** #231 belegt ein einzelnes Gate über Raumrückkehr; #236 belegt zwei Gates im selben Raum ohne diese kombinierte Rückkehrprüfung. Der neue kombinierte Probe ist im PR-Branch enthalten, aber noch nicht in stock ScummVM abgeschlossen. Der vorherige Lauf wurde während dieses Schritts abgebrochen; sein Artefakt enthält nur den getrennten Zwei-Gate-Test ohne Raumrückkehr. Erst ein vollständiger Report mit echten `tentacle.000/.001`, Screenshots, Logs und Actor-Routen schließt die Abnahme.
-- **Blocker:** Der kombinierte native Zwei-Gate-Raumrückkehrnachweis ist noch nicht abgeschlossen. Der letzte Geometry-Lauf wurde während des neuen stock-ScummVM-Raumrückkehr-Probes abgebrochen; ein neuer Lauf auf dem aktualisierten PR-Head muss diesen Test vollständig ausführen. Der allgemeine Core-PR-Job war im vorherigen Lauf übersprungen, und ein älterer Core-Push ersetzt keinen Test auf dem aktuellen Head. PR #260 bleibt offen. R07/R08/R09 bleiben Teilfähigkeiten; stock-v6-ZP05+ wird weiterhin vor dem Export abgelehnt.
-- **Danach:** Erst nach erfolgreicher kombinierter R09-Abnahme und Integration genau **ein** natives R08-Paket: eine konkave Gehfläche aus mehreren verbundenen, einzeln konvexen 3-/4-Eck-Walkboxen, vom Studio-Modell über JSON/Story und BOXD/BOXM bis zur echten ScummVM-Actor-Route gegen eine konvexe Kontrolle. Keine einzelne konkave BOXD-Walkbox behaupten; kein paralleles Feature.
+- **Hauptziel:** Vollständiger originaler SCUMM-v6-Adventure-Generator ohne eigene zusätzliche Laufzeit.
+- **Jetzt:** **R09 / [Issue #259](https://github.com/nauen/adventure_studio/issues/259), [PR #260](https://github.com/nauen/adventure_studio/pull/260)** – zwei unabhängig reversible BOXD2/3-Gates bleiben nach echter Raumrückkehr getrennt geschaltet. R06 vier weltfeste ZP01–ZP04-Masken bei Kamera X=160→480→160 ist mit [Native/Studio 45022278434](https://github.com/nauen/adventure_studio/actions/runs/45022278434) grün und auf `main` gemergt ([#262](https://github.com/nauen/adventure_studio/pull/262), Squash `128c9ff`). Kein NPC-Komfort seit #190.
+- **Abnahme:** Studio/Story → JSON-v1 → produktiver ScummC-v6-Export → stock ScummVM. Beide Schaltfolgen `00→10→11→01→00` und `00→01→11→10→00`, je fünf reale `Tavern→Shed→Tavern`-Rückkehren und separat kompiliertes always-open-Kontrollspiel mit gemessenen BOXD2/3-Flags, Actor-Routen und Screenshot-/Zeitbelegen.
+- **Blocker:** [R09 Native 44959056163](https://github.com/nauen/adventure_studio/actions/runs/44959056163) war auf altem R09-Head `e06ad562` erfolgreich. Nach R06-Merge divergiere der Branch; das kombinierte R09-Head bewahrt R06-Kameraabnahme und ergänzt echte Room-Return-Evidenz samt ausreichender Geometry-Laufzeit. Alle aktuellen Core-/Native-/Studio-Pflichtgates müssen erneut grün werden, bevor #260 integriert wird. ZP05+ bleiben stock-v6-fail-closed.
+- **Danach:** Genau ein weiteres natives Raumgrafik-/Walkbox-Paket nach der Fähigkeitsmatrix priorisieren. Keine parallele R07/R08- oder NPC-Komfortarbeit.
 
 ## Grundlagen – nicht erneut als Neuimplementierung einplanen
 

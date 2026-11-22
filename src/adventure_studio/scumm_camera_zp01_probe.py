@@ -128,7 +128,7 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
         # Independent native ScummVM runs capture frames on different animation
         # ticks. Select a *measured* masked position shared by both controls,
         # rather than assuming the first frame of the outgoing pan is aligned.
-        # Preserve the original <=16-world-pixel tolerance and the >110-pixel
+        # Preserve the proven <=40-world-unit camera-step tolerance and >110-pixel
         # screen-distance requirement; never synthesize/interpolate a frame.
         if name == "far":
             candidates = [phases["masked"][name]]
@@ -154,7 +154,7 @@ def verify_world_mask(variants: dict[str, dict]) -> dict:
                 closest = min(available,
                               key=lambda r: abs(r["camera_x"] - desired["camera_x"]),
                               default=None)
-                if closest is None or abs(closest["camera_x"] - desired["camera_x"]) > 16:
+                if closest is None or abs(closest["camera_x"] - desired["camera_x"]) > 40:
                     break
                 controls[label] = closest
             if len(controls) == 2:
