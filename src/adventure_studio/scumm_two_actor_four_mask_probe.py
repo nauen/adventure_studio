@@ -40,7 +40,7 @@ def author_two_actor_four_mask_project(output: Path, *, variant: str = "masked")
     # Both distinct costume lanes must intersect every Z-plane: the original
     # single-Ego R06 mask ends at Y=110 and cannot occlude our second Actor.
     # Re-author taller masks as real Studio PNGs through the production API.
-    if variant == "masked":
+    if variant in ("masked", "wrong-box"):
         from PIL import Image
         for plane, (left, right) in enumerate(_MASK_REGIONS, 1):
             pixels = bytes(255 if left <= x < right and 60 < y < 140 else 0
