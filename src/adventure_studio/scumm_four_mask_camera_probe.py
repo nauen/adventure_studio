@@ -39,6 +39,51 @@ _EXPECTED_CUES = (
 _MASK_REGIONS = ((160, 320), (320, 400), (400, 500), (500, 640))
 
 
+def verify_moving_actor_crosses_four_masks(frames: list[dict]) -> dict:
+    """Fail closed unless *observed* native frames prove walking through four zones.
+
+    Camera movement alone is insufficient: unlike the earlier stationary-actor
+    probe, actor world X must change while the camera traverses both directions.
+    """
+    if not frames:
+        raise RuntimeError("Missing native moving-actor screenshots")
+    ordered = sorted(frames, key=lambda row: row["seconds"])
+    if len({row["seconds"] for row in ordered}) != len(ordered):
+        raise RuntimeError("Native moving-actor frame timestamps are not unique")
+    zones = ((160, 320), (320, 400), (400, 500), (500, 640))
+    visited = []
+    moving = 0
+    for previous, current in zip(ordered, ordered[1:]):
+        if current["seconds"] <= previous["seconds"]:
+            raise RuntimeError("Native moving-actor frames are not time ordered")
+        if current["world_x"] != previous["world_x"]:
+            moving += 1
+        if not 0 <= current["camera_x"] <= 640:
+            raise RuntimeError("Invalid measured native camera X")
+    for index, (left, right) in enumerate(zones, 1):
+        observations = [row for row in ordered
+                        if left <= row["world_x"] < right]
+        if not observations:
+            raise RuntimeError(f"Moving Actor never entered ZP{index:02d} region")
+        visited.append({"zplane": index,
+                        "first_seconds": observations[0]["seconds"],
+                        "world_x": observations[0]["world_x"]})
+    if moving < 4:
+        raise RuntimeError("Stationary Actor cannot establish four-zone walking")
+    if [row["first_seconds"] for row in visited] != sorted(
+            row["first_seconds"] for row in visited):
+        raise RuntimeError("Actor did not cross the four mask regions in order")
+    camera = [row["camera_x"] for row in ordered]
+    far = next((i for i, x in enumerate(camera) if x >= 475), None)
+    if (far is None or not any(x <= 165 for x in camera[:far])
+            or not any(x <= 165 for x in camera[far + 1:])):
+        raise RuntimeError("Native camera did not complete 160→480→160")
+    return {"native_moving_actor_four_mask_path_observed": True,
+            "moving_frame_transitions": moving,
+            "visited_zplanes": visited,
+            "camera_far_frame_index": far}
+
+
 def select_actor_phases(rows: list[dict], world_x: int,
                         outgoing_x: int, returning_x: int) -> dict:
     """Select camera phases by observed world X, not assumed elapsed time."""
