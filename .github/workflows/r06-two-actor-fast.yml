@@ -4,6 +4,8 @@ on:
     paths:
       - 'src/adventure_studio/scumm_two_actor_four_mask_probe.py'
       - 'tests/test_scumm_two_actor_four_mask_probe.py'
+      - 'src/adventure_studio/scumm_four_mask_camera_probe.py'
+      - 'tests/test_scumm_four_mask_camera_probe.py'
       - '.github/workflows/r06-two-actor-fast.yml'
   push:
     branches:
@@ -22,4 +24,6 @@ jobs:
       - name: Validate two Actor walking commands through JSON-v1 and four BOXD masks
         env:
           PYTHONPATH: src
-        run: python -m unittest discover -s tests -p 'test_scumm_two_actor_four_mask_probe.py' -v
+        run: |
+          python -m unittest discover -s tests -p 'test_scumm_two_actor_four_mask_probe.py' -v
+          python -m unittest discover -s tests -p 'test_scumm_four_mask_camera_probe.py' -v
