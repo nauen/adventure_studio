@@ -896,6 +896,11 @@ def scummc_room_source(room: RoomAsset, catalog=None,
         *(["        createBoxMatrix();\n"] if any(rule.unlock_walkbox is not None
                                                   for rule in room.use_rules) else []),
         *(["        cameraFollowActor(VAR_EGO);\n"] if not room.camera_cues else []),
+        # Start native Actor walking before the authored camera sequence.
+        # Previously the blocking delay()/waitForCamera() cues finished first,
+        # leaving the Actor off-screen during the later demo walk.
+        *([f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, {room.demo_walk_to_y if room.demo_walk_to_y is not None else 100});\n"]
+          if room.demo_walk_to_x is not None and room.camera_cues else []),
         *[{
             "set": lambda cue: f"        setCameraAt({cue.x});\n",
             "pan": lambda cue: f"        panCameraTo({cue.x});\n",
@@ -912,7 +917,7 @@ def scummc_room_source(room: RoomAsset, catalog=None,
     ])
     if room.music_id is not None:
         parts.append(f"        startMusic({room.music_id});\n")
-    if room.demo_walk_to_x is not None:
+    if room.demo_walk_to_x is not None and not room.camera_cues:
         target_y = room.demo_walk_to_y if room.demo_walk_to_y is not None else 100
         parts.append(f"        walkActorTo(VAR_EGO, {room.demo_walk_to_x}, {target_y});\n")
     if room.goal_text is not None:
