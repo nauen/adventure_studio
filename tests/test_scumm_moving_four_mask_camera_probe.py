@@ -45,6 +45,11 @@ class MovingActorEvidenceTests(unittest.TestCase):
             self.assertEqual(masks, [0, 1, 2, 3, 4])
             self.assertEqual(len(room.zplanes), 4)
             self.assertEqual(len(room.walkboxes), 5)
+            from adventure_studio.scumm_assets import scummc_room_source
+            source = scummc_room_source(room)
+            self.assertLess(
+                source.index("walkActorTo(VAR_EGO, 535, 100);"),
+                source.index("panCameraTo(480);"))
 
     def test_observed_four_zones_and_camera_return(self):
         rows = [frame(0, 170, 160), frame(1, 245, 210),
