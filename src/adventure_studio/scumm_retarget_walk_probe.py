@@ -93,12 +93,19 @@ def verify_native_walk_retarget(traces: dict, cameras: list[dict]) -> dict:
                     key=lambda frame: camera_by_frame[frame]["seconds"])
     if len(shared) < 12:
         raise RuntimeError("Too few native screenshot frames for B redirection")
+    # Earlier R06 scenes already contain native leftward and rightward walks.
+    # Those are NOT evidence that the new mid-walk retarget happened.
+    # Anchor the proof to the independently observed X480 -> X395 camera
+    # tour while both Actors wait at X395, before either departure command.
+    tour = verify_native_meeting_camera_tour(traces, cameras)
+    release_seconds = tour["returned"]["seconds"]
     positions = by_actor[ACTOR_IDS[1]]
     segments = []
     for first, second in zip(shared, shared[1:]):
         delta = positions[second]["world_x"] - positions[first]["world_x"]
         delta_t = camera_by_frame[second]["seconds"] - camera_by_frame[first]["seconds"]
-        if 0 < delta_t <= 1.5:
+        if (camera_by_frame[first]["seconds"] >= release_seconds
+                and 0 < delta_t <= 1.5):
             segments.append({"from": first, "to": second,
                              "seconds": camera_by_frame[second]["seconds"],
                              "delta": delta,
