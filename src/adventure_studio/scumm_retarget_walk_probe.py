@@ -106,6 +106,12 @@ def verify_native_walk_retarget(traces: dict, cameras: list[dict]) -> dict:
         delta_t = camera_by_frame[second]["seconds"] - camera_by_frame[first]["seconds"]
         if (camera_by_frame[first]["seconds"] >= release_seconds
                 and 0 < delta_t <= 1.5):
+            # The reversal must come from physically plausible native
+            # movement, not a discontinuous jump between real screenshots.
+            # Use the existing R06 return-walk evidence speed envelope;
+            # never interpolate missing screenshot positions.
+            if abs(delta) > 225 * delta_t + 15:
+                raise RuntimeError("Native retarget frames contain implausible teleport")
             segments.append({"from": first, "to": second,
                              "seconds": camera_by_frame[second]["seconds"],
                              "delta": delta,
