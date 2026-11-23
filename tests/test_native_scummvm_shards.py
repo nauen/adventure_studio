@@ -23,12 +23,13 @@ class NativeScummVMShardingTests(unittest.TestCase):
         matches = list(STEP.finditer(contents))
         # Counts include real gameplay and evidence-retention steps. New native
         # capabilities change the matrix length; preserve the per-shard gates.
-        self.assertEqual(len(matches), 134)
+        self.assertEqual(len(matches), 135)
         expected_counts = {"actors": 26, "mask": 2, "geometry": 48, "story": 48}
         observed_counts = {shard: 0 for shard in SHARDS}
         shared = {
             "Restore previously downloaded Ubuntu packages",
             "Install compiler dependencies and stock ScummVM",
+            "Make successfully downloaded apt archives cacheable",
             "Save downloaded Ubuntu packages even when install times out",
             "Fetch unmodified ScummC",
             "Fix legacy ScummC tool help paths in ephemeral checkout",
