@@ -1,5 +1,10 @@
 # Adventure Studio – SCUMM-v6-Funktionsmatrix
 
+**Aktueller R06-Status (2026-11-23):** #266 (bewegter Actor über vier Raum-ZP01–ZP04 mit Kamerarückfahrt) und #269 (zwei unabhängig laufende Actors vor vier Z-Masken) sind integriert; R08 #264 und R09 #267 sind ebenfalls integriert. R06 bleibt **Teilfähigkeit**, nicht umfassend fertig. **Jetzt genau ein offenes natives Paket:** [R06 #270 / PR #271](https://github.com/nauen/adventure_studio/pull/271), Kameraübergabe während beide Actors weiterlaufen. Alte stock-ScummVM-Evidenz (Run 45088766893, Artefakt 14780382031) ist belegt, aber auf dem aktuellen Head sind Core- und Native-Gates nach Fixes noch nicht endgültig grün. Kein neues V/Fertig für #270 vor neuer Abnahme. ZP05+ bleibt fail-closed; keine weiteren parallelen Fähigkeiten.
+
+## Historische Matrix-Einleitung (älterer Integrationsstand)
+
+
 **R06 – Konsolidierung 2026-11-22:** [PR #262](https://github.com/nauen/adventure_studio/pull/262) ist nach vollständiger nativer CI gemergt (`128c9ff`): vier gleichzeitige weltfeste ZP01–ZP04-Masken bei Kamera-Hin-/Rückfahrt mit getrennten Actor-Positionen und unabhängigen Kontrollen sind eine belegte **Teilfähigkeit**. Die ältere R06-Zeile unten enthält den historischen Zwischenstand vor Merge und ist nicht als aktueller Merge-Status zu lesen. **Neu aktiv, nicht abgenommen:** [Issue #265](https://github.com/nauen/adventure_studio/issues/265) prüft die noch offene Kombination eines durchgehend *laufenden* Actors über alle vier Masken bei Kamerafahrt im echten stock ScummVM. Bis zu Gameplay-Evidenz und grünen Pflichtgates kein neuer V-Abschluss. ZP05+ bleibt fail-closed; R08 #264 und R09 #260 bleiben ungemergt.
 
 
