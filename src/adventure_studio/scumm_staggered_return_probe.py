@@ -139,7 +139,8 @@ def run_staggered_native_return(upstream: Path, output: Path) -> dict:
         game = compile_story_game(build, upstream, root / "game")
         launch_smoke(game, root / "screenshots", seconds=6,
                      scene_only=True, allow_static_scene=True,
-                     native_two_actor_walk_probe=True)
+                     native_two_actor_walk_probe=True,
+                     native_two_actor_capture_frames=300)
         report["variants"][variant] = {"stock_scummvm_started": True}
         persist()
 
