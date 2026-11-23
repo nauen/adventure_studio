@@ -7,7 +7,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from adventure_studio.scumm_project import parse_document
+from adventure_studio.scumm_project import PanCameraStep, WaitCameraStep, parse_document
 from adventure_studio.scumm_opposing_actor_probe import ACTOR_IDS
 from adventure_studio.scumm_staggered_return_probe import (
     author_staggered_native_return, assert_staggered_native_return,
@@ -38,6 +38,30 @@ class NativeStaggeredReturnTests(unittest.TestCase):
                                     if a.id in ACTOR_IDS))
 
     @unittest.skipUnless(find_spec("PIL"), "Studio PNG fixture requires Pillow")
+    @unittest.skipUnless(find_spec("PIL"), "Studio PNG fixture requires Pillow")
+    def test_stationary_b_must_remain_in_native_camera_view_during_a_return(self):
+        # Screenshot evidence from the failed stock-ScummVM run showed
+        # BackgroundWalker standing at world X=175, outside the follow-A
+        # viewport. A native camera pan must precede the staged return.
+        with TemporaryDirectory() as directory:
+            document = parse_document(author_staggered_native_return(Path(directory)))
+            sequence = next(s for s in document.interaction_sequences if (
+                s.room, s.hotspot_id, s.verb) == ("Harbor", "Key", "Close"))
+            self.assertEqual(
+                sequence.steps[10:12], (PanCameraStep(320), WaitCameraStep()))
+            # A world-space X=175 remains 15px inside the left 320-wide
+            # SCUMM camera viewport; A reappears as it walks left from X=530.
+            self.assertLessEqual(320 - 160, 175)
+            self.assertGreaterEqual(320 + 160, 400)
+            malformed = replace(sequence, steps=(
+                *sequence.steps[:10], *sequence.steps[12:]))
+            broken = replace(document, interaction_sequences=tuple(
+                malformed if s is sequence else s
+                for s in document.interaction_sequences
+            ))
+            with self.assertRaisesRegex(RuntimeError, "precede B"):
+                assert_staggered_native_return(broken)
+
     def test_no_early_return_of_b_allowed(self):
         with TemporaryDirectory() as directory:
             doc = parse_document(author_staggered_native_return(Path(directory)))
