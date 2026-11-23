@@ -1,5 +1,15 @@
 # Adventure Studio – aktueller Arbeitsstand
 
+## Verbindliche Konsolidierung – 23. November 2026
+
+- **Hauptziel:** Vollständiger originaler SCUMM-v6-Generator. Ohne eigene Runtime in stock ScummVM spielen; nach PR #190 keine NPC-Komfortarbeit.
+- **Jetzt:** Genau **R06 #280 / [PR #281](https://github.com/nauen/adventure_studio/pull/281)** – zwei Actors laufen zeitversetzt zurück, vier ZP01–ZP04-Masken und echte native Kamera. In `main`: #273, #275, #277 und #279 (alle Native-/Core-geprüft und gemergt).
+- **Abnahme:** Studio-PNG/RoomAsset → JSON-v1/Story → ScummC-v6 → drei unabhängige echte ScummVM-Spiele, Screenshot-Tracking von A bei B-Stillstand, hin- und rücklaufende Actors, Kamerarückkehr, Masken-/Wrong-BOXD-Kontrollen, sämtliche Pflicht-CI grün.
+- **Blocker:** [Native 45133190779](https://github.com/nauen/adventure_studio/actions/runs/45133190779): Stagger-Gameplay und Negativkontrollen grün; Gesamt-Geometry noch aktiv, unabhängiger Dialogue-Shard wegen geschlossener Tür `0` Pixel rot. Kein finaler Merge/V-Nachweis für #281.
+- **Danach:** Erst nach kompletter #281-Abnahme genau [R06 #282 / PR #283](https://github.com/nauen/adventure_studio/pull/283) als nächste einzelne native Fähigkeit (Treffpunkt bei Welt-X=395, getrennte Rückwege). #285 bleibt wartend; keine ZP05+-Freigabe.
+
+## Historische Statusprotokolle – nicht aktive Arbeitspakete
+
 ## Konsolidierter Ist-Stand und genau ein aktives Paket (2026-11-23)
 
 - **Hauptziel:** vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; ScummVM-Gameplay ist die Abnahme.
