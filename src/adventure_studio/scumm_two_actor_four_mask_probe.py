@@ -182,14 +182,18 @@ def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
                        check=True, timeout=10)
         time.sleep(0.15)
     captured = []
-    for index in range(140):
+    # Capture the same real-gameplay span at higher temporal resolution.
+    # Narrow Z-mask intersections previously produced only one genuine
+    # control frame, so an animation blank could make the positive control
+    # unprovable. Preserve every captured frame; never synthesize positions.
+    for index in range(210):
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM quit during two-Actor native walk")
-        label = f"r06-two-actor-walk-{index:02d}"
+        label = f"r06-two-actor-walk-{index:03d}"
         capture_frame(label)
         captured.append({"frame": label,
                          "seconds_since_native_input": round(time.monotonic() - initiated, 3)})
-        time.sleep(0.12)
+        time.sleep(0.07)
     result = {"click_verb": "Close", "click_hotspot": "Key",
               "native_hotspot_screen_position": [key_x, key_y],
               "captured_frames": captured,
