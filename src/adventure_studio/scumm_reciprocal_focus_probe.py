@@ -106,13 +106,29 @@ def verify_native_reciprocal_focus(traces: dict, camera_frames: list[dict]) -> d
         key=lambda frame: cameras[frame]["seconds"],
     )
     visible_motion = []
-    for before, after in zip(shared, shared[1:]):
-        a0, a1 = by_actor[ACTOR_IDS[0]][before], by_actor[ACTOR_IDS[0]][after]
-        b0, b1 = by_actor[ACTOR_IDS[1]][before], by_actor[ACTOR_IDS[1]][after]
-        if (a1["world_x"] - a0["world_x"] >= 5
-                and b0["world_x"] - b1["world_x"] >= 5):
+    # The recorder samples much faster than a native costume's movement
+    # tick. Adjacent screenshot pairs can show <5px despite genuine walks.
+    # Compare only real frame pairs within a bounded 0.4s interval; never
+    # interpolate camera/actor coordinates or accept a stopped Actor.
+    for end_index, after in enumerate(shared):
+        end_time = cameras[after]["seconds"]
+        moving = False
+        for before in reversed(shared[:end_index]):
+            duration = end_time - cameras[before]["seconds"]
+            if duration > 0.4:
+                break
+            a0, a1 = by_actor[ACTOR_IDS[0]][before], by_actor[ACTOR_IDS[0]][after]
+            b0, b1 = by_actor[ACTOR_IDS[1]][before], by_actor[ACTOR_IDS[1]][after]
+            if (0 < duration <= 0.4
+                    and 5 <= a1["world_x"] - a0["world_x"] <= 55
+                    and 5 <= b0["world_x"] - b1["world_x"] <= 55):
+                moving = True
+                break
+        if moving:
+            a1 = by_actor[ACTOR_IDS[0]][after]
+            b1 = by_actor[ACTOR_IDS[1]][after]
             visible_motion.append({
-                "frame": after, "seconds": cameras[after]["seconds"],
+                "frame": after, "seconds": end_time,
                 "camera_x": cameras[after]["camera_x"],
                 "a_distance": abs(a1["screen_x"] - 512),
                 "b_distance": abs(b1["screen_x"] - 512),
