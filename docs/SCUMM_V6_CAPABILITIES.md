@@ -1,11 +1,14 @@
 # Adventure Studio – SCUMM-v6-Funktionsmatrix
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator; Studio-PNG/Walkboxen → JSON-v1/Story → ScummC-v6 → unverändertes ScummVM, ohne zusätzliche Runtime. Kein NPC-Komfort nach #190.
-- **Integriert:** R06 PRs #273, #275, #277, #279, #281 und #283, jeweils begrenzte native Teilabnahmen, keine vollständige v6-Abdeckung.
-- **Jetzt – genau eine Fähigkeit:** [Issue #284 / PR #285](https://github.com/nauen/adventure_studio/pull/285): Zwei Actors treffen bei Welt-X=395 auf getrennten Y-Spuren ein, halten gemeinsam und laufen zeitversetzt wieder auseinander (A vor B mit nativer Verzögerung).
-- **Abnahme:** Drei separat gelinkte masked/transparent/wrong-box-Spiele aus dem produktiven Studio/JSON-v1/Story/ScummC-v6-Pfad. Stock-ScummVM belegt mindestens zwei gemeinsame Stillstandsframes (je ≤8 Weltpixel), mindestens drei echte Rückschritte von A bei stehendem B und danach mindestens drei Schritte von B, vier ZP-Masken mit Negativkontrollen, Walkboxen und Kamera-Rückfahrt. Core sowie sämtliche erforderlichen Native-/Dialogue-Gates auf **dem finalen Head** grün. Kein V-Status aus isolierten Unit-Tests.
-- **Blocker/Nachweis:** [Core 45216610441](https://github.com/nauen/adventure_studio/actions/runs/45216610441) auf PR-Head db3c10c grün; [Native/Studio 45216627316](https://github.com/nauen/adventure_studio/actions/runs/45216627316) bei Konsolidierung noch nicht abgeschlossen. Ältere rote Läufe sind keine finale CI-Aussage. Nach diesem Dokumentations-Commit sind die Pflichtgates auf seinem neuen Head erneut zu prüfen; bis dahin **kein Merge, kein V-Abschluss**.
-- **Danach – genau ein Folgepaket:** Erst nach finaler nativer Abnahme und Merge von #285 die oberste unverblockierte native Matrixlücke wählen. ZP05+ bleibt fail-closed; keine parallele Feature-Arbeit.
+Die unten stehende Funktionsmatrix bleibt der einzige Katalog der Capability-IDs. Der folgende konsolidierte Integrationskopf ändert **keine** unten dokumentierte Einzel-Capability auf V, solange ihre originale stock-ScummVM-Abnahme nicht nachgewiesen ist.
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator; Studio/JSON-v1/Story→ScummC-v6→unverändertes stock ScummVM, keine zusätzliche Runtime und kein NPC-Komfort nach PR #190.
+- **Integrierte R06-Teilfähigkeiten:** #273, #275, #277, #279, #281, #283, #285, #287 gemergt. Keine pauschale V-Freigabe für R06 oder SCUMM v6.
+- **Offene native Integrationsfolge:** #289 (gegen main), dann #291, #293, #295, #297, #299, #301, #303 auf ihren jeweiligen Parent-Branches; die späteren PRs werden bis Parent-Integration und individueller finaler Gameplay-Abnahme zurückgestellt.
+- **Jetzt – genau eine R06-Fähigkeit:** [#288 / PR #289](https://github.com/nauen/adventure_studio/pull/289) – Kamera folgt Actor B erneut, nachdem zwei stationäre Actors eine native Inspektionsfahrt X395→X480→X395 durchlaufen haben und B seinen Walk-Rückweg begonnen hat.
+- **V-Kriterium:** Drei separat exportierte Spiele (masked/transparent/wrong-box), echte stock-ScummVM-Screenshots mit chronologisch belegter Inspektionsfahrt, ≥3 nativen Actor-B-Rechtsbewegungs-Framepaaren (je 5–55 Weltpixel) und ≥24 nativen Kamera-X-Pixeln Follow-Fahrt, unveränderte Vier-Z-Masken-/Walkbox-/Negativgates, Core plus alle relevanten Native-Shards grün am finalen Head.
+- **Blocker/Nachweis (23.11.2026):** PR #289 Head `9881302c`, Core [45263437847](https://github.com/nauen/adventure_studio/actions/runs/45263437847) und R06-Guard [45263448426](https://github.com/nauen/adventure_studio/actions/runs/45263448426) erfolgreich; Native/Studio [45263448530](https://github.com/nauen/adventure_studio/actions/runs/45263448530) noch laufend, Geometry nicht fertig. **R06 #288: implementiert/teilgetestet, nicht als V abgeschlossen.**
+- **Danach – ein Folgepaket:** [#290 / PR #291](https://github.com/nauen/adventure_studio/pull/291) – native Actor-B-Zielumleitung während des Laufens, echte Richtungsumkehr statt Teleport. Erst nach Abnahme/Merge #289. ZP05+ weiterhin fail-closed.
 
 ## Historische Matrix-Einleitung (älterer Integrationsstand)
 
