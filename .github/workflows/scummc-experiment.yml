@@ -32,18 +32,29 @@ jobs:
           restore-keys: |
             ubuntu-24.04-scumm-experimental-apt-
       - name: Install compiler dependencies and stock ScummVM
-        timeout-minutes: 35
+        timeout-minutes: 50
         run: |
           sudo mkdir -p /tmp/scumm-experimental-apt/partial
-          # Ubuntu's archive mirror can hang indefinitely after InRelease
-          # downloads. Bound each attempt and use an independent fallback;
-          # never skip the package install or an actual native test.
+          # Bound both index and package downloads. A stalled 72 MB
+          # scummvm-data download must retry through an independent mirror.
           if ! timeout --signal=TERM --kill-after=15s 420s sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=25 update; then
-            echo "::warning::Default Ubuntu apt mirror stalled; retrying on azure.archive.ubuntu.com"
-            sudo sed -i 's@https://archive.ubuntu.com/ubuntu@http://azure.archive.ubuntu.com/ubuntu@g; s@http://archive.ubuntu.com/ubuntu@http://azure.archive.ubuntu.com/ubuntu@g' /etc/apt/sources.list.d/ubuntu.sources
+            echo "::warning::Ubuntu apt index mirror stalled; switching to Azure archive"
+            sudo sed -i -E 's#https?://([A-Za-z0-9.-]+\\.)?archive\\.ubuntu\\.com/ubuntu#http://azure.archive.ubuntu.com/ubuntu#g' /etc/apt/sources.list.d/ubuntu.sources
             timeout --signal=TERM --kill-after=15s 420s sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=25 update
           fi
-          timeout --signal=TERM --kill-after=15s 900s sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Dir::Cache::archives=/tmp/scumm-experimental-apt -o Acquire::Retries=2 -o Acquire::http::Timeout=30 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm timgm6mb-soundfont xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core
+          packages=(build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm timgm6mb-soundfont xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core)
+          if ! timeout --signal=TERM --kill-after=15s 600s sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Dir::Cache::archives=/tmp/scumm-experimental-apt -o Acquire::Retries=1 -o Acquire::http::Timeout=25 install "${packages[@]}"; then
+            echo "::warning::Ubuntu package download stalled; switching to Azure archive and retrying real install"
+            sudo sed -i -E 's#https?://([A-Za-z0-9.-]+\\.)?archive\\.ubuntu\\.com/ubuntu#http://azure.archive.ubuntu.com/ubuntu#g' /etc/apt/sources.list.d/ubuntu.sources
+            timeout --signal=TERM --kill-after=15s 300s sudo apt-get -o Acquire::Retries=1 -o Acquire::http::Timeout=25 update
+            timeout --signal=TERM --kill-after=15s 900s sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Dir::Cache::archives=/tmp/scumm-experimental-apt -o Acquire::Retries=1 -o Acquire::http::Timeout=25 install "${packages[@]}"
+          fi
+      - name: Make successfully downloaded apt archives cacheable
+        if: always()
+        run: |
+          sudo rm -f /tmp/scumm-experimental-apt/lock
+          sudo rm -rf /tmp/scumm-experimental-apt/partial
+          sudo chown -R "${USER}:${USER}" /tmp/scumm-experimental-apt
       - name: Save downloaded Ubuntu packages even when install times out
         if: always()
         uses: actions/cache/save@v4
