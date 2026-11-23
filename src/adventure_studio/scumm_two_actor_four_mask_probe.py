@@ -418,7 +418,7 @@ def verify_two_actor_native_camera_roundtrip(
     if expected_start == 320:
         if not any(row["camera_x"] <= 290 for row in frames[:far]):
             raise RuntimeError("Native R06 camera did not follow the moving Actor before far pan")
-    elif not any(row["camera_x"] >= 435 for row in frames[:far]):
+    elif not any(row["camera_x"] > expected_start + 24 for row in frames[:far]):
         raise RuntimeError("Native R06 camera never moved right before far pan")
     return {"native_camera_roundtrip_verified": True,
             "start": frames[0], "far": frames[far], "returned": frames[returned]}
