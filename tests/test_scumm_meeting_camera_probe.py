@@ -40,8 +40,8 @@ class NativeMeetingCameraTourTests(unittest.TestCase):
                           if (s.room, s.hotspot_id, s.verb)
                           == ("Harbor", "Key", "Close"))
             broken = replace(target, steps=(
-                *target.steps[:20], *target.steps[25:29],
-                *target.steps[20:25], *target.steps[29:],
+                *target.steps[:20], *target.steps[26:30],
+                *target.steps[20:26], *target.steps[30:],
             ))
             changed = replace(doc, interaction_sequences=tuple(
                 broken if s is target else s for s in doc.interaction_sequences

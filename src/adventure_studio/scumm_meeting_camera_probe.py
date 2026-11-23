@@ -27,7 +27,7 @@ from .scumm_two_actor_four_mask_probe import (
 
 CAMERA_TOUR = (
     PanCameraStep(480), WaitCameraStep(), DelayStep(1),
-    PanCameraStep(MEETING_X), WaitCameraStep(),
+    PanCameraStep(MEETING_X), WaitCameraStep(), DelayStep(2),
 )
 
 
@@ -66,10 +66,10 @@ def assert_native_meeting_camera_tour(document, *, variant: str = "masked") -> d
     if len(matches) != 1:
         raise RuntimeError("Native meeting camera tour requires one interaction")
     steps = matches[0].steps
-    if len(steps) != 35 or steps[20:25] != CAMERA_TOUR:
+    if len(steps) != 36 or steps[20:26] != CAMERA_TOUR:
         raise RuntimeError("Native meeting camera inspection pan and wait commands missing")
     parent = replace(document, interaction_sequences=tuple(
-        replace(s, steps=(*s.steps[:20], *s.steps[25:]))
+        replace(s, steps=(*s.steps[:20], *s.steps[26:]))
         if s is matches[0] else s for s in document.interaction_sequences
     ))
     assert_native_staggered_departure(parent, variant=variant)
