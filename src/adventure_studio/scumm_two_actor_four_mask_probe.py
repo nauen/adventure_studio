@@ -394,7 +394,8 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
 
 
 
-def verify_two_actor_native_camera_roundtrip(frames: list[dict]) -> dict:
+def verify_two_actor_native_camera_roundtrip(
+        frames: list[dict], *, expected_start: int = 320) -> dict:
     """Require measured full native camera travel, not just authored cue commands."""
     if len(frames) < 8:
         raise RuntimeError("Not enough native R06 camera samples")
@@ -402,8 +403,10 @@ def verify_two_actor_native_camera_roundtrip(frames: list[dict]) -> dict:
     times = [row["seconds"] for row in frames]
     if len(set(times)) != len(times):
         raise RuntimeError("Duplicate native camera screenshot timestamps")
-    if not 300 <= frames[0]["camera_x"] <= 340:
-        raise RuntimeError("Native R06 camera did not begin near X=320")
+    if expected_start not in (320, 400):
+        raise ValueError("Native R06 camera start must be an authored supported position")
+    if abs(frames[0]["camera_x"] - expected_start) > 20:
+        raise RuntimeError(f"Native R06 camera did not begin near X={expected_start}")
     far = next((i for i, row in enumerate(frames)
                 if row["camera_x"] >= 475), None)
     if far is None:
@@ -412,8 +415,11 @@ def verify_two_actor_native_camera_roundtrip(frames: list[dict]) -> dict:
                      if frames[i]["camera_x"] <= 165), None)
     if returned is None:
         raise RuntimeError("Native R06 camera did not complete the return to X=160")
-    if not any(row["camera_x"] <= 290 for row in frames[:far]):
-        raise RuntimeError("Native R06 camera did not follow the moving Actor before far pan")
+    if expected_start == 320:
+        if not any(row["camera_x"] <= 290 for row in frames[:far]):
+            raise RuntimeError("Native R06 camera did not follow the moving Actor before far pan")
+    elif not any(row["camera_x"] >= 435 for row in frames[:far]):
+        raise RuntimeError("Native R06 camera never moved right before far pan")
     return {"native_camera_roundtrip_verified": True,
             "start": frames[0], "far": frames[far], "returned": frames[returned]}
 
