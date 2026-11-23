@@ -43,13 +43,13 @@ def author_native_camera_follow_resume(output: Path, *, variant: str = "masked")
     for sequence in document.interaction_sequences:
         if (sequence.room, sequence.hotspot_id, sequence.verb) == (
                 "Harbor", "Key", "Close"):
-            # Parent: tour at indices 20..24, A returns at 25,
-            # B's return at 27. Native follow starts immediately after B's
+            # Parent: tour at indices 20..25, A returns at 26,
+            # B's return at 28. Native follow starts immediately after B's
             # second WalkActorStep, before either WaitActorStep.
             sequences.append(replace(sequence, steps=(
-                *sequence.steps[:28],
+                *sequence.steps[:29],
                 FollowActorCameraStep(ACTOR_IDS[1]),
-                *sequence.steps[28:],
+                *sequence.steps[29:],
             )))
         else:
             sequences.append(sequence)
@@ -66,12 +66,12 @@ def assert_native_camera_follow_resume(document, *, variant: str = "masked") -> 
         raise RuntimeError("R06 camera resume requires one native interaction")
     sequence = sequences[0]
     steps = sequence.steps
-    if (len(steps) != 36
-            or steps[27] != WalkActorStep(ACTOR_IDS[1], 545, 135)
-            or steps[28] != FollowActorCameraStep(ACTOR_IDS[1])):
+    if (len(steps) != 37
+            or steps[28] != WalkActorStep(ACTOR_IDS[1], 545, 135)
+            or steps[29] != FollowActorCameraStep(ACTOR_IDS[1])):
         raise RuntimeError("Native camera follow of walking Actor B must follow its return command")
     parent = replace(document, interaction_sequences=tuple(
-        replace(s, steps=(*s.steps[:28], *s.steps[29:]))
+        replace(s, steps=(*s.steps[:29], *s.steps[30:]))
         if s is sequence else s for s in document.interaction_sequences
     ))
     assert_native_meeting_camera_tour(parent, variant=variant)

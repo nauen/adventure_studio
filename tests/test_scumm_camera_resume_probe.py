@@ -59,9 +59,9 @@ class NativeCameraResumeTests(unittest.TestCase):
                             if (s.room, s.hotspot_id, s.verb)
                             == ("Harbor", "Key", "Close"))
             wrong = replace(sequence, steps=(
-                *sequence.steps[:27],
-                sequence.steps[28], sequence.steps[27],
-                *sequence.steps[29:],
+                *sequence.steps[:28],
+                sequence.steps[29], sequence.steps[28],
+                *sequence.steps[30:],
             ))
             altered = replace(document, interaction_sequences=tuple(
                 wrong if s is sequence else s for s in document.interaction_sequences
