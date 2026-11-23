@@ -191,9 +191,11 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
     # Native 621d73ad evidence: first detectable sky at camera 200, and one
     # control sampled the turn only at 472. Hold each endpoint in the authored
     # room plan; never loosen the required 160/480/160 phase thresholds.
-    expected_cues = (CameraCue("set", 160), CameraCue("hold", ticks=360), CameraCue("pan", 480),
-                     CameraCue("wait"), CameraCue("hold", ticks=120), CameraCue("pan", 160),
-                     CameraCue("wait"))
+    expected_cues = (CameraCue("set", 160), CameraCue("hold", ticks=360),
+                     CameraCue("pan", 400), CameraCue("wait"), CameraCue("hold", ticks=600),
+                     CameraCue("pan", 480), CameraCue("wait"), CameraCue("hold", ticks=600),
+                     CameraCue("pan", 400), CameraCue("wait"), CameraCue("hold", ticks=600),
+                     CameraCue("pan", 160), CameraCue("wait"))
     story = (Path(__file__).resolve().parents[2] / "examples" /
              "mini_story_chain.json").read_text(encoding="utf-8")
     width, height = base.geometry.room_width, base.geometry.room_height
@@ -203,7 +205,7 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
                               (base, destination_fixture())))
         project = author_room_camera_plan(
             project, "Harbor", 390, 100,
-            "set:160;hold:360;pan:480;wait;hold:120;pan:160;wait", stationary_actor=True)
+            "set:160;hold:360;pan:400;wait;hold:600;pan:480;wait;hold:600;pan:400;wait;hold:600;pan:160;wait", stationary_actor=True)
         project = author_room_walkbox(project, "Harbor", 1,
                                       "0,70; 320,70; 320,150; 0,150")
         project = author_room_walkbox(project, "Harbor", 2,
@@ -248,7 +250,8 @@ def run(upstream: Path, generated: Path, output: Path) -> dict:
             raise RuntimeError("Wrong product-exported Z-plane assignment")
         try:
             render = render_native_room(room, upstream, generated, output, name,
-                                        allow_static_scene=True, camera_pan_capture=True)
+                                        allow_static_scene=True, camera_pan_capture=True,
+                                        camera_capture_seconds=70.0)
             frames = read_frames(output / f"{name}-screenshots")
             # Keep measurable native samples even if phase selection fails.
             # A missing return is a failed acceptance, not missing evidence.
