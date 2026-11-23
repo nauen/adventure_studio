@@ -490,6 +490,28 @@ jobs:
             /tmp/native-r06-four-focus/*/screenshots/scummvm-*.png
             /tmp/native-r06-four-focus/*/screenshots/scummvm-launch.log
             /tmp/native-r06-four-focus/*/screenshots/r06-two-actor-walk-capture.json
+      - name: Prove free-camera stage framing after native A-B-A-B Actor follow
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          python -m unittest discover -s tests -p 'test_scumm_free_camera_probe.py' -v
+          xvfb-run -a -s '-screen 0 1024x768x24' python -u -m adventure_studio.scumm_free_camera_probe /tmp/scummc-upstream /tmp/native-r06-free-camera
+      - name: Retain native camera-release gameplay and three world-mask controls
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r06-free-camera
+          if-no-files-found: ignore
+          path: |
+            /tmp/native-r06-free-camera/native-r06-free-camera-report.json
+            /tmp/native-r06-free-camera/*/build/project.json
+            /tmp/native-r06-free-camera/*/game/tentacle.000
+            /tmp/native-r06-free-camera/*/game/tentacle.001
+            /tmp/native-r06-free-camera/*/screenshots/scummvm-*.png
+            /tmp/native-r06-free-camera/*/screenshots/scummvm-launch.log
+            /tmp/native-r06-free-camera/*/screenshots/r06-two-actor-walk-capture.json
       - name: Verify moving Actor crosses four native Z-masks with camera round-trip
         if: ${{ matrix.shard == 'geometry' }}
         env:
