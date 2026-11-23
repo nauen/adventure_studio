@@ -33,6 +33,8 @@ class TwoActorRendezvousTests(unittest.TestCase):
                     doc.interaction_sequences[-1].steps[10:12],
                     (PanCameraStep(320), WaitCameraStep()),
                 )
+                self.assertEqual(doc.interaction_sequences[-1].steps[18:20],
+                                 (PanCameraStep(400), WaitCameraStep()))
                 self.assertTrue(result["two_actor_native_rendezvous_authored"])
                 self.assertFalse(result["two_actor_native_rendezvous_pixels_verified"])
                 name = doc.costumes[-1].name
@@ -47,12 +49,36 @@ class TwoActorRendezvousTests(unittest.TestCase):
             doc = parse_document(author_two_actor_rendezvous_project(Path(root)))
             seq = next(s for s in doc.interaction_sequences
                        if (s.room, s.hotspot_id, s.verb) == ("Harbor", "Key", "Close"))
-            broken = replace(seq, steps=seq.steps[:19] + seq.steps[20:])
+            broken = replace(seq, steps=seq.steps[:21] + seq.steps[22:])
             changed = replace(doc, interaction_sequences=tuple(
                 broken if s is seq else s for s in doc.interaction_sequences
             ))
             with self.assertRaisesRegex(RuntimeError, "commands missing"):
                 assert_two_actor_rendezvous(changed)
+
+    def test_independent_native_walk_frames_are_not_discarded_by_lane_occlusion(self):
+        # Pixel-derived actor tracks can have distinct missing frames as
+        # SCUMM masks and camera movement occlude one lane at a time.
+        # The rendezvous itself must STILL be jointly visible.
+        a = [530, 510, 490, 470, 450, 430, 410, 395, 395, 395, 395, 395,
+             395, 380, 365, 345, 325, 305, 285, 265]
+        b = [175, 175, 175, 195, 220, 245, 270, 295, 320, 345, 370, 395,
+             395, 395, 420, 445, 470, 495, 520, 545]
+        a_rows = [row for i, row in enumerate(synthetic_trace(a))
+                  if i not in (2, 4, 6)]
+        b_rows = [row for i, row in enumerate(synthetic_trace(b))
+                  if i not in (14, 16, 18)]
+        for i in range(3):
+            meeting = {"frame": f"joint-meet-{i}",
+                       "seconds": 3.02 + 0.02 * i, "world_x": 395}
+            a_rows.append(dict(meeting))
+            b_rows.append(dict(meeting))
+        verdict = verify_native_rendezvous({
+            ACTOR_IDS[0]: a_rows, ACTOR_IDS[1]: b_rows,
+        })
+        self.assertTrue(verdict["native_two_actor_rendezvous_verified"])
+        self.assertTrue(verdict["meeting_frame"].startswith("joint-meet")
+                        or verdict["meeting_frame"] in ("11", "12", "13"))
 
     def test_meeting_requires_two_actor_approach_and_departure_from_real_frames(self):
         # Synthetic values are ONLY for rejection/regression tests, never the
