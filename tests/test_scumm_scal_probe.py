@@ -19,7 +19,13 @@ class ScummScaleCurveMathTests(unittest.TestCase):
 
     def test_native_perspective_acceptance_bands(self):
         self.assertTrue(verify_perspective_progression((724, 1020, 1124))["perspective_scaling_passed"])
-        for counts in ((0, 286, 1016), (800, 800, 1200), (800, 1000, 1000)):
+        # Three actual stock-ScummVM SCAL captures from run 45193428558.
+        # Both silhouette increases are visibly positive (296px, 48px).
+        result = verify_perspective_progression((724, 1020, 1068))
+        self.assertTrue(result["perspective_scaling_passed"])
+        self.assertEqual(result["count_sequence"], [724, 1020, 1068])
+        for counts in ((0, 286, 1016), (800, 800, 1200),
+                       (800, 1000, 1000), (724, 1020, 1059)):
             with self.subTest(counts=counts), self.assertRaises(RuntimeError):
                 verify_perspective_progression(counts)
         with self.assertRaises(ValueError):

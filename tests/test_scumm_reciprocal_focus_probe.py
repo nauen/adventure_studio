@@ -85,6 +85,88 @@ class NativeReciprocalFocusTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Not enough simultaneous"):
             verify_native_reciprocal_focus(no_b, cameras)
 
+    def test_stock_scummvm_handback_quantization_contract(self):
+        # Numbers transcribed from real stock-ScummVM screenshots in
+        # native run 45146807247. This deterministic regression is NOT
+        # a replacement for the actual native acceptance game.
+        # A is 34 screen pixels closer than B at the final handback.
+        observations = [
+            (3.690, 267, 537, 392),
+            (3.920, 327, 476, 336),
+            (4.050, 375, 428, 328),
+            (4.180, 407, 392, 328),
+            (4.305, 439, 360, 352),
+            (4.430, 471, 328, 384),
+            (4.559, 495, 304, 408),
+        ]
+        def make_tracks(observed):
+            return {
+                actor: [
+                    {"frame": str(i), "world_x": row[column],
+                     "screen_x": 512 + 2 * (row[column] - row[3])}
+                    for i, row in enumerate(observed)
+                ]
+                for actor, column in zip(ACTOR_IDS, (1, 2))
+            }
+        cameras = [
+            {"frame": str(i), "seconds": row[0], "camera_x": row[3]}
+            for i, row in enumerate(observations)
+        ]
+        measured = verify_native_reciprocal_focus(
+            make_tracks(observations), cameras)
+        self.assertTrue(measured["native_reciprocal_focus_verified"])
+        self.assertEqual(measured["a_return"]["a_distance"], 174)
+        self.assertEqual(measured["a_return"]["b_distance"], 208)
+        self.assertGreaterEqual(
+            measured["a_return"]["b_distance"] -
+            measured["a_return"]["a_distance"], 32)
+        stopped_b = [(*row[:2], 537, row[3]) for row in observations]
+        with self.assertRaisesRegex(RuntimeError, "Not enough simultaneous"):
+            verify_native_reciprocal_focus(make_tracks(stopped_b), cameras)
+
+    def test_real_native_focus_requires_non_greedy_ordered_triple(self):
+        # Measured from stock-ScummVM PNGs in run 45166183004,
+        # artifact native-r06-reciprocal-focus (transparent variant).
+        # The first A-focused frame has too little camera travel to B;
+        # a later, still-moving A frame yields a real 32px/64px triplet.
+        samples = [
+            (3.631, 392, 267, 537),
+            (3.775, 352, 307, 492),
+            (3.918, 328, 343, 460),
+            (4.061, 328, 375, 428),
+            (4.206, 328, 407, 392),
+            (4.349, 360, 447, 352),
+            (4.493, 392, 479, 320),
+            (4.638, 424, 511, 288),
+        ]
+        frames = [str(i) for i in range(len(samples))]
+        cameras = [
+            {"frame": frames[i], "seconds": t, "camera_x": camera}
+            for i, (t, camera, _a, _b) in enumerate(samples)
+        ]
+        tracks = {
+            actor: [
+                {"frame": frames[i], "world_x": row[col],
+                 "screen_x": 512 + 2 * (row[col] - row[1])}
+                for i, row in enumerate(samples)
+            ]
+            for actor, col in zip(ACTOR_IDS, (2, 3))
+        }
+        result = verify_native_reciprocal_focus(tracks, cameras)
+        self.assertTrue(result["native_reciprocal_focus_verified"])
+        self.assertEqual(result["a_first"]["frame"], "2")
+        self.assertEqual(result["b_middle"]["frame"], "5")
+        self.assertEqual(result["a_return"]["frame"], "7")
+        self.assertGreaterEqual(
+            abs(result["b_middle"]["camera_x"] -
+                result["a_first"]["camera_x"]), 12)
+        self.assertGreaterEqual(
+            abs(result["a_return"]["camera_x"] -
+                result["b_middle"]["camera_x"]), 12)
+        with self.assertRaisesRegex(RuntimeError, "reciprocal A-B-A"):
+            verify_native_reciprocal_focus(
+                tracks, [{**row, "camera_x": 352} for row in cameras])
+
     def test_visual_verifier_rejects_missing_actor_or_stationary_camera(self):
         frames = [str(i) for i in range(8)]
         a = [260, 275, 290, 310, 330, 350, 370, 390]

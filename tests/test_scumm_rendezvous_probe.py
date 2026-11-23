@@ -77,8 +77,19 @@ class TwoActorRendezvousTests(unittest.TestCase):
             ACTOR_IDS[0]: a_rows, ACTOR_IDS[1]: b_rows,
         })
         self.assertTrue(verdict["native_two_actor_rendezvous_verified"])
-        self.assertTrue(verdict["meeting_frame"].startswith("joint-meet")
-                        or verdict["meeting_frame"] in ("11", "12", "13"))
+        # The native verifier may select any jointly visible sample in
+        # the 25px meeting window. Check the actual independent costume
+        # measurements, never a fixture-specific screenshot filename.
+        selected = verdict["meeting_frame"]
+        a_meet = next(row for row in a_rows if row["frame"] == selected)
+        b_meet = next(row for row in b_rows if row["frame"] == selected)
+        self.assertLessEqual(abs(a_meet["world_x"] - 395), 25)
+        self.assertLessEqual(abs(b_meet["world_x"] - 395), 25)
+        self.assertEqual(a_meet["seconds"], b_meet["seconds"])
+        self.assertGreaterEqual(
+            verdict["actor_legs"][ACTOR_IDS[0]]["inbound_steps"], 3)
+        self.assertGreaterEqual(
+            verdict["actor_legs"][ACTOR_IDS[1]]["outbound_steps"], 3)
 
     def test_meeting_requires_two_actor_approach_and_departure_from_real_frames(self):
         # Synthetic values are ONLY for rejection/regression tests, never the

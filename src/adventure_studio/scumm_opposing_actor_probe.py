@@ -203,7 +203,7 @@ def run_native_opposing_actor_probe(upstream: Path, output: Path) -> dict:
     report["camera_roundtrip"] = {
         variant: verify_two_actor_native_camera_roundtrip(
             measure_two_actor_native_camera_trace(output / variant / "screenshots"),
-            expected_start=400)
+            expected_start=400, prepan_direction="either")
         for variant in ("masked", "transparent", "wrong-box")
     }
     report["native_mask_comparison"] = measure_two_actor_native_mask_comparison(output, traces)

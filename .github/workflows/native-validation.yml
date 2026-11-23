@@ -260,6 +260,7 @@ jobs:
               - 'src/adventure_studio/scumm_staggered_return_probe.py'
               - 'src/adventure_studio/scumm_rendezvous_probe.py'
               - 'src/adventure_studio/scumm_meeting_release_probe.py'
+      - 'src/adventure_studio/scumm_meeting_release_probe.py'
               - 'tests/test_scumm_two_actor_four_mask_probe.py'
               - 'tests/test_scumm_two_actor_camera_handoff_probe.py'
               - 'tests/test_scumm_opposing_actor_probe.py'
@@ -269,6 +270,7 @@ jobs:
               - 'tests/test_scumm_staggered_return_probe.py'
               - 'tests/test_scumm_rendezvous_probe.py'
               - 'tests/test_scumm_meeting_release_probe.py'
+      - 'tests/test_scumm_meeting_release_probe.py'
               - 'src/adventure_studio/scumm_object_zmask_probe.py'
               - 'src/adventure_studio/scumm_camera_probe.py'
               - 'src/adventure_studio/scumm_camera_zp01_probe.py'
@@ -287,6 +289,7 @@ jobs:
               - 'tests/test_scumm_staggered_return_probe.py'
               - 'tests/test_scumm_rendezvous_probe.py'
               - 'tests/test_scumm_meeting_release_probe.py'
+      - 'tests/test_scumm_meeting_release_probe.py'
               - 'tests/test_scumm_moving_four_mask_camera_probe.py'
 
   studio:

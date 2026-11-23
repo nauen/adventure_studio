@@ -135,18 +135,29 @@ def verify_native_reciprocal_focus(traces: dict, camera_frames: list[dict]) -> d
             })
     if len(visible_motion) < 5:
         raise RuntimeError("Not enough simultaneous opposite native motion during focus swaps")
-    first = next((row for row in visible_motion
-                  if row["a_distance"] + 40 < row["b_distance"]), None)
-    second = next((row for row in visible_motion
-                   if first and row["seconds"] > first["seconds"]
-                   and row["b_distance"] + 40 < row["a_distance"]
-                   and abs(row["camera_x"] - first["camera_x"]) >= 12), None)
-    third = next((row for row in visible_motion
-                  if second and row["seconds"] > second["seconds"]
-                  and row["a_distance"] + 40 < row["b_distance"]
-                  and abs(row["camera_x"] - second["camera_x"]) >= 12), None)
-    if first is None or second is None or third is None:
+    # A first valid focus frame is not necessarily a valid start for the
+    # complete camera roundtrip. The actual stock-ScummVM capture has
+    # A-focused frames at t=3.775 (camera X=352) and t=3.918 (X=328);
+    # B focus at t=4.349 (X=360), A return at t=4.638 (X=424).
+    # Greedily choosing t=3.775 rejects a real A-B-A sequence because
+    # its first camera displacement is just 8px. Search the *ordered*
+    # screenshot triples and retain every existing motion/focus threshold.
+    triple = next((
+        (first, second, third)
+        for first in visible_motion
+        if first["a_distance"] + 40 < first["b_distance"]
+        for second in visible_motion
+        if (second["seconds"] > first["seconds"]
+            and second["b_distance"] + 40 < second["a_distance"]
+            and abs(second["camera_x"] - first["camera_x"]) >= 12)
+        for third in visible_motion
+        if (third["seconds"] > second["seconds"]
+            and third["a_distance"] + 32 <= third["b_distance"]
+            and abs(third["camera_x"] - second["camera_x"]) >= 12)
+    ), None)
+    if triple is None:
         raise RuntimeError("Stock ScummVM never showed reciprocal A-B-A focus during both walks")
+    first, second, third = triple
     return {"native_reciprocal_focus_verified": True,
             "a_first": first, "b_middle": second, "a_return": third}
 
