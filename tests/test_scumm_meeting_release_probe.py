@@ -35,7 +35,7 @@ class NativeMeetingReleaseTests(unittest.TestCase):
                                 == ("Harbor", "Key", "Close"))
                 self.assertEqual(sequence.steps[10:12],
                                  (PanCameraStep(320), WaitCameraStep()))
-                self.assertEqual(sequence.steps[18:21], (
+                self.assertEqual(sequence.steps[20:23], (
                     WalkActorStep(ACTOR_IDS[0], 260, 85),
                     DelayStep(2),
                     WalkActorStep(ACTOR_IDS[1], 545, 135),
@@ -56,7 +56,7 @@ class NativeMeetingReleaseTests(unittest.TestCase):
             target = next(s for s in document.interaction_sequences
                           if (s.room, s.hotspot_id, s.verb)
                           == ("Harbor", "Key", "Close"))
-            broken = replace(target, steps=(*target.steps[:19], *target.steps[20:]))
+            broken = replace(target, steps=(*target.steps[:21], *target.steps[22:]))
             changed = replace(document, interaction_sequences=tuple(
                 broken if s is target else s for s in document.interaction_sequences))
             with self.assertRaisesRegex(RuntimeError, "staggered release missing"):
