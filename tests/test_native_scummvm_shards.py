@@ -21,25 +21,50 @@ class NativeScummVMShardingTests(unittest.TestCase):
         self.assertIn("fail-fast: false", contents)
         self.assertIn("shard: [mask, geometry, actors, story]", contents)
         matches = list(STEP.finditer(contents))
-        self.assertEqual(len(matches), 116)
-        for index, match in enumerate(matches, 1):
-            end = matches[index].start() if index < len(matches) else len(contents)
+        # Counts include real gameplay and evidence-retention steps. New native
+        # capabilities change the matrix length; preserve the per-shard gates.
+        self.assertEqual(len(matches), 122)
+        expected_counts = {"actors": 26, "mask": 2, "geometry": 36, "story": 48}
+        observed_counts = {shard: 0 for shard in SHARDS}
+        shared = {
+            "Restore previously downloaded Ubuntu packages",
+            "Install compiler dependencies and stock ScummVM",
+            "Save downloaded Ubuntu packages even when install times out",
+            "Fetch unmodified ScummC",
+            "Fix legacy ScummC tool help paths in ephemeral checkout",
+            "Build ScummC tools",
+            "Build upstream road example",
+            "Generate Adventure Studio 640x200 room source",
+            "Compile generated room with ScummC",
+            "Link generated room with upstream game bootstrap",
+        }
+        required = {
+            "Compile and play native R06 camera handoff to second moving Actor": "geometry",
+            "Retain three genuine ScummVM camera-handoff control games and frames": "geometry",
+            "Build and launch two authored native Actors with four room Z-masks (R06 stage 1)": "geometry",
+            "Play both doors and reach final room of chained adventure in stock ScummVM": "story",
+        }
+        seen = set()
+        for index, match in enumerate(matches):
+            end = matches[index + 1].start() if index + 1 < len(matches) else len(contents)
             block = contents[match.start():end]
-            expected = (
-                "actors" if index in (7, 8) or 45 <= index <= 68 else
-                "mask" if 21 <= index <= 22 else
-                "geometry" if 13 <= index <= 44 else
-                "actors" if 43 <= index <= 66 else
-                "story" if 69 <= index <= 116 else None
-            )
-            with self.subTest(step=index, name=match.group(1)):
-                found = re.findall(r"matrix\.shard == '([^']+)'", block)
-                if expected is None:
+            name = match.group(1)
+            found = re.findall(r"matrix\.shard == '([^']+)'", block)
+            self.assertNotIn(name, seen, "Duplicate native CI step name")
+            seen.add(name)
+            with self.subTest(step=index + 1, name=name):
+                if name in shared:
                     self.assertEqual(found, [], "Shared setup step was incorrectly gated")
                 else:
-                    self.assertEqual(found, [expected], "A native gate was moved or lost")
+                    self.assertEqual(len(found), 1, "Native gate must have exactly one shard")
+                    self.assertIn(found[0], SHARDS)
+                    observed_counts[found[0]] += 1
                     if "if: always()" in block:
                         self.fail("A gated artifact job must use always() with its shard")
+                if name in required:
+                    self.assertEqual(found, [required[name]])
+        self.assertEqual(observed_counts, expected_counts)
+        self.assertTrue(set(required).issubset(seen))
 
     def test_shards_keep_native_artifacts_and_independent_failures(self):
         contents = WORKFLOW.read_text(encoding="utf-8")

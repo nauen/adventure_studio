@@ -1,5 +1,17 @@
 # Adventure Studio – aktueller Arbeitsstand
 
+## Konsolidierter Ist-Stand und genau ein aktives Paket (2026-11-23)
+
+- **Hauptziel:** vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; ScummVM-Gameplay ist die Abnahme.
+- **Integriert:** R06 #266 (laufender Actor über vier weltfeste ZP01–ZP04 und Kamera-Rückfahrt), R08 #264 (konkaver Walkbox-Korridor), R09 #267 (zwei reversible Gates über Raumrückkehr), R06 #269 / Issue #268 (zwei unabhängig bewegte Actors vor vier Masken). Die Funktionsmatrix bleibt insgesamt nur teilweise verifiziert.
+- **Jetzt = genau eine Fähigkeit:** R06 [Issue #270](https://github.com/nauen/adventure_studio/issues/270) / [PR #271](https://github.com/nauen/adventure_studio/pull/271): native Kameraübergabe von Actor A zu Actor B, während beide in demselben generierten SCUMM-v6-Spiel vor ZP01–ZP04 weiterlaufen, samt Kamerarückweg.
+- **Gameplay-Evidenz:** älterer Head aus Run [45088766893](https://github.com/nauen/adventure_studio/actions/runs/45088766893), Geometry-Artefakt 14780382031 mit Pixeltracking, Fokusübergabe und acht Maskenkontrollen. **Keine finale Freigabe des aktuellen Heads daraus ableiten.**
+- **Blocker:** Native-CI 45090602659 scheiterte am Geometry-ZP02-Frame-Abgleich und bestehendem Story-Raumwechsel; Core 45090596656 scheiterte an fehlendem Pillow, veralteter Shard-Sicherung sowie Laufzeit-Validierungsreihenfolge. Korrekturen sind im offenen PR #271 gepusht; vollständige Core-/Native-Pflicht-CI und aktuelle native Artefakte erneut abwarten. Kein Merge ohne grüne Gates.
+- **Danach:** erst bei vollständiger aktueller ScummVM- und CI-Abnahme genau ein Folgepaket aus der Matrix priorisieren. Keine parallele Fähigkeit, kein NPC-Komfort nach #190. ZP05+ bleibt fail-closed.
+
+## Historische Arbeitsstände (nicht mehr als aktuelle Paketauswahl verwenden)
+
+
 ## Aktueller integrierter Stand und nächste native Abnahme (2026-11-22)
 
 - **R06:** PR #266, native laufende Actor-Route über vier weltfeste ZP01–ZP04-Masken und vollständige Kamerarückfahrt, integriert.

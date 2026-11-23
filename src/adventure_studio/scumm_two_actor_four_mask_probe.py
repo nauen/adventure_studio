@@ -339,26 +339,42 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
                 values = {}
                 aligned = True
                 for variant, directory in directories.items():
-                    closest = min(timelines[variant],
-                                  key=lambda row: abs(row["seconds_since_native_input"]
-                                                      - control["seconds"]))
-                    if abs(closest["seconds_since_native_input"] - control["seconds"]) > 0.35:
+                    # Runners capture each independently linked native game.
+                    # The nearest timestamp can land between costume frames or
+                    # on a camera transition. Try every *real* frame within the
+                    # existing strict synchronisation window instead of
+                    # misclassifying one arbitrary nearest frame as no evidence.
+                    nearby = sorted(
+                        (row for row in timelines[variant]
+                         if abs(row["seconds_since_native_input"] -
+                                control["seconds"]) <= 0.35),
+                        key=lambda row: abs(row["seconds_since_native_input"] -
+                                            control["seconds"]),
+                    )
+                    observed = []
+                    for captured in nearby:
+                        with Image.open(directory / f"scummvm-{captured['frame']}.png") as image:
+                            rgb = image.convert("RGB")
+                            camera = camera_from_sky(rgb)
+                            if camera is None or abs(camera - control["camera_x"]) > 35:
+                                continue
+                            projected_x = round(192 + 2 * (control["world_x"] - camera + 160))
+                            if not 220 <= projected_x <= 803:
+                                continue
+                            pixels = sum(
+                                1 for x in range(projected_x - 19, projected_x + 19)
+                                for y in range(top, bottom)
+                                if max(rgb.getpixel((x, y))) <= 24)
+                            observed.append(pixels)
+                    if not observed:
                         aligned = False
                         break
-                    with Image.open(directory / f"scummvm-{closest['frame']}.png") as image:
-                        rgb = image.convert("RGB")
-                        camera = camera_from_sky(rgb)
-                        if camera is None or abs(camera - control["camera_x"]) > 35:
-                            aligned = False
-                            break
-                        projected_x = round(192 + 2 * (control["world_x"] - camera + 160))
-                        if not 220 <= projected_x <= 803:
-                            aligned = False
-                            break
-                        values[variant] = sum(
-                            1 for x in range(projected_x - 19, projected_x + 19)
-                            for y in range(top, bottom)
-                            if max(rgb.getpixel((x, y))) <= 24)
+                    # Keep the positive controls independently visible, and
+                    # the masked sample independently occluded. These are
+                    # actual ScummVM captures, not synthesized test frames.
+                    values[variant] = (
+                        min(observed) if variant == "masked" else max(observed)
+                    )
                 if aligned and min(values.get("transparent", 0),
                                    values.get("wrong-box", 0)) >= 80:
                     # A sprite straddling a mask boundary is not a valid

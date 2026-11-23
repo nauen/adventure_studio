@@ -1,0 +1,25 @@
+name: R06 native camera-handoff authoring guard
+on:
+  pull_request:
+    paths:
+      - 'src/adventure_studio/scumm_two_actor_camera_handoff_probe.py'
+      - 'tests/test_scumm_two_actor_camera_handoff_probe.py'
+      - '.github/workflows/r06-camera-handoff-fast.yml'
+  push:
+    branches:
+      - feature/r06-camera-handoff-two-actors-270
+jobs:
+  json-v1-handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install PNG import dependency
+        run: python -m pip install 'Pillow>=10,<13'
+      - name: Verify productive JSON-v1 camera handoff, both Actors and all ZP bindings
+        env:
+          PYTHONPATH: src
+        run: python -m unittest discover -s tests -p 'test_scumm_two_actor_camera_handoff_probe.py' -v

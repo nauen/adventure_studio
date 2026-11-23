@@ -72,7 +72,7 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             self.assertIn('"DoorOpen.bmp", { "DoorOpenZ01.bmp" }', source)
             self.assertTrue((directory / "DoorZ01.bmp").is_file())
             self.assertTrue((directory / "DoorOpenZ01.bmp").is_file())
-            story = (Path(__file__).parent / "fixtures" / "mini_story_chain.json").read_text(encoding="utf-8")
+            story = (Path(__file__).resolve().parents[1] / "examples" / "mini_story_chain.json").read_text(encoding="utf-8")
             composed = parse_document(compose_story_project(story, second))
             persisted = next(h for r in composed.rooms if r.name == "Harbor"
                              for h in r.hotspots if h.id == "Door")
@@ -978,7 +978,7 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             self.assertIn('"HarborZ01.bmp", "HarborZ02.bmp", "HarborZ03.bmp"',
                           (root / "Harbor.scc").read_text(encoding="utf-8"))
             native = (root / "Harbor.box").read_bytes()
-            self.assertEqual([native[30 + 21 * index + 16] for index in range(4)],
+            self.assertEqual([native[8 + 21 * index + 1 + 16] for index in range(4)],
                              [0, 1, 2, 3])
             self.assertTrue(all((root / f"HarborZ{index:02d}.bmp").is_file()
                                 for index in (1, 2, 3)))
@@ -1044,7 +1044,7 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             self.assertIn('"HarborZ01.bmp", "HarborZ02.bmp", "HarborZ03.bmp", "HarborZ04.bmp"',
                           (root / "Harbor.scc").read_text(encoding="utf-8"))
             native = (root / "Harbor.box").read_bytes()
-            self.assertEqual([native[30 + 21 * index + 16] for index in range(5)],
+            self.assertEqual([native[8 + 21 * index + 1 + 16] for index in range(5)],
                              [0, 1, 2, 3, 4])
             self.assertTrue(all((root / f"HarborZ{index:02d}.bmp").is_file()
                                 for index in (1, 2, 3, 4)))
