@@ -67,8 +67,7 @@ def assert_native_staggered_departure(document, *, variant: str = "masked") -> d
         raise RuntimeError("R06 native rendezvous hold and staggered release missing")
     parent = replace(document, interaction_sequences=tuple(
         replace(s, steps=(
-            *s.steps[:10], PanCameraStep(320),
-            *s.steps[11:21], *s.steps[22:],
+            *s.steps[:21], *s.steps[22:],
         ))
         if s is matches[0] else s for s in document.interaction_sequences
     ))

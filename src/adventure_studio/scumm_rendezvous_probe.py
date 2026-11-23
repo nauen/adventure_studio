@@ -69,8 +69,12 @@ def author_two_actor_rendezvous_project(output: Path, *, variant: str = "masked"
             WaitActorStep(ACTOR_IDS[0]),
             WaitActorStep(ACTOR_IDS[1]),
         )
+        # X=400 frames both actual rendezvous approach legs. At X=320
+        # Actor A's approach from X=530 is partially offscreen, preventing
+        # the existing >=90-world-pixel native evidence without changing play.
         sequences.append(replace(sequence, steps=(
-            *steps[:12], *meet, *steps[17:],
+            *steps[:10], PanCameraStep(400), *steps[11:12],
+            *meet, *steps[17:],
         )))
     document = replace(original, interaction_sequences=tuple(sequences))
     assert_two_actor_rendezvous(document, variant=variant)
@@ -95,11 +99,12 @@ def assert_two_actor_rendezvous(document, *, variant: str = "masked") -> dict:
         WalkActorStep(ACTOR_IDS[1], *STARTS[ACTOR_IDS[1]]),
         WaitActorStep(ACTOR_IDS[0]), WaitActorStep(ACTOR_IDS[1]),
     )
-    if len(steps) != 29 or steps[12:24] != expected:
+    if (len(steps) != 29 or steps[10:12] !=
+            (PanCameraStep(400), WaitCameraStep()) or steps[12:24] != expected):
         raise RuntimeError("R06 native rendezvous meet, wait or depart commands missing")
     parent = replace(document, interaction_sequences=tuple(
         replace(s, steps=(
-            *s.steps[:12],
+            *s.steps[:10], PanCameraStep(320), *s.steps[11:12],
             WalkActorStep(ACTOR_IDS[0], *STARTS[ACTOR_IDS[0]]),
             DelayStep(2),
             WalkActorStep(ACTOR_IDS[1], *STARTS[ACTOR_IDS[1]]),
