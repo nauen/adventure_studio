@@ -31,7 +31,7 @@ class TwoActorRendezvousTests(unittest.TestCase):
                 result = assert_two_actor_rendezvous(doc, variant=variant)
                 self.assertEqual(
                     doc.interaction_sequences[-1].steps[10:12],
-                    (PanCameraStep(320), WaitCameraStep()),
+                    (PanCameraStep(400), WaitCameraStep()),
                 )
                 self.assertEqual(doc.interaction_sequences[-1].steps[18:20],
                                  (PanCameraStep(400), WaitCameraStep()))
@@ -42,6 +42,22 @@ class TwoActorRendezvousTests(unittest.TestCase):
                 names.add(name)
                 self.assertTrue(all(a.costume == name for a in doc.actors
                                     if a.id in ACTOR_IDS))
+
+    @unittest.skipUnless(find_spec("PIL"), "Studio PNG authoring requires Pillow")
+    def test_rendezvous_camera_must_frame_actor_a_approach(self):
+        with TemporaryDirectory() as root:
+            doc = parse_document(author_two_actor_rendezvous_project(Path(root)))
+            target = next(s for s in doc.interaction_sequences
+                          if (s.room, s.hotspot_id, s.verb)
+                          == ("Harbor", "Key", "Close"))
+            broken = replace(target, steps=(
+                *target.steps[:10], PanCameraStep(320), *target.steps[11:],
+            ))
+            changed = replace(doc, interaction_sequences=tuple(
+                broken if s is target else s for s in doc.interaction_sequences
+            ))
+            with self.assertRaisesRegex(RuntimeError, "commands missing"):
+                assert_two_actor_rendezvous(changed)
 
     @unittest.skipUnless(find_spec("PIL"), "Studio PNG authoring requires Pillow")
     def test_missing_departure_rejected(self):

@@ -332,6 +332,28 @@ jobs:
             /tmp/native-r06-rendezvous/*/screenshots/scummvm-*.png
             /tmp/native-r06-rendezvous/*/screenshots/scummvm-launch.log
             /tmp/native-r06-rendezvous/*/screenshots/r06-two-actor-walk-capture.json
+      - name: Prove native rendezvous stillness and A-first B-second Actor release
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          python -m unittest discover -s tests -p 'test_scumm_meeting_release_probe.py' -v
+          xvfb-run -a -s '-screen 0 1024x768x24' python -u -m adventure_studio.scumm_meeting_release_probe /tmp/scummc-upstream /tmp/native-r06-meeting-release
+      - name: Retain native meeting and delayed release masked and control games
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r06-meeting-release
+          if-no-files-found: ignore
+          path: |
+            /tmp/native-r06-meeting-release/native-r06-meeting-release-report.json
+            /tmp/native-r06-meeting-release/*/build/project.json
+            /tmp/native-r06-meeting-release/*/game/tentacle.000
+            /tmp/native-r06-meeting-release/*/game/tentacle.001
+            /tmp/native-r06-meeting-release/*/screenshots/scummvm-*.png
+            /tmp/native-r06-meeting-release/*/screenshots/scummvm-launch.log
+            /tmp/native-r06-meeting-release/*/screenshots/r06-two-actor-walk-capture.json
       - name: Verify moving Actor crosses four native Z-masks with camera round-trip
         if: ${{ matrix.shard == 'geometry' }}
         env:

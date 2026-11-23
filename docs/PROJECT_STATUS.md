@@ -1,12 +1,13 @@
 # Adventure Studio – aktueller Arbeitsstand
 
-## Verbindliche Konsolidierung – 23. November 2026
+## Verbindlicher Stand – 23.11.2026
 
-- **Hauptziel:** Vollständiger originaler SCUMM-v6-Generator. Ohne eigene Runtime in stock ScummVM spielen; nach PR #190 keine NPC-Komfortarbeit.
-- **Jetzt:** Genau **R06 #280 / [PR #281](https://github.com/nauen/adventure_studio/pull/281)** – zwei Actors laufen zeitversetzt zurück, vier ZP01–ZP04-Masken und echte native Kamera. In `main`: #273, #275, #277 und #279 (alle Native-/Core-geprüft und gemergt).
-- **Abnahme:** Studio-PNG/RoomAsset → JSON-v1/Story → ScummC-v6 → drei unabhängige echte ScummVM-Spiele, Screenshot-Tracking von A bei B-Stillstand, hin- und rücklaufende Actors, Kamerarückkehr, Masken-/Wrong-BOXD-Kontrollen, sämtliche Pflicht-CI grün.
-- **Blocker:** [Native 45133190779](https://github.com/nauen/adventure_studio/actions/runs/45133190779): Stagger-Gameplay und Negativkontrollen grün; Gesamt-Geometry noch aktiv, unabhängiger Dialogue-Shard wegen geschlossener Tür `0` Pixel rot. Kein finaler Merge/V-Nachweis für #281.
-- **Danach:** Erst nach kompletter #281-Abnahme genau [R06 #282 / PR #283](https://github.com/nauen/adventure_studio/pull/283) als nächste einzelne native Fähigkeit (Treffpunkt bei Welt-X=395, getrennte Rückwege). #285 bleibt wartend; keine ZP05+-Freigabe.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator; Studio-PNG/Walkboxen → JSON-v1/Story → ScummC-v6 → unverändertes ScummVM, ohne zusätzliche Runtime. Kein NPC-Komfort nach #190.
+- **Integriert:** R06 PRs #273, #275, #277, #279, #281 und #283, jeweils begrenzte native Teilabnahmen, keine vollständige v6-Abdeckung.
+- **Jetzt – genau eine Fähigkeit:** [Issue #284 / PR #285](https://github.com/nauen/adventure_studio/pull/285): Zwei Actors treffen bei Welt-X=395 auf getrennten Y-Spuren ein, halten gemeinsam und laufen zeitversetzt wieder auseinander (A vor B mit nativer Verzögerung).
+- **Abnahme:** Drei separat gelinkte masked/transparent/wrong-box-Spiele aus dem produktiven Studio/JSON-v1/Story/ScummC-v6-Pfad. Stock-ScummVM belegt mindestens zwei gemeinsame Stillstandsframes (je ≤8 Weltpixel), mindestens drei echte Rückschritte von A bei stehendem B und danach mindestens drei Schritte von B, vier ZP-Masken mit Negativkontrollen, Walkboxen und Kamera-Rückfahrt. Core sowie sämtliche erforderlichen Native-/Dialogue-Gates auf **dem finalen Head** grün. Kein V-Status aus isolierten Unit-Tests.
+- **Blocker/Nachweis:** [Core 45216610441](https://github.com/nauen/adventure_studio/actions/runs/45216610441) auf PR-Head db3c10c grün; [Native/Studio 45216627316](https://github.com/nauen/adventure_studio/actions/runs/45216627316) bei Konsolidierung noch nicht abgeschlossen. Ältere rote Läufe sind keine finale CI-Aussage. Nach diesem Dokumentations-Commit sind die Pflichtgates auf seinem neuen Head erneut zu prüfen; bis dahin **kein Merge, kein V-Abschluss**.
+- **Danach – genau ein Folgepaket:** Erst nach finaler nativer Abnahme und Merge von #285 die oberste unverblockierte native Matrixlücke wählen. ZP05+ bleibt fail-closed; keine parallele Feature-Arbeit.
 
 ## Historische Statusprotokolle – nicht aktive Arbeitspakete
 

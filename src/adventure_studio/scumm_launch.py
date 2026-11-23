@@ -497,7 +497,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     json.dumps(camera_frame_times, indent=2) + "\n", encoding="utf-8")
 
             sample_number = 0
-            readiness_deadline = time.monotonic() + 20.0
+            # A cold stock-ScummVM/Xvfb boot can exceed 20s under parallel
+            # CI shard load. Keep the genuine pixel readiness requirement,
+            # but allow the native game up to 45s to render its authored sky.
+            readiness_deadline = time.monotonic() + 45.0
             while time.monotonic() < readiness_deadline:
                 if process.poll() is not None:
                     raise RuntimeError(f"ScummVM quit early (exit={process.returncode}); see {log_path}")
@@ -519,7 +522,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     break
                 time.sleep(0.3)
             else:
-                raise RuntimeError("Expected authored room sky not visible within 20 seconds")
+                raise RuntimeError("Expected authored room sky not visible within 45 seconds")
             deadline = time.monotonic() + seconds
             next_sample = time.monotonic()
             while time.monotonic() < deadline:
