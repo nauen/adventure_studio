@@ -226,6 +226,28 @@ jobs:
             /tmp/native-r06-opposing-handoff/*/screenshots/scummvm-*.png
             /tmp/native-r06-opposing-handoff/*/screenshots/scummvm-launch.log
             /tmp/native-r06-opposing-handoff/*/screenshots/r06-two-actor-walk-capture.json
+      - name: Prove reciprocal A-B-A native camera focus during opposite walks
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          python -m unittest discover -s tests -p 'test_scumm_reciprocal_focus_probe.py' -v
+          xvfb-run -a -s '-screen 0 1024x768x24' python -u -m adventure_studio.scumm_reciprocal_focus_probe /tmp/scummc-upstream /tmp/native-r06-reciprocal-focus
+      - name: Retain reciprocal A-B-A masked and control native ScummVM gameplay
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r06-reciprocal-focus
+          if-no-files-found: ignore
+          path: |
+            /tmp/native-r06-reciprocal-focus/native-r06-reciprocal-focus-report.json
+            /tmp/native-r06-reciprocal-focus/*/build/project.json
+            /tmp/native-r06-reciprocal-focus/*/game/tentacle.000
+            /tmp/native-r06-reciprocal-focus/*/game/tentacle.001
+            /tmp/native-r06-reciprocal-focus/*/screenshots/scummvm-*.png
+            /tmp/native-r06-reciprocal-focus/*/screenshots/scummvm-launch.log
+            /tmp/native-r06-reciprocal-focus/*/screenshots/r06-two-actor-walk-capture.json
       - name: Verify moving Actor crosses four native Z-masks with camera round-trip
         if: ${{ matrix.shard == 'geometry' }}
         env:
