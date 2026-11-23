@@ -335,6 +335,8 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
             candidates = [row for row in traces[actor] if left + 9 <= row["world_x"] < right - 9
                           and 220 <= row["screen_x"] <= 803]
             sample = None
+            diagnostics = {"candidates": len(candidates), "not_aligned": 0,
+                           "control_too_dark": 0, "mask_not_occluded": 0}
             for control in candidates:
                 values = {}
                 aligned = True
@@ -375,6 +377,11 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
                     values[variant] = (
                         min(observed) if variant == "masked" else max(observed)
                     )
+                if not aligned:
+                    diagnostics["not_aligned"] += 1
+                elif min(values.get("transparent", 0),
+                         values.get("wrong-box", 0)) < 80:
+                    diagnostics["control_too_dark"] += 1
                 if aligned and min(values.get("transparent", 0),
                                    values.get("wrong-box", 0)) >= 80:
                     # A sprite straddling a mask boundary is not a valid
@@ -386,8 +393,11 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
                                   "world_x": control["world_x"],
                                   "seconds": control["seconds"], **values}
                         break
+                    diagnostics["mask_not_occluded"] += 1
             if sample is None:
-                raise RuntimeError(f"No aligned native mask/control frame for {actor} ZP{plane:02d}")
+                raise RuntimeError(
+                    f"No aligned native mask/control frame for {actor} ZP{plane:02d}; "
+                    f"native evidence diagnostics: {diagnostics}")
             samples.append(sample)
     verdict = verify_two_actor_four_mask_pixels(samples)
     return {"comparison": verdict, "measured_native_samples": samples}
