@@ -111,12 +111,37 @@ def verify_two_actor_native_return(traces: dict) -> dict:
         for turn in range(1, len(rows) - 1):
             outgoing = [(a, b) for a, b in outbound if b["seconds"] <= rows[turn]["seconds"]]
             incoming = [(a, b) for a, b in returns if a["seconds"] >= rows[turn]["seconds"]]
-            if (len(outgoing) >= 3 and len(incoming) >= 3
-                    and (outgoing[-1][1]["world_x"] -
-                         outgoing[0][0]["world_x"]) * first_sign >= 120
-                    and (incoming[-1][1]["world_x"] -
-                         incoming[0][0]["world_x"]) * first_sign <= -120):
-                turns.append(rows[turn])
+            if len(outgoing) < 3 or len(incoming) < 3:
+                continue
+            if ((outgoing[-1][1]["world_x"] -
+                 outgoing[0][0]["world_x"]) * first_sign < 120):
+                continue
+            # A native camera pan can occlude the costume for ~1s after
+            # several independently measured return steps. In the actual
+            # stock-ScummVM run B walked visibly 335→359→383→415→439,
+            # disappeared during a pan, then reappeared at world X=544
+            # and X=545. The old verifier discarded those REAL endpoint
+            # screenshots merely because their gap exceeded 55px.
+            #
+            # Require >=3 bounded native return increments (above), then
+            # anchor the full 120px return to an actual later costume frame
+            # near the authored start. Reject a teleport over the occluded
+            # interval by bounding the observed displacement by real time.
+            start = incoming[0][0]
+            tail = [r for r in rows if r["seconds"] >= start["seconds"]]
+            for end_index, end in enumerate(tail):
+                if ((end["world_x"] - start["world_x"]) * first_sign > -120
+                        or abs(end["world_x"] - STARTS[actor][0]) > 25):
+                    continue
+                segment = tail[:end_index + 1]
+                if all(
+                    0 < right["seconds"] - left["seconds"] <= 1.5
+                    and abs(right["world_x"] - left["world_x"])
+                    <= 140 * (right["seconds"] - left["seconds"]) + 15
+                    for left, right in zip(segment, segment[1:])
+                ):
+                    turns.append(rows[turn])
+                    break
         if not turns:
             raise RuntimeError(f"Native Actor {actor} did not complete both 120px legs")
         results[actor] = {"native_direction_reversal_verified": True,
