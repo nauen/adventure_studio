@@ -40,11 +40,11 @@ def author_staggered_native_return(output: Path, *, variant: str = "masked") -> 
             # Actual stock-ScummVM evidence showed B stationary at world
             # X=175 while A returned from X=530, but the camera still framed
             # the right side of the room and clipped B out of the evidence.
-            # Pan to X=330 before A returns: B at 175 and the walking A
+            # Pan to X=320 before A returns: B at 175 and the walking A
             # become simultaneously visible without changing either route.
             # Keep the native two-second delay before B's return command.
             sequences.append(replace(sequence, steps=(
-                *steps[:10], PanCameraStep(330), WaitCameraStep(),
+                *steps[:10], PanCameraStep(320), WaitCameraStep(),
                 steps[10], DelayStep(2), *steps[11:],
             )))
         else:
@@ -62,7 +62,7 @@ def assert_staggered_native_return(document, *, variant: str = "masked") -> dict
         raise RuntimeError("R06 staggered return requires one native interaction")
     steps = sequences[0].steps
     if (len(steps) != 22 or steps[10:17] != (
-            PanCameraStep(330), WaitCameraStep(),
+            PanCameraStep(320), WaitCameraStep(),
             WalkActorStep(ACTOR_IDS[0], 260, 85), DelayStep(2),
             WalkActorStep(ACTOR_IDS[1], 545, 135),
             WaitActorStep(ACTOR_IDS[0]), WaitActorStep(ACTOR_IDS[1]))):
