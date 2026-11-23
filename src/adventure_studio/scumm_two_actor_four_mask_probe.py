@@ -187,8 +187,8 @@ def play_two_actor_walk(output: Path, capture_frame, process, *, frame_count: in
     # Narrow Z-mask intersections previously produced only one genuine
     # control frame, so an animation blank could make the positive control
     # unprovable. Preserve every captured frame; never synthesize positions.
-    if frame_count < 210 or frame_count > 360:
-        raise ValueError("Native two-Actor capture requires 210–360 real frames")
+    if frame_count < 210 or frame_count > 480:
+        raise ValueError("Native two-Actor capture requires 210–480 real frames")
     if not 0.01 <= capture_interval <= 0.1:
         raise ValueError("Native two-Actor capture interval must be 10–100 ms")
     for index in range(frame_count):
