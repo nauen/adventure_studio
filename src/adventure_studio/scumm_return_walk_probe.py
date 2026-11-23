@@ -175,7 +175,8 @@ def run_native_return_walk(upstream: Path, output: Path) -> dict:
         export_document(document, resources)
         game = compile_story_game(build, upstream, root / "game")
         launch_smoke(game, root / "screenshots", seconds=6, scene_only=True,
-                     allow_static_scene=True, native_two_actor_walk_probe=True)
+                     allow_static_scene=True, native_two_actor_walk_probe=True,
+                     native_two_actor_capture_frames=420)
         report["variants"][variant] = {"stock_scummvm_started": True}
         persist()
 
