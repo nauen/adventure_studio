@@ -74,6 +74,7 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                        camera_pan_capture: bool = False,
                        camera_capture_seconds: float | None = None,
                        scene_capture_seconds: float | None = None,
+                       scene_walk_target_x: int | None = None,
                        initial_object_state2: str | None = None,
                        scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                        native_walkbox_gate_probe: bool = False,
@@ -107,6 +108,21 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
         if count != 1:
             raise ValueError("Second-state fixture requires an exported two-state object")
         script.write_text(changed, encoding="utf-8")
+    if scene_walk_target_x is not None:
+        # Isolated native screenshot control: finish the genuine walking
+        # movement inside an authored object mask rather than sampling a
+        # later, non-occluded position outside that object.
+        if (initial_object_state2 is None or type(scene_walk_target_x) is not int
+                or not 120 <= scene_walk_target_x < room.geometry.room_width):
+            raise ValueError("Native second-state walk target outside the room")
+        script = root / f"{room.name}.scc"
+        source = script.read_text(encoding="utf-8")
+        original_walk = "walkActorTo(VAR_EGO, 540, 100);"
+        if source.count(original_walk) != 1:
+            raise ValueError("Expected one stock SCUMM Actor walk in fixture")
+        script.write_text(source.replace(
+            original_walk, f"walkActorTo(VAR_EGO, {scene_walk_target_x}, 100);"
+        ), encoding="utf-8")
     shutil.copyfile(goal_manifest, root / "game-goal.json")
     subprocess.run([
         str(compiler), "-V", "6", "-I", str(upstream / "include"),
