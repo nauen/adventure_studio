@@ -50,6 +50,36 @@ class NativeStaggeredReturnTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "precede B"):
                 assert_staggered_native_return(bad)
 
+    def test_dense_native_capture_uses_two_disjoint_real_frame_windows(self):
+        # The actual runner samples around 70 ms: adjacent sprite frames
+        # often advance <15 px. Never manufacture extra frames or reduce the
+        # displacement threshold; use two non-overlapping measured windows.
+        outward_a = [260 + 6 * i for i in range(50)]
+        outward_b = [545 - 8 * i for i in range(50)]
+        returning_a = [outward_a[-1] - 6 * (i + 1) for i in range(49)]
+        returning_b = [outward_b[-1] + 8 * (i + 1) for i in range(49)]
+        a = outward_a + returning_a + [returning_a[-1]] * 12
+        b = outward_b + [outward_b[-1]] * 12 + returning_b
+        def dense(xs):
+            return [{"frame": str(i), "seconds": round(i * 0.07, 3),
+                     "world_x": x} for i, x in enumerate(xs)]
+        verified = verify_staggered_native_return({
+            ACTOR_IDS[0]: dense(a), ACTOR_IDS[1]: dense(b),
+        })
+        phases = verified["a_before_b_frames"]
+        self.assertEqual(len(phases), 2)
+        self.assertTrue(all(15 <= row["a_return_pixels"] <= 55
+                            and row["b_stationary_pixels"] <= 8
+                            and 0 < row["duration_seconds"] <= 1.5
+                            for row in phases))
+        self.assertLess(int(phases[0]["frame"]), int(phases[1]["start_frame"]))
+        # If B reverses immediately, no stationary interval can pass.
+        without_pause = outward_b + returning_b + [returning_b[-1]] * 12
+        with self.assertRaisesRegex(RuntimeError, "while B remains stopped"):
+            verify_staggered_native_return({
+                ACTOR_IDS[0]: dense(a), ACTOR_IDS[1]: dense(without_pause),
+            })
+
     def test_visual_stagger_required_before_b_reverses(self):
         outbound_a = [260 + i * 25 for i in range(11)]
         outbound_b = [540 - i * 25 for i in range(11)]
