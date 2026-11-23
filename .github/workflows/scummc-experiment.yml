@@ -270,6 +270,28 @@ jobs:
             /tmp/native-r06-return-walk/*/screenshots/scummvm-*.png
             /tmp/native-r06-return-walk/*/screenshots/scummvm-launch.log
             /tmp/native-r06-return-walk/*/screenshots/r06-two-actor-walk-capture.json
+      - name: Prove staggered native two-Actor return with one Actor temporarily stopped
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          python -m unittest discover -s tests -p 'test_scumm_staggered_return_probe.py' -v
+          xvfb-run -a -s '-screen 0 1024x768x24' python -u -m adventure_studio.scumm_staggered_return_probe /tmp/scummc-upstream /tmp/native-r06-staggered-return
+      - name: Retain staggered Actor return game and native positive-negative controls
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r06-staggered-return
+          if-no-files-found: ignore
+          path: |
+            /tmp/native-r06-staggered-return/native-r06-staggered-return-report.json
+            /tmp/native-r06-staggered-return/*/build/project.json
+            /tmp/native-r06-staggered-return/*/game/tentacle.000
+            /tmp/native-r06-staggered-return/*/game/tentacle.001
+            /tmp/native-r06-staggered-return/*/screenshots/scummvm-*.png
+            /tmp/native-r06-staggered-return/*/screenshots/scummvm-launch.log
+            /tmp/native-r06-staggered-return/*/screenshots/r06-two-actor-walk-capture.json
       - name: Verify moving Actor crosses four native Z-masks with camera round-trip
         if: ${{ matrix.shard == 'geometry' }}
         env:
