@@ -1,5 +1,16 @@
 # Adventure Studio – aktueller Arbeitsstand
 
+## Verbindliche Konsolidierung nach Merge #271 (2026-11-23)
+
+- **Hauptziel:** vollständiger nativer SCUMM-v6-Generator ohne Adventure-Studio-Runtime. NPC-Komfort endete mit dem Merge von #190.
+- **In main:** #266 (R06 Actor/ZP01–04), #264 (R08 konkave Walkboxen), #267 (R09 reversible Raum-Gates), #269 (R06 zwei Actors) und jetzt auch [#271](https://github.com/nauen/adventure_studio/pull/271) (R06 native Kamera-Fokusübergabe A→B), gemergt am 23.11.2026 als `d526b4f76745a625a85fc4ec263bfaf04cf904af`. Der bisherige Abschnitt mit „#271 offen“ ist historisch und darf nicht als aktuelle Arbeitsanweisung benutzt werden.
+- **Jetzt genau eine native Fähigkeit:** [Issue #272](https://github.com/nauen/adventure_studio/issues/272) / [PR #273](https://github.com/nauen/adventure_studio/pull/273): zwei Actors laufen **gleichzeitig gegensinnig** durch vier weltfeste Raum-Z-Masken bei nativer Kamerafahrt. Dies ist die erste offene R06-Stufe direkt gegen `main`; nicht die gestapelten Nachfolger #275–#295 bearbeiten oder mergen.
+- **Abnahme = Spielverhalten:** Studio-PNG/RoomAsset → JSON-v1/Story → produktiver ScummC-v6-Export → drei unabhängig gebaute Spiele in unverändertem stock ScummVM (masked/transparent/wrong-box); echte zeitgestempelte Screenshots/Pixeltracks zeigen beide gleichzeitig gegenläufigen Actor-Routen, alle vier ZP01–ZP04-Occlusions, Kamerahin- und Rückweg; deterministische Negativtests und vollständige Core-/Native-Pflicht-CI auf finalem PR-Head.
+- **Blocker/Nachweisstand:** #273 ist offen; seine Beschreibung bestätigt Code und CI-Verdrahtung, aber noch **keine grüne native Gesamtabnahme**. Kein V, kein Merge und kein Folgescope allein aus vorhandenen Skripten, Fixtures oder der Evidenz für #271. ZP05+ bleibt fail-closed.
+- **Danach genau ein Folgepaket:** erst nach bestandener #273-Abnahme [Issue #274 / PR #275](https://github.com/nauen/adventure_studio/pull/275) als nächsten abhängigen Kamera-Handoff während gegenläufiger Bewegungen separat konsolidieren und abnehmen. Spätere gestapelte PRs bleiben wartend.
+
+## Frühere Statusnotizen (historisch; nicht als aktive Paketauswahl verwenden)
+
 ## Konsolidierter Ist-Stand und genau ein aktives Paket (2026-11-23)
 
 - **Hauptziel:** vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; ScummVM-Gameplay ist die Abnahme.

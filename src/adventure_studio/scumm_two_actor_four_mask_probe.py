@@ -182,14 +182,18 @@ def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
                        check=True, timeout=10)
         time.sleep(0.15)
     captured = []
-    for index in range(140):
+    # Capture the same real-gameplay span at higher temporal resolution.
+    # Narrow Z-mask intersections previously produced only one genuine
+    # control frame, so an animation blank could make the positive control
+    # unprovable. Preserve every captured frame; never synthesize positions.
+    for index in range(210):
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM quit during two-Actor native walk")
-        label = f"r06-two-actor-walk-{index:02d}"
+        label = f"r06-two-actor-walk-{index:03d}"
         capture_frame(label)
         captured.append({"frame": label,
                          "seconds_since_native_input": round(time.monotonic() - initiated, 3)})
-        time.sleep(0.12)
+        time.sleep(0.07)
     result = {"click_verb": "Close", "click_hotspot": "Key",
               "native_hotspot_screen_position": [key_x, key_y],
               "captured_frames": captured,
@@ -335,6 +339,8 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
             candidates = [row for row in traces[actor] if left + 9 <= row["world_x"] < right - 9
                           and 220 <= row["screen_x"] <= 803]
             sample = None
+            diagnostics = {"candidates": len(candidates), "not_aligned": 0,
+                           "control_too_dark": 0, "mask_not_occluded": 0}
             for control in candidates:
                 values = {}
                 aligned = True
@@ -375,6 +381,11 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
                     values[variant] = (
                         min(observed) if variant == "masked" else max(observed)
                     )
+                if not aligned:
+                    diagnostics["not_aligned"] += 1
+                elif min(values.get("transparent", 0),
+                         values.get("wrong-box", 0)) < 80:
+                    diagnostics["control_too_dark"] += 1
                 if aligned and min(values.get("transparent", 0),
                                    values.get("wrong-box", 0)) >= 80:
                     # A sprite straddling a mask boundary is not a valid
@@ -386,15 +397,20 @@ def measure_two_actor_native_mask_comparison(output: Path, traces: dict) -> dict
                                   "world_x": control["world_x"],
                                   "seconds": control["seconds"], **values}
                         break
+                    diagnostics["mask_not_occluded"] += 1
             if sample is None:
-                raise RuntimeError(f"No aligned native mask/control frame for {actor} ZP{plane:02d}")
+                raise RuntimeError(
+                    f"No aligned native mask/control frame for {actor} ZP{plane:02d}; "
+                    f"native evidence diagnostics: {diagnostics}")
             samples.append(sample)
     verdict = verify_two_actor_four_mask_pixels(samples)
     return {"comparison": verdict, "measured_native_samples": samples}
 
 
 
-def verify_two_actor_native_camera_roundtrip(frames: list[dict]) -> dict:
+def verify_two_actor_native_camera_roundtrip(
+        frames: list[dict], *, expected_start: int = 320,
+        prepan_direction: str = "right") -> dict:
     """Require measured full native camera travel, not just authored cue commands."""
     if len(frames) < 8:
         raise RuntimeError("Not enough native R06 camera samples")
@@ -402,8 +418,10 @@ def verify_two_actor_native_camera_roundtrip(frames: list[dict]) -> dict:
     times = [row["seconds"] for row in frames]
     if len(set(times)) != len(times):
         raise RuntimeError("Duplicate native camera screenshot timestamps")
-    if not 300 <= frames[0]["camera_x"] <= 340:
-        raise RuntimeError("Native R06 camera did not begin near X=320")
+    if expected_start not in (320, 400):
+        raise ValueError("Native R06 camera start must be an authored supported position")
+    if abs(frames[0]["camera_x"] - expected_start) > 20:
+        raise RuntimeError(f"Native R06 camera did not begin near X={expected_start}")
     far = next((i for i, row in enumerate(frames)
                 if row["camera_x"] >= 475), None)
     if far is None:
@@ -412,8 +430,20 @@ def verify_two_actor_native_camera_roundtrip(frames: list[dict]) -> dict:
                      if frames[i]["camera_x"] <= 165), None)
     if returned is None:
         raise RuntimeError("Native R06 camera did not complete the return to X=160")
-    if not any(row["camera_x"] <= 290 for row in frames[:far]):
-        raise RuntimeError("Native R06 camera did not follow the moving Actor before far pan")
+    if expected_start == 320:
+        if not any(row["camera_x"] <= 290 for row in frames[:far]):
+            raise RuntimeError("Native R06 camera did not follow the moving Actor before far pan")
+    elif prepan_direction not in ("right", "either"):
+        raise ValueError("Unsupported R06 native camera pre-pan direction")
+    elif not any(
+            abs(row["camera_x"] - expected_start) > 24
+            if prepan_direction == "either"
+            else row["camera_x"] > expected_start + 24
+            for row in frames[:far]):
+        raise RuntimeError(
+            "Native R06 camera never moved "
+            + ("before far pan" if prepan_direction == "either"
+               else "right before far pan"))
     return {"native_camera_roundtrip_verified": True,
             "start": frames[0], "far": frames[far], "returned": frames[returned]}
 

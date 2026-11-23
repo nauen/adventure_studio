@@ -99,6 +99,25 @@ class TwoActorFourMaskAuthoringTests(unittest.TestCase):
         observed = trace([320, 320, 288, 256, 300, 400, 480, 480, 420, 320, 220, 160])
         self.assertTrue(verify_two_actor_native_camera_roundtrip(
             observed)["native_camera_roundtrip_verified"])
+        shifted_start = trace([400, 400, 350, 288, 256, 300, 400, 440, 480, 480, 420, 320, 220, 160])
+        self.assertTrue(verify_two_actor_native_camera_roundtrip(
+            shifted_start, expected_start=400)["native_camera_roundtrip_verified"])
+        self.assertTrue(verify_two_actor_native_camera_roundtrip(
+            trace([400, 400, 420, 432, 456, 480, 480, 420, 320, 220, 160]),
+            expected_start=400)["native_camera_roundtrip_verified"])
+        with self.assertRaisesRegex(RuntimeError, "never moved right"):
+            verify_two_actor_native_camera_roundtrip(
+                trace([400, 400, 420, 424, 480, 480, 420, 320, 220, 160]),
+                expected_start=400)
+        with self.assertRaisesRegex(RuntimeError, "never moved right"):
+            verify_two_actor_native_camera_roundtrip(
+                trace([400, 400, 400, 400, 480, 480, 420, 320, 220, 160]),
+                expected_start=400)
+        with self.assertRaisesRegex(RuntimeError, "begin near X=320"):
+            verify_two_actor_native_camera_roundtrip(shifted_start)
+        with self.assertRaisesRegex(RuntimeError, "return to X=160"):
+            verify_two_actor_native_camera_roundtrip(
+                shifted_start[:-2], expected_start=400)
         with self.assertRaisesRegex(RuntimeError, "far endpoint"):
             verify_two_actor_native_camera_roundtrip(
                 trace([320, 320, 288, 256, 300, 400, 456, 456, 420, 320, 220, 160]))

@@ -1,5 +1,16 @@
 # Adventure Studio – aktive Produktroadmap
 
+## Verbindliche Paketreihenfolge nach #271-Merge (2026-11-23)
+
+- **Hauptziel:** vollständiger nativer SCUMM-v6-Generator ohne eigene Runtime; einzig Gameplay im unveränderten ScummVM und Pflicht-CI rechtfertigen die Abnahme.
+- **Integriert:** #266, #264, #267, #269 sowie die native Zwei-Actor-Kameraübergabe [#271](https://github.com/nauen/adventure_studio/pull/271), Merge `d526b4f`. Die frühere Angabe „#271 offen“ unten ist überholt.
+- **Jetzt = eine Fähigkeit:** [R06 #272 / PR #273](https://github.com/nauen/adventure_studio/pull/273) — gleichzeitig gegenläufige native Actor-Walks durch ZP01–ZP04 und vollständige Kamerafahrt.
+- **Abnahme:** echter Studio/JSON-v1/Story/ScummC-v6-Pfad, drei unabhängig kompilierte Original-ScummVM-Kontrollspiele, zeitgestempelte Pixelbelege für gleichzeitige gegenläufige Bewegung, alle vier Masken, Kamera-Hin-/Rückfahrt, negative Regressionen sowie grüne Core-/Native-Gates auf exakt dem letzten Head.
+- **Blocker:** #273 besitzt laut PR derzeit nur implementierte CI-Verdrahtung, keine final bestätigte grüne stock-ScummVM-Abnahme. Nicht mergen; keine nachfolgenden gestapelten Fähigkeiten vorziehen. Keine ZP05+-Freigabe.
+- **Danach = ein Folgepaket:** [R06 #274 / PR #275](https://github.com/nauen/adventure_studio/pull/275) — A→B-Kamerafokuswechsel während beide Actors gegensinnig laufen, **erst nach** vollständiger Abnahme von #273; alle weiteren R06-PRs bleiben zurückgestellt.
+
+## Frühere Roadmap-Steuerung (historisch; nicht aktiv)
+
 ## Roadmap-Steuerung – aktuelles Einzelpaket (2026-11-23)
 
 - **Hauptziel:** vollständiger nativer SCUMM-v6-Generator. Abnahme ausschließlich durch echtes Verhalten im unveränderten ScummVM und passende Pflicht-CI.
