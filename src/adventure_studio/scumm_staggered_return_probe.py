@@ -76,17 +76,35 @@ def verify_staggered_native_return(traces: dict) -> dict:
     a = {row["frame"]: row for row in traces[ACTOR_IDS[0]]}
     b = {row["frame"]: row for row in traces[ACTOR_IDS[1]]}
     shared = sorted(set(a) & set(b), key=lambda frame: a[frame]["seconds"])
+    # The native capture samples roughly every 70 ms; a single adjacent
+    # frame can represent only a few world pixels. Measure the SAME 15–55px
+    # movement over genuine timestamped frame intervals (<=1.5s), requiring
+    # TWO non-overlapping intervals while B is stationary. No authored/scripted
+    # coordinates or interpolated positions count as evidence.
     stages = []
-    for first, second in zip(shared, shared[1:]):
-        left_a = a[first]["world_x"] - a[second]["world_x"]
-        right_b = b[second]["world_x"] - b[first]["world_x"]
-        duration = a[second]["seconds"] - a[first]["seconds"]
-        if (0 < duration <= 1.5 and 15 <= left_a <= 55
-                and abs(right_b) <= 8):
-            stages.append({
-                "frame": second, "seconds": a[second]["seconds"],
-                "a_return_pixels": left_a, "b_stationary_pixels": abs(right_b),
-            })
+    last_end = -1
+    for start_index, first in enumerate(shared):
+        if start_index <= last_end:
+            continue
+        for end_index in range(start_index + 1, len(shared)):
+            second = shared[end_index]
+            duration = a[second]["seconds"] - a[first]["seconds"]
+            if duration > 1.5:
+                break
+            left_a = a[first]["world_x"] - a[second]["world_x"]
+            right_b = b[second]["world_x"] - b[first]["world_x"]
+            if (0 < duration <= 1.5 and 15 <= left_a <= 55
+                    and abs(right_b) <= 8):
+                stages.append({
+                    "start_frame": first, "frame": second,
+                    "seconds": a[second]["seconds"],
+                    "duration_seconds": duration,
+                    "a_return_pixels": left_a, "b_stationary_pixels": abs(right_b),
+                })
+                last_end = end_index
+                break
+        if len(stages) == 2:
+            break
     if len(stages) < 2:
         raise RuntimeError("No native frames show Actor A returning while B remains stopped")
     if not all(stages[i]["seconds"] < stages[i + 1]["seconds"]
