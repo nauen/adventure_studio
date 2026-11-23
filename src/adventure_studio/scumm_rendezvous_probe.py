@@ -15,7 +15,7 @@ from .scumm_staggered_return_probe import (
 )
 from .scumm_opposing_actor_probe import ACTOR_IDS, STARTS
 from .scumm_project import (
-    DelayStep, WalkActorStep, WaitActorStep,
+    DelayStep, PanCameraStep, WaitCameraStep, WalkActorStep, WaitActorStep,
     canonical_json, parse_document, export_document,
 )
 from .scumm_two_actor_four_mask_probe import (
@@ -59,6 +59,11 @@ def author_two_actor_rendezvous_project(output: Path, *, variant: str = "masked"
             WaitActorStep(ACTOR_IDS[0]),
             WaitActorStep(ACTOR_IDS[1]),
             DelayStep(2),
+            # After the simultaneous X=395 meeting, frame both return
+            # destinations: camera X=400 sees world X=240..560. Actual
+            # stock-ScummVM frames at X=320 clipped B at world X>480
+            # before three visible departure steps could be measured.
+            PanCameraStep(400), WaitCameraStep(),
             WalkActorStep(ACTOR_IDS[0], *STARTS[ACTOR_IDS[0]]),
             WalkActorStep(ACTOR_IDS[1], *STARTS[ACTOR_IDS[1]]),
             WaitActorStep(ACTOR_IDS[0]),
@@ -85,11 +90,12 @@ def assert_two_actor_rendezvous(document, *, variant: str = "masked") -> dict:
         WalkActorStep(ACTOR_IDS[1], MEETING_X, 135),
         WaitActorStep(ACTOR_IDS[0]), WaitActorStep(ACTOR_IDS[1]),
         DelayStep(2),
+        PanCameraStep(400), WaitCameraStep(),
         WalkActorStep(ACTOR_IDS[0], *STARTS[ACTOR_IDS[0]]),
         WalkActorStep(ACTOR_IDS[1], *STARTS[ACTOR_IDS[1]]),
         WaitActorStep(ACTOR_IDS[0]), WaitActorStep(ACTOR_IDS[1]),
     )
-    if len(steps) != 27 or steps[12:22] != expected:
+    if len(steps) != 29 or steps[12:24] != expected:
         raise RuntimeError("R06 native rendezvous meet, wait or depart commands missing")
     parent = replace(document, interaction_sequences=tuple(
         replace(s, steps=(
@@ -98,7 +104,7 @@ def assert_two_actor_rendezvous(document, *, variant: str = "masked") -> dict:
             DelayStep(2),
             WalkActorStep(ACTOR_IDS[1], *STARTS[ACTOR_IDS[1]]),
             WaitActorStep(ACTOR_IDS[0]), WaitActorStep(ACTOR_IDS[1]),
-            *s.steps[22:],
+            *s.steps[24:],
         )) if s is target[0] else s for s in document.interaction_sequences
     ))
     assert_staggered_native_return(parent, variant=variant)
@@ -135,9 +141,16 @@ def verify_native_rendezvous(traces: dict) -> dict:
         for actor, approach_sign, depart_sign in (
                 (ACTOR_IDS[0], -1, -1),
                 (ACTOR_IDS[1], 1, 1)):
-            trace = [rows[actor][f] for f in common]
-            before = trace[:index + 1]
-            after = trace[index:]
+            # The meeting must be simultaneously visible in both lanes.
+            # Native camera scroll and occlusion can hide the OTHER actor
+            # during a valid walking leg, so do not throw away real costume
+            # frames that are unique to this actor's own timestamped track.
+            meeting_time = rows[actor][frame]["seconds"]
+            trace = sorted(traces[actor], key=lambda row: row["seconds"])
+            before = [row for row in trace
+                      if row["seconds"] <= meeting_time]
+            after = [row for row in trace
+                     if row["seconds"] >= meeting_time]
             def movements(part, sign):
                 return [
                     (a, b) for a, b in zip(part, part[1:])
