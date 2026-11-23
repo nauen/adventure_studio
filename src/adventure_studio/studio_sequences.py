@@ -2584,6 +2584,36 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                 room.geometry.room_width != previous.geometry.room_width or
                 room.geometry.room_height != previous.geometry.room_height):
             raise ValueError(f"Raum-Z-Maske/Walkbox für {room.name} passt nicht mehr zur Story-Raumgröße")
+        # The Story owns hotspot identity, interactions and sprites. Preserve
+        # only compatible native per-image occlusion masks: silently dropping
+        # Studio-authored IM01/IM02 Z-planes would change exported gameplay.
+        mask_fields = (
+            "object_zplane_pixels", "object_zplane2_pixels",
+            "object_zplane3_pixels", "object_zplane4_pixels",
+            "open_object_zplane_pixels", "open_object_zplane2_pixels",
+            "open_object_zplane3_pixels", "open_object_zplane4_pixels",
+        )
+        native_hotspots = {h.id: h for h in previous.hotspots} if previous is not None else {}
+        authored_hotspots = []
+        for hotspot in room.hotspots:
+            old_hotspot = native_hotspots.pop(hotspot.id, None)
+            if old_hotspot is None:
+                authored_hotspots.append(hotspot)
+                continue
+            masks = {field: getattr(old_hotspot, field) for field in mask_fields
+                     if getattr(old_hotspot, field) is not None}
+            if masks:
+                if ((hotspot.x, hotspot.y, hotspot.width, hotspot.height) !=
+                        (old_hotspot.x, old_hotspot.y, old_hotspot.width, old_hotspot.height)
+                        or hotspot.sprite_pixels != old_hotspot.sprite_pixels
+                        or hotspot.open_sprite_pixels != old_hotspot.open_sprite_pixels):
+                    raise ValueError(
+                        f"Story changed native object Z-mask image: {room.name}/{hotspot.id}")
+                hotspot = replace(hotspot, **masks)
+            authored_hotspots.append(hotspot)
+        for removed in native_hotspots.values():
+            if any(getattr(removed, field) is not None for field in mask_fields):
+                raise ValueError(f"Story removed native object Z-mask target: {room.name}/{removed.id}")
         # Story regenerates its inventory rules. Preserve the Studio-native gate
         # only when the same item still opens the same local door. Otherwise
         # reject a stale binding instead of silently losing gameplay.
@@ -2602,6 +2632,7 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
         if native_gates:
             raise ValueError(f"Story removed native walkbox gate target: {room.name}/{sorted(native_gates)}")
         rooms.append(replace(room, music_id=music_by_room.get(room.name), zplanes=zplanes,
+                             hotspots=tuple(authored_hotspots),
                              walkboxes=previous.walkboxes if previous is not None else (),
                              box_routes=previous.box_routes if previous is not None else (),
                              scale_slots=previous.scale_slots if previous is not None else None,
