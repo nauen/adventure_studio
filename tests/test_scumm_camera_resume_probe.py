@@ -76,6 +76,16 @@ class NativeCameraResumeTests(unittest.TestCase):
         tracks, cameras = evidence(camera_x, b)
         report = verify_native_camera_follow_resume(tracks, cameras)
         self.assertTrue(report["native_camera_follow_resume_verified"])
+        # Stock ScummVM may mask A during the decisive B-follow frames.
+        # Dropping these unrelated A detections must not discard genuine
+        # timestamp-aligned B motion and native camera movement.
+        foreground_visible_early = {
+            ACTOR_IDS[0]: [row for row in tracks[ACTOR_IDS[0]]
+                           if int(row["frame"]) <= 10],
+            ACTOR_IDS[1]: tracks[ACTOR_IDS[1]],
+        }
+        self.assertTrue(verify_native_camera_follow_resume(
+            foreground_visible_early, cameras)["native_camera_follow_resume_verified"])
         with self.assertRaisesRegex(RuntimeError, "did not reacquire"):
             verify_native_camera_follow_resume(
                 tracks, [{**row, "camera_x": 395 if i >= 10 else row["camera_x"]}
