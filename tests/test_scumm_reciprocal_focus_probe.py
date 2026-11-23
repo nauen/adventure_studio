@@ -49,6 +49,42 @@ class NativeReciprocalFocusTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "must precede both waits"):
                 assert_reciprocal_focus_authoring(bad)
 
+    def test_high_frequency_real_frame_contract_keeps_reciprocal_focus_strict(self):
+        # Synthetic inputs exercise only the verifier; they are NOT V evidence.
+        # Each adjacent frame moves 3px, below the >=5px requirement.
+        # Genuine frame pairs within 0.4s still show simultaneous movement.
+        frames = [str(i) for i in range(24)]
+        xs_a = [260 + 3 * i for i in range(24)]
+        xs_b = [540 - 3 * i for i in range(24)]
+        cameras_x = [xs_a[i] if i < 8 or i >= 16 else xs_b[i]
+                     for i in range(24)]
+        tracks = {
+            actor: [{"frame": frames[i], "world_x": x,
+                     "screen_x": 512 + 2 * (x - cameras_x[i])}
+                    for i, x in enumerate(xs)]
+            for actor, xs in zip(ACTOR_IDS, (xs_a, xs_b))
+        }
+        cameras = [{"frame": frames[i], "seconds": round(i * 0.1, 3),
+                    "camera_x": cameras_x[i]} for i in range(24)]
+        verdict = verify_native_reciprocal_focus(tracks, cameras)
+        self.assertTrue(verdict["native_reciprocal_focus_verified"])
+        self.assertLess(verdict["a_first"]["seconds"], verdict["b_middle"]["seconds"])
+        self.assertLess(verdict["b_middle"]["seconds"], verdict["a_return"]["seconds"])
+        with self.assertRaisesRegex(RuntimeError, "reciprocal A-B-A focus"):
+            fixed_tracks = {
+                actor: [{**entry, "screen_x": 512 + 2 * (entry["world_x"] - 260)}
+                        for entry in rows]
+                for actor, rows in tracks.items()
+            }
+            verify_native_reciprocal_focus(fixed_tracks, [
+                {**row, "camera_x": 260} for row in cameras
+            ])
+        no_b = {ACTOR_IDS[0]: tracks[ACTOR_IDS[0]],
+                ACTOR_IDS[1]: [{**row, "world_x": 540}
+                               for row in tracks[ACTOR_IDS[1]]]}
+        with self.assertRaisesRegex(RuntimeError, "Not enough simultaneous"):
+            verify_native_reciprocal_focus(no_b, cameras)
+
     def test_visual_verifier_rejects_missing_actor_or_stationary_camera(self):
         frames = [str(i) for i in range(8)]
         a = [260, 275, 290, 310, 330, 350, 370, 390]
