@@ -1267,7 +1267,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 # Entering the intermediate room restores its own local
                 # pickup and closed exit; the first door is already open.
                 arrived = False
-                arrival_deadline = time.monotonic() + 20
+                arrival_started = time.monotonic()
+                arrival_deadline = arrival_started + 20
+                exit_retried = False
                 while time.monotonic() < arrival_deadline:
                     if process.poll() is not None:
                         raise RuntimeError("ScummVM quit during chain room transition")
@@ -1276,6 +1278,23 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                             and door_pixels(output_directory, "chain-arrival") >= 40):
                         arrived = True
                         break
+                    # Stock ScummVM can show an open first-room exit before
+                    # its hotspot accepts the click. Repeat only once after
+                    # the original click has had time to dispatch, and only
+                    # while the *old* open door remains visibly on screen.
+                    if (time.monotonic() - arrival_started >= 3
+                            and should_retry_open_door_exit(
+                                door_pixels(output_directory, "chain-arrival",
+                                            open_state=True),
+                                already_retried=exit_retried)):
+                        exit_retried = True
+                        retry_x, retry_y = open_door_center(
+                            output_directory, "chain-arrival")
+                        subprocess.run(
+                            ["xdotool", "mousemove", str(retry_x),
+                             str(retry_y), "click", "1"],
+                            check=True, timeout=5,
+                        )
                     time.sleep(0.4)
                 if not arrived:
                     raise RuntimeError("Second story room did not render its pickup and locked exit")
