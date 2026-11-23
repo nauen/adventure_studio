@@ -33,6 +33,8 @@ class TwoActorRendezvousTests(unittest.TestCase):
                     doc.interaction_sequences[-1].steps[10:12],
                     (PanCameraStep(320), WaitCameraStep()),
                 )
+                self.assertEqual(doc.interaction_sequences[-1].steps[18:20],
+                                 (PanCameraStep(400), WaitCameraStep()))
                 self.assertTrue(result["two_actor_native_rendezvous_authored"])
                 self.assertFalse(result["two_actor_native_rendezvous_pixels_verified"])
                 name = doc.costumes[-1].name
@@ -47,7 +49,7 @@ class TwoActorRendezvousTests(unittest.TestCase):
             doc = parse_document(author_two_actor_rendezvous_project(Path(root)))
             seq = next(s for s in doc.interaction_sequences
                        if (s.room, s.hotspot_id, s.verb) == ("Harbor", "Key", "Close"))
-            broken = replace(seq, steps=seq.steps[:19] + seq.steps[20:])
+            broken = replace(seq, steps=seq.steps[:21] + seq.steps[22:])
             changed = replace(doc, interaction_sequences=tuple(
                 broken if s is seq else s for s in doc.interaction_sequences
             ))
