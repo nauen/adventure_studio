@@ -49,7 +49,7 @@ class NativeScummVMShardingTests(unittest.TestCase):
             end = matches[index + 1].start() if index + 1 < len(matches) else len(contents)
             block = contents[match.start():end]
             name = match.group(1)
-            found = re.findall(r"matrix\\.shard == '([^']+)'", block)
+            found = re.findall(r"matrix\.shard == '([^']+)'", block)
             self.assertNotIn(name, seen, "Duplicate native CI step name")
             seen.add(name)
             with self.subTest(step=index + 1, name=name):
