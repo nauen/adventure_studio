@@ -314,7 +314,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_independent_gate_control: bool = False,
                  native_same_room_gate_plan: dict | None = None,
                  native_two_actor_walk_probe: bool = False,
-                 native_two_actor_capture_frames: int = 210) -> None:
+                 native_two_actor_capture_frames: int = 210,
+                 native_two_actor_capture_interval: float = 0.07) -> None:
     if native_two_actor_walk_probe and (not scene_only or scene_walk_clicks):
         raise ValueError("R06 two-Actor walk capture requires isolated native scene mode")
     if camera_pan_capture and (not scene_only or scene_walk_clicks or sample_scene_frames):
@@ -546,7 +547,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 if native_two_actor_walk_probe:
                     from .scumm_two_actor_four_mask_probe import play_two_actor_walk
                     play_two_actor_walk(output_directory, capture_frame, process,
-                                        frame_count=native_two_actor_capture_frames)
+                                        frame_count=native_two_actor_capture_frames,
+                                        capture_interval=native_two_actor_capture_interval)
                 for label, screen_x, screen_y in scene_walk_clicks:
                     click = subprocess.run(
                         ["xdotool", "mousemove", str(screen_x), str(screen_y), "click", "1"],

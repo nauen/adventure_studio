@@ -23,12 +23,13 @@ class NativeScummVMShardingTests(unittest.TestCase):
         matches = list(STEP.finditer(contents))
         # Counts include real gameplay and evidence-retention steps. New native
         # capabilities change the matrix length; preserve the per-shard gates.
-        self.assertEqual(len(matches), 132)
-        expected_counts = {"actors": 26, "mask": 2, "geometry": 46, "story": 48}
+        self.assertEqual(len(matches), 135)
+        expected_counts = {"actors": 26, "mask": 2, "geometry": 48, "story": 48}
         observed_counts = {shard: 0 for shard in SHARDS}
         shared = {
             "Restore previously downloaded Ubuntu packages",
             "Install compiler dependencies and stock ScummVM",
+            "Make successfully downloaded apt archives cacheable",
             "Save downloaded Ubuntu packages even when install times out",
             "Fetch unmodified ScummC",
             "Fix legacy ScummC tool help paths in ephemeral checkout",
@@ -47,6 +48,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
             "Prove reciprocal A-B-A native camera focus during opposite walks": "geometry",
             "Prove two native Actors walk both outbound and return Z-mask routes": "geometry",
             "Prove staggered native two-Actor return with one Actor temporarily stopped": "geometry",
+            "Prove native two-Actor rendezvous at common X and separate return routes": "geometry",
+            "Retain rendezvous native ScummVM games and all mask controls": "geometry",
             "Retain staggered Actor return game and native positive-negative controls": "geometry",
             "Retain two-Actor return gameplay and all stock ScummVM mask controls": "geometry",
             "Retain reciprocal A-B-A masked and control native ScummVM gameplay": "geometry",
