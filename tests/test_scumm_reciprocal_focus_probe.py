@@ -85,6 +85,45 @@ class NativeReciprocalFocusTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Not enough simultaneous"):
             verify_native_reciprocal_focus(no_b, cameras)
 
+    def test_stock_scummvm_handback_quantization_contract(self):
+        # Numbers transcribed from real stock-ScummVM screenshots in
+        # native run 45146807247. This deterministic regression is NOT
+        # a replacement for the actual native acceptance game.
+        # A is 34 screen pixels closer than B at the final handback.
+        observations = [
+            (3.690, 267, 537, 392),
+            (3.920, 327, 476, 336),
+            (4.050, 375, 428, 328),
+            (4.180, 407, 392, 328),
+            (4.305, 439, 360, 352),
+            (4.430, 471, 328, 384),
+            (4.559, 495, 304, 408),
+        ]
+        def make_tracks(observed):
+            return {
+                actor: [
+                    {"frame": str(i), "world_x": row[column],
+                     "screen_x": 512 + 2 * (row[column] - row[3])}
+                    for i, row in enumerate(observed)
+                ]
+                for actor, column in zip(ACTOR_IDS, (1, 2))
+            }
+        cameras = [
+            {"frame": str(i), "seconds": row[0], "camera_x": row[3]}
+            for i, row in enumerate(observations)
+        ]
+        measured = verify_native_reciprocal_focus(
+            make_tracks(observations), cameras)
+        self.assertTrue(measured["native_reciprocal_focus_verified"])
+        self.assertEqual(measured["a_return"]["a_distance"], 174)
+        self.assertEqual(measured["a_return"]["b_distance"], 208)
+        self.assertGreaterEqual(
+            measured["a_return"]["b_distance"] -
+            measured["a_return"]["a_distance"], 32)
+        stopped_b = [(*row[:2], 537, row[3]) for row in observations]
+        with self.assertRaisesRegex(RuntimeError, "Not enough simultaneous"):
+            verify_native_reciprocal_focus(make_tracks(stopped_b), cameras)
+
     def test_visual_verifier_rejects_missing_actor_or_stationary_camera(self):
         frames = [str(i) for i in range(8)]
         a = [260, 275, 290, 310, 330, 350, 370, 390]
