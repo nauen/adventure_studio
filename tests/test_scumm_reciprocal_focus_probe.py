@@ -94,7 +94,7 @@ class NativeReciprocalFocusTests(unittest.TestCase):
              "screen_x": 192 + 2 * (x - 300 + 160)}
             for i, x in enumerate(xs)]
             for name, xs in zip(ACTOR_IDS, (a, b))}
-        cameras = [{"frame": frame, "seconds": float(i), "camera_x": 300}
+        cameras = [{"frame": frame, "seconds": round(i * 0.1, 3), "camera_x": 300}
                    for i, frame in enumerate(frames)]
         with self.assertRaisesRegex(RuntimeError, "reciprocal A-B-A focus"):
             verify_native_reciprocal_focus(tracks, cameras)
