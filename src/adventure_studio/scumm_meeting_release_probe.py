@@ -39,7 +39,7 @@ def author_native_staggered_departure(output: Path, *, variant: str = "masked") 
     for s in original.interaction_sequences:
         if (s.room, s.hotspot_id, s.verb) == ("Harbor", "Key", "Close"):
             sequences.append(replace(s, steps=(
-                *s.steps[:17], DelayStep(2), *s.steps[17:],
+                *s.steps[:19], DelayStep(2), *s.steps[19:],
             )))
         else:
             sequences.append(s)
@@ -55,14 +55,14 @@ def assert_native_staggered_departure(document, *, variant: str = "masked") -> d
     if len(matches) != 1:
         raise RuntimeError("R06 staggered release needs one native interaction")
     steps = matches[0].steps
-    if len(steps) != 26 or steps[15:19] != (
+    if len(steps) != 28 or steps[17:21] != (
             DelayStep(2),
             WalkActorStep(ACTOR_IDS[0], 260, 85),
             DelayStep(2),
             WalkActorStep(ACTOR_IDS[1], 545, 135)):
         raise RuntimeError("R06 native rendezvous hold and staggered release missing")
     parent = replace(document, interaction_sequences=tuple(
-        replace(s, steps=(*s.steps[:17], *s.steps[18:]))
+        replace(s, steps=(*s.steps[:19], *s.steps[20:]))
         if s is matches[0] else s for s in document.interaction_sequences
     ))
     assert_two_actor_rendezvous(parent, variant=variant)
