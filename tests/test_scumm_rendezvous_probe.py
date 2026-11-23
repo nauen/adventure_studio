@@ -8,7 +8,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from adventure_studio.scumm_opposing_actor_probe import ACTOR_IDS
-from adventure_studio.scumm_project import parse_document
+from adventure_studio.scumm_project import PanCameraStep, WaitCameraStep, parse_document
 from adventure_studio.scumm_rendezvous_probe import (
     author_two_actor_rendezvous_project, assert_two_actor_rendezvous,
     verify_native_rendezvous,
@@ -29,6 +29,10 @@ class TwoActorRendezvousTests(unittest.TestCase):
                 doc = parse_document(author_two_actor_rendezvous_project(
                     Path(root) / variant, variant=variant))
                 result = assert_two_actor_rendezvous(doc, variant=variant)
+                self.assertEqual(
+                    doc.interaction_sequences[-1].steps[10:12],
+                    (PanCameraStep(320), WaitCameraStep()),
+                )
                 self.assertTrue(result["two_actor_native_rendezvous_authored"])
                 self.assertFalse(result["two_actor_native_rendezvous_pixels_verified"])
                 name = doc.costumes[-1].name
@@ -43,7 +47,7 @@ class TwoActorRendezvousTests(unittest.TestCase):
             doc = parse_document(author_two_actor_rendezvous_project(Path(root)))
             seq = next(s for s in doc.interaction_sequences
                        if (s.room, s.hotspot_id, s.verb) == ("Harbor", "Key", "Close"))
-            broken = replace(seq, steps=seq.steps[:17] + seq.steps[18:])
+            broken = replace(seq, steps=seq.steps[:19] + seq.steps[20:])
             changed = replace(doc, interaction_sequences=tuple(
                 broken if s is seq else s for s in doc.interaction_sequences
             ))
