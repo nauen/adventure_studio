@@ -135,9 +135,16 @@ def verify_native_rendezvous(traces: dict) -> dict:
         for actor, approach_sign, depart_sign in (
                 (ACTOR_IDS[0], -1, -1),
                 (ACTOR_IDS[1], 1, 1)):
-            trace = [rows[actor][f] for f in common]
-            before = trace[:index + 1]
-            after = trace[index:]
+            # The meeting must be simultaneously visible in both lanes.
+            # Native camera scroll and occlusion can hide the OTHER actor
+            # during a valid walking leg, so do not throw away real costume
+            # frames that are unique to this actor's own timestamped track.
+            meeting_time = rows[actor][frame]["seconds"]
+            trace = sorted(traces[actor], key=lambda row: row["seconds"])
+            before = [row for row in trace
+                      if row["seconds"] <= meeting_time]
+            after = [row for row in trace
+                     if row["seconds"] >= meeting_time]
             def movements(part, sign):
                 return [
                     (a, b) for a, b in zip(part, part[1:])
