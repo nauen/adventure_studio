@@ -88,8 +88,12 @@ def verify_native_camera_follow_resume(traces: dict, camera_frames: list[dict]) 
         for actor in ACTOR_IDS
     }
     cameras = {row["frame"]: row for row in camera_frames}
+    # A can be genuinely occluded while B moves and the camera follows.
+    # The earlier two-Actor meeting is checked by verify_native_meeting_camera_tour;
+    # camera reacquisition needs timestamp-aligned B costume and camera pixels,
+    # not an unrelated simultaneous detection of A.
     shared = sorted(
-        set(by_actor[ACTOR_IDS[0]]) & set(by_actor[ACTOR_IDS[1]]) & set(cameras),
+        set(by_actor[ACTOR_IDS[1]]) & set(cameras),
         key=lambda frame: cameras[frame]["seconds"],
     )
     if len(shared) < 12:
