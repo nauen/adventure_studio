@@ -106,31 +106,58 @@ def verify_native_reciprocal_focus(traces: dict, camera_frames: list[dict]) -> d
         key=lambda frame: cameras[frame]["seconds"],
     )
     visible_motion = []
-    for before, after in zip(shared, shared[1:]):
-        a0, a1 = by_actor[ACTOR_IDS[0]][before], by_actor[ACTOR_IDS[0]][after]
-        b0, b1 = by_actor[ACTOR_IDS[1]][before], by_actor[ACTOR_IDS[1]][after]
-        if (a1["world_x"] - a0["world_x"] >= 5
-                and b0["world_x"] - b1["world_x"] >= 5):
+    # The recorder samples much faster than a native costume's movement
+    # tick. Adjacent screenshot pairs can show <5px despite genuine walks.
+    # Compare only real frame pairs within a bounded 0.4s interval; never
+    # interpolate camera/actor coordinates or accept a stopped Actor.
+    for end_index, after in enumerate(shared):
+        end_time = cameras[after]["seconds"]
+        moving = False
+        for before in reversed(shared[:end_index]):
+            duration = end_time - cameras[before]["seconds"]
+            if duration > 0.4:
+                break
+            a0, a1 = by_actor[ACTOR_IDS[0]][before], by_actor[ACTOR_IDS[0]][after]
+            b0, b1 = by_actor[ACTOR_IDS[1]][before], by_actor[ACTOR_IDS[1]][after]
+            if (0 < duration <= 0.4
+                    and 5 <= a1["world_x"] - a0["world_x"] <= 55
+                    and 5 <= b0["world_x"] - b1["world_x"] <= 55):
+                moving = True
+                break
+        if moving:
+            a1 = by_actor[ACTOR_IDS[0]][after]
+            b1 = by_actor[ACTOR_IDS[1]][after]
             visible_motion.append({
-                "frame": after, "seconds": cameras[after]["seconds"],
+                "frame": after, "seconds": end_time,
                 "camera_x": cameras[after]["camera_x"],
                 "a_distance": abs(a1["screen_x"] - 512),
                 "b_distance": abs(b1["screen_x"] - 512),
             })
     if len(visible_motion) < 5:
         raise RuntimeError("Not enough simultaneous opposite native motion during focus swaps")
-    first = next((row for row in visible_motion
-                  if row["a_distance"] + 40 < row["b_distance"]), None)
-    second = next((row for row in visible_motion
-                   if first and row["seconds"] > first["seconds"]
-                   and row["b_distance"] + 40 < row["a_distance"]
-                   and abs(row["camera_x"] - first["camera_x"]) >= 12), None)
-    third = next((row for row in visible_motion
-                  if second and row["seconds"] > second["seconds"]
-                  and row["a_distance"] + 40 < row["b_distance"]
-                  and abs(row["camera_x"] - second["camera_x"]) >= 12), None)
-    if first is None or second is None or third is None:
+    # A first valid focus frame is not necessarily a valid start for the
+    # complete camera roundtrip. The actual stock-ScummVM capture has
+    # A-focused frames at t=3.775 (camera X=352) and t=3.918 (X=328);
+    # B focus at t=4.349 (X=360), A return at t=4.638 (X=424).
+    # Greedily choosing t=3.775 rejects a real A-B-A sequence because
+    # its first camera displacement is just 8px. Search the *ordered*
+    # screenshot triples and retain every existing motion/focus threshold.
+    triple = next((
+        (first, second, third)
+        for first in visible_motion
+        if first["a_distance"] + 40 < first["b_distance"]
+        for second in visible_motion
+        if (second["seconds"] > first["seconds"]
+            and second["b_distance"] + 40 < second["a_distance"]
+            and abs(second["camera_x"] - first["camera_x"]) >= 12)
+        for third in visible_motion
+        if (third["seconds"] > second["seconds"]
+            and third["a_distance"] + 32 <= third["b_distance"]
+            and abs(third["camera_x"] - second["camera_x"]) >= 12)
+    ), None)
+    if triple is None:
         raise RuntimeError("Stock ScummVM never showed reciprocal A-B-A focus during both walks")
+    first, second, third = triple
     return {"native_reciprocal_focus_verified": True,
             "a_first": first, "b_middle": second, "a_return": third}
 

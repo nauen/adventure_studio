@@ -313,7 +313,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_independent_gate_chain_probe: bool = False,
                  native_independent_gate_control: bool = False,
                  native_same_room_gate_plan: dict | None = None,
-                 native_two_actor_walk_probe: bool = False) -> None:
+                 native_two_actor_walk_probe: bool = False,
+                 native_two_actor_capture_frames: int = 210) -> None:
     if native_two_actor_walk_probe and (not scene_only or scene_walk_clicks):
         raise ValueError("R06 two-Actor walk capture requires isolated native scene mode")
     if camera_pan_capture and (not scene_only or scene_walk_clicks or sample_scene_frames):
@@ -544,7 +545,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             if scene_only:
                 if native_two_actor_walk_probe:
                     from .scumm_two_actor_four_mask_probe import play_two_actor_walk
-                    play_two_actor_walk(output_directory, capture_frame, process)
+                    play_two_actor_walk(output_directory, capture_frame, process,
+                                        frame_count=native_two_actor_capture_frames)
                 for label, screen_x, screen_y in scene_walk_clicks:
                     click = subprocess.run(
                         ["xdotool", "mousemove", str(screen_x), str(screen_y), "click", "1"],
@@ -570,6 +572,28 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             # and must not satisfy the goal. Check before collecting the key.
             capture_frame("locked-before")
             locked_before = door_pixels(output_directory, "locked-before")
+            if locked_before < 40 and auto_recipe:
+                # The initial follow-camera frame can be 32 world pixels left
+                # of the stable recipe view. Its rightmost Door is then
+                # *outside* the 640px viewport (seen in genuine CI captures).
+                # Walk on empty floor at the right edge to pan the REAL
+                # interpreter before making the required locked-door check.
+                # Do not synthesize pixels or accept an invisible/open Door.
+                walk = subprocess.run(
+                    ["xdotool", "mousemove", "810", "350", "click", "1"],
+                    capture_output=True, text=True, timeout=5, check=False,
+                )
+                if walk.returncode:
+                    raise RuntimeError(f"Autoplan camera recovery click failed: {walk.stderr}")
+                recenter_deadline = time.monotonic() + 8.0
+                while time.monotonic() < recenter_deadline:
+                    if process.poll() is not None:
+                        raise RuntimeError("ScummVM quit during autoplan camera recovery")
+                    time.sleep(0.4)
+                    capture_frame("locked-before")
+                    locked_before = door_pixels(output_directory, "locked-before")
+                    if locked_before >= 40:
+                        break
             if locked_before < 40:
                 raise RuntimeError(f"Closed door not visible for negative test: {locked_before}")
             locked_x, locked_y = door_center(output_directory, "locked-before")

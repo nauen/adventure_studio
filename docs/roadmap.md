@@ -1,15 +1,12 @@
 # Adventure Studio – aktive Produktroadmap
 
-## Verbindliche Paketreihenfolge nach #271-Merge (2026-11-23)
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator, Studio-PNG/Walkboxen/JSON-v1/Story → ScummC-v6 → unverändertes ScummVM. Keine eigene Runtime; NPC-Komfort nach #190 beendet.
+- **Jetzt:** Genau **R06 #280 / [PR #281](https://github.com/nauen/adventure_studio/pull/281)**: zeitversetzte native Rückbewegung zweier Actors hinter vier Raum-Z-Masken. Bereits integriert: #273, #275, #277, #279.
+- **Abnahme:** Drei unabhängig exportierte ScummVM-Spiele (maskiert/transparent/falsche Walkbox); echtes Gameplay zeigt A-Rücklauf bei noch stehendem B, beide vollständige Rückwege, ZP01–ZP04, Kamera-Roundtrip und Negativkontrollen. Core-/R06-Guard-/alle Native- und Dialogue-Pflichtjobs müssen auf finalem Head grün sein.
+- **Blocker:** Native Stagger-Gameplay in [Run 45133190779](https://github.com/nauen/adventure_studio/actions/runs/45133190779) **bestanden**. Aber der unabhängige Dialogue-Job ist rot (`Closed door not visible for negative test: 0`), Geometry-Gesamtjob läuft. Kein Merge; ZP05+ stock-v6-fail-closed.
+- **Danach:** Erst nach vollständig grünem #281 **genau** [R06 #282 / PR #283](https://github.com/nauen/adventure_studio/pull/283) – nativer Zwei-Actor-Treffpunkt bei X=395 samt getrennten Rückwegen. #285 und weitere Pakete bleiben zurückgestellt.
 
-- **Hauptziel:** vollständiger nativer SCUMM-v6-Generator ohne eigene Runtime; einzig Gameplay im unveränderten ScummVM und Pflicht-CI rechtfertigen die Abnahme.
-- **Integriert:** #266, #264, #267, #269 sowie die native Zwei-Actor-Kameraübergabe [#271](https://github.com/nauen/adventure_studio/pull/271), Merge `d526b4f`. Die frühere Angabe „#271 offen“ unten ist überholt.
-- **Jetzt = eine Fähigkeit:** [R06 #272 / PR #273](https://github.com/nauen/adventure_studio/pull/273) — gleichzeitig gegenläufige native Actor-Walks durch ZP01–ZP04 und vollständige Kamerafahrt.
-- **Abnahme:** echter Studio/JSON-v1/Story/ScummC-v6-Pfad, drei unabhängig kompilierte Original-ScummVM-Kontrollspiele, zeitgestempelte Pixelbelege für gleichzeitige gegenläufige Bewegung, alle vier Masken, Kamera-Hin-/Rückfahrt, negative Regressionen sowie grüne Core-/Native-Gates auf exakt dem letzten Head.
-- **Blocker:** #273 besitzt laut PR derzeit nur implementierte CI-Verdrahtung, keine final bestätigte grüne stock-ScummVM-Abnahme. Nicht mergen; keine nachfolgenden gestapelten Fähigkeiten vorziehen. Keine ZP05+-Freigabe.
-- **Danach = ein Folgepaket:** [R06 #274 / PR #275](https://github.com/nauen/adventure_studio/pull/275) — A→B-Kamerafokuswechsel während beide Actors gegensinnig laufen, **erst nach** vollständiger Abnahme von #273; alle weiteren R06-PRs bleiben zurückgestellt.
-
-## Frühere Roadmap-Steuerung (historisch; nicht aktiv)
+## Historische Roadmap-Stände – nicht aktive Arbeitsanweisungen
 
 ## Roadmap-Steuerung – aktuelles Einzelpaket (2026-11-23)
 
