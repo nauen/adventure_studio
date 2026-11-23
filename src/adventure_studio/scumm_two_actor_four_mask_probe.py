@@ -150,7 +150,8 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
 
 
 
-def play_two_actor_walk(output: Path, capture_frame, process, *, frame_count: int = 210) -> dict:
+def play_two_actor_walk(output: Path, capture_frame, process, *, frame_count: int = 210,
+                        capture_interval: float = 0.07) -> dict:
     """Click real native Close/Key action; retain every frame without faking motion."""
     from .scumm_launch import colored_item_center
 
@@ -188,6 +189,8 @@ def play_two_actor_walk(output: Path, capture_frame, process, *, frame_count: in
     # unprovable. Preserve every captured frame; never synthesize positions.
     if frame_count < 210 or frame_count > 360:
         raise ValueError("Native two-Actor capture requires 210–360 real frames")
+    if not 0.01 <= capture_interval <= 0.1:
+        raise ValueError("Native two-Actor capture interval must be 10–100 ms")
     for index in range(frame_count):
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM quit during two-Actor native walk")
@@ -195,7 +198,7 @@ def play_two_actor_walk(output: Path, capture_frame, process, *, frame_count: in
         capture_frame(label)
         captured.append({"frame": label,
                          "seconds_since_native_input": round(time.monotonic() - initiated, 3)})
-        time.sleep(0.07)
+        time.sleep(capture_interval)
     result = {"click_verb": "Close", "click_hotspot": "Key",
               "native_hotspot_screen_position": [key_x, key_y],
               "captured_frames": captured,
@@ -494,7 +497,9 @@ def run(upstream: Path, output: Path) -> dict:
         game = compile_story_game(build, upstream, root / "game")
         launch_smoke(game, root / "screenshots", seconds=6,
                      scene_only=True, allow_static_scene=True,
-                     native_two_actor_walk_probe=True)
+                     native_two_actor_walk_probe=True,
+                     native_two_actor_capture_frames=330,
+                     native_two_actor_capture_interval=0.02)
         native_input = json.loads((root / "screenshots" /
             "r06-two-actor-walk-capture.json").read_text(encoding="utf-8"))
         report["variants"][variant] = {
