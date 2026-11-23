@@ -304,7 +304,11 @@ def main() -> None:
                     "0", timeout=20000)
             assert not warns_before_tab_unload(page)
             sequence_input.fill("SpeakAlt, SpeakAlt")
+            # Gradio Textbox.change is committed on blur in Chromium. Trigger
+            # the native browser change event before asserting persisted draft
+            # state; the beforeunload input guard itself fires on every keystroke.
             assert warns_before_tab_unload(page)
+            sequence_input.press("Tab")
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-line", second[0])
