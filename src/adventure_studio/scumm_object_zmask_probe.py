@@ -70,9 +70,12 @@ def run_object_zmask_probe(upstream: Path, generated: Path, destination: Path) -
             raise RuntimeError("Second-state import modified first object Z-mask")
         if obj.open_object_zplane_pixels != bytes([int(level != 0)]) * (64 * 48):
             raise RuntimeError("Second-state object Z-mask lost in project JSON")
+        # The old six-second end frame catches different intermediate
+        # positions in separately launched stock-ScummVM games. Wait until
+        # the actor has finished its native approach before comparing IM02.
         second_variants[label] = render_native_room(
             authored, upstream, generated, destination, label,
-            initial_object_state2="Curtain",
+            initial_object_state2="Curtain", scene_capture_seconds=12.0,
         )
     second_clear = second_variants["secondclear"]["dark_costume_pixels"]
     second_masked = second_variants["secondmasked"]["dark_costume_pixels"]

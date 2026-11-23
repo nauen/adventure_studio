@@ -73,6 +73,7 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                        allow_static_scene: bool = False,
                        camera_pan_capture: bool = False,
                        camera_capture_seconds: float | None = None,
+                       scene_capture_seconds: float | None = None,
                        initial_object_state2: str | None = None,
                        scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                        native_walkbox_gate_probe: bool = False,
@@ -124,8 +125,13 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
     # so twelve seconds can truncate the return before the final frame.
     if camera_capture_seconds is not None and not 6.0 <= camera_capture_seconds <= 90.0:
         raise ValueError("Native camera capture must last 6..90 seconds")
+    if scene_capture_seconds is not None and not 6.0 <= scene_capture_seconds <= 90.0:
+        raise ValueError("Native scene capture must last 6..90 seconds")
+    if scene_capture_seconds is not None and camera_capture_seconds is not None:
+        raise ValueError("Native scene and camera capture durations are exclusive")
     launch_smoke(root, images, seconds=(
         camera_capture_seconds if camera_capture_seconds is not None
+        else scene_capture_seconds if scene_capture_seconds is not None
         else 20.0 if camera_pan_capture else 6.0),
                  scene_only=not native_walkbox_gate_probe,
                  verify_return=False, allow_static_scene=allow_static_scene,
