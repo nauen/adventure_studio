@@ -2603,12 +2603,14 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
             masks = {field: getattr(old_hotspot, field) for field in mask_fields
                      if getattr(old_hotspot, field) is not None}
             if masks:
-                if ((hotspot.x, hotspot.y, hotspot.width, hotspot.height) !=
-                        (old_hotspot.x, old_hotspot.y, old_hotspot.width, old_hotspot.height)
-                        or hotspot.sprite_pixels != old_hotspot.sprite_pixels
-                        or hotspot.open_sprite_pixels != old_hotspot.open_sprite_pixels):
+                if ((hotspot.width, hotspot.height) !=
+                        (old_hotspot.width, old_hotspot.height)):
                     raise ValueError(
-                        f"Story changed native object Z-mask image: {room.name}/{hotspot.id}")
+                        f"Story changed native object Z-mask dimensions: {room.name}/{hotspot.id}")
+                if any(len(pixels) != hotspot.width * hotspot.height
+                       for pixels in masks.values()):
+                    raise ValueError(
+                        f"Native object Z-mask dimensions invalid: {room.name}/{hotspot.id}")
                 hotspot = replace(hotspot, **masks)
             authored_hotspots.append(hotspot)
         for removed in native_hotspots.values():
