@@ -107,8 +107,12 @@ class NativeStaggeredReturnTests(unittest.TestCase):
     def test_visual_stagger_required_before_b_reverses(self):
         outbound_a = [260 + i * 25 for i in range(11)]
         outbound_b = [540 - i * 25 for i in range(11)]
-        inbound_a = [510 - i * 25 for i in range(1, 11)]
-        inbound_b = [290, 290, 290, 315, 340, 365, 390, 415, 440, 465]
+        # Both native paths must actually arrive back at their authored
+        # start positions. The old positive fixture stopped B at X=465
+        # (80px short of X=545), incorrectly treating a partial leg as V.
+        inbound_a = [510 - i * 25 for i in range(1, 11)] + [260] * 3
+        inbound_b = [290, 290, 290, 315, 340, 365, 390, 415, 440,
+                     465, 490, 515, 540]
         a = trace(outbound_a + inbound_a)
         b = trace(outbound_b + inbound_b)
         self.assertTrue(verify_staggered_native_return({
