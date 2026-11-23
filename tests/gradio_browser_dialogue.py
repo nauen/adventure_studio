@@ -414,10 +414,16 @@ def main() -> None:
             page.locator("#native-dialogue-draft-play").click()
             draft_gif = page.locator("#native-dialogue-draft-animation img")
             expect(draft_gif.first).to_be_visible(timeout=20000)
+            # The Gradio preview is transient: a second UI update can replace
+            # the img before the subsequent status assertion returns. Capture
+            # its real rendered source while the actual GIF is visible, then
+            # validate both the status and the GIF bytes independently.
+            draft_src = draft_gif.first.get_attribute("src")
+            assert draft_src and "/file=" in draft_src
             expect(page.locator("#native-dialogue-draft-animation-status")).to_contain_text(
                 "260 ms pro Bild · nur Entwurf", timeout=20000)
             draft_response = page.request.get(
-                urljoin(page.url, draft_gif.first.get_attribute("src")))
+                urljoin(page.url, draft_src))
             assert draft_response.ok
             with Image.open(BytesIO(draft_response.body())) as draft_animation:
                 assert draft_animation.format == "GIF"
