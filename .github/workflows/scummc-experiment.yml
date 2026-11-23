@@ -380,6 +380,28 @@ jobs:
             /tmp/native-r06-camera-resume/*/screenshots/scummvm-*.png
             /tmp/native-r06-camera-resume/*/screenshots/scummvm-launch.log
             /tmp/native-r06-camera-resume/*/screenshots/r06-two-actor-walk-capture.json
+      - name: Prove stock ScummVM Actor B mid-walk destination retarget without wait
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          python -m unittest discover -s tests -p 'test_scumm_retarget_walk_probe.py' -v
+          xvfb-run -a -s '-screen 0 1024x768x24' python -u -m adventure_studio.scumm_retarget_walk_probe /tmp/scummc-upstream /tmp/native-r06-retarget-walk
+      - name: Retain native mid-walk retarget games and mask-control screenshots
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-r06-retarget-walk
+          if-no-files-found: ignore
+          path: |
+            /tmp/native-r06-retarget-walk/native-r06-retarget-report.json
+            /tmp/native-r06-retarget-walk/*/build/project.json
+            /tmp/native-r06-retarget-walk/*/game/tentacle.000
+            /tmp/native-r06-retarget-walk/*/game/tentacle.001
+            /tmp/native-r06-retarget-walk/*/screenshots/scummvm-*.png
+            /tmp/native-r06-retarget-walk/*/screenshots/scummvm-launch.log
+            /tmp/native-r06-retarget-walk/*/screenshots/r06-two-actor-walk-capture.json
       - name: Verify moving Actor crosses four native Z-masks with camera round-trip
         if: ${{ matrix.shard == 'geometry' }}
         env:
