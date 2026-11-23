@@ -150,7 +150,7 @@ def assert_native_two_actor_authoring(document, expected_masks=(0, 1, 2, 3, 4),
 
 
 
-def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
+def play_two_actor_walk(output: Path, capture_frame, process, *, frame_count: int = 210) -> dict:
     """Click real native Close/Key action; retain every frame without faking motion."""
     from .scumm_launch import colored_item_center
 
@@ -186,7 +186,9 @@ def play_two_actor_walk(output: Path, capture_frame, process) -> dict:
     # Narrow Z-mask intersections previously produced only one genuine
     # control frame, so an animation blank could make the positive control
     # unprovable. Preserve every captured frame; never synthesize positions.
-    for index in range(210):
+    if frame_count < 210 or frame_count > 360:
+        raise ValueError("Native two-Actor capture requires 210–360 real frames")
+    for index in range(frame_count):
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM quit during two-Actor native walk")
         label = f"r06-two-actor-walk-{index:03d}"
