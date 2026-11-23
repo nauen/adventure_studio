@@ -72,6 +72,12 @@ class NativeWalkRetargetTests(unittest.TestCase):
             # Previous left/right walks must not count without the native
             # rendezvous inspection that precedes the retarget interaction.
             verify_native_walk_retarget(*observations(xs, manual_tour=False))
+        with self.assertRaisesRegex(RuntimeError, "implausible teleport"):
+            # Several bounded left and right steps do not excuse a single
+            # impossible world-space jump at the actual retarget point.
+            verify_native_walk_retarget(*observations(
+                [395, 395, 395, 395, 380, 365, 350, 335, 335,
+                 500, 515, 530, 545, 560, 575, 590, 605]))
         with self.assertRaisesRegex(RuntimeError, "never visibly took first leftward"):
             verify_native_walk_retarget(*observations([395] * 9 + xs[9:]))
         with self.assertRaisesRegex(RuntimeError, "never reversed"):
