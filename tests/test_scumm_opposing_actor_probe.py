@@ -8,7 +8,7 @@ from pathlib import Path
 from importlib.util import find_spec
 
 from adventure_studio.scumm_project import parse_document
-from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+from adventure_studio.scumm_two_actor_four_mask_probe import (ACTOR_IDS, verify_two_actor_native_camera_roundtrip)
 from adventure_studio.scumm_opposing_actor_probe import (
     STARTS, DESTINATIONS, author_opposing_native_actor_project,
     assert_opposing_native_actor_project, verify_opposing_native_motion,
@@ -72,6 +72,29 @@ class OpposingNativeActorTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(RuntimeError, "opposite native walk"):
                 assert_opposing_native_actor_project(replace(document, interaction_sequences=sequences))
+
+    def test_native_camera_follow_accepts_leftward_start_but_rejects_static_camera(self):
+        # A starts left of camera X=400: true native follow may first pan LEFT.
+        # Both endpoint checks and genuine pre-pan displacement remain mandatory.
+        xs = (400, 385, 360, 345, 390, 480, 400, 270, 160)
+        frames = [{"frame": f"scummvm-{i}", "seconds": i * 0.125,
+                   "camera_x": x} for i, x in enumerate(xs)]
+        verdict = verify_two_actor_native_camera_roundtrip(
+            frames, expected_start=400, prepan_direction="either")
+        self.assertTrue(verdict["native_camera_roundtrip_verified"])
+        with self.assertRaisesRegex(RuntimeError, "right before far pan"):
+            verify_two_actor_native_camera_roundtrip(
+                frames, expected_start=400, prepan_direction="right")
+        no_follow = [{**f, "camera_x": 400} if i < 5 else f
+                     for i, f in enumerate(frames)]
+        with self.assertRaisesRegex(RuntimeError, "before far pan"):
+            verify_two_actor_native_camera_roundtrip(
+                no_follow, expected_start=400, prepan_direction="either")
+        no_return = [{**f, "camera_x": 300} if i == len(frames) - 1 else f
+                     for i, f in enumerate(frames)]
+        with self.assertRaisesRegex(RuntimeError, "return to X=160"):
+            verify_two_actor_native_camera_roundtrip(
+                no_return, expected_start=400, prepan_direction="either")
 
     @staticmethod
     def _native_tracks(reverse=True):
