@@ -15,13 +15,18 @@ from adventure_studio.scumm_retarget_walk_probe import (
 )
 
 
-def observations(xs):
-    times = [{"frame": str(i), "seconds": i * .3, "camera_x": 400}
-             for i in range(len(xs))]
+def observations(xs, *, manual_tour=True):
+    # Real R06 retargeting happens only AFTER two stationary Actors are
+    # observed during the native X395 -> X480 -> X395 inspection.
+    camera_tour = [395, 415, 440, 465, 480, 480, 460, 435, 410, 395]
+    cameras = camera_tour + [395] * len(xs) if manual_tour else [395] * len(xs)
+    positions = [395] * len(camera_tour) + list(xs) if manual_tour else list(xs)
+    times = [{"frame": str(i), "seconds": i * .3, "camera_x": x}
+             for i, x in enumerate(cameras)]
     tracks = {
         actor: [{"frame": str(i), "seconds": i * .3,
                  "world_x": x if actor == ACTOR_IDS[1] else 395}
-                for i, x in enumerate(xs)]
+                for i, x in enumerate(positions)]
         for actor in ACTOR_IDS
     }
     return tracks, times
@@ -63,6 +68,10 @@ class NativeWalkRetargetTests(unittest.TestCase):
         tracks, camera = observations(xs)
         self.assertTrue(verify_native_walk_retarget(
             tracks, camera)["native_actor_walk_retarget_verified"])
+        with self.assertRaisesRegex(RuntimeError, "never reached X480"):
+            # Previous left/right walks must not count without the native
+            # rendezvous inspection that precedes the retarget interaction.
+            verify_native_walk_retarget(*observations(xs, manual_tour=False))
         with self.assertRaisesRegex(RuntimeError, "never visibly took first leftward"):
             verify_native_walk_retarget(*observations([395] * 9 + xs[9:]))
         with self.assertRaisesRegex(RuntimeError, "never reversed"):
