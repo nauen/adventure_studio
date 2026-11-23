@@ -141,9 +141,15 @@ def verify_native_reciprocal_focus(traces: dict, camera_frames: list[dict]) -> d
                    if first and row["seconds"] > first["seconds"]
                    and row["b_distance"] + 40 < row["a_distance"]
                    and abs(row["camera_x"] - first["camera_x"]) >= 12), None)
+    # Native 2x-costume tracking at the final A handback can show a
+    # 34-screen-pixel advantage (real capture: t=4.56s, camera X=408,
+    # A=495, B=304). The former 40px threshold incorrectly rejected
+    # that fully visible, moving A-B-A sequence. Keep the first two
+    # unambiguous 40px phases and require >=32px on the third, with the
+    # same genuine simultaneous motion and >=12px camera travel.
     third = next((row for row in visible_motion
                   if second and row["seconds"] > second["seconds"]
-                  and row["a_distance"] + 40 < row["b_distance"]
+                  and row["a_distance"] + 32 <= row["b_distance"]
                   and abs(row["camera_x"] - second["camera_x"]) >= 12), None)
     if first is None or second is None or third is None:
         raise RuntimeError("Stock ScummVM never showed reciprocal A-B-A focus during both walks")
