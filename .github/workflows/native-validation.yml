@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - feat/r06-moving-actor-four-zmasks
+      - feature/r06-two-actors-four-world-masks-268
   pull_request:
     types: [ready_for_review, synchronize, opened, reopened]
     paths:
@@ -47,6 +48,7 @@ on:
       - 'src/adventure_studio/scumm_four_facing_probe.py'
       - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
       - 'src/adventure_studio/scumm_four_mask_camera_probe.py'
+      - 'src/adventure_studio/scumm_two_actor_four_mask_probe.py'
       - 'src/adventure_studio/scumm_independent_gate_chain_probe.py'
       - 'src/adventure_studio/scumm_inventory_paging_demo.py'
       - 'src/adventure_studio/scumm_inventory_paging_probe.py'
@@ -87,6 +89,7 @@ on:
       - 'tests/test_scumm_camera_cues.py'
       - 'tests/test_scumm_camera_zp01_probe.py'
       - 'tests/test_scumm_four_mask_camera_probe.py'
+      - 'tests/test_scumm_two_actor_four_mask_probe.py'
       - 'tests/test_scumm_moving_four_mask_camera_probe.py'
       - 'tests/test_scumm_dialogue_probe.py'
       - 'tests/test_scumm_font.py'
@@ -231,6 +234,8 @@ jobs:
               - 'src/adventure_studio/scumm_multi_zplane_probe.py'
               - 'src/adventure_studio/scumm_four_simultaneous_zplane_probe.py'
               - 'src/adventure_studio/scumm_four_mask_camera_probe.py'
+              - 'src/adventure_studio/scumm_two_actor_four_mask_probe.py'
+              - 'tests/test_scumm_two_actor_four_mask_probe.py'
               - 'src/adventure_studio/scumm_object_zmask_probe.py'
               - 'src/adventure_studio/scumm_camera_probe.py'
               - 'src/adventure_studio/scumm_camera_zp01_probe.py'
@@ -240,6 +245,7 @@ jobs:
               - 'tests/test_scumm_camera_cues.py'
               - 'tests/test_scumm_camera_zp01_probe.py'
               - 'tests/test_scumm_four_mask_camera_probe.py'
+              - 'tests/test_scumm_two_actor_four_mask_probe.py'
               - 'tests/test_scumm_moving_four_mask_camera_probe.py'
 
   studio:

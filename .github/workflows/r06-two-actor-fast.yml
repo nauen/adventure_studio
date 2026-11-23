@@ -1,0 +1,29 @@
+name: R06 two-Actor authoring guard
+on:
+  pull_request:
+    paths:
+      - 'src/adventure_studio/scumm_two_actor_four_mask_probe.py'
+      - 'tests/test_scumm_two_actor_four_mask_probe.py'
+      - 'src/adventure_studio/scumm_four_mask_camera_probe.py'
+      - 'tests/test_scumm_four_mask_camera_probe.py'
+      - '.github/workflows/r06-two-actor-fast.yml'
+  push:
+    branches:
+      - feature/r06-two-actors-four-world-masks-268
+jobs:
+  json-story-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Pillow for authored Z-plane PNGs
+        run: python -m pip install 'Pillow>=10,<13'
+      - name: Validate two Actor walking commands through JSON-v1 and four BOXD masks
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m unittest discover -s tests -p 'test_scumm_two_actor_four_mask_probe.py' -v
+          python -m unittest discover -s tests -p 'test_scumm_four_mask_camera_probe.py' -v

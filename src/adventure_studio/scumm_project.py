@@ -110,6 +110,23 @@ class WalkActorStep:
 
 
 @dataclass(frozen=True)
+class FollowActorCameraStep:
+    """Follow a named room Actor during native interaction choreography."""
+    actor_id: str
+
+
+@dataclass(frozen=True)
+class PanCameraStep:
+    """Pan the genuine stock ScummVM camera to a world X coordinate."""
+    x: int
+
+
+@dataclass(frozen=True)
+class WaitCameraStep:
+    """Block the native sequence until the engine completes camera travel."""
+
+
+@dataclass(frozen=True)
 class WaitActorStep:
     actor_id: str
 
@@ -201,7 +218,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -313,6 +330,12 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, MoveActorStep)
                                                    else {"type": "walk_actor", **vars(step)}
                                                    if isinstance(step, WalkActorStep)
+                                                   else {"type": "follow_actor_camera", **vars(step)}
+                                                   if isinstance(step, FollowActorCameraStep)
+                                                   else {"type": "pan_camera", **vars(step)}
+                                                   if isinstance(step, PanCameraStep)
+                                                   else {"type": "wait_camera"}
+                                                   if isinstance(step, WaitCameraStep)
                                                    else {"type": "wait_actor", **vars(step)}
                                                    if isinstance(step, WaitActorStep)
                                                    else {"type": "face_actor", **vars(step)}
@@ -868,6 +891,15 @@ def _validate_document(document: GameDocument) -> None:
                         or not 0 <= step.x < room.geometry.room_width
                         or not 0 <= step.y < room.geometry.room_height):
                     raise ValueError("Interaction movement requires an Actor and position in the sequence room")
+            elif isinstance(step, FollowActorCameraStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if actor is None or actor.room != room.name:
+                    raise ValueError("Native camera follow requires an Actor in the sequence room")
+            elif isinstance(step, PanCameraStep):
+                if type(step.x) is not int or not 0 <= step.x < room.geometry.room_width:
+                    raise ValueError("Native interaction camera pan requires a world X in this room")
+            elif isinstance(step, WaitCameraStep):
+                pass
             elif isinstance(step, WaitActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if actor is None or actor.room != room.name:
@@ -1017,6 +1049,15 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "x", "y"},
                              {"type", "actor_id", "x", "y"})
                 steps.append(WalkActorStep(step["actor_id"], step["x"], step["y"]))
+            elif kind == "follow_actor_camera":
+                step = _only(raw_step, {"type", "actor_id"}, {"type", "actor_id"})
+                steps.append(FollowActorCameraStep(step["actor_id"]))
+            elif kind == "pan_camera":
+                step = _only(raw_step, {"type", "x"}, {"type", "x"})
+                steps.append(PanCameraStep(step["x"]))
+            elif kind == "wait_camera":
+                _only(raw_step, {"type"}, {"type"})
+                steps.append(WaitCameraStep())
             elif kind == "wait_actor":
                 step = _only(raw_step, {"type", "actor_id"}, {"type", "actor_id"})
                 steps.append(WaitActorStep(step["actor_id"]))

@@ -493,6 +493,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
+                                FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, VoiceLineStep)
 
@@ -564,6 +565,12 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            walkActorTo({step.actor_id}, {step.x}, {step.y});\n")
             elif isinstance(step, WaitActorStep):
                 instructions.append(f"            waitForActor({step.actor_id});\n")
+            elif isinstance(step, FollowActorCameraStep):
+                instructions.append(f"            cameraFollowActor({step.actor_id});\n")
+            elif isinstance(step, PanCameraStep):
+                instructions.append(f"            panCameraTo({step.x});\n")
+            elif isinstance(step, WaitCameraStep):
+                instructions.append("            waitForCamera();\n")
             elif isinstance(step, FaceActorStep):
                 direction = actor_facing_angle(step.direction)
                 instructions.extend((f"            setCurrentActor({step.actor_id});\n",
