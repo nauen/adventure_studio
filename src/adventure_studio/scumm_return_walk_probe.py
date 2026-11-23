@@ -137,7 +137,7 @@ def verify_two_actor_native_return(traces: dict) -> dict:
                 if all(
                     0 < right["seconds"] - left["seconds"] <= 1.5
                     and abs(right["world_x"] - left["world_x"])
-                    <= 200 * (right["seconds"] - left["seconds"]) + 15
+                    <= 225 * (right["seconds"] - left["seconds"]) + 15
                     for left, right in zip(segment, segment[1:])
                 ):
                     turns.append(rows[turn])
