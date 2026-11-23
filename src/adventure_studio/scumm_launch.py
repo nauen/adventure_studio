@@ -350,10 +350,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         raise ValueError("Reversed inventory combination requires recipe mode")
     if auto_recipe and not verify_recipe:
         raise ValueError("Automatic recipe replay requires recipe mode")
-    if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
-        raise ValueError("Missing isolated tentacle compatibility fixture")
     if seconds <= 0 or seconds > 90:
         raise ValueError("Smoke duration must be between 0 and 90 seconds")
+    if not (game_directory / "tentacle.000").is_file() or not (game_directory / "tentacle.001").is_file():
+        raise ValueError("Missing isolated tentacle compatibility fixture")
     goal_path = game_directory / "game-goal.json"
     if not goal_path.is_file():
         raise ValueError("Missing deterministic goal manifest")
