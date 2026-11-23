@@ -99,7 +99,7 @@ class TwoActorFourMaskAuthoringTests(unittest.TestCase):
         observed = trace([320, 320, 288, 256, 300, 400, 480, 480, 420, 320, 220, 160])
         self.assertTrue(verify_two_actor_native_camera_roundtrip(
             observed)["native_camera_roundtrip_verified"])
-        shifted_start = trace([400, 400, 350, 288, 256, 300, 400, 480, 480, 420, 320, 220, 160])
+        shifted_start = trace([400, 400, 350, 288, 256, 300, 400, 440, 480, 480, 420, 320, 220, 160])
         self.assertTrue(verify_two_actor_native_camera_roundtrip(
             shifted_start, expected_start=400)["native_camera_roundtrip_verified"])
         self.assertTrue(verify_two_actor_native_camera_roundtrip(
