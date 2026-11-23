@@ -103,8 +103,12 @@ class TwoActorFourMaskAuthoringTests(unittest.TestCase):
         self.assertTrue(verify_two_actor_native_camera_roundtrip(
             shifted_start, expected_start=400)["native_camera_roundtrip_verified"])
         self.assertTrue(verify_two_actor_native_camera_roundtrip(
-            trace([400, 400, 420, 440, 460, 480, 480, 420, 320, 220, 160]),
+            trace([400, 400, 420, 432, 456, 480, 480, 420, 320, 220, 160]),
             expected_start=400)["native_camera_roundtrip_verified"])
+        with self.assertRaisesRegex(RuntimeError, "never moved right"):
+            verify_two_actor_native_camera_roundtrip(
+                trace([400, 400, 420, 424, 480, 480, 420, 320, 220, 160]),
+                expected_start=400)
         with self.assertRaisesRegex(RuntimeError, "never moved right"):
             verify_two_actor_native_camera_roundtrip(
                 trace([400, 400, 400, 400, 480, 480, 420, 320, 220, 160]),
