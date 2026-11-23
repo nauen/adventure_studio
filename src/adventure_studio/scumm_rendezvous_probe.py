@@ -65,7 +65,7 @@ def author_two_actor_rendezvous_project(output: Path, *, variant: str = "masked"
             WaitActorStep(ACTOR_IDS[1]),
         )
         sequences.append(replace(sequence, steps=(
-            *steps[:10], *meet, *steps[15:],
+            *steps[:12], *meet, *steps[17:],
         )))
     document = replace(original, interaction_sequences=tuple(sequences))
     assert_two_actor_rendezvous(document, variant=variant)
@@ -89,16 +89,16 @@ def assert_two_actor_rendezvous(document, *, variant: str = "masked") -> dict:
         WalkActorStep(ACTOR_IDS[1], *STARTS[ACTOR_IDS[1]]),
         WaitActorStep(ACTOR_IDS[0]), WaitActorStep(ACTOR_IDS[1]),
     )
-    if len(steps) != 25 or steps[10:20] != expected:
+    if len(steps) != 27 or steps[12:22] != expected:
         raise RuntimeError("R06 native rendezvous meet, wait or depart commands missing")
     parent = replace(document, interaction_sequences=tuple(
         replace(s, steps=(
-            *s.steps[:10],
+            *s.steps[:12],
             WalkActorStep(ACTOR_IDS[0], *STARTS[ACTOR_IDS[0]]),
             DelayStep(2),
             WalkActorStep(ACTOR_IDS[1], *STARTS[ACTOR_IDS[1]]),
             WaitActorStep(ACTOR_IDS[0]), WaitActorStep(ACTOR_IDS[1]),
-            *s.steps[20:],
+            *s.steps[22:],
         )) if s is target[0] else s for s in document.interaction_sequences
     ))
     assert_staggered_native_return(parent, variant=variant)
