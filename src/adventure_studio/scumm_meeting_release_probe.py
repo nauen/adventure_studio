@@ -16,7 +16,7 @@ from .scumm_rendezvous_probe import (
 )
 from .scumm_opposing_actor_probe import ACTOR_IDS
 from .scumm_project import (
-    DelayStep, WalkActorStep, canonical_json, parse_document, export_document,
+    DelayStep, PanCameraStep, WalkActorStep, canonical_json, parse_document, export_document,
 )
 from .scumm_two_actor_four_mask_probe import (
     track_native_actor_lanes, measure_two_actor_native_camera_trace,
@@ -38,8 +38,13 @@ def author_native_staggered_departure(output: Path, *, variant: str = "masked") 
     sequences = []
     for s in original.interaction_sequences:
         if (s.room, s.hotspot_id, s.verb) == ("Harbor", "Key", "Close"):
+            # At camera X=320 the genuine A approach is partly clipped:
+            # three visible increments cover only 78 of its 135 world pixels.
+            # Center the native camera at X=400 *before* both meeting legs;
+            # do not weaken the 90-pixel gameplay acceptance threshold.
             sequences.append(replace(s, steps=(
-                *s.steps[:21], DelayStep(2), *s.steps[21:],
+                *s.steps[:10], PanCameraStep(400),
+                *s.steps[11:21], DelayStep(2), *s.steps[21:],
             )))
         else:
             sequences.append(s)
@@ -55,13 +60,16 @@ def assert_native_staggered_departure(document, *, variant: str = "masked") -> d
     if len(matches) != 1:
         raise RuntimeError("R06 staggered release needs one native interaction")
     steps = matches[0].steps
-    if len(steps) != 30 or steps[20:23] != (
+    if len(steps) != 30 or steps[10] != PanCameraStep(400) or steps[20:23] != (
             WalkActorStep(ACTOR_IDS[0], 260, 85),
             DelayStep(2),
             WalkActorStep(ACTOR_IDS[1], 545, 135)):
         raise RuntimeError("R06 native rendezvous hold and staggered release missing")
     parent = replace(document, interaction_sequences=tuple(
-        replace(s, steps=(*s.steps[:21], *s.steps[22:]))
+        replace(s, steps=(
+            *s.steps[:10], PanCameraStep(320),
+            *s.steps[11:21], *s.steps[22:],
+        ))
         if s is matches[0] else s for s in document.interaction_sequences
     ))
     assert_two_actor_rendezvous(parent, variant=variant)
