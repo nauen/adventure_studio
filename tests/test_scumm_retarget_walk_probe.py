@@ -68,7 +68,7 @@ class NativeWalkRetargetTests(unittest.TestCase):
         tracks, camera = observations(xs)
         self.assertTrue(verify_native_walk_retarget(
             tracks, camera)["native_actor_walk_retarget_verified"])
-        with self.assertRaisesRegex(RuntimeError, "never reached X480"):
+        with self.assertRaisesRegex(RuntimeError, "did not visibly remain at meeting"):
             # Previous left/right walks must not count without the native
             # rendezvous inspection that precedes the retarget interaction.
             verify_native_walk_retarget(*observations(xs, manual_tour=False))
