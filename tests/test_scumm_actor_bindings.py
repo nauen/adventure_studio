@@ -24,6 +24,47 @@ from dataclasses import replace
 
 
 class ActorBootstrapTests(unittest.TestCase):
+    def test_zclip_probes_use_disjoint_native_costumes(self):
+        import tempfile
+        from pathlib import Path
+        from adventure_studio.scumm_actor_zclip_probe import author_project
+        with tempfile.TemporaryDirectory() as tmp:
+            names = []
+            for initial in (False, True):
+                for variant in ("masked", "transparent"):
+                    root = Path(tmp) / f"{initial}-{variant}"
+                    root.mkdir()
+                    doc = parse_document(author_project(root, variant, initial=initial))
+                    names.append(next(a.costume for a in doc.actors
+                                      if a.id == "ForegroundWalker"))
+            self.assertEqual(len(set(names)), 4)
+
+    def test_initial_actor_zclip_studio_json_and_bootstrap(self):
+        import tempfile
+        from pathlib import Path
+        from adventure_studio.scumm_actor_zclip_probe import author_project
+        from adventure_studio.studio_actors import set_actor_initial_zclip
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = author_project(Path(tmp), "masked")
+            edited = set_actor_initial_zclip(raw, "ForegroundWalker", 1)
+            doc = parse_document(edited)
+            actor = next(a for a in doc.actors if a.id == "ForegroundWalker")
+            self.assertEqual(actor.initial_zclip, 1)
+            self.assertEqual(parse_document(canonical_json(doc)), doc)
+            self.assertNotIn("initial_zclip", canonical_json(parse_document(raw)))
+            self.assertEqual(set_actor_initial_zclip(edited, actor.id, 0), raw)
+            for invalid in (-1, 5, True, 1.5):
+                with self.assertRaises(ValueError):
+                    set_actor_initial_zclip(raw, actor.id, invalid)
+            source = ('room Harbor;\nroom ResRoom {\n'
+                      '    cost egoCost = "devil.cost";\n'
+                      '        // set VAR_EGO so we can use the *Ego* functions\n}\n')
+            native, _ = inject_actor_bindings(source, '// define an actor for our hero\nactor hero;\n',
+                                              doc.actors, doc.costumes,
+                                              tuple(room.name for room in doc.rooms))
+            self.assertEqual(native.count("setActorZClip(1);"), 1)
+            self.assertIn("setActorStanding();\n        setActorZClip(1);", native)
+
     def test_ordered_interaction_compiles_multiple_actors_and_object_reaction(self):
         actors = (ActorAsset('Companion', 'NativeGesture', 'Harbor', 300, 100),
                   ActorAsset('Guide', 'NativeGesture', 'Harbor', 400, 100))

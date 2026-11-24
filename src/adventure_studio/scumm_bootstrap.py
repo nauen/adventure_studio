@@ -327,6 +327,8 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
         setup.extend((f"        putActorAt({actor.id}, {actor.x}, {actor.y}, {actor.room});\n",
                       f"        setActorDirection({actor_facing_angle(actor.direction)});\n",
                       "        setActorStanding();\n"))
+        if actor.initial_zclip:
+            setup.append(f"        setActorZClip({actor.initial_zclip});\n")
     source = source.replace(setup_marker, ''.join(setup) + setup_marker, 1)
     return source, header
 

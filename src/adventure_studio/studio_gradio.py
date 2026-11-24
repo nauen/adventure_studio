@@ -107,7 +107,7 @@ from .studio_actors import (add_actor, actor_summary, costume_names, costume_sum
                             costume_direction_speaking_frame,
                             move_actor, costume_animation_names, costume_animation_steps,
                             costume_timeline_images, edit_costume_timeline,
-                            render_costume_preview, set_actor_initial_animation,
+                            render_costume_preview, set_actor_initial_animation, set_actor_initial_zclip,
                             set_actor_costume)
 
 
@@ -448,7 +448,7 @@ def make_app():
                                     set_costume_direction_speaking_pose,
                                     edit_costume_timeline) else
                       args[1] if action is add_actor else None)
-            selected_actor = args[0] if action is set_actor_initial_animation else (
+            selected_actor = args[0] if action in (set_actor_initial_animation, set_actor_initial_zclip) else (
                 args[0] if action is add_actor else None)
             actor_room = next((actor.room for actor in parse_document(updated).actors
                                if actor.id == selected_actor), None)
@@ -888,6 +888,9 @@ def make_app():
                     native_actor_initial = gr.Dropdown(label="Startanimation des ausgewählten Actors",
                                                        choices=[("Keine Startanimation", None)])
                     native_actor_initial_save = gr.Button("Startanimation speichern")
+                with gr.Row():
+                    native_actor_zclip = gr.Dropdown(label="Initiale Actor-Z-Verdeckung", choices=[("Walkbox-Automatik", 0), *[(f"ZP{i:02d}", i) for i in range(1, 5)]], value=0)
+                    native_actor_zclip_save = gr.Button("Initiale Z-Verdeckung speichern")
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum", elem_id="native-room")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt", elem_id="native-hotspot")
@@ -2075,6 +2078,10 @@ def make_app():
                 set_actor_initial_animation, raw, actor_id, animation),
             [native_state, native_actor, native_actor_initial],
             [native_state, *native_outputs, native_report])
+        native_actor_zclip_save.click(
+            lambda raw, actor_id, plane: native_asset_edit(set_actor_initial_zclip, raw, actor_id, plane),
+            [native_state, native_actor, native_actor_zclip],
+            [native_state, *native_outputs, native_report])
         def native_room_update(raw, room):
             if raw is None:
                 return gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
@@ -2122,6 +2129,11 @@ def make_app():
 
         native_actor.change(native_actor_update, [native_state, native_actor],
                             [native_animation, native_actor_initial])
+        def native_actor_zclip_update(raw, actor_id):
+            return next((actor.initial_zclip for actor in parse_document(raw).actors if actor.id == actor_id), 0) if raw is not None else 0
+
+        native_actor.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip])
+        native_state.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip])
         def native_sequence_update(raw, identity):
             steps = sequence_steps(raw, identity) if raw is not None and identity else ()
             return (gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],

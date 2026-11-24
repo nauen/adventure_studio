@@ -33,6 +33,7 @@ class ActorAsset:
     direction: str = "S"
     display_name: str | None = None
     initial_animation: str | None = None
+    initial_zclip: int = 0
 
 
 @dataclass(frozen=True)
@@ -304,7 +305,8 @@ def document_dict(document: GameDocument) -> dict:
         **({"actors": [{"id": actor.id, "costume": actor.costume, "room": actor.room,
                        "x": actor.x, "y": actor.y, "direction": actor.direction,
                        **({"display_name": actor.display_name} if actor.display_name is not None else {}),
-                       **({"initial_animation": actor.initial_animation} if actor.initial_animation is not None else {})}
+                       **({"initial_animation": actor.initial_animation} if actor.initial_animation is not None else {}),
+                       **({"initial_zclip": actor.initial_zclip} if actor.initial_zclip else {})}
                       for actor in document.actors]} if document.actors else {}),
         **({"animation_rules": [{"condition": {"actor_id": rule.condition.actor_id,
                                                "minimum_count": rule.condition.minimum_count},
@@ -609,6 +611,8 @@ def _validate_document(document: GameDocument) -> None:
         if actor.room not in room_names:
             raise ValueError(f"Actor {actor.id} references unknown room: {actor.room}")
         room = next(room for room in document.rooms if room.name == actor.room)
+        if type(actor.initial_zclip) is not int or not 0 <= actor.initial_zclip <= min(4, len(room.zplanes)):
+            raise ValueError(f"Actor {actor.id} initial Z-clip requires 0 or an existing native room Z-plane (1–4)")
         if (type(actor.x) is not int or type(actor.y) is not int
                 or not 0 <= actor.x < room.geometry.room_width
                 or not 0 <= actor.y < room.geometry.room_height):
@@ -989,11 +993,12 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Actors must be a list")
     actors = []
     for raw_actor in raw_actors:
-        actor = _only(raw_actor, {"id", "costume", "room", "x", "y", "direction", "display_name", "initial_animation"},
+        actor = _only(raw_actor, {"id", "costume", "room", "x", "y", "direction", "display_name", "initial_animation", "initial_zclip"},
                       {"id", "costume", "room", "x", "y"})
         actors.append(ActorAsset(actor["id"], actor["costume"], actor["room"],
                                  actor["x"], actor["y"], actor.get("direction", "S"),
-                                 actor.get("display_name"), actor.get("initial_animation")))
+                                 actor.get("display_name"), actor.get("initial_animation"),
+                                 actor.get("initial_zclip", 0)))
     raw_animation_rules = data.get("animation_rules", [])
     if not isinstance(raw_animation_rules, list):
         raise ValueError("Animation rules must be a list")
