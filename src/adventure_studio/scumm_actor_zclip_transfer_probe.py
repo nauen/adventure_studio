@@ -37,9 +37,11 @@ def author_transfer_project(root, variant):
                     if (s.room, s.hotspot_id, s.verb) != ("Harbor", "Key", "Close")))
     # Real destination PNG, not a source-room mask or mocked runtime.
     png = root / "cellar-zp01.png"
-    Image.frombytes("L", (320, 200), bytes(
+    cellar = next(room for room in doc.rooms if room.name == "Cellar")
+    width, height = cellar.geometry.room_width, cellar.geometry.room_height
+    Image.frombytes("L", (width, height), bytes(
         255 if variant == "masked" and 180 <= x < 260 and 45 <= y < 110 else 0
-        for y in range(200) for x in range(320))).save(png)
+        for y in range(height) for x in range(width))).save(png)
     raw = import_room_zplane(canonical_json(doc), "Cellar", 1, str(png))
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Cellar", 1, 220, 85)
