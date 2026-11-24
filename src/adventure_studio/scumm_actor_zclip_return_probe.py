@@ -87,7 +87,12 @@ def play_room_return(output, capture, process):
     click(*key)
     time.sleep(2)
     revealed = samples("revealed")
-    click(*colored_item_center(output, revealed[-1], PORTAL_RGB, fuzz_percent=4))
+    # Close remains selected after the reveal; explicitly select native WalkTo
+    # by clicking empty room ground before activating the passage.
+    click(780, 390)
+    time.sleep(1)
+    capture("zclip-exit-ready")
+    click(*colored_item_center(output, "zclip-exit-ready", PORTAL_RGB, fuzz_percent=4))
     await_frame("zclip-cellar", lambda label: close_rgb(scene_pixel(output, label), (120, 70, 180)))
     time.sleep(2)
     click(*colored_item_center(output, "zclip-cellar", (60, 220, 90), fuzz_percent=4))
