@@ -23,8 +23,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
         matches = list(STEP.finditer(contents))
         # Counts include real gameplay and evidence-retention steps. New native
         # capabilities change the matrix length; preserve the per-shard gates.
-        self.assertEqual(len(matches), 140)
-        expected_counts = {"actors": 26, "mask": 2, "geometry": 54, "story": 48}
+        self.assertEqual(len(matches), 142)
+        expected_counts = {"actors": 26, "mask": 2, "geometry": 56, "story": 48}
         observed_counts = {shard: 0 for shard in SHARDS}
         shared = {
             "Restore previously downloaded Ubuntu packages",
@@ -39,6 +39,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
             "Link generated room with upstream game bootstrap",
         }
         required = {
+            "Verify sequence-driven native Actor Z-clipping and restoration": "geometry",
+            "Retain native Actor Z-clipping screenshots and report": "geometry",
             "Compile and play native R06 camera handoff to second moving Actor": "geometry",
             "Retain three genuine ScummVM camera-handoff control games and frames": "geometry",
             "Build and launch two authored native Actors with four room Z-masks (R06 stage 1)": "geometry",
