@@ -40,6 +40,8 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             room = replace(room, palette=(*room.palette, RETURN_RGB),
                            hotspots=(*room.hotspots, portal),
                            camera_cues=(CameraCue("set", x=160),),
+                           walkboxes=next(r.walkboxes for r in doc.rooms if r.name == "Harbor"),
+                           box_routes=next(r.box_routes for r in doc.rooms if r.name == "Harbor"),
                            demo_walk_to_x=None, demo_walk_to_y=None)
         rooms.append(room)
     rooms = tuple(rooms)
