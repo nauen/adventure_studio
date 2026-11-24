@@ -474,3 +474,15 @@ def set_actor_initial_animation(raw: str, actor_id: str, animation: str | None) 
     actors = tuple(replace(actor, initial_animation=animation or None)
                    if actor.id == actor_id else actor for actor in document.actors)
     return canonical_json(replace(document, actors=actors))
+
+
+def set_actor_initial_zclip(raw: str, actor_id: str, plane: int | float) -> str:
+    """Set the initial native force-clip; zero keeps walkbox clipping."""
+    document = parse_document(raw)
+    if type(plane) not in (int, float) or plane not in (0, 1, 2, 3, 4):
+        raise ValueError("Z-Ebene muss eine ganze Zahl von 0 bis 4 sein")
+    if not any(actor.id == actor_id for actor in document.actors):
+        raise ValueError("Unbekannter Actor")
+    return canonical_json(replace(document, actors=tuple(
+        replace(actor, initial_zclip=int(plane)) if actor.id == actor_id else actor
+        for actor in document.actors)))
