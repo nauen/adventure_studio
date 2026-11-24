@@ -601,6 +601,8 @@ def main() -> None:
             select_option(page, "native-dialogue-direction", "Süd")
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("SpeakAlt")
+            expect(draft_save_status).to_contain_text(
+                "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-direction", "Nord")
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             expect(draft_save_status).to_contain_text(

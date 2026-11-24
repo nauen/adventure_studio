@@ -2295,18 +2295,25 @@ def make_app():
                 raw, line, direction, sequence, session, file)
             return (*view[:-2], restored, view[-1], updated)
 
-        def dialogue_animation_refresh(raw, line, direction):
+        def dialogue_animation_refresh(raw, line, direction, session):
             lines = dialogue_animation_lines(raw) if raw else ()
             current = line if line in {identity for _label, identity in lines} else None
+            view = dialogue_animation_update(raw, current, direction)
+            target = (parse_document(raw).id, current, direction) if raw and current else None
+            drafts = (session or {}).get("drafts", {})
+            # Project refresh is not a user target switch. Never replace an
+            # existing draft for this facing with the persisted sequence.
+            restored = drafts.get(target, view[-2])
             return (gr.update(choices=lines, value=current),
-                    *dialogue_animation_update(raw, current, direction))
+                    *view[:-2], restored, view[-1])
 
         # Retain the selected authored line across a save, and refresh both
         # its animation and PNG pose from the persisted project. Old/stale
         # lines are cleared instead of silently selecting another speaker.
         native_state.change(
             dialogue_animation_refresh,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction],
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_draft_session],
             [native_dialogue_animation_line, native_dialogue_animation,
              native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
