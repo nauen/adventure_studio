@@ -16,8 +16,10 @@ from .scumm_project import canonical_json, export_document, parse_document, Acto
 from .scumm_toolchain import compile_story_game
 from .scumm_two_actor_four_mask_probe import ACTOR_IDS, track_native_actor_lanes
 from .studio_actors import set_actor_initial_zclip
+from .studio_sequences import append_sequence_step
 
 PORTAL_RGB = (175, 60, 210)
+RETURN_RGB = (60, 210, 175)
 VARIANTS = ("masked-reset", "transparent-reset", "masked-persistent")
 
 
@@ -33,19 +35,27 @@ def author_return_project(root, variant):
     for room in doc.rooms:
         if room.name == "Harbor":
             portal = RoomHotspot("Passage", "cellar passage", "Go downstairs.",
-                                 300, 100, 16, 16, sprite_pixels=bytes([len(room.palette)]) * 256,
-                                 exit_destination="Cellar")
+                                 300, 100, 16, 16, sprite_pixels=bytes([len(room.palette)]) * 256)
             room = replace(room, palette=(*room.palette, PORTAL_RGB),
                            hotspots=(*room.hotspots, portal),
                            camera_cues=(CameraCue("set", x=320),))
+        elif room.name == "Cellar":
+            portal = RoomHotspot("R06Return", "return passage", "Go upstairs.",
+                                 285, 100, 16, 16, sprite_pixels=bytes([len(room.palette)]) * 256)
+            room = replace(room, palette=(*room.palette, RETURN_RGB),
+                           hotspots=(*room.hotspots, portal),
+                           camera_cues=(CameraCue("set", x=320),),
+                           demo_walk_to_x=None, demo_walk_to_y=None)
         rooms.append(room)
     sequences = tuple(replace(s, steps=(ActorZClipStep(ACTOR_IDS[0], 0),))
                       if (s.room, s.hotspot_id, s.verb) == ("Harbor", "Key", "Close")
                       else s for s in doc.interaction_sequences)
-    return canonical_json(replace(doc, rooms=tuple(rooms),
+    raw = canonical_json(replace(doc, rooms=tuple(rooms),
         costumes=(*doc.costumes[:-1], replace(doc.costumes[-1], name=name)),
         actors=tuple(replace(a, costume=name) if a.costume == previous else a for a in doc.actors),
         interaction_sequences=sequences))
+    raw = append_sequence_step(raw, "Harbor", "Passage", "Close", "Raum wechseln", None, None, "Cellar", None)
+    return append_sequence_step(raw, "Cellar", "R06Return", "Close", "Raum wechseln", None, None, "Harbor", None)
 
 
 def play_room_return(output, capture, process):
@@ -87,10 +97,12 @@ def play_room_return(output, capture, process):
     click(*key)
     time.sleep(2)
     revealed = samples("revealed")
+    click(234, 563)
     click(*colored_item_center(output, revealed[-1], PORTAL_RGB, fuzz_percent=4))
-    await_frame("zclip-cellar", lambda label: close_rgb(scene_pixel(output, label), (120, 70, 180)))
+    await_frame("zclip-cellar", lambda label: colored_item_pixels(output, label, RETURN_RGB) >= 40 and colored_item_pixels(output, label, PORTAL_RGB) < 40)
     time.sleep(2)
-    click(*colored_item_center(output, "zclip-cellar", (60, 220, 90), fuzz_percent=4))
+    click(234, 563)
+    click(*colored_item_center(output, "zclip-cellar", RETURN_RGB, fuzz_percent=4))
     await_frame("zclip-back", harbor)
     time.sleep(1)
     returned = samples("returned")
