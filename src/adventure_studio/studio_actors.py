@@ -490,3 +490,26 @@ def set_actor_initial_zclip(raw: str, actor_id: str, plane: int | float,
         replace(actor, initial_zclip=int(plane), reset_zclip_on_room_entry=(
             actor.reset_zclip_on_room_entry if reset_on_room_entry is None else reset_on_room_entry))
         if actor.id == actor_id else actor for actor in document.actors)))
+
+
+def set_actor_room_zclip(raw: str, actor_id: str, room: str, plane: int | float | None) -> str:
+    """Configure the destination profile used by a native Actor transfer; None removes it."""
+    document = parse_document(raw)
+    actor = next((a for a in document.actors if a.id == actor_id), None)
+    if actor is None:
+        raise ValueError("Actor existiert nicht")
+    target = next((r for r in document.rooms if r.name == room), None)
+    if target is None or room == actor.room:
+        raise ValueError("Bitte einen anderen vorhandenen Actor-Zielraum wählen")
+    profiles = dict(actor.room_zclips)
+    if plane is None:
+        profiles.pop(room, None)
+    elif type(plane) in (int, float) and plane in range(min(4, len(target.zplanes)) + 1):
+        profiles[room] = int(plane)
+    else:
+        raise ValueError("Z-Ebene muss im Zielraum vorhanden sein")
+    updated = canonical_json(replace(document, actors=tuple(
+        replace(a, room_zclips=tuple(sorted(profiles.items()))) if a.id == actor_id else a
+        for a in document.actors)))
+    parse_document(updated)
+    return updated

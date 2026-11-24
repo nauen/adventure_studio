@@ -518,6 +518,12 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
         return source
+    def transfer_plane(step):
+        if step.plane != -1:
+            return step.plane
+        actor = next(a for a in actors if a.id == step.actor_id)
+        return actor.initial_zclip if step.room == actor.room else dict(actor.room_zclips)[step.room]
+
     destinations = {step.room for sequence in active for step in sequence.steps
                     if isinstance(step, TransferActorZClipStep)}
     source = "".join(f"room {target};\n" for target in sorted(destinations)
@@ -586,7 +592,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, TransferActorZClipStep):
                 instructions.extend((f"            putActorAt({step.actor_id}, {step.x}, {step.y}, {step.room});\n",
                                      f"            setCurrentActor({step.actor_id});\n",
-                                     f"            setActorZClip({step.plane});\n",
+                                     f"            setActorZClip({transfer_plane(step)});\n",
                                      "            setCurrentActor(VAR_EGO);\n"))
             elif isinstance(step, WalkActorStep):
                 instructions.append(f"            walkActorTo({step.actor_id}, {step.x}, {step.y});\n")
@@ -666,7 +672,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_positions[step.actor_id] = (step.x, step.y, room_name)
             elif isinstance(step, TransferActorZClipStep):
                 end_positions[step.actor_id] = (step.x, step.y, step.room)
-                end_clipping[step.actor_id] = step.plane
+                end_clipping[step.actor_id] = transfer_plane(step)
             elif isinstance(step, ActorZClipStep):
                 end_clipping[step.actor_id] = step.plane
             elif isinstance(step, FaceActorStep):

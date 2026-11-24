@@ -65,6 +65,28 @@ class ActorBootstrapTests(unittest.TestCase):
             self.assertEqual(native.count("setActorZClip(1);"), 1)
             self.assertIn("setActorStanding();\n        setActorZClip(1);", native)
 
+    def test_actor_destination_profile_is_resolved_before_native_export(self):
+        import tempfile
+        from pathlib import Path
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.studio_actors import set_actor_room_zclip
+        from adventure_studio.scumm_project import TransferActorZClipStep
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = author_transfer_project(Path(tmp), "masked")
+            raw = set_actor_room_zclip(raw, "ForegroundWalker", "Cellar", 1)
+            doc = parse_document(raw)
+            seq = next(s for s in doc.interaction_sequences if s.room == "Harbor" and s.verb == "Close")
+            steps = tuple(replace(s, plane=-1) if isinstance(s, TransferActorZClipStep) else s for s in seq.steps)
+            seq = replace(seq, steps=steps, skippable=True)
+            doc = replace(doc, interaction_sequences=tuple(seq if s.room == "Harbor" and s.verb == "Close" else s for s in doc.interaction_sequences))
+            self.assertEqual(parse_document(canonical_json(doc)), doc)
+            room = next(r for r in doc.rooms if r.name == "Harbor")
+            native = inject_interaction_sequences(scummc_room_source(room), room.name, (seq,), doc.actors, doc.costumes, room)
+            self.assertEqual(native.count("setActorZClip(1);"), 2)
+            self.assertNotIn("setActorZClip(-1)", native)
+            with self.assertRaises(ValueError):
+                set_actor_room_zclip(canonical_json(doc), "ForegroundWalker", "Cellar", None)
+
     def test_actor_transfer_zclip_validates_destination_and_exports_skip(self):
         import tempfile
         from pathlib import Path
