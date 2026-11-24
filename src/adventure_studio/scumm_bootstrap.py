@@ -333,6 +333,22 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
     return source, header
 
 
+def inject_actor_room_zclip(source: str, room_name: str, actors) -> str:
+    """Restore opted-in Actor clipping through the native room entry script."""
+    active = [actor for actor in actors
+              if actor.room == room_name and actor.reset_zclip_on_room_entry]
+    if not active:
+        return source
+    marker = "        ResRoom::showCursor();\n"
+    if source.count(marker) != 1:
+        raise ValueError(f"Unexpected entry script for Actor Z-clip room {room_name}")
+    calls = "".join(
+        f"        setCurrentActor({actor.id});\n"
+        f"        setActorZClip({actor.initial_zclip});\n"
+        for actor in active)
+    return source.replace(marker, calls + "        setCurrentActor(VAR_EGO);\n" + marker, 1)
+
+
 def inject_actor_room_animations(source: str, room_name: str, actors, costumes) -> str:
     """Start each authored initial animation only on its first room entry."""
     active = [(index, actor) for index, actor in enumerate(actors)

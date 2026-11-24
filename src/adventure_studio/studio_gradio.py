@@ -890,6 +890,7 @@ def make_app():
                     native_actor_initial_save = gr.Button("Startanimation speichern")
                 with gr.Row():
                     native_actor_zclip = gr.Dropdown(label="Initiale Actor-Z-Verdeckung", choices=[("Walkbox-Automatik", 0), *[(f"ZP{i:02d}", i) for i in range(1, 5)]], value=0)
+                    native_actor_zclip_reset = gr.Checkbox(label="Z-Verdeckung bei jedem Raumbetreten zurücksetzen", value=False)
                     native_actor_zclip_save = gr.Button("Initiale Z-Verdeckung speichern")
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum", elem_id="native-room")
@@ -2079,8 +2080,8 @@ def make_app():
             [native_state, native_actor, native_actor_initial],
             [native_state, *native_outputs, native_report])
         native_actor_zclip_save.click(
-            lambda raw, actor_id, plane: native_asset_edit(set_actor_initial_zclip, raw, actor_id, plane),
-            [native_state, native_actor, native_actor_zclip],
+            lambda raw, actor_id, plane, reset: native_asset_edit(set_actor_initial_zclip, raw, actor_id, plane, reset),
+            [native_state, native_actor, native_actor_zclip, native_actor_zclip_reset],
             [native_state, *native_outputs, native_report])
         def native_room_update(raw, room):
             if raw is None:
@@ -2130,10 +2131,11 @@ def make_app():
         native_actor.change(native_actor_update, [native_state, native_actor],
                             [native_animation, native_actor_initial])
         def native_actor_zclip_update(raw, actor_id):
-            return next((actor.initial_zclip for actor in parse_document(raw).actors if actor.id == actor_id), 0) if raw is not None else 0
+            actor = next((actor for actor in parse_document(raw).actors if actor.id == actor_id), None) if raw is not None else None
+            return (actor.initial_zclip, actor.reset_zclip_on_room_entry) if actor else (0, False)
 
-        native_actor.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip])
-        native_state.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip])
+        native_actor.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip, native_actor_zclip_reset])
+        native_state.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip, native_actor_zclip_reset])
         def native_sequence_update(raw, identity):
             steps = sequence_steps(raw, identity) if raw is not None and identity else ()
             return (gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],

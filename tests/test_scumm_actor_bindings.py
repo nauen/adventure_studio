@@ -65,6 +65,33 @@ class ActorBootstrapTests(unittest.TestCase):
             self.assertEqual(native.count("setActorZClip(1);"), 1)
             self.assertIn("setActorStanding();\n        setActorZClip(1);", native)
 
+    def test_room_entry_zclip_is_opt_in_and_restores_ego(self):
+        import tempfile
+        from pathlib import Path
+        from adventure_studio.scumm_actor_zclip_probe import author_project
+        from adventure_studio.studio_actors import set_actor_initial_zclip
+        from adventure_studio.scumm_bootstrap import inject_actor_room_zclip
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = author_project(Path(tmp), "masked")
+            raw = set_actor_initial_zclip(raw, "ForegroundWalker", 1, True)
+            doc = parse_document(raw)
+            self.assertEqual(parse_document(canonical_json(doc)), doc)
+            source = "        ResRoom::showCursor();\n"
+            native = inject_actor_room_zclip(source, "Harbor", doc.actors)
+            self.assertEqual(native, "        setCurrentActor(ForegroundWalker);\n"
+                             "        setActorZClip(1);\n"
+                             "        setCurrentActor(VAR_EGO);\n" + source)
+            self.assertEqual(inject_actor_room_zclip(source, "Other", doc.actors), source)
+            auto = parse_document(set_actor_initial_zclip(raw, "ForegroundWalker", 0))
+            self.assertIn("setActorZClip(0);", inject_actor_room_zclip(source, "Harbor", auto.actors))
+            disabled = parse_document(set_actor_initial_zclip(raw, "ForegroundWalker", 1, False))
+            self.assertNotIn("reset_zclip_on_room_entry", canonical_json(disabled))
+            self.assertEqual(inject_actor_room_zclip(source, "Harbor", disabled.actors), source)
+            with self.assertRaises(ValueError):
+                set_actor_initial_zclip(raw, "ForegroundWalker", 1, "true")
+            with self.assertRaises(ValueError):
+                inject_actor_room_zclip("", "Harbor", doc.actors)
+
     def test_ordered_interaction_compiles_multiple_actors_and_object_reaction(self):
         actors = (ActorAsset('Companion', 'NativeGesture', 'Harbor', 300, 100),
                   ActorAsset('Guide', 'NativeGesture', 'Harbor', 400, 100))
