@@ -159,9 +159,19 @@ def language_runtime_probe(game: Path, output: Path,
         process = subprocess.Popen(["scummvm", f"--path={game.resolve()}", "tentacle"],
                                    stdout=log, stderr=subprocess.STDOUT, env=environment)
         try:
-            time.sleep(5)
-            if process.poll() is not None:
-                raise RuntimeError("ScummVM exited before language input")
+            # Do not send language input into an unrendered startup window.
+            # A black Xvfb root was retained in the failed native CI run.
+            deadline = time.monotonic() + 45
+            while True:
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited before language input")
+                try:
+                    capture("startup-ready", process)
+                    break
+                except RuntimeError:
+                    if process.poll() is not None or time.monotonic() >= deadline:
+                        raise
+            # Preserve the existing screenshot and language assertions.
             # Keep Polish selected while changing rooms, then repeat the
             # translated line without changing GameLanguage.
             for key, code in (*LANGUAGE_PROBE_KEYS,
