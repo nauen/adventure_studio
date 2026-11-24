@@ -19,9 +19,11 @@ from .studio_sequences import append_sequence_step, import_room_zplane
 
 VARIANTS = ("masked", "transparent")
 RETURN_RGB = (175, 60, 210)
+REVEAL_RGB = (60, 210, 175)
+RESTORE_RGB = (210, 175, 60)
 
 
-def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False):
+def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False, restore_profile=False):
     if variant not in VARIANTS:
         raise ValueError("Unknown transfer mask control")
     doc = parse_document(author_project(root, "transparent", initial=False))
@@ -42,6 +44,15 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                            hotspots=(*room.hotspots, stairs),
                            camera_cues=(CameraCue("set", x=320),),
                            demo_walk_to_x=None, demo_walk_to_y=None)
+            if dynamic or restore_profile:
+                for ident, color, x in (("R06Reveal", REVEAL_RGB, 320),
+                                        ("R06Restore", RESTORE_RGB, 350)):
+                    if ident == "R06Restore" and not restore_profile:
+                        continue
+                    hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
+                                          sprite_pixels=bytes([len(room.palette)]) * 256)
+                    room = replace(room, palette=(*room.palette, color),
+                                   hotspots=(*room.hotspots, hotspot))
         rooms.append(room)
     rooms = tuple(rooms)
     doc = replace(doc, rooms=rooms,
@@ -58,6 +69,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         255 if variant == "masked" and 180 <= x < 260 and 45 <= y < 110 else 0
         for y in range(height) for x in range(width))).save(png)
     raw = import_room_zplane(canonical_json(doc), "Cellar", 1, str(png))
+    profiles = profiles or restore_profile
     if profiles:
         from .studio_actors import set_actor_room_zclip
         raw = set_actor_room_zclip(raw, ACTOR_IDS[0], "Cellar", 1, entry_restore)
@@ -73,13 +85,16 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", -1 if profiles else 0, 240, 85)
     raw = append_sequence_step(raw, "Cellar", "R06Return", "Close",
         "Raum wechseln", None, None, "Harbor", None)
-    if dynamic:
-        raw = append_sequence_step(raw, "Cellar", "R06Return", "Open",
+    if dynamic or restore_profile:
+        raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
+    if restore_profile:
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Actor Z-Clipping", ACTOR_IDS[0], None, None, -1)
     return raw
 
 
-def play_transfer(output, capture, process, dynamic=False):
+def play_transfer(output, capture, process, dynamic=False, restore_profile=False):
     def click(x, y):
         subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                        check=True, timeout=5)
@@ -127,55 +142,68 @@ def play_transfer(output, capture, process, dynamic=False):
     await_frame("transfer-cellar", lambda label: colored_item_pixels(output, label, RETURN_RGB) >= 40)
     time.sleep(2)
     destination = sample("destination", 320, 220)
-    revealed = []
-    if dynamic:
-        click(234, 535)
-        click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
+    revealed, restored = [], []
+    if dynamic or restore_profile:
+        click(234, 563)
+        click(*colored_item_center(output, destination[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
         time.sleep(2)
         revealed = sample("revealed", 320, 220)
+    if restore_profile:
+        click(234, 563)
+        click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
+        time.sleep(2)
+        restored = sample("restored", 320, 220)
     click(234, 563)
     click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
     await_frame("transfer-back", harbor)
     time.sleep(1)
     returned = sample("returned", 320, 240)
     (output / "transfer-report.json").write_text(json.dumps({
-        "before": before, "destination": destination, "returned": returned, "revealed": revealed}, indent=2))
+        "before": before, "destination": destination, "returned": returned, "revealed": revealed, "restored": restored}, indent=2))
 
 
-def verify_transfer(report, variant, dynamic=False):
-    for phase in (("before", "destination", "revealed", "returned") if dynamic else ("before", "destination", "returned")):
+def verify_transfer(report, variant, dynamic=False, restore_profile=False):
+    phases = ["before", "destination"]
+    if dynamic or restore_profile:
+        phases.append("revealed")
+    if restore_profile:
+        phases.append("restored")
+    phases.append("returned")
+    for phase in phases:
         rows = report[phase]
         if len(rows) != 8:
             raise RuntimeError(f"Missing native transfer screenshots: {phase}")
-        visible = phase != "destination" or variant == "transparent"
+        visible = phase not in ("destination", "restored") or variant == "transparent"
         count = sum(row["a_pixels"] >= 100 for row in rows)
         if (visible and count < 6) or (not visible and any(row["a_pixels"] >= 25 for row in rows)):
             raise RuntimeError(f"Unexpected transferred Actor visibility: {variant} {phase}: {rows}")
         if phase in ("before", "returned") and sum(row["b_pixels"] >= 100 for row in rows) < 6:
             raise RuntimeError(f"Reference Actor changed in Harbor: {phase}")
-        if phase in ("destination", "revealed") and any(row["b_pixels"] >= 100 for row in rows):
+        if phase in ("destination", "revealed", "restored") and any(row["b_pixels"] >= 100 for row in rows):
             raise RuntimeError("Non-transferred reference Actor appeared in Cellar")
 
 
-def run(upstream, output, profiles=False, entry_restore=False, dynamic=False):
+def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, restore_profile=False):
     output.mkdir(parents=True, exist_ok=True)
     result = {}
     for variant in VARIANTS:
         root = output / variant
         resources = root / "build" / "resources"
         resources.mkdir(parents=True, exist_ok=True)
-        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic)
+        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic, restore_profile=restore_profile)
         (root / "build" / "project.json").write_text(raw)
         export_document(parse_document(raw), resources)
         game = compile_story_game(root / "build", upstream, root / "game")
         launch_smoke(game, root / "screenshots", scene_only=True, allow_static_scene=True,
-                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic)
+                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic, native_actor_zclip_profile_restore_probe=restore_profile)
         report = json.loads((root / "screenshots" / "transfer-report.json").read_text())
-        verify_transfer(report, variant, dynamic=dynamic)
+        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile)
         result[variant] = report
     result["native_actor_zclip_transfer_verified"] = True
     if dynamic:
         result["native_transferred_actor_dynamic_zclip_verified"] = True
+    if restore_profile:
+        result["native_interaction_room_zclip_profile_verified"] = True
     if entry_restore:
         result["native_present_actor_entry_profile_smoke_passed"] = True
     (output / "report.json").write_text(json.dumps(result, indent=2))
@@ -183,4 +211,4 @@ def run(upstream, output, profiles=False, entry_restore=False, dynamic=False):
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:]), indent=2))
+    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:], restore_profile="--restore-profile" in sys.argv[3:]), indent=2))
