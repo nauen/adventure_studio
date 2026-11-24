@@ -710,6 +710,19 @@ jobs:
           name: native-actor-zclip-profiles
           path: /tmp/native-actor-zclip-profiles
           if-no-files-found: ignore
+      - name: Compile and play native presence-guarded Actor entry profiles
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_transfer_probe /tmp/scummc-upstream /tmp/native-present-actor-entry-profile --entry-restore
+      - name: Retain native presence-guarded Actor entry profile evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-present-actor-entry-profile
+          path: /tmp/native-present-actor-entry-profile
+          if-no-files-found: ignore
       - name: Verify four independently selected Studio-authored Z-plane layers in stock ScummVM
         if: ${{ matrix.shard == 'geometry' }}
         env:
