@@ -95,7 +95,22 @@ def play_room_return(output, capture, process):
     key = colored_item_center(output, before[-1], (255, 220, 75))
     click(234, 563)
     click(*key)
-    time.sleep(2)
+    def revealed_at_expected_position(label):
+        if not harbor(label):
+            return False
+        with Image.open(output / f"scummvm-{label}.png") as img:
+            rgb = img.convert("RGB")
+            camera = camera_from_sky(rgb)
+            center = round(192 + 2 * (240 - camera + 160))
+            # Require the same opaque costume geometry as the lane tracker.
+            columns = [sum(max(rgb.getpixel((x, y))) <= 24
+                           for y in range(312, 343))
+                       for x in range(center - 8, center + 9)]
+            return sum(c >= 22 for c in columns) >= 5 and sum(columns) >= 60
+
+    # The native interaction can finish after the initial two-second delay.
+    # Wait for actual rendered pixels, then take eight independent frames.
+    await_frame("zclip-reveal-ready", revealed_at_expected_position)
     revealed = samples("revealed")
     click(234, 563)
     click(*colored_item_center(output, revealed[-1], PORTAL_RGB, fuzz_percent=4))
