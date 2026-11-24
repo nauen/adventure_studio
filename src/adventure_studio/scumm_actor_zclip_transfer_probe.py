@@ -60,7 +60,6 @@ def author_transfer_project(root, variant, profiles=False):
     if profiles:
         from .studio_actors import set_actor_room_zclip
         raw = set_actor_room_zclip(raw, ACTOR_IDS[0], "Cellar", 1)
-        raw = set_actor_room_zclip(raw, ACTOR_IDS[0], "Harbor", 0)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Cellar", -1 if profiles else 1, 220, 85)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
