@@ -16,7 +16,7 @@ from .scumm_toolchain import compile_story_game
 def author_project(root, variant, initial=False):
     doc = parse_document(author_two_actor_four_mask_project(root, variant=variant))
     costume = doc.costumes[-1]
-    name = "R06ZClip" + variant.title() + "Costume"
+    name = ("R06InitialZClip" if initial else "R06ZClip") + variant.title() + "Costume"
     # Both figures stand in ZP01's opaque region, but their walkbox uses 0.
     actors = tuple(replace(a, costume=name, x=240) if a.id in ACTOR_IDS else a
                    for a in doc.actors)

@@ -24,6 +24,21 @@ from dataclasses import replace
 
 
 class ActorBootstrapTests(unittest.TestCase):
+    def test_zclip_probes_use_disjoint_native_costumes(self):
+        import tempfile
+        from pathlib import Path
+        from adventure_studio.scumm_actor_zclip_probe import author_project
+        with tempfile.TemporaryDirectory() as tmp:
+            names = []
+            for initial in (False, True):
+                for variant in ("masked", "transparent"):
+                    root = Path(tmp) / f"{initial}-{variant}"
+                    root.mkdir()
+                    doc = parse_document(author_project(root, variant, initial=initial))
+                    names.append(next(a.costume for a in doc.actors
+                                      if a.id == "ForegroundWalker"))
+            self.assertEqual(len(set(names)), 4)
+
     def test_initial_actor_zclip_studio_json_and_bootstrap(self):
         import tempfile
         from pathlib import Path
