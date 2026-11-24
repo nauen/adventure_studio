@@ -492,7 +492,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
-                                MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep,
+                                MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, VoiceLineStep)
@@ -571,6 +571,10 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            panCameraTo({step.x});\n")
             elif isinstance(step, WaitCameraStep):
                 instructions.append("            waitForCamera();\n")
+            elif isinstance(step, ActorZClipStep):
+                instructions.extend((f"            setCurrentActor({step.actor_id});\n",
+                                     f"            setActorZClip({step.plane});\n",
+                                     "            setCurrentActor(VAR_EGO);\n"))
             elif isinstance(step, FaceActorStep):
                 direction = actor_facing_angle(step.direction)
                 instructions.extend((f"            setCurrentActor({step.actor_id});\n",
@@ -624,6 +628,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_states = {}
         end_positions = {}
         end_directions = {}
+        end_clipping = {}
         inventory_steps = []
         final_music = None
         final_sounds = {}
@@ -632,6 +637,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_states[step.hotspot_id] = step.state
             elif isinstance(step, (MoveActorStep, WalkActorStep)):
                 end_positions[step.actor_id] = (step.x, step.y)
+            elif isinstance(step, ActorZClipStep):
+                end_clipping[step.actor_id] = step.plane
             elif isinstance(step, FaceActorStep):
                 end_directions[step.actor_id] = step.direction
             elif isinstance(step, PickupObjectStep):
@@ -658,6 +665,10 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             native_direction = actor_facing_angle(direction)
             commit += (f"                setCurrentActor({actor});\n"
                        f"                setActorDirection({native_direction});\n"
+                       "                setCurrentActor(VAR_EGO);\n")
+        for actor, plane in end_clipping.items():
+            commit += (f"                setCurrentActor({actor});\n"
+                       f"                setActorZClip({plane});\n"
                        "                setCurrentActor(VAR_EGO);\n")
         if final_music is not None:
             commit += (f"                startMusic({room_asset.music_id});\n"
