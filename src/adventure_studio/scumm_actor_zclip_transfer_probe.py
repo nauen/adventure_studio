@@ -42,11 +42,13 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                                  sprite_pixels=bytes([return_color]) * 256)
             room = replace(room, palette=(*room.palette, RETURN_RGB),
                            hotspots=(*room.hotspots, stairs),
-                           camera_cues=(CameraCue("set", x=320),),
+                           camera_cues=(CameraCue("set", x=160),),
+                           walkboxes=next(r.walkboxes for r in doc.rooms if r.name == "Harbor"),
+                           box_routes=next(r.box_routes for r in doc.rooms if r.name == "Harbor"),
                            demo_walk_to_x=None, demo_walk_to_y=None)
             if dynamic or restore_profile:
-                for ident, color, x in (("R06Reveal", REVEAL_RGB, 320),
-                                        ("R06Restore", RESTORE_RGB, 350)):
+                for ident, color, x in (("R06Reveal", REVEAL_RGB, 250),
+                                        ("R06Restore", RESTORE_RGB, 180)):
                     if ident == "R06Restore" and not restore_profile:
                         continue
                     hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
@@ -142,18 +144,18 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     await_frame("transfer-cellar", lambda label: colored_item_pixels(output, label, RETURN_RGB) >= 40
                 and colored_item_pixels(output, label, (255, 220, 75)) < 10)
     time.sleep(2)
-    destination = sample("destination", 320, 220)
+    destination = sample("destination", 160, 220)
     revealed, restored = [], []
     if dynamic or restore_profile:
         click(234, 563)
         click(*colored_item_center(output, destination[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
         time.sleep(2)
-        revealed = sample("revealed", 320, 220)
+        revealed = sample("revealed", 160, 220)
     if restore_profile:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
         time.sleep(2)
-        restored = sample("restored", 320, 220)
+        restored = sample("restored", 160, 220)
     click(234, 563)
     click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
     await_frame("transfer-back", harbor)
