@@ -2129,8 +2129,17 @@ def make_app():
         def native_transfer_actor_choices(raw, room, kind, selected):
             if raw is None:
                 return gr.skip()
-            actors = (tuple(a.id for a in parse_document(raw).actors)
-                      if kind == "Actor-Raumtransfer mit Z-Clipping" else project_choices(raw, room)[2])
+            document = parse_document(raw)
+            if kind == "Actor-Raumtransfer mit Z-Clipping":
+                actors = tuple(a.id for a in document.actors)
+            elif kind == "Actor Z-Clipping":
+                from .scumm_project import TransferActorZClipStep
+                transferred = {step.actor_id for sequence in document.interaction_sequences
+                               for step in sequence.steps
+                               if isinstance(step, TransferActorZClipStep) and step.room == room}
+                actors = tuple(a.id for a in document.actors if a.room == room or a.id in transferred)
+            else:
+                actors = project_choices(raw, room)[2]
             return gr.update(choices=[("Ego (für gesprochene Zeile)", None), *[(a, a) for a in actors]],
                              value=selected if selected in actors else (actors[0] if actors else None))
 
