@@ -648,6 +648,25 @@ jobs:
             /tmp/native-boxm-routing/*-screenshots/scummvm-end.png
             /tmp/native-boxm-routing/*-screenshots/scummvm-frame-report.json
           if-no-files-found: ignore
+      - name: Verify sequence-driven native Actor Z-clipping and restoration
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_probe /tmp/scummc-upstream /tmp/native-actor-zclip
+      - name: Retain native Actor Z-clipping screenshots and report
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-actor-zclip
+          path: |
+            /tmp/native-actor-zclip/*/build/project.json
+            /tmp/native-actor-zclip/*/screenshots/scummvm-r06-two-actor-*.png
+            /tmp/native-actor-zclip/*/screenshots/*.json
+            /tmp/native-actor-zclip/*/screenshots/*.log
+            /tmp/native-actor-zclip/report.json
+          if-no-files-found: ignore
       - name: Verify four independently selected Studio-authored Z-plane layers in stock ScummVM
         if: ${{ matrix.shard == 'geometry' }}
         env:

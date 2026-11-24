@@ -11,7 +11,7 @@ import tempfile
 import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep,
-                            FaceActorStep, GameDocument,
+                            FaceActorStep, ActorZClipStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
@@ -2745,7 +2745,7 @@ def _identity(sequence: InteractionSequence) -> str:
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2756,6 +2756,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Actor {step.actor_id}: zu ({step.x}, {step.y}) laufen lassen"
     if isinstance(step, WaitActorStep):
         return f"Auf Actor {step.actor_id} warten"
+    if isinstance(step, ActorZClipStep):
+        return f"Actor {step.actor_id}: Z-Clipping {step.plane or 'automatisch'}"
     if isinstance(step, FaceActorStep):
         return f"Actor {step.actor_id}: Richtung {step.direction}"
     if isinstance(step, PickupObjectStep):
@@ -2833,6 +2835,10 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
                 else WalkActorStep(actor_id, int(x), int(y)))
     elif kind == "Auf Actor warten":
         step = WaitActorStep(actor_id)
+    elif kind == "Actor Z-Clipping":
+        if type(amount) not in (int, float) or int(amount) != amount:
+            raise ValueError("Z-Ebene muss eine ganze Zahl sein")
+        step = ActorZClipStep(actor_id, int(amount))
     elif kind == "Actor drehen":
         step = FaceActorStep(actor_id, direction)
     else:
@@ -2922,6 +2928,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Actor laufen lassen", step.actor_id, None, None, 1, step.x, step.y, "S")
     if isinstance(step, WaitActorStep):
         return ("Auf Actor warten", step.actor_id, None, None, 1, 320, 100, "S")
+    if isinstance(step, ActorZClipStep):
+        return ("Actor Z-Clipping", step.actor_id, None, None, step.plane, 320, 100, "S")
     if isinstance(step, FaceActorStep):
         return ("Actor drehen", step.actor_id, None, None, 1, 320, 100, step.direction)
     if isinstance(step, DelayStep):
