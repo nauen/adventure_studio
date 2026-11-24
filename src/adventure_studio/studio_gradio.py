@@ -1003,7 +1003,7 @@ def make_app():
                                          placeholder="Text, den die Spielfigur spricht")
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten.")
             gr.Markdown("**Actor-Raumtransfer mit Z-Clipping:** Actor, Zielraum, X/Y und Ziel-Z-Ebene wählen. Transfer am Ende der Sequenz, optional gefolgt von einem Raumwechsel.")
-            gr.Markdown("**Actor Z-Clipping:** 1–4 erzwingt eine vorhandene Raum-Z-Maske; 0 stellt die automatische Walkbox-Verdeckung wieder her.")
+            gr.Markdown("**Actor Z-Clipping:** 1–4 erzwingt eine vorhandene Raum-Z-Maske; 0 stellt die automatische Walkbox-Verdeckung wieder her. Die Aktion wirkt nur auf einen im aktuellen Raum anwesenden Actor, auch nach authoriertem Raumtransfer.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
             native_add_selected = gr.Button("Schritt an ausgewählte Variante anhängen")

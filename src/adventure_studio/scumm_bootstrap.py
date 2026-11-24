@@ -612,9 +612,11 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, WaitCameraStep):
                 instructions.append("            waitForCamera();\n")
             elif isinstance(step, ActorZClipStep):
-                instructions.extend((f"            setCurrentActor({step.actor_id});\n",
-                                     f"            setActorZClip({step.plane});\n",
-                                     "            setCurrentActor(VAR_EGO);\n"))
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     f"                setActorZClip({step.plane});\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
             elif isinstance(step, FaceActorStep):
                 direction = actor_facing_angle(step.direction)
                 instructions.extend((f"            setCurrentActor({step.actor_id});\n",
@@ -679,9 +681,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_positions[step.actor_id] = (step.x, step.y, room_name)
             elif isinstance(step, TransferActorZClipStep):
                 end_positions[step.actor_id] = (step.x, step.y, step.room)
-                end_clipping[step.actor_id] = transfer_plane(step)
+                end_clipping[step.actor_id] = (transfer_plane(step), False)
             elif isinstance(step, ActorZClipStep):
-                end_clipping[step.actor_id] = step.plane
+                end_clipping[step.actor_id] = (step.plane, True)
             elif isinstance(step, FaceActorStep):
                 end_directions[step.actor_id] = step.direction
             elif isinstance(step, PickupObjectStep):
@@ -709,10 +711,14 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += (f"                setCurrentActor({actor});\n"
                        f"                setActorDirection({native_direction});\n"
                        "                setCurrentActor(VAR_EGO);\n")
-        for actor, plane in end_clipping.items():
+        for actor, (plane, require_presence) in end_clipping.items():
+            if require_presence:
+                commit += f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
             commit += (f"                setCurrentActor({actor});\n"
                        f"                setActorZClip({plane});\n"
                        "                setCurrentActor(VAR_EGO);\n")
+            if require_presence:
+                commit += "                }\n"
         if final_music is not None:
             commit += (f"                startMusic({room_asset.music_id});\n"
                        if final_music == "start" else "                stopMusic();\n")
