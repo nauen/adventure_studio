@@ -157,7 +157,15 @@ class NativeSequenceEditorTests(unittest.TestCase):
         self.assertIn("setCurrentActor(VAR_EGO);", normal)
         self.assertIn("setActorZClip(0);", override)
         self.assertNotIn("setActorZClip(1);", override)
-        for plane in (-1, 2, 5, 1.5, True):
+        restored = replace_sequence_step(raw, identity, 2, "Actor Z-Clipping",
+                                         "Guide", None, None, -1)
+        restored_doc = parse_document(restored)
+        restored_native = inject_interaction_sequences(scummc_room_source(restored_doc.rooms[0]), "Harbor",
+                                                         restored_doc.interaction_sequences, restored_doc.actors,
+                                                         restored_doc.costumes, restored_doc.rooms[0])
+        self.assertIn("setActorZClip(0);", restored_native.split("} override {", 1)[1])
+        self.assertNotIn("setActorZClip(-1);", restored_native)
+        for plane in (-2, 2, 5, 1.5, True):
             with self.assertRaises(ValueError):
                 replace_sequence_step(raw, identity, 0, "Actor Z-Clipping",
                                       "Guide", None, None, plane)

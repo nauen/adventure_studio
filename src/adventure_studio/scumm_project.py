@@ -147,7 +147,7 @@ class WaitActorStep:
 @dataclass(frozen=True)
 class ActorZClipStep:
     actor_id: str
-    plane: int  # 0 restores native walkbox clipping
+    plane: int  # -1 restores the authored room profile; 0 restores native walkbox clipping
 
 
 @dataclass(frozen=True)
@@ -973,8 +973,10 @@ def _validate_document(document: GameDocument) -> None:
                         and transfer.actor_id == actor.id and transfer.room == room.name
                         for interaction in document.interaction_sequences for transfer in interaction.steps))
                         or type(step.plane) is not int
-                        or not 0 <= step.plane <= min(4, len(room.zplanes))):
-                    raise ValueError("Actor Z-clip requires a room Actor and 0 or an existing native room Z-plane (1–4)")
+                        or not -1 <= step.plane <= min(4, len(room.zplanes))):
+                    raise ValueError("Actor Z-clip requires a room Actor and -1, 0 or an existing native room Z-plane (1–4)")
+                if step.plane == -1 and actor.room != room.name and room.name not in dict(actor.room_zclips):
+                    raise ValueError("Actor Z-clip profile restoration requires an authored destination profile")
             elif isinstance(step, FaceActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if actor is None or actor.room != room.name or step.direction not in ("N", "E", "S", "W"):

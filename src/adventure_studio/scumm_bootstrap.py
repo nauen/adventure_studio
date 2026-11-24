@@ -531,6 +531,12 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         actor = next(a for a in actors if a.id == step.actor_id)
         return actor.initial_zclip if step.room == actor.room else dict(actor.room_zclips)[step.room]
 
+    def interaction_plane(step):
+        if step.plane != -1:
+            return step.plane
+        actor = next(a for a in actors if a.id == step.actor_id)
+        return actor.initial_zclip if room_name == actor.room else dict(actor.room_zclips)[room_name]
+
     destinations = {step.room for sequence in active for step in sequence.steps
                     if isinstance(step, TransferActorZClipStep)}
     source = "".join(f"room {target};\n" for target in sorted(destinations)
@@ -614,7 +620,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, ActorZClipStep):
                 instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({step.actor_id});\n",
-                                     f"                setActorZClip({step.plane});\n",
+                                     f"                setActorZClip({interaction_plane(step)});\n",
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
             elif isinstance(step, FaceActorStep):
@@ -683,7 +689,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_positions[step.actor_id] = (step.x, step.y, step.room)
                 end_clipping[step.actor_id] = (transfer_plane(step), False)
             elif isinstance(step, ActorZClipStep):
-                end_clipping[step.actor_id] = (step.plane, True)
+                end_clipping[step.actor_id] = (interaction_plane(step), True)
             elif isinstance(step, FaceActorStep):
                 end_directions[step.actor_id] = step.direction
             elif isinstance(step, PickupObjectStep):

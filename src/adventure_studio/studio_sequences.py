@@ -2759,7 +2759,7 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
     if isinstance(step, WaitActorStep):
         return f"Auf Actor {step.actor_id} warten"
     if isinstance(step, ActorZClipStep):
-        return f"Actor {step.actor_id}: Z-Clipping {step.plane or 'automatisch'}"
+        return f"Actor {step.actor_id}: Z-Clipping {'Raumprofil' if step.plane == -1 else step.plane or 'automatisch'}"
     if isinstance(step, FaceActorStep):
         return f"Actor {step.actor_id}: Richtung {step.direction}"
     if isinstance(step, PickupObjectStep):
