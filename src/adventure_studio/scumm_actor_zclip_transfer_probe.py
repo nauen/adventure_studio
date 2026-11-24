@@ -37,7 +37,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             # Story composition replaces the original fixture hotspots.
             # Author a dedicated, independently coloured return interaction.
             return_color = len(room.palette)
-            stairs = RoomHotspot("R06Return", "Return to harbor", "Return to harbor.",
+            stairs = RoomHotspot("R06TransferReturn", "Return to harbor", "Return to harbor.",
                                  285, 100, 16, 16,
                                  sprite_pixels=bytes([return_color]) * 256)
             room = replace(room, palette=(*room.palette, RETURN_RGB),
@@ -81,9 +81,9 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Cellar", -1 if profiles else 1, 220, 85)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
         "Raum wechseln", None, None, "Cellar", None)
-    raw = append_sequence_step(raw, "Cellar", "R06Return", "Close",
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", -1 if profiles else 0, 240, 85)
-    raw = append_sequence_step(raw, "Cellar", "R06Return", "Close",
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Raum wechseln", None, None, "Harbor", None)
     if dynamic or restore_profile:
         raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
@@ -139,7 +139,8 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     before = sample("before", 320, 240)
     click(234, 563)
     click(*colored_item_center(output, before[-1]["frame"], (255, 220, 75)))
-    await_frame("transfer-cellar", lambda label: colored_item_pixels(output, label, RETURN_RGB) >= 40)
+    await_frame("transfer-cellar", lambda label: colored_item_pixels(output, label, RETURN_RGB) >= 40
+                and colored_item_pixels(output, label, (255, 220, 75)) < 10)
     time.sleep(2)
     destination = sample("destination", 320, 220)
     revealed, restored = [], []
