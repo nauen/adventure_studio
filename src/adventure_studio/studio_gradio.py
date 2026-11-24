@@ -2932,8 +2932,9 @@ def make_app():
                     f"Bildfolgenverlauf: Schritt {index} von {len(states) - 1} "
                     "· maximal 20 Bearbeitungsschritte",
                     gr.update(
-                        choices=dialogue_png_sprite_sheet_history_choices(history),
-                        value=index, interactive=len(states) > 1))
+                        choices=[(label, str(position)) for label, position in
+                                 dialogue_png_sprite_sheet_history_choices(history)],
+                        value=None, interactive=len(states) > 1))
 
         def png_sheet_track_undo(sheet, columns, rows, margin_x, margin_y,
                                  gap_x, gap_y, skipped, cell_order, repeats,
@@ -3013,8 +3014,10 @@ def make_app():
                 sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                 skipped, cell_order, repeats)
             try:
+                if position is None:
+                    return (gr.skip(),) * 6
                 restored, updated = jump_dialogue_png_sprite_sheet_history(
-                    history, timeline, context, position)
+                    history, timeline, context, int(position))
                 return (restored, updated, *png_sheet_history_controls(updated))
             except ValueError as error:
                 raise gr.Error(str(error)) from error
