@@ -209,7 +209,7 @@ def play_two_actor_walk(output: Path, capture_frame, process, *, frame_count: in
     return result
 
 
-def track_native_actor_lanes(screenshots: Path) -> dict:
+def track_native_actor_lanes(screenshots: Path, *, include_before: bool = False) -> dict:
     """Measure both costumes in separate vertical lanes of stock ScummVM frames.
 
     This uses actual costume pixels, not the authored Actor destination.
@@ -221,7 +221,10 @@ def track_native_actor_lanes(screenshots: Path) -> dict:
     bands = {"ForegroundWalker": (312, 343),
              "BackgroundWalker": (418, 448)}
     observations = {name: [] for name in ACTOR_IDS}
-    for entry in metadata["captured_frames"]:
+    entries = metadata["captured_frames"]
+    if include_before:
+        entries = [{"frame": "r06-two-actor-before", "seconds_since_native_input": -1}, *entries]
+    for entry in entries:
         with Image.open(screenshots / f"scummvm-{entry['frame']}.png") as frame:
             rgb = frame.convert("RGB")
             camera_x = camera_from_sky(rgb)

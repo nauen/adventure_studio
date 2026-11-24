@@ -44,8 +44,8 @@ def author_project(root, variant, initial=False):
     return raw
 
 
-def measure(root):
-    tracks = track_native_actor_lanes(root)
+def measure(root, initial=False):
+    tracks = track_native_actor_lanes(root, include_before=initial)
     capture = json.loads((root / "r06-two-actor-walk-capture.json").read_text())
     frames = capture["captured_frames"]
     a, b = ({row["frame"]: row for row in tracks[actor]} for actor in ACTOR_IDS)
@@ -54,6 +54,11 @@ def measure(root):
                 "a_visible": f["frame"] in a}
                for f in frames if f["frame"] in b
                and abs(b[f["frame"]]["world_x"] - 240) <= 8]
+    if initial:
+        before = "r06-two-actor-before"
+        if before not in b or abs(b[before]["world_x"] - 240) > 8:
+            raise RuntimeError("Reference Actor missing before first native input")
+        samples.insert(0, {"frame": before, "seconds": -1, "a_visible": before in a})
     if len(samples) < 15:
         raise RuntimeError("Unchanged reference Actor not visible")
     if any(abs(row["world_x"] - 240) > 8 for row in a.values()):
@@ -94,9 +99,11 @@ def run(upstream, output, initial=False):
         launch_smoke(game, root / "screenshots", seconds=6, scene_only=True,
                      allow_static_scene=True, native_two_actor_walk_probe=True,
                      native_two_actor_capture_frames=210)
-        report[variant] = measure(root / "screenshots")
+        report[variant] = measure(root / "screenshots", initial=initial)
         (output / "report.json").write_text(json.dumps(report, indent=2))
     if initial:
+        if not report["transparent"][0]["a_visible"]:
+            raise RuntimeError("Transparent control Actor missing before first native input")
         if any(s["a_visible"] for s in report["masked"]):
             raise RuntimeError("Initially clipped Actor visible in opaque mask")
         if sum(s["a_visible"] for s in report["transparent"]) < len(report["transparent"]) * .85:
