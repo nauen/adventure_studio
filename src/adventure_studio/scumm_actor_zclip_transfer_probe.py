@@ -11,14 +11,14 @@ from PIL import Image
 from .scumm_actor_zclip_probe import author_project
 from .scumm_assets import CameraCue, RoomHotspot
 from .scumm_camera_zp01_probe import camera_from_sky
-from .scumm_launch import close_rgb, colored_item_center, colored_item_pixels, launch_smoke, scene_pixel
+from .scumm_launch import colored_item_center, colored_item_pixels, launch_smoke
 from .scumm_project import canonical_json, export_document, parse_document, InteractionSequence
 from .scumm_toolchain import compile_story_game
 from .scumm_two_actor_four_mask_probe import ACTOR_IDS
 from .studio_sequences import append_sequence_step, import_room_zplane
 
 VARIANTS = ("masked", "transparent")
-RETURN_RGB = (175, 60, 210)
+RETURN_RGB = (60, 210, 175)
 
 
 def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False):
@@ -32,15 +32,14 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         if room.name == "Harbor":
             room = replace(room, camera_cues=(CameraCue("set", x=320),))
         elif room.name == "Cellar":
-            # Story composition replaces the original fixture hotspots.
-            # Author a dedicated, independently coloured return interaction.
-            return_color = len(room.palette)
-            stairs = RoomHotspot("R06Return", "Return to harbor", "Return to harbor.",
+            # A unique visible return object is a room identity marker and
+            # a real interaction target, not a background color assumption.
+            portal = RoomHotspot("R06TransferReturn", "return passage", "Go upstairs.",
                                  285, 100, 16, 16,
-                                 sprite_pixels=bytes([return_color]) * 256)
+                                 sprite_pixels=bytes([len(room.palette)]) * 256)
             room = replace(room, palette=(*room.palette, RETURN_RGB),
-                           hotspots=(*room.hotspots, stairs),
-                           camera_cues=(CameraCue("set", x=320),),
+                           hotspots=(*room.hotspots, portal),
+                           camera_cues=(CameraCue("set", x=160),),
                            demo_walk_to_x=None, demo_walk_to_y=None)
         rooms.append(room)
     rooms = tuple(rooms)
@@ -69,12 +68,12 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Cellar", -1 if profiles else 1, 220, 85)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
         "Raum wechseln", None, None, "Cellar", None)
-    raw = append_sequence_step(raw, "Cellar", "R06Return", "Close",
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", -1 if profiles else 0, 240, 85)
-    raw = append_sequence_step(raw, "Cellar", "R06Return", "Close",
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Raum wechseln", None, None, "Harbor", None)
     if dynamic:
-        raw = append_sequence_step(raw, "Cellar", "R06Return", "Open",
+        raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
     return raw
 
@@ -124,15 +123,16 @@ def play_transfer(output, capture, process, dynamic=False):
     before = sample("before", 320, 240)
     click(234, 563)
     click(*colored_item_center(output, before[-1]["frame"], (255, 220, 75)))
-    await_frame("transfer-cellar", lambda label: colored_item_pixels(output, label, RETURN_RGB) >= 40)
+    await_frame("transfer-cellar", lambda label: colored_item_pixels(output, label, RETURN_RGB) >= 40
+                and colored_item_pixels(output, label, (255, 220, 75)) < 10)
     time.sleep(2)
-    destination = sample("destination", 320, 220)
+    destination = sample("destination", 160, 220)
     revealed = []
     if dynamic:
         click(234, 535)
         click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
         time.sleep(2)
-        revealed = sample("revealed", 320, 220)
+        revealed = sample("revealed", 160, 220)
     click(234, 563)
     click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
     await_frame("transfer-back", harbor)

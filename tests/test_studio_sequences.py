@@ -94,18 +94,18 @@ class NativeSequenceEditorTests(unittest.TestCase):
         from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
         with tempfile.TemporaryDirectory() as directory:
             raw = author_transfer_project(Path(directory), "masked")
-            raw = append_sequence_step(raw, "Cellar", "R06Return", "Open",
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                        "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
-            raw = append_sequence_step(raw, "Cellar", "R06Return", "Open",
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                        "Warten", None, None, None, 2)
-            raw = append_sequence_step(raw, "Cellar", "R06Return", "Open",
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                        "Actor Z-Clipping", ACTOR_IDS[0], None, None, 1)
-            raw = set_sequence_skippable(raw, "Cellar|R06Return|Open", True)
+            raw = set_sequence_skippable(raw, "Cellar|R06TransferReturn|Open", True)
             doc = parse_document(raw)
             self.assertEqual(canonical_json(doc), raw)
             room = next(room for room in doc.rooms if room.name == "Cellar")
             sequence = next(s for s in doc.interaction_sequences
-                            if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06Return", "Open"))
+                            if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
             native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
                                                    (sequence,), doc.actors, doc.costumes, room)
             normal, override = native.split("} override {", 1)
@@ -115,10 +115,10 @@ class NativeSequenceEditorTests(unittest.TestCase):
             self.assertIn("setActorZClip(1);", override)
             self.assertNotIn("setActorZClip(0);", override)
             with self.assertRaises(ValueError):
-                append_sequence_step(raw, "Cellar", "R06Return", "Open",
+                append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Actor Z-Clipping", ACTOR_IDS[1], None, None, 0)
             with self.assertRaises(ValueError):
-                append_sequence_step(raw, "Cellar", "R06Return", "Open",
+                append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Actor Z-Clipping", ACTOR_IDS[0], None, None, 5)
 
     def test_actor_zclip_roundtrip_native_export_and_escape(self):
