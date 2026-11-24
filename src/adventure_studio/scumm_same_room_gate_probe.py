@@ -348,7 +348,19 @@ def play_same_room_gates(plan: dict, output: Path, capture,
             raise RuntimeError(f"Real native pickup failed for {key}")
 
     capture("initial-gates")
-    initial = _observed_states(output / "scummvm-initial-gates.png")
+    # Inventory pickup can leave the follow camera one strip short of
+    # the far-right local door. Recover only from missing sprite evidence;
+    # never accept an ambiguous or open door as a closed one.
+    frame = output / "scummvm-initial-gates.png"
+    for _ in range(3):
+        if all(max(_gate_pixels(frame, gate)) >= 40 for gate in range(2)):
+            break
+        if process.poll() is not None:
+            raise RuntimeError("ScummVM exited while positioning initial gate camera")
+        _click(790, 390)
+        time.sleep(4)
+        capture("initial-gates")
+    initial = _observed_states(frame)
     if initial != [False, False]:
         raise RuntimeError(f"Native Story doors must begin closed: {initial}")
     states = [[True, True]] if plan["control"] else [initial]
