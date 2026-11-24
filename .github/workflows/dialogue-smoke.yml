@@ -9,7 +9,7 @@ on:
 jobs:
   dialogue:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,11 +22,25 @@ jobs:
         run: |
           PYTHONPATH=src:tests python -m unittest discover -s tests -p test_story_v4.py -v
           PYTHONPATH=src:tests python -m unittest discover -s tests -p test_scumm_dialogue_probe.py -v
+      - name: Restore previously downloaded Ubuntu packages
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/scumm-experimental-apt
+          key: ubuntu-24.04-scumm-experimental-apt-${{ github.run_id }}-${{ github.run_attempt }}-dialogue
+          restore-keys: |
+            ubuntu-24.04-scumm-experimental-apt-
       - name: Install ScummC build tools and ScummVM interaction dependencies
-        timeout-minutes: 18
+        timeout-minutes: 35
         run: |
-          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=45 update
-          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Acquire::Retries=3 -o Acquire::http::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core
+          sudo mkdir -p /tmp/scumm-experimental-apt/partial
+          bash .github/scripts/prepare-native-apt.sh
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends -o Dir::Cache::archives=/tmp/scumm-experimental-apt -o Acquire::Retries=3 -o Acquire::http::Timeout=45 -o Acquire::https::Timeout=45 install build-essential bison flex xsltproc pkg-config libglib2.0-dev scummvm xvfb xauth x11-apps xdotool imagemagick fonts-dejavu-core
+      - name: Save downloaded Ubuntu packages even when install times out
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/scumm-experimental-apt
+          key: ubuntu-24.04-scumm-experimental-apt-${{ github.run_id }}-${{ github.run_attempt }}-dialogue
       - name: Build compatible upstream ScummC tools
         run: |
           git clone --depth 1 https://github.com/AlbanBedel/scummc.git /tmp/scummc-upstream
