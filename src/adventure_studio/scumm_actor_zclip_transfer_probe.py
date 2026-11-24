@@ -11,14 +11,14 @@ from PIL import Image
 from .scumm_actor_zclip_probe import author_project
 from .scumm_assets import CameraCue, RoomHotspot
 from .scumm_camera_zp01_probe import camera_from_sky
-from .scumm_launch import close_rgb, colored_item_center, colored_item_pixels, launch_smoke, scene_pixel
+from .scumm_launch import colored_item_center, colored_item_pixels, launch_smoke
 from .scumm_project import canonical_json, export_document, parse_document, InteractionSequence
 from .scumm_toolchain import compile_story_game
 from .scumm_two_actor_four_mask_probe import ACTOR_IDS
 from .studio_sequences import append_sequence_step, import_room_zplane
 
 VARIANTS = ("masked", "transparent")
-RETURN_RGB = (60, 220, 90)
+RETURN_RGB = (60, 210, 175)
 
 
 def author_transfer_project(root, variant):
@@ -27,8 +27,22 @@ def author_transfer_project(root, variant):
     doc = parse_document(author_project(root, "transparent", initial=False))
     name = "R06Transfer" + variant.title() + "Costume"
     previous = doc.costumes[-1].name
-    rooms = tuple(replace(room, camera_cues=(CameraCue("set", x=320),))
-                  if room.name == "Harbor" else room for room in doc.rooms)
+    rooms = []
+    for room in doc.rooms:
+        if room.name == "Harbor":
+            room = replace(room, camera_cues=(CameraCue("set", x=320),))
+        elif room.name == "Cellar":
+            # A unique visible return object is a room identity marker and
+            # a real interaction target, not a background color assumption.
+            portal = RoomHotspot("R06TransferReturn", "return passage", "Go upstairs.",
+                                 285, 100, 16, 16,
+                                 sprite_pixels=bytes([len(room.palette)]) * 256)
+            room = replace(room, palette=(*room.palette, RETURN_RGB),
+                           hotspots=(*room.hotspots, portal),
+                           camera_cues=(CameraCue("set", x=160),),
+                           demo_walk_to_x=None, demo_walk_to_y=None)
+        rooms.append(room)
+    rooms = tuple(rooms)
     doc = replace(doc, rooms=rooms,
         costumes=(*doc.costumes[:-1], replace(doc.costumes[-1], name=name)),
         actors=tuple(replace(a, costume=name, initial_zclip=0) if a.costume == previous else a
@@ -47,9 +61,9 @@ def author_transfer_project(root, variant):
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Cellar", 1, 220, 85)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
         "Raum wechseln", None, None, "Cellar", None)
-    raw = append_sequence_step(raw, "Cellar", "Stairs", "Close",
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", 0, 240, 85)
-    return append_sequence_step(raw, "Cellar", "Stairs", "Close",
+    return append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Raum wechseln", None, None, "Harbor", None)
 
 
@@ -98,7 +112,8 @@ def play_transfer(output, capture, process):
     before = sample("before", 320, 240)
     click(234, 563)
     click(*colored_item_center(output, before[-1]["frame"], (255, 220, 75)))
-    await_frame("transfer-cellar", lambda label: close_rgb(scene_pixel(output, label), (120, 70, 180)))
+    await_frame("transfer-cellar", lambda label: colored_item_pixels(output, label, RETURN_RGB) >= 40
+                and colored_item_pixels(output, label, (255, 220, 75)) < 10)
     time.sleep(2)
     destination = sample("destination", 160, 220)
     click(234, 563)
