@@ -228,6 +228,8 @@ def select_actor_phases(rows: list[dict], world_x: int,
         for out_row in outgoing_candidates
         for return_row in returning_candidates
         if abs(out_row["camera_x"] - return_row["camera_x"]) > 55
+        and all(row["world_x"] == world_x and 192 <= row["screen_x"] <= 831
+                for row in (out_row, return_row))
     ]
     if not pairs:
         raise RuntimeError("Visible Actor positions do not disprove a screen-fixed mask")
