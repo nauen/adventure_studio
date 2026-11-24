@@ -2975,8 +2975,9 @@ def make_app():
                     f"Bildfolgenverlauf: Schritt {index} von {len(states) - 1} "
                     "· maximal 20 Bearbeitungsschritte",
                     gr.update(
-                        choices=dialogue_png_sprite_sheet_history_choices(history),
-                        value=index, interactive=len(states) > 1))
+                        choices=[(label, str(position)) for label, position in
+                                 dialogue_png_sprite_sheet_history_choices(history)],
+                        value=None, interactive=len(states) > 1))
 
         def png_sheet_track_undo(sheet, columns, rows, margin_x, margin_y,
                                  gap_x, gap_y, skipped, cell_order, repeats,
@@ -3051,7 +3052,16 @@ def make_app():
 
         def png_sheet_jump_history(sheet, columns, rows, margin_x, margin_y,
                                    gap_x, gap_y, skipped, cell_order, repeats,
-                                   timeline, history, position):
+                                   timeline, history, evt: gr.SelectData):
+            # Only a deliberate option selection is a navigation command.
+            # Updating choices or clearing the search field is not a jump.
+            if evt is None or not evt.selected:
+                return (gr.skip(),) * 6
+            choices = dialogue_png_sprite_sheet_history_choices(history)
+            position = next((index for label, index in choices
+                             if evt.value in (label, str(index), index)), None)
+            if position is None:
+                return (gr.skip(),) * 6
             context = png_sheet_undo_context(
                 sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                 skipped, cell_order, repeats)
@@ -3062,15 +3072,15 @@ def make_app():
             except ValueError as error:
                 raise gr.Error(str(error)) from error
 
-        native_dialogue_sprite_history_position.input(
+        png_sheet_jump_history.__annotations__["evt"] = gr.SelectData
+        native_dialogue_sprite_history_position.select(
             png_sheet_jump_history,
             [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
              native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
              native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
-             native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
-             native_dialogue_sprite_history_position],
+             native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
             [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
              native_dialogue_sprite_undo, native_dialogue_sprite_redo,
              native_dialogue_sprite_history_status,

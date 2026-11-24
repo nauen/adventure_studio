@@ -589,7 +589,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             # and must not satisfy the goal. Check before collecting the key.
             capture_frame("locked-before")
             locked_before = door_pixels(output_directory, "locked-before")
-            if locked_before < 40 and auto_recipe:
+            if locked_before < 40 and verify_recipe:
                 # The initial follow-camera frame can be 32 world pixels left
                 # of the stable recipe view. Its rightmost Door is then
                 # *outside* the 640px viewport (seen in genuine CI captures).
@@ -601,11 +601,11 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     capture_output=True, text=True, timeout=5, check=False,
                 )
                 if walk.returncode:
-                    raise RuntimeError(f"Autoplan camera recovery click failed: {walk.stderr}")
+                    raise RuntimeError(f"Recipe camera recovery click failed: {walk.stderr}")
                 recenter_deadline = time.monotonic() + 8.0
                 while time.monotonic() < recenter_deadline:
                     if process.poll() is not None:
-                        raise RuntimeError("ScummVM quit during autoplan camera recovery")
+                        raise RuntimeError("ScummVM quit during recipe camera recovery")
                     time.sleep(0.4)
                     capture_frame("locked-before")
                     locked_before = door_pixels(output_directory, "locked-before")
