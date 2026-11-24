@@ -492,7 +492,8 @@ def set_actor_initial_zclip(raw: str, actor_id: str, plane: int | float,
         if actor.id == actor_id else actor for actor in document.actors)))
 
 
-def set_actor_room_zclip(raw: str, actor_id: str, room: str, plane: int | float | None) -> str:
+def set_actor_room_zclip(raw: str, actor_id: str, room: str, plane: int | float | None,
+                         restore_on_entry: bool | None = None) -> str:
     """Configure the destination profile used by a native Actor transfer; None removes it."""
     document = parse_document(raw)
     actor = next((a for a in document.actors if a.id == actor_id), None)
@@ -501,6 +502,8 @@ def set_actor_room_zclip(raw: str, actor_id: str, room: str, plane: int | float 
     target = next((r for r in document.rooms if r.name == room), None)
     if target is None or room == actor.room:
         raise ValueError("Bitte einen anderen vorhandenen Actor-Zielraum wählen")
+    if restore_on_entry is not None and type(restore_on_entry) is not bool:
+        raise ValueError("Raumprofil-Wiederherstellung muss boolesch sein")
     profiles = dict(actor.room_zclips)
     if plane is None:
         profiles.pop(room, None)
@@ -509,7 +512,9 @@ def set_actor_room_zclip(raw: str, actor_id: str, room: str, plane: int | float 
     else:
         raise ValueError("Z-Ebene muss im Zielraum vorhanden sein")
     updated = canonical_json(replace(document, actors=tuple(
-        replace(a, room_zclips=tuple(sorted(profiles.items()))) if a.id == actor_id else a
+        replace(a, room_zclips=tuple(sorted(profiles.items())),
+                restore_profile_on_entry=a.restore_profile_on_entry if restore_on_entry is None else restore_on_entry)
+        if a.id == actor_id else a
         for a in document.actors)))
     parse_document(updated)
     return updated

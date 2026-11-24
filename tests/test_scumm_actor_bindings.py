@@ -65,6 +65,26 @@ class ActorBootstrapTests(unittest.TestCase):
             self.assertEqual(native.count("setActorZClip(1);"), 1)
             self.assertIn("setActorStanding();\n        setActorZClip(1);", native)
 
+    def test_destination_profile_entry_is_guarded_by_native_actor_room(self):
+        import tempfile
+        from pathlib import Path
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        from adventure_studio.studio_actors import set_actor_room_zclip
+        from adventure_studio.scumm_bootstrap import inject_actor_room_zclip
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = author_transfer_project(Path(tmp), "masked")
+            raw = set_actor_room_zclip(raw, ACTOR_IDS[0], "Cellar", 1, True)
+            doc = parse_document(raw)
+            self.assertEqual(parse_document(canonical_json(doc)), doc)
+            source = "    local script entry() {\n    }\n"
+            native = inject_actor_room_zclip(source, "Cellar", doc.actors)
+            self.assertIn(f"if (getActorRoom({ACTOR_IDS[0]}) == VAR_ROOM) {{", native)
+            self.assertIn("setActorZClip(1);", native)
+            self.assertNotIn(f"setCurrentActor({ACTOR_IDS[1]});", native)
+            self.assertIn("setCurrentActor(VAR_EGO);", native)
+            self.assertEqual(inject_actor_room_zclip(source, "Archive", doc.actors), source)
+
     def test_actor_destination_profile_is_resolved_before_native_export(self):
         import tempfile
         from pathlib import Path

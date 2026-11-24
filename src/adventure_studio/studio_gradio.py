@@ -896,6 +896,7 @@ def make_app():
                     native_profile_actor = gr.Dropdown(label="Actor für Zielraumprofil")
                     native_profile_room = gr.Dropdown(label="Zielraumprofil")
                     native_profile_plane = gr.Dropdown(label="Z-Ebene im Zielraum", choices=[("Profil entfernen", None), ("Automatik", 0), *[(f"ZP{i:02d}", i) for i in range(1, 5)]])
+                    native_profile_restore = gr.Checkbox(label="Zielraumprofile bei Anwesenheit beim Raumbetreten wiederherstellen", value=False)
                     native_profile_save = gr.Button("Zielraumprofil speichern")
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum", elem_id="native-room")
@@ -2097,15 +2098,15 @@ def make_app():
 
         def native_profile_value(raw, actor_id, room):
             if raw is None:
-                return None
+                return None, False
             actor = next((a for a in parse_document(raw).actors if a.id == actor_id), None)
-            return dict(actor.room_zclips).get(room) if actor else None
+            return (dict(actor.room_zclips).get(room), actor.restore_profile_on_entry) if actor else (None, False)
 
         native_state.change(native_profile_choices, [native_state], [native_profile_actor, native_profile_room])
-        native_profile_actor.change(native_profile_value, [native_state, native_profile_actor, native_profile_room], [native_profile_plane])
-        native_profile_room.change(native_profile_value, [native_state, native_profile_actor, native_profile_room], [native_profile_plane])
-        native_profile_save.click(lambda raw, actor, room, plane: native_asset_edit(set_actor_room_zclip, raw, actor, room, plane),
-                                  [native_state, native_profile_actor, native_profile_room, native_profile_plane],
+        native_profile_actor.change(native_profile_value, [native_state, native_profile_actor, native_profile_room], [native_profile_plane, native_profile_restore])
+        native_profile_room.change(native_profile_value, [native_state, native_profile_actor, native_profile_room], [native_profile_plane, native_profile_restore])
+        native_profile_save.click(lambda raw, actor, room, plane, restore: native_asset_edit(set_actor_room_zclip, raw, actor, room, plane, restore),
+                                  [native_state, native_profile_actor, native_profile_room, native_profile_plane, native_profile_restore],
                                   [native_state, *native_outputs, native_report])
         def native_room_update(raw, room):
             if raw is None:
