@@ -87,6 +87,40 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     set_costume_direction_speaking_sequence(raw, "Speaker", "N", invalid)
 
+    def test_transferred_actor_restores_authored_room_profile_in_native_interaction(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            raw = author_transfer_project(root, "masked")
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Cellar", "R06Return", "Open",
+                                     "Actor Z-Clipping", ACTOR_IDS[0], None, None, -1)
+            raw = author_transfer_project(root, "masked", profiles=True)
+            raw = append_sequence_step(raw, "Cellar", "R06Return", "Open",
+                                       "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
+            raw = append_sequence_step(raw, "Cellar", "R06Return", "Open",
+                                       "Warten", None, None, None, 2)
+            raw = append_sequence_step(raw, "Cellar", "R06Return", "Open",
+                                       "Actor Z-Clipping", ACTOR_IDS[0], None, None, -1)
+            raw = set_sequence_skippable(raw, "Cellar|R06Return|Open", True)
+            doc = parse_document(raw)
+            self.assertEqual(canonical_json(doc), raw)
+            room = next(room for room in doc.rooms if room.name == "Cellar")
+            sequence = next(s for s in doc.interaction_sequences
+                            if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06Return", "Open"))
+            native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
+                                                   (sequence,), doc.actors, doc.costumes, room)
+            normal, override = native.split("} override {", 1)
+            self.assertLess(normal.index("setActorZClip(0);"), normal.index("setActorZClip(1);"))
+            self.assertIn("setActorZClip(1);", override)
+            self.assertNotIn("setActorZClip(-1);", native)
+            guard = f"if (getActorRoom({ACTOR_IDS[0]}) == VAR_ROOM)"
+            self.assertEqual(normal.count(guard), 2)
+            self.assertEqual(override.count(guard), 1)
+
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
