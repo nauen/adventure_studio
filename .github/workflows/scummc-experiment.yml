@@ -655,6 +655,7 @@ jobs:
         run: |
           python -m pip install 'Pillow>=10,<13'
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_probe /tmp/scummc-upstream /tmp/native-actor-zclip
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_probe /tmp/scummc-upstream /tmp/native-initial-actor-zclip --initial
       - name: Retain native Actor Z-clipping screenshots and report
         if: ${{ always() && matrix.shard == 'geometry' }}
         uses: actions/upload-artifact@v4
@@ -666,6 +667,7 @@ jobs:
             /tmp/native-actor-zclip/*/screenshots/*.json
             /tmp/native-actor-zclip/*/screenshots/*.log
             /tmp/native-actor-zclip/report.json
+            /tmp/native-initial-actor-zclip
           if-no-files-found: ignore
       - name: Verify four independently selected Studio-authored Z-plane layers in stock ScummVM
         if: ${{ matrix.shard == 'geometry' }}
