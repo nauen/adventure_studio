@@ -890,6 +890,7 @@ def make_app():
                     native_actor_initial_save = gr.Button("Startanimation speichern")
                 with gr.Row():
                     native_actor_zclip = gr.Dropdown(label="Initiale Actor-Z-Verdeckung", choices=[("Walkbox-Automatik", 0), *[(f"ZP{i:02d}", i) for i in range(1, 5)]], value=0)
+                    native_actor_zclip_reset = gr.Checkbox(label="Z-Verdeckung bei jedem Raumbetreten zurücksetzen", value=False)
                     native_actor_zclip_save = gr.Button("Initiale Z-Verdeckung speichern")
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum", elem_id="native-room")
@@ -2079,8 +2080,8 @@ def make_app():
             [native_state, native_actor, native_actor_initial],
             [native_state, *native_outputs, native_report])
         native_actor_zclip_save.click(
-            lambda raw, actor_id, plane: native_asset_edit(set_actor_initial_zclip, raw, actor_id, plane),
-            [native_state, native_actor, native_actor_zclip],
+            lambda raw, actor_id, plane, reset: native_asset_edit(set_actor_initial_zclip, raw, actor_id, plane, reset),
+            [native_state, native_actor, native_actor_zclip, native_actor_zclip_reset],
             [native_state, *native_outputs, native_report])
         def native_room_update(raw, room):
             if raw is None:
@@ -2130,10 +2131,11 @@ def make_app():
         native_actor.change(native_actor_update, [native_state, native_actor],
                             [native_animation, native_actor_initial])
         def native_actor_zclip_update(raw, actor_id):
-            return next((actor.initial_zclip for actor in parse_document(raw).actors if actor.id == actor_id), 0) if raw is not None else 0
+            actor = next((actor for actor in parse_document(raw).actors if actor.id == actor_id), None) if raw is not None else None
+            return (actor.initial_zclip, actor.reset_zclip_on_room_entry) if actor else (0, False)
 
-        native_actor.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip])
-        native_state.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip])
+        native_actor.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip, native_actor_zclip_reset])
+        native_state.change(native_actor_zclip_update, [native_state, native_actor], [native_actor_zclip, native_actor_zclip_reset])
         def native_sequence_update(raw, identity):
             steps = sequence_steps(raw, identity) if raw is not None and identity else ()
             return (gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],
@@ -2930,8 +2932,9 @@ def make_app():
                     f"Bildfolgenverlauf: Schritt {index} von {len(states) - 1} "
                     "· maximal 20 Bearbeitungsschritte",
                     gr.update(
-                        choices=dialogue_png_sprite_sheet_history_choices(history),
-                        value=index, interactive=len(states) > 1))
+                        choices=[(label, str(position)) for label, position in
+                                 dialogue_png_sprite_sheet_history_choices(history)],
+                        value=None, interactive=len(states) > 1))
 
         def png_sheet_track_undo(sheet, columns, rows, margin_x, margin_y,
                                  gap_x, gap_y, skipped, cell_order, repeats,
@@ -2942,7 +2945,7 @@ def make_app():
             updated = track_dialogue_png_sprite_sheet_undo(history, timeline, context)
             return (updated, *png_sheet_history_controls(updated))
 
-        native_dialogue_sprite_timeline.change(
+        native_dialogue_sprite_timeline.input(
             png_sheet_track_undo,
             [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
@@ -2952,7 +2955,7 @@ def make_app():
              native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
             [native_dialogue_sprite_undo_history, native_dialogue_sprite_undo,
              native_dialogue_sprite_redo, native_dialogue_sprite_history_status,
-             native_dialogue_sprite_history_position])
+             native_dialogue_sprite_history_position], concurrency_id="sprite-history")
 
         def png_sheet_undo(sheet, columns, rows, margin_x, margin_y, gap_x,
                            gap_y, skipped, cell_order, repeats, timeline, history):
@@ -2977,7 +2980,7 @@ def make_app():
             [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
              native_dialogue_sprite_undo, native_dialogue_sprite_redo,
              native_dialogue_sprite_history_status,
-             native_dialogue_sprite_history_position])
+             native_dialogue_sprite_history_position], concurrency_id="sprite-history")
 
         def png_sheet_redo(sheet, columns, rows, margin_x, margin_y, gap_x,
                            gap_y, skipped, cell_order, repeats, timeline, history):
@@ -3002,11 +3005,20 @@ def make_app():
             [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
              native_dialogue_sprite_undo, native_dialogue_sprite_redo,
              native_dialogue_sprite_history_status,
-             native_dialogue_sprite_history_position])
+             native_dialogue_sprite_history_position], concurrency_id="sprite-history")
 
         def png_sheet_jump_history(sheet, columns, rows, margin_x, margin_y,
                                    gap_x, gap_y, skipped, cell_order, repeats,
-                                   timeline, history, position):
+                                   timeline, history, evt: gr.SelectData):
+            # Only a deliberate option selection is a navigation command.
+            # Updating choices or clearing the search field is not a jump.
+            if evt is None or not evt.selected:
+                return (gr.skip(),) * 6
+            choices = dialogue_png_sprite_sheet_history_choices(history)
+            position = next((index for label, index in choices
+                             if evt.value in (label, str(index), index)), None)
+            if position is None:
+                return (gr.skip(),) * 6
             context = png_sheet_undo_context(
                 sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                 skipped, cell_order, repeats)
@@ -3017,19 +3029,19 @@ def make_app():
             except ValueError as error:
                 raise gr.Error(str(error)) from error
 
-        native_dialogue_sprite_history_position.input(
+        png_sheet_jump_history.__annotations__["evt"] = gr.SelectData
+        native_dialogue_sprite_history_position.select(
             png_sheet_jump_history,
             [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
              native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
              native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
-             native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
-             native_dialogue_sprite_history_position],
+             native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
             [native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history,
              native_dialogue_sprite_undo, native_dialogue_sprite_redo,
              native_dialogue_sprite_history_status,
-             native_dialogue_sprite_history_position])
+             native_dialogue_sprite_history_position], concurrency_id="sprite-history")
 
         def png_sheet_select_playback(evt: gr.SelectData):
             if evt is None or type(evt.index) is not int:
@@ -3118,26 +3130,53 @@ def make_app():
             except (ValueError, OSError) as error:
                 raise gr.Error(str(error)) from error
 
+        # Record button edits in the same callback as the new timeline.
+        # Undo/redo/history jumps must never trigger another history write.
+        def png_sheet_edit_transaction(edit):
+            def apply(*args):
+                history = args[-1]
+                values = args[:-1]
+                context = png_sheet_undo_context(*values[:10])
+                current = values[10]
+                updated = track_dialogue_png_sprite_sheet_undo(history, current, context)
+                timeline = edit(*values)
+                updated = track_dialogue_png_sprite_sheet_undo(updated, timeline, context)
+                return (timeline, updated, *png_sheet_history_controls(updated))
+            return apply
+
+        sprite_history_outputs = [native_dialogue_sprite_timeline,
+                                  native_dialogue_sprite_undo_history,
+                                  native_dialogue_sprite_undo, native_dialogue_sprite_redo,
+                                  native_dialogue_sprite_history_status,
+                                  native_dialogue_sprite_history_position]
+
         for button, action in ((native_dialogue_sprite_insert, "insert"),
                                (native_dialogue_sprite_remove_position, "remove")):
             button.click(
-                lambda sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                png_sheet_edit_transaction(lambda sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                        skipped, cell_order, repeats, timeline, selected, position,
                        action=action: png_sheet_compose(
                            sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                            skipped, cell_order, repeats, timeline, selected,
-                           position, action),
+                           position, action)),
                 [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
                  native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
                  native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
                  native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
                  native_dialogue_sprite_order, native_dialogue_sprite_repeats,
                  native_dialogue_sprite_timeline, native_dialogue_sprite_selected,
-                 native_dialogue_sprite_position],
-                [native_dialogue_sprite_timeline])
+                 native_dialogue_sprite_position, native_dialogue_sprite_undo_history],
+                sprite_history_outputs, concurrency_id="sprite-history")
 
         native_dialogue_sprite_reset_timeline.click(
-            lambda: "", outputs=[native_dialogue_sprite_timeline])
+            png_sheet_edit_transaction(lambda *values: ""),
+            [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
+             native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
+             native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
+             native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
+             native_dialogue_sprite_order, native_dialogue_sprite_repeats,
+             native_dialogue_sprite_timeline, native_dialogue_sprite_undo_history],
+            sprite_history_outputs, concurrency_id="sprite-history")
 
         def png_sheet_move_playback(sheet, columns, rows, margin_x, margin_y,
                                     gap_x, gap_y, skipped, cell_order, repeats,
@@ -3156,19 +3195,19 @@ def make_app():
         for button, step in ((native_dialogue_sprite_move_position_up, -1),
                              (native_dialogue_sprite_move_position_down, 1)):
             button.click(
-                lambda sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                png_sheet_edit_transaction(lambda sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                        skipped, cell_order, repeats, timeline, position,
                        step=step: png_sheet_move_playback(
                            sheet, columns, rows, margin_x, margin_y, gap_x,
                            gap_y, skipped, cell_order, repeats, timeline,
-                           position, step),
+                           position, step)),
                 [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
                  native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
                  native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
                  native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
                  native_dialogue_sprite_order, native_dialogue_sprite_repeats,
-                 native_dialogue_sprite_timeline, native_dialogue_sprite_position],
-                [native_dialogue_sprite_timeline])
+                 native_dialogue_sprite_timeline, native_dialogue_sprite_position, native_dialogue_sprite_undo_history],
+                sprite_history_outputs, concurrency_id="sprite-history")
 
         def png_sheet_move_block(sheet, columns, rows, margin_x, margin_y,
                                  gap_x, gap_y, skipped, cell_order, repeats,
@@ -3190,20 +3229,20 @@ def make_app():
         for button, step in ((native_dialogue_sprite_move_block_up, -1),
                              (native_dialogue_sprite_move_block_down, 1)):
             button.click(
-                lambda sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
+                png_sheet_edit_transaction(lambda sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                        skipped, cell_order, repeats, timeline, position,
                        block_end, step=step: png_sheet_move_block(
                            sheet, columns, rows, margin_x, margin_y, gap_x,
                            gap_y, skipped, cell_order, repeats, timeline,
-                           position, block_end, step),
+                           position, block_end, step)),
                 [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
                  native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
                  native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
                  native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
                  native_dialogue_sprite_order, native_dialogue_sprite_repeats,
                  native_dialogue_sprite_timeline, native_dialogue_sprite_position,
-                 native_dialogue_sprite_block_end],
-                [native_dialogue_sprite_timeline])
+                 native_dialogue_sprite_block_end, native_dialogue_sprite_undo_history],
+                sprite_history_outputs, concurrency_id="sprite-history")
 
         def png_sheet_remove_block(sheet, columns, rows, margin_x, margin_y,
                                    gap_x, gap_y, skipped, cell_order, repeats,
@@ -3222,15 +3261,15 @@ def make_app():
                 raise gr.Error(str(error)) from error
 
         native_dialogue_sprite_remove_block.click(
-            png_sheet_remove_block,
+            png_sheet_edit_transaction(png_sheet_remove_block),
             [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
              native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
              native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
              native_dialogue_sprite_timeline, native_dialogue_sprite_position,
-             native_dialogue_sprite_block_end],
-            [native_dialogue_sprite_timeline])
+             native_dialogue_sprite_block_end, native_dialogue_sprite_undo_history],
+            sprite_history_outputs, concurrency_id="sprite-history")
 
         def png_sheet_relocate_block(sheet, columns, rows, margin_x, margin_y,
                                      gap_x, gap_y, skipped, cell_order, repeats,
@@ -3251,15 +3290,15 @@ def make_app():
                 raise gr.Error(str(error)) from error
 
         native_dialogue_sprite_relocate_block.click(
-            png_sheet_relocate_block,
+            png_sheet_edit_transaction(png_sheet_relocate_block),
             [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
              native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
              native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
              native_dialogue_sprite_timeline, native_dialogue_sprite_position,
-             native_dialogue_sprite_block_end, native_dialogue_sprite_copy_destination],
-            [native_dialogue_sprite_timeline])
+             native_dialogue_sprite_block_end, native_dialogue_sprite_copy_destination, native_dialogue_sprite_undo_history],
+            sprite_history_outputs, concurrency_id="sprite-history")
 
         def png_sheet_repeat_block(sheet, columns, rows, margin_x, margin_y,
                                    gap_x, gap_y, skipped, cell_order, repeats,
@@ -3283,7 +3322,7 @@ def make_app():
                 raise gr.Error(str(error)) from error
 
         native_dialogue_sprite_repeat_block.click(
-            png_sheet_repeat_block,
+            png_sheet_edit_transaction(png_sheet_repeat_block),
             [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
              native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
@@ -3291,8 +3330,8 @@ def make_app():
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
              native_dialogue_sprite_timeline, native_dialogue_sprite_position,
              native_dialogue_sprite_block_end, native_dialogue_sprite_copy_destination,
-             native_dialogue_sprite_block_repetitions],
-            [native_dialogue_sprite_timeline])
+             native_dialogue_sprite_block_repetitions, native_dialogue_sprite_undo_history],
+            sprite_history_outputs, concurrency_id="sprite-history")
 
         def png_sheet_copy_block(sheet, columns, rows, margin_x, margin_y,
                                  gap_x, gap_y, skipped, cell_order, repeats,
@@ -3313,15 +3352,15 @@ def make_app():
                 raise gr.Error(str(error)) from error
 
         native_dialogue_sprite_copy_block.click(
-            png_sheet_copy_block,
+            png_sheet_edit_transaction(png_sheet_copy_block),
             [native_dialogue_sprite_sheet, native_dialogue_sprite_columns,
              native_dialogue_sprite_rows, native_dialogue_sprite_margin_x,
              native_dialogue_sprite_margin_y, native_dialogue_sprite_gap_x,
              native_dialogue_sprite_gap_y, native_dialogue_sprite_skipped,
              native_dialogue_sprite_order, native_dialogue_sprite_repeats,
              native_dialogue_sprite_timeline, native_dialogue_sprite_position,
-             native_dialogue_sprite_block_end, native_dialogue_sprite_copy_destination],
-            [native_dialogue_sprite_timeline])
+             native_dialogue_sprite_block_end, native_dialogue_sprite_copy_destination, native_dialogue_sprite_undo_history],
+            sprite_history_outputs, concurrency_id="sprite-history")
 
         def png_sheet_play(sheet, columns, rows, margin_x, margin_y, gap_x, gap_y,
                            skipped, cell_order, repeats, timeline, duration):

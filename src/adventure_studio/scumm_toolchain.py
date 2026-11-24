@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Callable
 
 from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_objects,
-                              inject_actor_bindings, inject_actor_room_animations,
+                              inject_actor_bindings, inject_actor_room_animations, inject_actor_room_zclip,
                               inject_actor_initial_flags, inject_actor_count_rules, inject_actor_input_rules,
                               inject_actor_animation_triggers,
                               inject_interaction_sequences,
@@ -282,6 +282,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         rendered = inject_actor_room_animations(
             room_source.read_text(encoding="utf-8"), room.name,
             document.actors, document.costumes)
+        rendered = inject_actor_room_zclip(rendered, room.name, document.actors)
         rendered = inject_actor_count_rules(rendered, room.name,
                                             document.animation_rules,
                                             document.actors, document.costumes)

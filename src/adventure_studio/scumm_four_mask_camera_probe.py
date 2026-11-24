@@ -223,11 +223,17 @@ def select_actor_phases(rows: list[dict], world_x: int,
         raise RuntimeError(f"Missing camera sample for outgoing at X={outgoing_x}")
     if not returning_candidates:
         raise RuntimeError(f"Missing camera sample for returning at X={returning_x}")
+    for phase, candidates in (("outgoing", outgoing_candidates), ("returning", returning_candidates)):
+        if not any(row["world_x"] == world_x and 192 <= row["screen_x"] <= 831
+                   for row in candidates):
+            raise RuntimeError(f"Actor is not visible at the {phase} camera phase")
     pairs = [
         (out_row, return_row)
         for out_row in outgoing_candidates
         for return_row in returning_candidates
         if abs(out_row["camera_x"] - return_row["camera_x"]) > 55
+        and all(row["world_x"] == world_x and 192 <= row["screen_x"] <= 831
+                for row in (out_row, return_row))
     ]
     if not pairs:
         raise RuntimeError("Visible Actor positions do not disprove a screen-fixed mask")
