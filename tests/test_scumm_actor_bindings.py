@@ -65,6 +65,32 @@ class ActorBootstrapTests(unittest.TestCase):
             self.assertEqual(native.count("setActorZClip(1);"), 1)
             self.assertIn("setActorStanding();\n        setActorZClip(1);", native)
 
+    def test_actor_transfer_zclip_validates_destination_and_exports_skip(self):
+        import tempfile
+        from pathlib import Path
+        from adventure_studio.scumm_actor_zclip_probe import author_project
+        from adventure_studio.scumm_project import TransferActorZClipStep
+        from adventure_studio.studio_sequences import append_sequence_step, sequence_step_fields
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = author_project(Path(tmp), "masked", initial=True)
+            args = ("Harbor", "Key", "Close", "Actor-Raumtransfer mit Z-Clipping",
+                    "ForegroundWalker", None, "Cellar")
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, *args, 1, 100, 100)
+            edited = append_sequence_step(raw, *args, 0, 100, 100)
+            doc = parse_document(edited)
+            self.assertEqual(parse_document(canonical_json(doc)), doc)
+            sequence = next(s for s in doc.interaction_sequences if s.hotspot_id == "Key" and s.verb == "Close")
+            self.assertEqual(sequence.steps[-1], TransferActorZClipStep("ForegroundWalker", "Cellar", 100, 100, 0))
+            self.assertEqual(sequence_step_fields(edited, "Harbor|Key|Close", len(sequence.steps)-1)[:7],
+                             ("Actor-Raumtransfer mit Z-Clipping", "ForegroundWalker", None, "Cellar", 0, 100, 100))
+            room = next(r for r in doc.rooms if r.name == "Harbor")
+            source = scummc_room_source(room)
+            native = inject_interaction_sequences(source, "Harbor", (replace(sequence, skippable=True),),
+                                                  doc.actors, doc.costumes, room)
+            self.assertEqual(native.count("putActorAt(ForegroundWalker, 100, 100, Cellar);"), 2)
+            self.assertEqual(native.count("setActorZClip(0);"), 2)
+
     def test_room_entry_zclip_is_opt_in_and_restores_ego(self):
         import tempfile
         from pathlib import Path

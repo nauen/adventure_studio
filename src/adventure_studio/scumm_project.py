@@ -105,6 +105,15 @@ class MoveActorStep:
 
 
 @dataclass(frozen=True)
+class TransferActorZClipStep:
+    actor_id: str
+    room: str
+    x: int
+    y: int
+    plane: int
+
+
+@dataclass(frozen=True)
 class WalkActorStep:
     actor_id: str
     x: int
@@ -226,7 +235,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -338,6 +347,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, ObjectStateStep)
                                                    else {"type": "move_actor", **vars(step)}
                                                    if isinstance(step, MoveActorStep)
+                                                   else {"type": "transfer_actor_zclip", **vars(step)}
+                                                   if isinstance(step, TransferActorZClipStep)
                                                    else {"type": "walk_actor", **vars(step)}
                                                    if isinstance(step, WalkActorStep)
                                                    else {"type": "follow_actor_camera", **vars(step)}
@@ -900,6 +911,21 @@ def _validate_document(document: GameDocument) -> None:
             elif isinstance(step, DelayStep):
                 if type(step.seconds) is not int or step.seconds < 1:
                     raise ValueError("Interaction delay must be positive whole seconds")
+            elif isinstance(step, TransferActorZClipStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                target = rooms_by_name.get(step.room) if isinstance(step.room, str) else None
+                if (actor is None or target is None or target.name == room.name
+                        or type(step.x) is not int or type(step.y) is not int
+                        or not 0 <= step.x < target.geometry.room_width
+                        or not 0 <= step.y < target.geometry.room_height
+                        or type(step.plane) is not int
+                        or not 0 <= step.plane <= min(4, len(target.zplanes))):
+                    raise ValueError("Actor transfer requires an existing Actor, another room, valid position and destination Z-plane")
+                if actor.reset_zclip_on_room_entry and actor.room == target.name:
+                    raise ValueError("Actor transfer to its home room conflicts with enabled entry Z-clip reset")
+                if any(not isinstance(later, (TransferActorZClipStep, ChangeRoomStep))
+                       for later in sequence.steps[step_index + 1:]):
+                    raise ValueError("Actor transfers must finish the sequence before an optional room change")
             elif isinstance(step, (MoveActorStep, WalkActorStep)):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or actor.room != room.name or type(step.x) is not int
@@ -1067,6 +1093,11 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "x", "y"},
                              {"type", "actor_id", "x", "y"})
                 steps.append(MoveActorStep(step["actor_id"], step["x"], step["y"]))
+            elif kind == "transfer_actor_zclip":
+                fields = {"type", "actor_id", "room", "x", "y", "plane"}
+                step = _only(raw_step, fields, fields)
+                steps.append(TransferActorZClipStep(step["actor_id"], step["room"],
+                                                   step["x"], step["y"], step["plane"]))
             elif kind == "walk_actor":
                 step = _only(raw_step, {"type", "actor_id", "x", "y"},
                              {"type", "actor_id", "x", "y"})

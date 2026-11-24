@@ -510,7 +510,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
-                                MoveActorStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
+                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, VoiceLineStep)
@@ -518,6 +518,10 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
         return source
+    destinations = {step.room for sequence in active for step in sequence.steps
+                    if isinstance(step, TransferActorZClipStep)}
+    source = "".join(f"room {target};\n" for target in sorted(destinations)
+                     if f"room {target};\n" not in source) + source
     room_sounds = tuple(asset for asset in sound_assets if asset.room == room_name)
     actors_by_id = {actor.id: actor for actor in actors}
     costumes_by_name = {costume.name: costume for costume in costumes}
@@ -579,6 +583,11 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            delaySeconds({step.seconds});\n")
             elif isinstance(step, MoveActorStep):
                 instructions.append(f"            putActorAt({step.actor_id}, {step.x}, {step.y}, {room_name});\n")
+            elif isinstance(step, TransferActorZClipStep):
+                instructions.extend((f"            putActorAt({step.actor_id}, {step.x}, {step.y}, {step.room});\n",
+                                     f"            setCurrentActor({step.actor_id});\n",
+                                     f"            setActorZClip({step.plane});\n",
+                                     "            setCurrentActor(VAR_EGO);\n"))
             elif isinstance(step, WalkActorStep):
                 instructions.append(f"            walkActorTo({step.actor_id}, {step.x}, {step.y});\n")
             elif isinstance(step, WaitActorStep):
@@ -654,7 +663,10 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             if isinstance(step, ObjectStateStep):
                 end_states[step.hotspot_id] = step.state
             elif isinstance(step, (MoveActorStep, WalkActorStep)):
-                end_positions[step.actor_id] = (step.x, step.y)
+                end_positions[step.actor_id] = (step.x, step.y, room_name)
+            elif isinstance(step, TransferActorZClipStep):
+                end_positions[step.actor_id] = (step.x, step.y, step.room)
+                end_clipping[step.actor_id] = step.plane
             elif isinstance(step, ActorZClipStep):
                 end_clipping[step.actor_id] = step.plane
             elif isinstance(step, FaceActorStep):
@@ -677,8 +689,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += inventory_action(step, "                ")
         for hotspot, state in end_states.items():
             commit += f"                setObjectState({hotspot},{state});\n"
-        for actor, (x, y) in end_positions.items():
-            commit += f"                putActorAt({actor}, {x}, {y}, {room_name});\n"
+        for actor, (x, y, destination) in end_positions.items():
+            commit += f"                putActorAt({actor}, {x}, {y}, {destination});\n"
         for actor, direction in end_directions.items():
             native_direction = actor_facing_angle(direction)
             commit += (f"                setCurrentActor({actor});\n"
