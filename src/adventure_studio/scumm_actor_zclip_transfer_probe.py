@@ -18,7 +18,7 @@ from .scumm_two_actor_four_mask_probe import ACTOR_IDS
 from .studio_sequences import append_sequence_step, import_room_zplane
 
 VARIANTS = ("masked", "transparent")
-RETURN_RGB = (60, 220, 90)
+RETURN_RGB = (175, 60, 210)
 
 
 def author_transfer_project(root, variant, profiles=False):
@@ -27,8 +27,23 @@ def author_transfer_project(root, variant, profiles=False):
     doc = parse_document(author_project(root, "transparent", initial=False))
     name = ("R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
     previous = doc.costumes[-1].name
-    rooms = tuple(replace(room, camera_cues=(CameraCue("set", x=320),))
-                  if room.name == "Harbor" else room for room in doc.rooms)
+    rooms = []
+    for room in doc.rooms:
+        if room.name == "Harbor":
+            room = replace(room, camera_cues=(CameraCue("set", x=320),))
+        elif room.name == "Cellar":
+            # Story composition replaces the original fixture hotspots.
+            # Author a dedicated, independently coloured return interaction.
+            return_color = len(room.palette)
+            stairs = RoomHotspot("R06Return", "Return to harbor", "Return to harbor.",
+                                 285, 100, 16, 16,
+                                 sprite_pixels=bytes([return_color]) * 256)
+            room = replace(room, palette=(*room.palette, RETURN_RGB),
+                           hotspots=(*room.hotspots, stairs),
+                           camera_cues=(CameraCue("set", x=320),),
+                           demo_walk_to_x=None, demo_walk_to_y=None)
+        rooms.append(room)
+    rooms = tuple(rooms)
     doc = replace(doc, rooms=rooms,
         costumes=(*doc.costumes[:-1], replace(doc.costumes[-1], name=name)),
         actors=tuple(replace(a, costume=name, initial_zclip=0) if a.costume == previous else a
@@ -50,9 +65,9 @@ def author_transfer_project(root, variant, profiles=False):
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Cellar", -1 if profiles else 1, 220, 85)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
         "Raum wechseln", None, None, "Cellar", None)
-    raw = append_sequence_step(raw, "Cellar", "Stairs", "Close",
+    raw = append_sequence_step(raw, "Cellar", "R06Return", "Close",
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", -1 if profiles else 0, 240, 85)
-    return append_sequence_step(raw, "Cellar", "Stairs", "Close",
+    return append_sequence_step(raw, "Cellar", "R06Return", "Close",
         "Raum wechseln", None, None, "Harbor", None)
 
 
@@ -103,7 +118,7 @@ def play_transfer(output, capture, process):
     click(*colored_item_center(output, before[-1]["frame"], (255, 220, 75)))
     await_frame("transfer-cellar", lambda label: close_rgb(scene_pixel(output, label), (120, 70, 180)))
     time.sleep(2)
-    destination = sample("destination", 160, 220)
+    destination = sample("destination", 320, 220)
     click(234, 563)
     click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
     await_frame("transfer-back", harbor)
