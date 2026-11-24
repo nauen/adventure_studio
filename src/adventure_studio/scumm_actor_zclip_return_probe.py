@@ -115,9 +115,14 @@ def play_room_return(output, capture, process):
     click(234, 563)
     click(*colored_item_center(output, revealed[-1], PORTAL_RGB, fuzz_percent=4))
     await_frame("zclip-cellar", lambda label: colored_item_pixels(output, label, RETURN_RGB) >= 40 and colored_item_pixels(output, label, PORTAL_RGB) < 40)
+    # Room entry may still be scrolling after its first visible marker.
+    # Resolve the target from a fresh frame AFTER selecting the verb.
     time.sleep(2)
     click(234, 563)
-    click(*colored_item_center(output, "zclip-cellar", RETURN_RGB, fuzz_percent=4))
+    await_frame("zclip-return-target", lambda label:
+                colored_item_pixels(output, label, RETURN_RGB) >= 40
+                and colored_item_pixels(output, label, PORTAL_RGB) < 40)
+    click(*colored_item_center(output, "zclip-return-target", RETURN_RGB, fuzz_percent=4))
     await_frame("zclip-back", harbor)
     time.sleep(1)
     returned = samples("returned")
