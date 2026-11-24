@@ -87,6 +87,50 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     set_costume_direction_speaking_sequence(raw, "Speaker", "N", invalid)
 
+    def test_actor_zclip_roundtrip_native_export_and_escape(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import ZPlane, scummc_room_source
+        from adventure_studio.scumm_project import ActorZClipStep
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        room = scrolling_fixture()
+        width, height = room.geometry.room_width, room.geometry.room_height
+        room = replace(room, zplanes=(ZPlane(1, bytes(
+            int(x == 400 and y == 100)
+            for y in range(height) for x in range(width))),))
+        document = GameDocument("ClipProject", (room, destination_fixture()),
+                                (gesture_fixture(),),
+                                (ActorAsset("Guide", "NativeGesture", "Harbor", 400, 110),))
+        raw = canonical_json(document)
+        identity = "Harbor|Key|Close"
+        for kind, actor, amount in (("Actor Z-Clipping", "Guide", 1),
+                                    ("Warten", None, 2),
+                                    ("Actor Z-Clipping", "Guide", 0)):
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                       kind, actor, None, None, amount)
+        raw = set_sequence_skippable(raw, identity, True)
+        parsed = parse_document(raw)
+        self.assertEqual(canonical_json(parsed), raw)
+        self.assertEqual(parsed.interaction_sequences[0].steps[0], ActorZClipStep("Guide", 1))
+        self.assertEqual(parsed.interaction_sequences[0].steps[2], ActorZClipStep("Guide", 0))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:5],
+                         ("Actor Z-Clipping", "Guide", None, None, 1))
+        native = inject_interaction_sequences(scummc_room_source(parsed.rooms[0]), "Harbor",
+                                               parsed.interaction_sequences, parsed.actors,
+                                               parsed.costumes, parsed.rooms[0])
+        normal, override = native.split("} override {", 1)
+        self.assertLess(normal.index("setActorZClip(1);"), normal.index("setActorZClip(0);"))
+        self.assertIn("setCurrentActor(Guide);", normal)
+        self.assertIn("setCurrentActor(VAR_EGO);", normal)
+        self.assertIn("setActorZClip(0);", override)
+        self.assertNotIn("setActorZClip(1);", override)
+        for plane in (-1, 2, 5, 1.5, True):
+            with self.assertRaises(ValueError):
+                replace_sequence_step(raw, identity, 0, "Actor Z-Clipping",
+                                      "Guide", None, None, plane)
+        with self.assertRaises(ValueError):
+            replace_sequence_step(raw, identity, 0, "Actor Z-Clipping",
+                                  "Missing", None, None, 1)
+
     def test_story_linked_export_retains_authored_room_zplane(self):
         story = (Path(__file__).resolve().parents[1] / "examples" /
                  "mini_story_chain.json").read_text(encoding="utf-8")
