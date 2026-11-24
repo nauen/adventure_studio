@@ -683,6 +683,20 @@ jobs:
           name: native-actor-zclip-return
           path: /tmp/native-actor-zclip-return
           if-no-files-found: ignore
+      - name: Verify native Actor transfer with destination Z-clipping
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_transfer_probe /tmp/scummc-upstream /tmp/native-actor-zclip-transfer
+      - name: Retain native Actor transfer Z-clipping evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-actor-zclip-transfer
+          path: /tmp/native-actor-zclip-transfer
+          if-no-files-found: ignore
       - name: Verify four independently selected Studio-authored Z-plane layers in stock ScummVM
         if: ${{ matrix.shard == 'geometry' }}
         env:

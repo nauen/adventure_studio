@@ -313,10 +313,13 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_independent_gate_chain_probe: bool = False,
                  native_independent_gate_control: bool = False,
                  native_same_room_gate_plan: dict | None = None,
+                 native_actor_zclip_transfer_probe: bool = False,
                  native_actor_zclip_return_probe: bool = False,
                  native_two_actor_walk_probe: bool = False,
                  native_two_actor_capture_frames: int = 210,
                  native_two_actor_capture_interval: float = 0.07) -> None:
+    if native_actor_zclip_transfer_probe and (not scene_only or scene_walk_clicks or native_two_actor_walk_probe or native_actor_zclip_return_probe):
+        raise ValueError("Actor Z-clip transfer requires isolated scene mode")
     if native_actor_zclip_return_probe and (not scene_only or scene_walk_clicks or native_two_actor_walk_probe):
         raise ValueError("Actor Z-clip room return requires isolated scene mode")
     if native_two_actor_walk_probe and (not scene_only or scene_walk_clicks):
@@ -520,7 +523,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 # acceptance still independently requires an initial blue
                 # view and the complete outward/return journey.
                 if (close_rgb(start_rgb, (70, 130, 190))
-                        or ((camera_pan_capture or native_two_actor_walk_probe or native_actor_zclip_return_probe) and
+                        or ((camera_pan_capture or native_two_actor_walk_probe or native_actor_zclip_return_probe or native_actor_zclip_transfer_probe) and
                             close_rgb(start_rgb, (240, 175, 95)))):
                     break
                 time.sleep(0.3)
@@ -550,6 +553,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                      initial_pickup_rgb=initial_rgb,
                                      require_key_sprite=not (allow_static_scene and scene_only))
             if scene_only:
+                if native_actor_zclip_transfer_probe:
+                    from .scumm_actor_zclip_transfer_probe import play_transfer
+                    play_transfer(output_directory, capture_frame, process)
                 if native_actor_zclip_return_probe:
                     from .scumm_actor_zclip_return_probe import play_room_return
                     play_room_return(output_directory, capture_frame, process)
