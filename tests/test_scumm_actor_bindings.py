@@ -76,11 +76,11 @@ class ActorBootstrapTests(unittest.TestCase):
             raw = set_actor_initial_zclip(raw, "ForegroundWalker", 1, True)
             doc = parse_document(raw)
             self.assertEqual(parse_document(canonical_json(doc)), doc)
-            source = "        ResRoom::showCursor();\n"
+            source = "    local script entry() {\n"
             native = inject_actor_room_zclip(source, "Harbor", doc.actors)
-            self.assertEqual(native, "        setCurrentActor(ForegroundWalker);\n"
+            self.assertEqual(native, source + "        setCurrentActor(ForegroundWalker);\n"
                              "        setActorZClip(1);\n"
-                             "        setCurrentActor(VAR_EGO);\n" + source)
+                             "        setCurrentActor(VAR_EGO);\n")
             self.assertEqual(inject_actor_room_zclip(source, "Other", doc.actors), source)
             auto = parse_document(set_actor_initial_zclip(raw, "ForegroundWalker", 0))
             self.assertIn("setActorZClip(0);", inject_actor_room_zclip(source, "Harbor", auto.actors))

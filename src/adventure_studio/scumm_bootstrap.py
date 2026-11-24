@@ -339,14 +339,14 @@ def inject_actor_room_zclip(source: str, room_name: str, actors) -> str:
               if actor.room == room_name and actor.reset_zclip_on_room_entry]
     if not active:
         return source
-    marker = "        ResRoom::showCursor();\n"
+    marker = "    local script entry() {\n"
     if source.count(marker) != 1:
         raise ValueError(f"Unexpected entry script for Actor Z-clip room {room_name}")
     calls = "".join(
         f"        setCurrentActor({actor.id});\n"
         f"        setActorZClip({actor.initial_zclip});\n"
         for actor in active)
-    return source.replace(marker, calls + "        setCurrentActor(VAR_EGO);\n" + marker, 1)
+    return source.replace(marker, marker + calls + "        setCurrentActor(VAR_EGO);\n", 1)
 
 
 def inject_actor_room_animations(source: str, room_name: str, actors, costumes) -> str:
