@@ -440,15 +440,19 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         save_path.mkdir(exist_ok=True)
     environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
 
-    def capture_frame(label: str) -> Path:
+    def capture_frame(label: str, *, on_framebuffer_capture=None) -> Path:
         image_path = output_directory / f"scummvm-{label}.xwd"
         preview_path = output_directory / f"scummvm-{label}.png"
+        capture_started = time.monotonic()
         capture = subprocess.run(
             ["xwd", "-root", "-silent", "-out", str(image_path)],
             capture_output=True, text=True, timeout=10, check=False,
         )
+        capture_finished = time.monotonic()
         if capture.returncode != 0 or not image_path.is_file() or image_path.stat().st_size < 1024:
             raise RuntimeError(f"X framebuffer capture failed: {capture.stderr}")
+        if on_framebuffer_capture is not None:
+            on_framebuffer_capture(capture_started, capture_finished)
         preview = subprocess.run(
             ["convert", str(image_path), str(preview_path)],
             capture_output=True, text=True, timeout=10, check=False,
