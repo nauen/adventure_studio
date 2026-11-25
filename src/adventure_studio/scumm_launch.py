@@ -317,11 +317,12 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_actor_zclip_dynamic_probe: bool = False,
                  native_actor_zclip_profile_restore_probe: bool = False,
                  native_transferred_actor_walk_probe: bool = False,
+                 native_transferred_actor_animation_probe: bool = False,
                  native_actor_zclip_return_probe: bool = False,
                  native_two_actor_walk_probe: bool = False,
                  native_two_actor_capture_frames: int = 210,
                  native_two_actor_capture_interval: float = 0.07) -> None:
-    if (native_actor_zclip_dynamic_probe or native_actor_zclip_profile_restore_probe or native_transferred_actor_walk_probe) and not native_actor_zclip_transfer_probe:
+    if (native_actor_zclip_dynamic_probe or native_actor_zclip_profile_restore_probe or native_transferred_actor_walk_probe or native_transferred_actor_animation_probe) and not native_actor_zclip_transfer_probe:
         raise ValueError("Dynamic Actor clipping requires transfer probe")
     if native_actor_zclip_transfer_probe and (not scene_only or scene_walk_clicks or native_two_actor_walk_probe or native_actor_zclip_return_probe):
         raise ValueError("Actor Z-clip transfer requires isolated scene mode")
@@ -564,7 +565,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             if scene_only:
                 if native_actor_zclip_transfer_probe:
                     from .scumm_actor_zclip_transfer_probe import play_transfer
-                    play_transfer(output_directory, capture_frame, process, dynamic=native_actor_zclip_dynamic_probe, restore_profile=native_actor_zclip_profile_restore_probe, walk=native_transferred_actor_walk_probe)
+                    play_transfer(output_directory, capture_frame, process, dynamic=native_actor_zclip_dynamic_probe, restore_profile=native_actor_zclip_profile_restore_probe, walk=native_transferred_actor_walk_probe, animation=native_transferred_actor_animation_probe)
                 if native_actor_zclip_return_probe:
                     from .scumm_actor_zclip_return_probe import play_room_return
                     play_room_return(output_directory, capture_frame, process)
