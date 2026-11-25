@@ -15,7 +15,7 @@ from .scumm_launch import close_rgb, colored_item_center, colored_item_pixels, l
 from .scumm_project import canonical_json, export_document, parse_document, InteractionSequence
 from .scumm_toolchain import compile_story_game
 from .scumm_two_actor_four_mask_probe import ACTOR_IDS
-from .studio_sequences import append_sequence_step, import_room_zplane
+from .studio_sequences import append_sequence_step, import_room_zplane, set_sequence_skippable
 
 VARIANTS = ("masked", "transparent")
 RETURN_RGB = (175, 60, 210)
@@ -92,7 +92,10 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
     if restore_profile:
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Warten", None, None, None, 5)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, -1)
+        raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
     return raw
 
 
@@ -145,7 +148,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
                 and colored_item_pixels(output, label, (255, 220, 75)) < 10)
     time.sleep(2)
     destination = sample("destination", 160, 220)
-    revealed, restored = [], []
+    revealed, restored, revealed_again, restored_escape = [], [], [], []
     if dynamic or restore_profile:
         click(234, 563)
         click(*colored_item_center(output, destination[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
@@ -154,15 +157,26 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     if restore_profile:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
-        time.sleep(2)
+        time.sleep(6)
         restored = sample("restored", 160, 220)
+        click(234, 563)
+        click(*colored_item_center(output, restored[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
+        time.sleep(2)
+        revealed_again = sample("revealed-again", 160, 220)
+        click(234, 563)
+        click(*colored_item_center(output, revealed_again[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
+        time.sleep(.6)
+        subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=5)
+        time.sleep(.4)
+        restored_escape = sample("restored-escape", 160, 220)
     click(234, 563)
     click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
     await_frame("transfer-back", harbor)
     time.sleep(1)
     returned = sample("returned", 320, 240)
     (output / "transfer-report.json").write_text(json.dumps({
-        "before": before, "destination": destination, "returned": returned, "revealed": revealed, "restored": restored}, indent=2))
+        "before": before, "destination": destination, "returned": returned, "revealed": revealed, "restored": restored, "revealed_again": revealed_again,
+        "restored_escape": restored_escape}, indent=2))
 
 
 def verify_transfer(report, variant, dynamic=False, restore_profile=False):
@@ -170,19 +184,19 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False):
     if dynamic or restore_profile:
         phases.append("revealed")
     if restore_profile:
-        phases.append("restored")
+        phases.extend(("restored", "revealed_again", "restored_escape"))
     phases.append("returned")
     for phase in phases:
         rows = report[phase]
         if len(rows) != 8:
             raise RuntimeError(f"Missing native transfer screenshots: {phase}")
-        visible = phase not in ("destination", "restored") or variant == "transparent"
+        visible = phase not in ("destination", "restored", "restored_escape") or variant == "transparent"
         count = sum(row["a_pixels"] >= 100 for row in rows)
         if (visible and count < 6) or (not visible and any(row["a_pixels"] >= 25 for row in rows)):
             raise RuntimeError(f"Unexpected transferred Actor visibility: {variant} {phase}: {rows}")
         if phase in ("before", "returned") and sum(row["b_pixels"] >= 100 for row in rows) < 6:
             raise RuntimeError(f"Reference Actor changed in Harbor: {phase}")
-        if phase in ("destination", "revealed", "restored") and any(row["b_pixels"] >= 100 for row in rows):
+        if phase in ("destination", "revealed", "restored", "revealed_again", "restored_escape") and any(row["b_pixels"] >= 100 for row in rows):
             raise RuntimeError("Non-transferred reference Actor appeared in Cellar")
 
 
