@@ -985,7 +985,9 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Actor Z-clip profile restoration requires an authored destination profile")
             elif isinstance(step, FaceActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
-                if actor is None or actor.room != room.name or step.direction not in ("N", "E", "S", "W"):
+                if (actor is None or (actor.room != room.name and
+                        (actor.id, room.name) not in transfer_destinations)
+                        or step.direction not in ("N", "E", "S", "W")):
                     raise ValueError("Interaction facing requires an Actor in the room and a cardinal direction")
             else:
                 raise ValueError("Unsupported interaction sequence step")
