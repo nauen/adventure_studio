@@ -417,7 +417,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         click(234, 563)
         click(*colored_item_center(output, idle_frames[-1]["frame"], ACTION_RGB, fuzz_percent=4))
         action_frames = pose_samples("action", 90)
-    def bounded_escape(label, previous_x=220, target_x=220, start_marker=None):
+    def bounded_escape(label, previous_x=220, target_x=220, start_marker=None, masked_target=False):
         started = time.monotonic()
         if start_marker is not None:
             # Native object state zero removes the trigger sprite. Its disappearance
@@ -435,8 +435,30 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             capture("transfer-before-escape")
         if lane_pixels("transfer-before-escape", previous_x, 160, 312, 343) < 100:
             raise RuntimeError("Actor not visible before native Escape")
-        subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=5)
-        time.sleep(.4)
+        # Hold Escape across a native input tick and observe the committed
+        # state before collecting the eight acceptance frames. A short key
+        # pulse can fall between event polls on a loaded runner.
+        subprocess.run(["xdotool", "keydown", "Escape"], check=True, timeout=5)
+        try:
+            time.sleep(.25)
+        finally:
+            subprocess.run(["xdotool", "keyup", "Escape"], check=True, timeout=5)
+        stable = 0
+        index = 0
+        while time.monotonic() < started + 7:
+            frame = f"transfer-{label}-settle-{index:02d}"
+            capture(frame)
+            pixels = lane_pixels(frame, target_x, 160, 312, 343)
+            matches = pixels < 25 if masked_target else pixels >= 100
+            if previous_x != target_x:
+                matches = matches and lane_pixels(frame, previous_x, 160, 312, 343) < 25
+            stable = stable + 1 if matches else 0
+            if stable >= 3:
+                break
+            index += 1
+            time.sleep(.15)
+        else:
+            raise RuntimeError(f"Native Escape target not observed before ordinary delay: {label}, pixels={pixels}")
         rows = sample(label, 160, target_x)
         elapsed = time.monotonic() - started
         if elapsed >= 10:
@@ -463,7 +485,8 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     if dynamic and not restore_profile and not walk and not animation and not facing and not camera and not position:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], ESCAPE_RGB, fuzz_percent=4))
-        escaped, escape_elapsed = bounded_escape("escaped", start_marker=ESCAPE_RGB)
+        escaped, escape_elapsed = bounded_escape("escaped", start_marker=ESCAPE_RGB,
+            masked_target=all(row["a_pixels"] < 25 for row in destination))
     if walk:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
@@ -479,7 +502,8 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         revealed_again = sample("revealed-again", 160, 220)
         click(234, 563)
         click(*colored_item_center(output, revealed_again[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
-        restored_escape, escape_elapsed = bounded_escape("restored-escape")
+        restored_escape, escape_elapsed = bounded_escape("restored-escape",
+            masked_target=all(row["a_pixels"] < 25 for row in destination))
     # The prior cutscene can still own native input. Wait for the live
     # hotspot and retry only while still in the destination room.
     deadline = time.monotonic() + 45
