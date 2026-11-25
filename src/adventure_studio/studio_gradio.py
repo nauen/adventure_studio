@@ -983,7 +983,7 @@ def make_app():
                 native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
                 native_sound_add = gr.Button("VOC dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Actor Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Actor drehen", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
@@ -996,6 +996,7 @@ def make_app():
             native_subtitle = gr.Textbox(label="Untertitel für gesprochene Zeile (Unicode, maximal 160 Zeichen)",
                                          placeholder="Text, den die Spielfigur spricht")
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten.")
+            gr.Markdown("**Actor-Raumtransfer mit Z-Clipping:** Actor, Zielraum, X/Y und Ziel-Z-Ebene wählen. Transfer am Ende der Sequenz, optional gefolgt von einem Raumwechsel.")
             gr.Markdown("**Actor Z-Clipping:** 1–4 erzwingt eine vorhandene Raum-Z-Maske; 0 stellt die automatische Walkbox-Verdeckung wieder her.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
@@ -2101,6 +2102,15 @@ def make_app():
                     gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in animations]],
                               value=initial))
 
+        def native_transfer_actor_choices(raw, room, kind, selected):
+            if raw is None:
+                return gr.skip()
+            actors = (tuple(a.id for a in parse_document(raw).actors)
+                      if kind == "Actor-Raumtransfer mit Z-Clipping" else project_choices(raw, room)[2])
+            return gr.update(choices=[("Ego (für gesprochene Zeile)", None), *[(a, a) for a in actors]],
+                             value=selected if selected in actors else (actors[0] if actors else None))
+
+        native_kind.change(native_transfer_actor_choices, [native_state, native_room, native_kind, native_actor], [native_actor])
         native_room.change(native_room_update, [native_state, native_room],
                            [native_hotspot, native_target, native_actor, native_animation,
                             native_actor_initial])
@@ -2174,6 +2184,8 @@ def make_app():
             fields = sequence_step_fields(raw, identity, number)
             sequence_room = identity.split("|", 1)[0] if identity else None
             rooms, objects, actors = project_choices(raw, sequence_room)
+            if fields[0] == "Actor-Raumtransfer mit Z-Clipping":
+                actors = tuple(a.id for a in parse_document(raw).actors)
             animations = actor_animations(raw, fields[1]) if fields[1] else ()
             return (fields[0], gr.update(choices=[("Ego (für gesprochene Zeile)", None),
                                                  *[(item, item) for item in actors]], value=fields[1]),
@@ -2258,7 +2270,8 @@ def make_app():
             view = dialogue_animation_update(raw, line, direction)
             restored, updated = switch_with_session(
                 raw, line, direction, sequence, session, file)
-            return (*view[:-2], restored, view[-1], updated)
+            return (*view[:-2], restored, view[-1], updated,
+                    speaking_draft_session_status(raw, line, direction, restored))
 
         def dialogue_animation_refresh(raw, line, direction):
             lines = dialogue_animation_lines(raw) if raw else ()
@@ -2309,7 +2322,8 @@ def make_app():
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status, native_dialogue_draft_session])
+             native_dialogue_direction_status, native_dialogue_draft_session,
+             native_dialogue_draft_save_status])
         native_dialogue_animation.input(
             dialogue_direction_animation_preview,
             [native_state, native_dialogue_animation_line,
@@ -2322,7 +2336,8 @@ def make_app():
                 raw, line, animation, direction)
             restored, updated = switch_with_session(
                 raw, line, direction, sequence, session, file)
-            return image, status, restored, updated
+            return image, status, restored, updated, speaking_draft_session_status(
+                raw, line, direction, restored)
 
         native_dialogue_direction.input(
             direction_with_session,
@@ -2330,7 +2345,8 @@ def make_app():
              native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_draft_session, native_file],
             [native_dialogue_direction_preview, native_dialogue_direction_status,
-             native_dialogue_speaking_sequence, native_dialogue_draft_session])
+             native_dialogue_speaking_sequence, native_dialogue_draft_session,
+             native_dialogue_draft_save_status])
         native_dialogue_speaking_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
@@ -2534,12 +2550,7 @@ def make_app():
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
             [native_dialogue_draft_save_status], show_progress="hidden")
-        for source in (native_dialogue_animation_line, native_dialogue_direction):
-            source.change(
-                speaking_draft_session_status,
-                [native_state, native_dialogue_animation_line,
-                 native_dialogue_direction, native_dialogue_speaking_sequence],
-                [native_dialogue_draft_save_status], show_progress="hidden")
+        # Target switches compute status from the restored draft atomically.
 
         native_dialogue_draft_step.change(
             dialogue_speaking_draft_step_preview,

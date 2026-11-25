@@ -10,7 +10,7 @@ import re
 import tempfile
 import unicodedata
 
-from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, WalkActorStep, WaitActorStep,
+from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, ActorZClipStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
@@ -2752,6 +2752,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Warten: {step.seconds} s"
     if isinstance(step, MoveActorStep):
         return f"Actor {step.actor_id}: zu ({step.x}, {step.y}) setzen"
+    if isinstance(step, TransferActorZClipStep):
+        return f"Actor {step.actor_id}: nach {step.room} ({step.x}, {step.y}), Z-Clipping {step.plane}"
     if isinstance(step, WalkActorStep):
         return f"Actor {step.actor_id}: zu ({step.x}, {step.y}) laufen lassen"
     if isinstance(step, WaitActorStep):
@@ -2827,6 +2829,10 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Wartezeit muss eine ganze Zahl sein")
         step = DelayStep(int(amount))
+    elif kind == "Actor-Raumtransfer mit Z-Clipping":
+        if any(type(value) not in (int, float) or int(value) != value for value in (x, y, amount)):
+            raise ValueError("Actor-Transfer benötigt ganze Koordinaten und Z-Ebene")
+        step = TransferActorZClipStep(actor_id, target_id, int(x), int(y), int(amount))
     elif kind in ("Actor versetzen", "Actor laufen lassen"):
         if (type(x) not in (int, float) or type(y) not in (int, float)
                 or int(x) != x or int(y) != y):
@@ -2924,6 +2930,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Actor animieren", step.actor_id, step.animation, None, 1, 320, 100, "S")
     if isinstance(step, MoveActorStep):
         return ("Actor versetzen", step.actor_id, None, None, 1, step.x, step.y, "S")
+    if isinstance(step, TransferActorZClipStep):
+        return ("Actor-Raumtransfer mit Z-Clipping", step.actor_id, None, step.room, step.plane, step.x, step.y, "S")
     if isinstance(step, WalkActorStep):
         return ("Actor laufen lassen", step.actor_id, None, None, 1, step.x, step.y, "S")
     if isinstance(step, WaitActorStep):

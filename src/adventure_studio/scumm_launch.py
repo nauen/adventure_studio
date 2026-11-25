@@ -313,10 +313,13 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_independent_gate_chain_probe: bool = False,
                  native_independent_gate_control: bool = False,
                  native_same_room_gate_plan: dict | None = None,
+                 native_actor_zclip_transfer_probe: bool = False,
                  native_actor_zclip_return_probe: bool = False,
                  native_two_actor_walk_probe: bool = False,
                  native_two_actor_capture_frames: int = 210,
                  native_two_actor_capture_interval: float = 0.07) -> None:
+    if native_actor_zclip_transfer_probe and (not scene_only or scene_walk_clicks or native_two_actor_walk_probe or native_actor_zclip_return_probe):
+        raise ValueError("Actor Z-clip transfer requires isolated scene mode")
     if native_actor_zclip_return_probe and (not scene_only or scene_walk_clicks or native_two_actor_walk_probe):
         raise ValueError("Actor Z-clip room return requires isolated scene mode")
     if native_two_actor_walk_probe and (not scene_only or scene_walk_clicks):
@@ -434,15 +437,19 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         save_path.mkdir(exist_ok=True)
     environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
 
-    def capture_frame(label: str) -> Path:
+    def capture_frame(label: str, *, on_framebuffer_capture=None) -> Path:
         image_path = output_directory / f"scummvm-{label}.xwd"
         preview_path = output_directory / f"scummvm-{label}.png"
+        capture_started = time.monotonic()
         capture = subprocess.run(
             ["xwd", "-root", "-silent", "-out", str(image_path)],
             capture_output=True, text=True, timeout=10, check=False,
         )
+        capture_finished = time.monotonic()
         if capture.returncode != 0 or not image_path.is_file() or image_path.stat().st_size < 1024:
             raise RuntimeError(f"X framebuffer capture failed: {capture.stderr}")
+        if on_framebuffer_capture is not None:
+            on_framebuffer_capture(capture_started, capture_finished)
         preview = subprocess.run(
             ["convert", str(image_path), str(preview_path)],
             capture_output=True, text=True, timeout=10, check=False,
@@ -520,7 +527,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 # acceptance still independently requires an initial blue
                 # view and the complete outward/return journey.
                 if (close_rgb(start_rgb, (70, 130, 190))
-                        or ((camera_pan_capture or native_two_actor_walk_probe or native_actor_zclip_return_probe) and
+                        or ((camera_pan_capture or native_two_actor_walk_probe or native_actor_zclip_return_probe or native_actor_zclip_transfer_probe) and
                             close_rgb(start_rgb, (240, 175, 95)))):
                     break
                 time.sleep(0.3)
@@ -550,6 +557,9 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                                      initial_pickup_rgb=initial_rgb,
                                      require_key_sprite=not (allow_static_scene and scene_only))
             if scene_only:
+                if native_actor_zclip_transfer_probe:
+                    from .scumm_actor_zclip_transfer_probe import play_transfer
+                    play_transfer(output_directory, capture_frame, process)
                 if native_actor_zclip_return_probe:
                     from .scumm_actor_zclip_return_probe import play_room_return
                     play_room_return(output_directory, capture_frame, process)
@@ -583,7 +593,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             # and must not satisfy the goal. Check before collecting the key.
             capture_frame("locked-before")
             locked_before = door_pixels(output_directory, "locked-before")
-            if locked_before < 40 and auto_recipe:
+            if locked_before < 40 and verify_recipe:
                 # The initial follow-camera frame can be 32 world pixels left
                 # of the stable recipe view. Its rightmost Door is then
                 # *outside* the 640px viewport (seen in genuine CI captures).
@@ -595,11 +605,11 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     capture_output=True, text=True, timeout=5, check=False,
                 )
                 if walk.returncode:
-                    raise RuntimeError(f"Autoplan camera recovery click failed: {walk.stderr}")
+                    raise RuntimeError(f"Recipe camera recovery click failed: {walk.stderr}")
                 recenter_deadline = time.monotonic() + 8.0
                 while time.monotonic() < recenter_deadline:
                     if process.poll() is not None:
-                        raise RuntimeError("ScummVM quit during autoplan camera recovery")
+                        raise RuntimeError("ScummVM quit during recipe camera recovery")
                     time.sleep(0.4)
                     capture_frame("locked-before")
                     locked_before = door_pixels(output_directory, "locked-before")
