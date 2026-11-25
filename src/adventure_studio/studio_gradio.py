@@ -2581,9 +2581,7 @@ def make_app():
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
             [native_dialogue_draft_save_status], show_progress="hidden")
-        # Target changes update the textbox asynchronously. Calculate the
-        # status from the restored draft in the same callback, not from a
-        # separate dropdown change event with the previous textbox value.
+        # Target switches compute status from the restored draft atomically.
 
         native_dialogue_draft_step.change(
             dialogue_speaking_draft_step_preview,
