@@ -742,14 +742,16 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                        f"                    setActorDirection({native_direction});\n"
                        "                    setCurrentActor(VAR_EGO);\n"
                        "                }\n")
+        clipping_commit = ""
         for actor, (plane, require_presence) in end_clipping.items():
             if require_presence:
-                commit += f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
-            commit += (f"                setCurrentActor({actor});\n"
+                clipping_commit += f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
+            clipping_commit += (f"                setCurrentActor({actor});\n"
                        f"                setActorZClip({plane});\n"
                        "                setCurrentActor(VAR_EGO);\n")
             if require_presence:
-                commit += "                }\n"
+                clipping_commit += "                }\n"
+        commit += clipping_commit
         if isinstance(final_camera, PanCameraStep):
             commit += f"                panCameraTo({final_camera.x});\n"
             commit += "                waitForCamera();\n"
@@ -772,6 +774,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 + "                    }\n"
                 + "                }\n"
                 + "            }\n"
+                # Reconcile the persistent clipping state on the common exit,
+                # independently of VAR_OVERRIDE and the cutscene input reset.
+                + clipping_commit
                 + transition)
 
     for group in grouped.values():
