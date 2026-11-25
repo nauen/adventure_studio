@@ -152,7 +152,19 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     if dynamic or restore_profile:
         click(234, 563)
         click(*colored_item_center(output, destination[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
-        time.sleep(2)
+        deadline = time.monotonic() + 20
+        stable = 0
+        index = 0
+        while time.monotonic() < deadline and stable < 3:
+            if process.poll() is not None:
+                raise RuntimeError("ScummVM exited during clipping restoration")
+            label = f"transfer-reveal-settle-{index:03d}"
+            capture(label)
+            stable = stable + 1 if lane_pixels(label, 220, 160, 312, 343) >= 100 else 0
+            index += 1
+            time.sleep(.15)
+        if stable < 3:
+            raise RuntimeError("Native revealed Actor did not stabilize")
         revealed = sample("revealed", 160, 220)
     if restore_profile:
         click(234, 563)
