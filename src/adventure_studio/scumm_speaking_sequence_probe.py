@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -89,6 +90,12 @@ def run(game_directory: Path, output: Path, two_lines: bool = False,
             red_captured = False
             observed: tuple[str, ...] = ()
             ending_seen = False
+            def retain_observed_frame(label):
+                # Save the actual measured frame instead of taking another
+                # screenshot while the native animation continues.
+                shutil.copyfile(output / "scummvm-current.png",
+                                output / f"scummvm-{label}.png")
+
             for sample in range(240 if two_lines else 120):
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited during animated NPC line")
@@ -101,25 +108,25 @@ def run(game_directory: Path, output: Path, two_lines: bool = False,
                         if not observed_speaking_change(baseline, samples):
                             raise RuntimeError("Native ending pose started before the first speaking frames")
                         ending_seen = True
-                        _capture(output, "frame-ending")
+                        retain_observed_frame("frame-ending")
                     if not ending_seen and any(row[index] >= baseline[index] + 16
                                                for index in (2, 3)):
                         raise RuntimeError("Second NPC line started before its native ending pose")
                 if sample in (0, 8, 20, 40):
-                    _capture(output, f"checkpoint-{sample:03d}")
+                    retain_observed_frame(f"checkpoint-{sample:03d}")
                 if not red_captured and row[0] >= baseline[0] + 16:
-                    _capture(output, "frame-red")
+                    retain_observed_frame("frame-red")
                     red_captured = True
                 if two_lines:
                     seen = observed_independent_line_pairs(baseline, samples)
                     if len(seen) > len(observed):
                         for color in seen[len(observed):]:
-                            _capture(output, f"frame-{color}")
+                            retain_observed_frame(f"frame-{color}")
                         observed = seen
                     if len(seen) == 4 and (not ending or ending_seen):
                         break
                 elif observed_speaking_change(baseline, samples):
-                    _capture(output, "frame-green")
+                    retain_observed_frame("frame-green")
                     break
                 # Avoid phase-locking screenshot samples to short alternating
                 # COST frames: a fixed interval can repeatedly miss one pose.
