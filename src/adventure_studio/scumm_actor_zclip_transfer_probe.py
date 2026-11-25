@@ -41,7 +41,10 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                 harbor_room = next(r for r in doc.rooms if r.name == "Harbor")
                 # Use the real scrolling background and palette for optical camera measurement.
                 room = replace(room, geometry=harbor_room.geometry, pixels=harbor_room.pixels,
-                               palette=harbor_room.palette, hotspots=(), ego_start_x=160)
+                               palette=harbor_room.palette, hotspots=(), use_rules=(),
+                               combine_rules=(), talk_rules=(), palette_cycles=(),
+                               zplanes=(), scale_slots=None, scale_curves=(),
+                               goal_text=None, ego_start_x=160)
             # Story composition replaces the original fixture hotspots.
             # Author a dedicated, independently coloured return interaction.
             return_color = len(room.palette)
@@ -311,8 +314,31 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=5)
         time.sleep(.4)
         restored_escape = sample("restored-escape", 160, 220)
-    click(234, 563)
-    click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
+    # The prior cutscene can still own native input. Wait for the live
+    # hotspot and retry only while still in the destination room.
+    deadline = time.monotonic() + 45
+    returned_to_harbor = False
+    attempt = 0
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            raise RuntimeError("ScummVM exited before native return")
+        label = f"transfer-return-attempt-{attempt:03d}"
+        capture(label)
+        if harbor(label) and colored_item_pixels(output, label, RETURN_RGB, fuzz_percent=4) < 40:
+            returned_to_harbor = True
+            break
+        if colored_item_pixels(output, label, RETURN_RGB, fuzz_percent=4) >= 40:
+            click(234, 563)
+            capture(label + "-verb")
+            if colored_item_pixels(output, label + "-verb", RETURN_RGB, fuzz_percent=4) >= 40:
+                click(*colored_item_center(output, label + "-verb", RETURN_RGB, fuzz_percent=4))
+            # Allow the native interaction to finish before retrying.
+            time.sleep(3)
+        else:
+            time.sleep(.3)
+        attempt += 1
+    if not returned_to_harbor:
+        raise RuntimeError("Native return interaction did not reach Harbor")
     await_frame("transfer-back", harbor)
     time.sleep(1)
     returned = sample("returned", 320, 240)
