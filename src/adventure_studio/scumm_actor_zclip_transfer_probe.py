@@ -176,7 +176,19 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
                     motion.append({"frame": label, "world_x": (sum(x*n for x,n in columns)/pixels - 192)/2})
                 time.sleep(.06)
         else:
-            time.sleep(2)
+            deadline = time.monotonic() + 20
+            stable = 0
+            index = 0
+            while time.monotonic() < deadline and stable < 3:
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited during clipping restoration")
+                label = f"transfer-reveal-settle-{index:03d}"
+                capture(label)
+                stable = stable + 1 if lane_pixels(label, 220, 160, 312, 343) >= 100 else 0
+                index += 1
+                time.sleep(.15)
+            if stable < 3:
+                raise RuntimeError("Native revealed Actor did not stabilize")
         revealed = sample("revealed", 160, 140 if walk else 220)
     if restore_profile:
         click(234, 563)
