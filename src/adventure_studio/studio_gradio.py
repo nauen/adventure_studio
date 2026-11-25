@@ -2126,13 +2126,11 @@ def make_app():
                     gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in animations]],
                               value=initial))
 
-        def native_transfer_actor_choices(raw, room, kind, selected):
-            if raw is None:
-                return gr.skip()
+        def native_action_actor_ids(raw, room, kind):
             document = parse_document(raw)
             if kind == "Actor-Raumtransfer mit Z-Clipping":
                 actors = tuple(a.id for a in document.actors)
-            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten"):
+            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren"):
                 from .scumm_project import TransferActorZClipStep
                 transferred = {step.actor_id for sequence in document.interaction_sequences
                                for step in sequence.steps
@@ -2140,6 +2138,12 @@ def make_app():
                 actors = tuple(a.id for a in document.actors if a.room == room or a.id in transferred)
             else:
                 actors = project_choices(raw, room)[2]
+            return actors
+
+        def native_transfer_actor_choices(raw, room, kind, selected):
+            if raw is None:
+                return gr.skip()
+            actors = native_action_actor_ids(raw, room, kind)
             return gr.update(choices=[("Ego (für gesprochene Zeile)", None), *[(a, a) for a in actors]],
                              value=selected if selected in actors else (actors[0] if actors else None))
 
@@ -2221,8 +2225,7 @@ def make_app():
             fields = sequence_step_fields(raw, identity, number)
             sequence_room = identity.split("|", 1)[0] if identity else None
             rooms, objects, actors = project_choices(raw, sequence_room)
-            if fields[0] == "Actor-Raumtransfer mit Z-Clipping":
-                actors = tuple(a.id for a in parse_document(raw).actors)
+            actors = native_action_actor_ids(raw, sequence_room, fields[0])
             animations = actor_animations(raw, fields[1]) if fields[1] else ()
             return (fields[0], gr.update(choices=[("Ego (für gesprochene Zeile)", None),
                                                  *[(item, item) for item in actors]], value=fields[1]),

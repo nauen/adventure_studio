@@ -593,7 +593,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 actor = actors_by_id[step.actor_id]
                 animation = next(item for item in costumes_by_name[actor.costume].animations
                                  if item.name == step.animation)
-                instructions.append(f"            animateActor({actor.id},{animation.index});\n")
+                instructions.append(f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n"
+                                    f"                animateActor({actor.id},{animation.index});\n"
+                                    "            }\n")
             elif isinstance(step, ObjectStateStep):
                 instructions.append(f"            setObjectState({step.hotspot_id},{step.state});\n")
             elif isinstance(step, (PickupObjectStep, CombineInventoryStep)):
