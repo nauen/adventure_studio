@@ -157,7 +157,7 @@ def run_native_camera_follow_resume(upstream: Path, output: Path) -> dict:
         launch_smoke(game, root / "screenshots", seconds=6,
                      scene_only=True, allow_static_scene=True,
                      native_two_actor_walk_probe=True,
-                     native_two_actor_capture_frames=500,
+                     native_two_actor_capture_frames=480,
                      native_two_actor_capture_interval=0.02)
         report["variants"][variant] = {"stock_scummvm_started": True}
         persist()
