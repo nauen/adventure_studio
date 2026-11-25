@@ -147,7 +147,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
     if dynamic and not restore_profile and not walk and not animation and not facing and not camera:
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
-            "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
+            "Objektzustand setzen", None, None, "R06Hide", 0)
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
             "Warten", None, None, None, 12)
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
@@ -402,10 +402,22 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         click(234, 563)
         click(*colored_item_center(output, idle_frames[-1]["frame"], ACTION_RGB, fuzz_percent=4))
         action_frames = pose_samples("action", 90)
-    def bounded_escape(label, previous_x=220, target_x=220):
+    def bounded_escape(label, previous_x=220, target_x=220, start_marker=None):
         started = time.monotonic()
-        time.sleep(1)
-        capture("transfer-before-escape")
+        if start_marker is not None:
+            # Native object state zero removes the trigger sprite. Its disappearance
+            # proves the interaction was accepted before sending Escape.
+            deadline = started + 4
+            while time.monotonic() < deadline:
+                capture("transfer-before-escape")
+                if colored_item_pixels(output, "transfer-before-escape", start_marker, fuzz_percent=4) < 40:
+                    break
+                time.sleep(.15)
+            else:
+                raise RuntimeError("Native Escape interaction did not start: marker still visible")
+        else:
+            time.sleep(1)
+            capture("transfer-before-escape")
         if lane_pixels("transfer-before-escape", previous_x, 160, 312, 343) < 100:
             raise RuntimeError("Actor not visible before native Escape")
         subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=5)
@@ -419,7 +431,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     if dynamic and not restore_profile and not walk and not animation and not facing and not camera:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], ESCAPE_RGB, fuzz_percent=4))
-        escaped, escape_elapsed = bounded_escape("escaped")
+        escaped, escape_elapsed = bounded_escape("escaped", start_marker=ESCAPE_RGB)
     if walk:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
