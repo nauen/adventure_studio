@@ -21,11 +21,11 @@ VARIANTS = ("masked", "transparent")
 RETURN_RGB = (60, 210, 175)
 
 
-def author_transfer_project(root, variant, profiles=False):
+def author_transfer_project(root, variant, profiles=False, entry_restore=False):
     if variant not in VARIANTS:
         raise ValueError("Unknown transfer mask control")
     doc = parse_document(author_project(root, "transparent", initial=False))
-    name = ("R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
+    name = ("R06EntryProfile" if entry_restore else "R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
     previous = doc.costumes[-1].name
     rooms = []
     for room in doc.rooms:
@@ -61,7 +61,10 @@ def author_transfer_project(root, variant, profiles=False):
     raw = import_room_zplane(canonical_json(doc), "Cellar", 1, str(png))
     if profiles:
         from .studio_actors import set_actor_room_zclip
-        raw = set_actor_room_zclip(raw, ACTOR_IDS[0], "Cellar", 1)
+        raw = set_actor_room_zclip(raw, ACTOR_IDS[0], "Cellar", 1, entry_restore)
+        if entry_restore:
+            # Actor B stays in Harbor; its Cellar profile must not affect it.
+            raw = set_actor_room_zclip(raw, ACTOR_IDS[1], "Cellar", 1, True)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Cellar", -1 if profiles else 1, 220, 85)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
@@ -145,14 +148,14 @@ def verify_transfer(report, variant):
             raise RuntimeError("Non-transferred reference Actor appeared in Cellar")
 
 
-def run(upstream, output, profiles=False):
+def run(upstream, output, profiles=False, entry_restore=False):
     output.mkdir(parents=True, exist_ok=True)
     result = {}
     for variant in VARIANTS:
         root = output / variant
         resources = root / "build" / "resources"
         resources.mkdir(parents=True, exist_ok=True)
-        raw = author_transfer_project(root, variant, profiles=profiles)
+        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore)
         (root / "build" / "project.json").write_text(raw)
         export_document(parse_document(raw), resources)
         game = compile_story_game(root / "build", upstream, root / "game")
@@ -162,9 +165,11 @@ def run(upstream, output, profiles=False):
         verify_transfer(report, variant)
         result[variant] = report
     result["native_actor_zclip_transfer_verified"] = True
+    if entry_restore:
+        result["native_present_actor_entry_profile_smoke_passed"] = True
     (output / "report.json").write_text(json.dumps(result, indent=2))
     return result
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:]), indent=2))
+    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:]), indent=2))

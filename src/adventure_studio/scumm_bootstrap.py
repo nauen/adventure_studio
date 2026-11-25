@@ -337,7 +337,9 @@ def inject_actor_room_zclip(source: str, room_name: str, actors) -> str:
     """Restore opted-in Actor clipping through the native room entry script."""
     active = [actor for actor in actors
               if actor.room == room_name and actor.reset_zclip_on_room_entry]
-    if not active:
+    profiles = [(actor, dict(actor.room_zclips)[room_name]) for actor in actors
+                if actor.restore_profile_on_entry and room_name in dict(actor.room_zclips)]
+    if not active and not profiles:
         return source
     marker = "    local script entry() {\n"
     if source.count(marker) != 1:
@@ -346,6 +348,11 @@ def inject_actor_room_zclip(source: str, room_name: str, actors) -> str:
         f"        setCurrentActor({actor.id});\n"
         f"        setActorZClip({actor.initial_zclip});\n"
         for actor in active)
+    calls += "".join(
+        f"        if (getActorRoom({actor.id}) == VAR_ROOM) {{\n"
+        f"            setCurrentActor({actor.id});\n"
+        f"            setActorZClip({plane});\n"
+        "        }\n" for actor, plane in profiles)
     return source.replace(marker, marker + calls + "        setCurrentActor(VAR_EGO);\n", 1)
 
 

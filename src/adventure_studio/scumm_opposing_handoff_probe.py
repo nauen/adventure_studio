@@ -167,7 +167,9 @@ def run_opposing_camera_handoff(upstream: Path, output: Path) -> dict:
         export_document(document, resources)
         game = compile_story_game(build, upstream, root / "game")
         launch_smoke(game, root / "screenshots", seconds=6, scene_only=True,
-                     allow_static_scene=True, native_two_actor_walk_probe=True)
+                     allow_static_scene=True, native_two_actor_walk_probe=True,
+                     native_two_actor_capture_frames=480,
+                     native_two_actor_capture_interval=0.02)
         report["variants"][variant] = {"native_game_started": True}
         persist()
     transparent = output / "transparent" / "screenshots"
