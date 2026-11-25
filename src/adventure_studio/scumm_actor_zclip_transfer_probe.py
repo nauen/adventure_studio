@@ -208,7 +208,19 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
                     motion.append({"frame": label, "world_x": (sum(x*n for x,n in columns)/pixels - 192)/2})
                 time.sleep(.06)
         else:
-            time.sleep(2)
+            deadline = time.monotonic() + 20
+            stable = 0
+            index = 0
+            while time.monotonic() < deadline and stable < 3:
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited during clipping restoration")
+                label = f"transfer-reveal-settle-{index:03d}"
+                capture(label)
+                stable = stable + 1 if lane_pixels(label, 220, 160, 312, 343) >= 100 else 0
+                index += 1
+                time.sleep(.15)
+            if stable < 3:
+                raise RuntimeError("Native revealed Actor did not stabilize")
         revealed = sample("revealed", 160, 140 if walk else 220)
     if restore_profile:
         click(234, 563)
@@ -235,7 +247,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
 
 
 def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=False, animation=False):
-    if walk or animation:
+    if walk:
         dynamic = True
         xs = [row["world_x"] for row in report["motion"]]
         if len(xs) < 5 or sum(155 < x < 205 for x in xs) < 2 or not all(abs(x-140) <= 12 for x in xs[-3:]):
@@ -286,7 +298,7 @@ def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, re
         launch_smoke(game, root / "screenshots", scene_only=True, allow_static_scene=True,
                      native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic, native_actor_zclip_profile_restore_probe=restore_profile, native_transferred_actor_walk_probe=walk, native_transferred_actor_animation_probe=animation)
         report = json.loads((root / "screenshots" / "transfer-report.json").read_text())
-        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile, walk=walk)
+        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile, walk=walk, animation=animation)
         result[variant] = report
     result["native_actor_zclip_transfer_verified"] = True
     if dynamic:
