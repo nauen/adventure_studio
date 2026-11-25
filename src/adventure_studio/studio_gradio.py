@@ -2130,7 +2130,7 @@ def make_app():
             document = parse_document(raw)
             if kind == "Actor-Raumtransfer mit Z-Clipping":
                 actors = tuple(a.id for a in document.actors)
-            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor drehen", "Kamera folgt Actor"):
+            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor drehen", "Kamera folgt Actor", "Actor versetzen"):
                 from .scumm_project import TransferActorZClipStep
                 transferred = {step.actor_id for sequence in document.interaction_sequences
                                for step in sequence.steps
