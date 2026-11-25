@@ -410,7 +410,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             deadline = started + 4
             while time.monotonic() < deadline:
                 capture("transfer-before-escape")
-                if colored_item_pixels(output, "transfer-before-escape", start_marker, fuzz_percent=4) < 40:
+                if colored_item_pixels(output, "transfer-before-escape", start_marker) < 40:
                     break
                 time.sleep(.15)
             else:
@@ -458,13 +458,13 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             raise RuntimeError("ScummVM exited before native return")
         label = f"transfer-return-attempt-{attempt:03d}"
         capture(label)
-        if harbor(label) and colored_item_pixels(output, label, RETURN_RGB, fuzz_percent=4) < 40:
+        if harbor(label) and colored_item_pixels(output, label, RETURN_RGB) < 40:
             returned_to_harbor = True
             break
-        if colored_item_pixels(output, label, RETURN_RGB, fuzz_percent=4) >= 40:
+        if colored_item_pixels(output, label, RETURN_RGB) >= 40:
             click(234, 563)
             capture(label + "-verb")
-            if colored_item_pixels(output, label + "-verb", RETURN_RGB, fuzz_percent=4) >= 40:
+            if colored_item_pixels(output, label + "-verb", RETURN_RGB) >= 40:
                 click(*colored_item_center(output, label + "-verb", RETURN_RGB, fuzz_percent=4))
             # Allow the native interaction to finish before retrying.
             time.sleep(3)
