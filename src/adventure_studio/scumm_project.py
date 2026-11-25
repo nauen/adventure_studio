@@ -909,8 +909,9 @@ def _validate_document(document: GameDocument) -> None:
                                for char in step.text)
                         or (step.actor_id is not None and
                             (not isinstance(step.actor_id, str)
-                             or step.actor_id not in {actor.id for actor in document.actors
-                                                     if actor.room == room.name}))):
+                             or step.actor_id not in actors_by_id
+                             or (actors_by_id[step.actor_id].room != room.name
+                                 and (step.actor_id, room.name) not in transfer_destinations)))):
                     raise ValueError("Voice line requires a room VOC, safe subtitle and optional room Actor")
                 languages = set()
                 for variant in step.variants:
