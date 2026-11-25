@@ -195,9 +195,13 @@ def play_two_actor_walk(output: Path, capture_frame, process, *, frame_count: in
         if process.poll() is not None:
             raise RuntimeError("Stock ScummVM quit during two-Actor native walk")
         label = f"r06-two-actor-walk-{index:03d}"
-        capture_frame(label)
+        acquisition = []
+        capture_frame(label, on_framebuffer_capture=lambda start, end: acquisition.extend((start, end)))
+        start, end = acquisition
         captured.append({"frame": label,
-                         "seconds_since_native_input": round(time.monotonic() - initiated, 3)})
+                         "seconds_since_native_input": round(end - initiated, 3),
+                         "capture_started_seconds": round(start - initiated, 3),
+                         "capture_finished_seconds": round(end - initiated, 3)})
         time.sleep(capture_interval)
     result = {"click_verb": "Close", "click_hotspot": "Key",
               "native_hotspot_screen_position": [key_x, key_y],
@@ -470,7 +474,11 @@ def measure_two_actor_native_camera_trace(screenshots: Path) -> list[dict]:
         if camera is not None:
             observations.append({"frame": entry["frame"],
                                  "seconds": entry["seconds_since_native_input"],
-                                 "camera_x": camera})
+                                 "camera_x": camera,
+                                 **({key: entry[key] for key in ("capture_started_seconds",
+                                                                "capture_finished_seconds")}
+                                    if "capture_started_seconds" in entry and
+                                       "capture_finished_seconds" in entry else {})})
     return observations
 
 

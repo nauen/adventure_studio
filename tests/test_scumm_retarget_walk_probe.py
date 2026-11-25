@@ -62,6 +62,25 @@ class NativeWalkRetargetTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "interrupt active movement"):
                 assert_native_walk_retarget(wrong)
 
+    def test_framebuffer_acquisition_bounds_preserve_speed_limit(self):
+        xs = [395, 395, 395, 395, 380, 365, 350, 335, 335,
+              350, 402, 417, 432, 447, 462, 477, 492, 507]
+        tracks, cameras = observations(xs)
+        # The 52px movement is only 130ms apart by completion timestamps,
+        # but the first actual framebuffer acquisition began 60ms earlier.
+        first, second = cameras[19], cameras[20]
+        first["seconds"] = second["seconds"] - .13
+        for row in cameras:
+            row["capture_started_seconds"] = row["seconds"] - .06
+            row["capture_finished_seconds"] = row["seconds"]
+        self.assertTrue(verify_native_walk_retarget(tracks, cameras)
+                        ["native_actor_walk_retarget_verified"])
+        for row in cameras:
+            row.pop("capture_started_seconds")
+            row.pop("capture_finished_seconds")
+        with self.assertRaisesRegex(RuntimeError, "implausible teleport"):
+            verify_native_walk_retarget(tracks, cameras)
+
     def test_visual_requires_left_then_right_without_teleport(self):
         xs = [395, 395, 395, 395, 380, 365, 350, 335, 335,
               350, 365, 380, 395, 410, 425, 440, 455, 470, 485, 500, 515]
