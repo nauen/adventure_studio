@@ -762,6 +762,58 @@ jobs:
           name: native-transferred-actor-walk
           path: /tmp/native-transferred-actor-walk
           if-no-files-found: ignore
+      - name: Verify native transferred Actor action animation in destination room
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_transfer_probe /tmp/scummc-upstream /tmp/native-transferred-actor-animation --animation
+      - name: Retain native transferred Actor animation evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-transferred-actor-animation
+          path: /tmp/native-transferred-actor-animation
+          if-no-files-found: ignore
+      - name: Verify native transferred Actor facing in destination room
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_transfer_probe /tmp/scummc-upstream /tmp/native-transferred-actor-facing --facing
+      - name: Retain native transferred Actor facing evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-transferred-actor-facing
+          path: /tmp/native-transferred-actor-facing
+          if-no-files-found: ignore
+      - name: Verify native transferred Actor camera follow and return
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_transfer_probe /tmp/scummc-upstream /tmp/native-transferred-actor-camera --camera
+      - name: Retain native transferred Actor camera evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-transferred-actor-camera
+          path: /tmp/native-transferred-actor-camera
+          if-no-files-found: ignore
+      - name: Verify native transferred Actor positioning in destination room
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_transfer_probe /tmp/scummc-upstream /tmp/native-transferred-actor-position --position
+      - name: Retain native transferred Actor position evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-transferred-actor-position
+          path: /tmp/native-transferred-actor-position
+          if-no-files-found: ignore
       - name: Verify four independently selected Studio-authored Z-plane layers in stock ScummVM
         if: ${{ matrix.shard == 'geometry' }}
         env:
