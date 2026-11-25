@@ -236,7 +236,9 @@ class ActorBootstrapTests(unittest.TestCase):
         guarded_source = inject_interaction_sequences(source, 'Harbor', (guarded,),
                                                       document.actors, document.costumes)
         self.assertIn('case Close:\n            if(getObjectState(Door) != 1) return;\n'
-                      '            animateActor(Companion,24);', guarded_source)
+                      '            if (getActorRoom(Companion) == VAR_ROOM) {\n'
+                      '                animateActor(Companion,24);\n'
+                      '            }', guarded_source)
         alternate = InteractionSequence('Harbor', 'Key', 'Close',
                                         (ObjectStateStep('Door', 1),), 'Door', 2)
         alternatives = replace(document, interaction_sequences=(guarded, alternate))
