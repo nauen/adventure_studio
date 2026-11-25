@@ -21,11 +21,11 @@ VARIANTS = ("masked", "transparent")
 RETURN_RGB = (60, 210, 175)
 
 
-def author_transfer_project(root, variant):
+def author_transfer_project(root, variant, profiles=False):
     if variant not in VARIANTS:
         raise ValueError("Unknown transfer mask control")
     doc = parse_document(author_project(root, "transparent", initial=False))
-    name = "R06Transfer" + variant.title() + "Costume"
+    name = ("R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
     previous = doc.costumes[-1].name
     rooms = []
     for room in doc.rooms:
@@ -40,8 +40,6 @@ def author_transfer_project(root, variant):
             room = replace(room, palette=(*room.palette, RETURN_RGB),
                            hotspots=(*room.hotspots, portal),
                            camera_cues=(CameraCue("set", x=160),),
-                           # Keep native actor placement on valid full-scale
-                           # walkboxes; the default Cellar has no BOXD.
                            walkboxes=next(r.walkboxes for r in doc.rooms if r.name == "Harbor"),
                            box_routes=next(r.box_routes for r in doc.rooms if r.name == "Harbor"),
                            demo_walk_to_x=None, demo_walk_to_y=None)
@@ -61,12 +59,15 @@ def author_transfer_project(root, variant):
         255 if variant == "masked" and 180 <= x < 260 and 45 <= y < 110 else 0
         for y in range(height) for x in range(width))).save(png)
     raw = import_room_zplane(canonical_json(doc), "Cellar", 1, str(png))
+    if profiles:
+        from .studio_actors import set_actor_room_zclip
+        raw = set_actor_room_zclip(raw, ACTOR_IDS[0], "Cellar", 1)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
-        "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Cellar", 1, 220, 85)
+        "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Cellar", -1 if profiles else 1, 220, 85)
     raw = append_sequence_step(raw, "Harbor", "Key", "Close",
         "Raum wechseln", None, None, "Cellar", None)
     raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
-        "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", 0, 240, 85)
+        "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", -1 if profiles else 0, 240, 85)
     return append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Raum wechseln", None, None, "Harbor", None)
 
@@ -144,14 +145,14 @@ def verify_transfer(report, variant):
             raise RuntimeError("Non-transferred reference Actor appeared in Cellar")
 
 
-def run(upstream, output):
+def run(upstream, output, profiles=False):
     output.mkdir(parents=True, exist_ok=True)
     result = {}
     for variant in VARIANTS:
         root = output / variant
         resources = root / "build" / "resources"
         resources.mkdir(parents=True, exist_ok=True)
-        raw = author_transfer_project(root, variant)
+        raw = author_transfer_project(root, variant, profiles=profiles)
         (root / "build" / "project.json").write_text(raw)
         export_document(parse_document(raw), resources)
         game = compile_story_game(root / "build", upstream, root / "game")
@@ -166,4 +167,4 @@ def run(upstream, output):
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2])), indent=2))
+    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:]), indent=2))

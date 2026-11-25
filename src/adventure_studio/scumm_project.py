@@ -35,6 +35,7 @@ class ActorAsset:
     initial_animation: str | None = None
     initial_zclip: int = 0
     reset_zclip_on_room_entry: bool = False
+    room_zclips: tuple[tuple[str, int], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -317,7 +318,8 @@ def document_dict(document: GameDocument) -> dict:
                        **({"display_name": actor.display_name} if actor.display_name is not None else {}),
                        **({"initial_animation": actor.initial_animation} if actor.initial_animation is not None else {}),
                        **({"initial_zclip": actor.initial_zclip} if actor.initial_zclip else {}),
-                       **({"reset_zclip_on_room_entry": True} if actor.reset_zclip_on_room_entry else {})}
+                       **({"reset_zclip_on_room_entry": True} if actor.reset_zclip_on_room_entry else {}),
+                       **({"room_zclips": dict(actor.room_zclips)} if actor.room_zclips else {})}
                       for actor in document.actors]} if document.actors else {}),
         **({"animation_rules": [{"condition": {"actor_id": rule.condition.actor_id,
                                                "minimum_count": rule.condition.minimum_count},
@@ -626,6 +628,15 @@ def _validate_document(document: GameDocument) -> None:
         room = next(room for room in document.rooms if room.name == actor.room)
         if type(actor.initial_zclip) is not int or not 0 <= actor.initial_zclip <= min(4, len(room.zplanes)):
             raise ValueError(f"Actor {actor.id} initial Z-clip requires 0 or an existing native room Z-plane (1–4)")
+        if not isinstance(actor.room_zclips, tuple):
+            raise ValueError("Actor room Z-clips must be immutable pairs")
+        configured = set()
+        for target_name, plane in actor.room_zclips:
+            target_room = next((r for r in document.rooms if r.name == target_name), None)
+            if (target_room is None or target_name == actor.room or target_name in configured
+                    or type(plane) is not int or not 0 <= plane <= min(4, len(target_room.zplanes))):
+                raise ValueError("Actor room Z-clip requires a distinct existing destination and valid plane")
+            configured.add(target_name)
         if type(actor.reset_zclip_on_room_entry) is not bool:
             raise ValueError(f"Actor {actor.id} room-entry Z-clip reset must be boolean")
         if (type(actor.x) is not int or type(actor.y) is not int
@@ -919,9 +930,11 @@ def _validate_document(document: GameDocument) -> None:
                         or not 0 <= step.x < target.geometry.room_width
                         or not 0 <= step.y < target.geometry.room_height
                         or type(step.plane) is not int
-                        or not 0 <= step.plane <= min(4, len(target.zplanes))):
+                        or not -1 <= step.plane <= min(4, len(target.zplanes))):
                     raise ValueError("Actor transfer requires an existing Actor, another room, valid position and destination Z-plane")
-                if actor.reset_zclip_on_room_entry and actor.room == target.name:
+                if step.plane == -1 and target.name != actor.room and target.name not in dict(actor.room_zclips):
+                    raise ValueError("Actor transfer requires a configured destination Z-clip")
+                if actor.reset_zclip_on_room_entry and actor.room == target.name and step.plane != -1:
                     raise ValueError("Actor transfer to its home room conflicts with enabled entry Z-clip reset")
                 if any(not isinstance(later, (TransferActorZClipStep, ChangeRoomStep))
                        for later in sequence.steps[step_index + 1:]):
@@ -1023,12 +1036,16 @@ def parse_document(source: str) -> GameDocument:
         raise ValueError("Actors must be a list")
     actors = []
     for raw_actor in raw_actors:
-        actor = _only(raw_actor, {"id", "costume", "room", "x", "y", "direction", "display_name", "initial_animation", "initial_zclip", "reset_zclip_on_room_entry"},
+        actor = _only(raw_actor, {"id", "costume", "room", "x", "y", "direction", "display_name", "initial_animation", "initial_zclip", "reset_zclip_on_room_entry", "room_zclips"},
                       {"id", "costume", "room", "x", "y"})
+        room_zclips = actor.get("room_zclips", {})
+        if not isinstance(room_zclips, dict):
+            raise ValueError("Actor room Z-clips must be a room-to-plane mapping")
         actors.append(ActorAsset(actor["id"], actor["costume"], actor["room"],
                                  actor["x"], actor["y"], actor.get("direction", "S"),
                                  actor.get("display_name"), actor.get("initial_animation"),
-                                 actor.get("initial_zclip", 0), actor.get("reset_zclip_on_room_entry", False)))
+                                 actor.get("initial_zclip", 0), actor.get("reset_zclip_on_room_entry", False),
+                                 tuple(sorted(room_zclips.items()))))
     raw_animation_rules = data.get("animation_rules", [])
     if not isinstance(raw_animation_rules, list):
         raise ValueError("Animation rules must be a list")

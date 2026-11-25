@@ -107,7 +107,7 @@ from .studio_actors import (add_actor, actor_summary, costume_names, costume_sum
                             costume_direction_speaking_frame,
                             move_actor, costume_animation_names, costume_animation_steps,
                             costume_timeline_images, edit_costume_timeline,
-                            render_costume_preview, set_actor_initial_animation, set_actor_initial_zclip,
+                            render_costume_preview, set_actor_initial_animation, set_actor_initial_zclip, set_actor_room_zclip,
                             set_actor_costume)
 
 
@@ -892,6 +892,11 @@ def make_app():
                     native_actor_zclip = gr.Dropdown(label="Initiale Actor-Z-Verdeckung", choices=[("Walkbox-Automatik", 0), *[(f"ZP{i:02d}", i) for i in range(1, 5)]], value=0)
                     native_actor_zclip_reset = gr.Checkbox(label="Z-Verdeckung bei jedem Raumbetreten zurücksetzen", value=False)
                     native_actor_zclip_save = gr.Button("Initiale Z-Verdeckung speichern")
+                with gr.Row():
+                    native_profile_actor = gr.Dropdown(label="Actor für Zielraumprofil")
+                    native_profile_room = gr.Dropdown(label="Zielraumprofil")
+                    native_profile_plane = gr.Dropdown(label="Z-Ebene im Zielraum", choices=[("Profil entfernen", None), ("Automatik", 0), *[(f"ZP{i:02d}", i) for i in range(1, 5)]])
+                    native_profile_save = gr.Button("Zielraumprofil speichern")
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum", elem_id="native-room")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt", elem_id="native-hotspot")
@@ -987,7 +992,7 @@ def make_app():
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
-                native_amount = gr.Number(label="Sekunden / Objektzustand (0–2) / Z-Clipping (0–4)", value=1, precision=0)
+                native_amount = gr.Number(label="Sekunden / Objektzustand (0–2) / Z-Clipping (0–4) / Transferprofil (-1)", value=1, precision=0)
             with gr.Row():
                 native_move_x = gr.Number(label="Actor-Ziel X (Versetzen/Laufen)", value=320, precision=0)
                 native_move_y = gr.Number(label="Actor-Ziel Y (Versetzen/Laufen)", value=100, precision=0)
@@ -2084,6 +2089,24 @@ def make_app():
             lambda raw, actor_id, plane, reset: native_asset_edit(set_actor_initial_zclip, raw, actor_id, plane, reset),
             [native_state, native_actor, native_actor_zclip, native_actor_zclip_reset],
             [native_state, *native_outputs, native_report])
+        def native_profile_choices(raw):
+            if raw is None:
+                return gr.update(choices=[]), gr.update(choices=[])
+            doc = parse_document(raw)
+            return gr.update(choices=[a.id for a in doc.actors]), gr.update(choices=[r.name for r in doc.rooms])
+
+        def native_profile_value(raw, actor_id, room):
+            if raw is None:
+                return None
+            actor = next((a for a in parse_document(raw).actors if a.id == actor_id), None)
+            return dict(actor.room_zclips).get(room) if actor else None
+
+        native_state.change(native_profile_choices, [native_state], [native_profile_actor, native_profile_room])
+        native_profile_actor.change(native_profile_value, [native_state, native_profile_actor, native_profile_room], [native_profile_plane])
+        native_profile_room.change(native_profile_value, [native_state, native_profile_actor, native_profile_room], [native_profile_plane])
+        native_profile_save.click(lambda raw, actor, room, plane: native_asset_edit(set_actor_room_zclip, raw, actor, room, plane),
+                                  [native_state, native_profile_actor, native_profile_room, native_profile_plane],
+                                  [native_state, *native_outputs, native_report])
         def native_room_update(raw, room):
             if raw is None:
                 return gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
@@ -2273,18 +2296,25 @@ def make_app():
             return (*view[:-2], restored, view[-1], updated,
                     speaking_draft_session_status(raw, line, direction, restored))
 
-        def dialogue_animation_refresh(raw, line, direction):
+        def dialogue_animation_refresh(raw, line, direction, session):
             lines = dialogue_animation_lines(raw) if raw else ()
             current = line if line in {identity for _label, identity in lines} else None
+            view = dialogue_animation_update(raw, current, direction)
+            target = (parse_document(raw).id, current, direction) if raw and current else None
+            drafts = (session or {}).get("drafts", {})
+            # Project refresh is not a user target switch. Never replace an
+            # existing draft for this facing with the persisted sequence.
+            restored = drafts.get(target, view[-2])
             return (gr.update(choices=lines, value=current),
-                    *dialogue_animation_update(raw, current, direction))
+                    *view[:-2], restored, view[-1])
 
         # Retain the selected authored line across a save, and refresh both
         # its animation and PNG pose from the persisted project. Old/stale
         # lines are cleared instead of silently selecting another speaker.
         native_state.change(
             dialogue_animation_refresh,
-            [native_state, native_dialogue_animation_line, native_dialogue_direction],
+            [native_state, native_dialogue_animation_line, native_dialogue_direction,
+             native_dialogue_draft_session],
             [native_dialogue_animation_line, native_dialogue_animation,
              native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
