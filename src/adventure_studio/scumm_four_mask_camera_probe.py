@@ -169,7 +169,7 @@ def verify_moving_actor_crosses_four_masks(
 
 
 def select_actor_phases(rows: list[dict], world_x: int,
-                        outgoing_x: int, returning_x: int) -> dict:
+                        outgoing_x: int, returning_x: int, *, reference=None) -> dict:
     """Select camera phases by observed world X, not assumed elapsed time."""
     if not rows:
         raise RuntimeError("No identifiable native camera frames")
@@ -237,6 +237,12 @@ def select_actor_phases(rows: list[dict], world_x: int,
     ]
     if not pairs:
         raise RuntimeError("Visible Actor positions do not disprove a screen-fixed mask")
+    if reference is not None:
+        pairs = [(out, back) for out, back in pairs
+                 if abs(out["camera_x"] - reference["outgoing"]["camera_x"]) <= 40
+                 and abs(back["camera_x"] - reference["returning"]["camera_x"]) <= 40]
+        if not pairs:
+            raise RuntimeError("Camera phase mismatch: no comparable captured round trip")
     outgoing, returning = min(
         pairs,
         key=lambda pair: (
@@ -296,10 +302,15 @@ def verify_four_mask_camera(groups: dict[int, dict]) -> dict:
                     f"Native room has no rendered frame variation: ZP{plane:02d}/{name}")
             if row["world_x"] != world_x:
                 raise RuntimeError(f"Wrong Actor world position: ZP{plane:02d}/{name}")
-        phase_rows = {
-            name: select_actor_phases(row["frames"], world_x, outgoing_x, returning_x)
-            for name, row in variants.items()
-        }
+        phase_rows = {"masked": select_actor_phases(
+            variants["masked"]["frames"], world_x, outgoing_x, returning_x)}
+        for name in ("transparent", "wrong-box"):
+            try:
+                phase_rows[name] = select_actor_phases(
+                    variants[name]["frames"], world_x, outgoing_x, returning_x,
+                    reference=phase_rows["masked"])
+            except RuntimeError as error:
+                raise RuntimeError(f"ZP{plane:02d}/{name}: {error}") from error
         phase_comparisons = {}
         for phase in ("outgoing", "returning"):
             masked = phase_rows["masked"][phase]
