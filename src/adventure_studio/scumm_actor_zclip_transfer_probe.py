@@ -18,7 +18,8 @@ from .scumm_two_actor_four_mask_probe import ACTOR_IDS
 from .studio_sequences import append_sequence_step, import_room_zplane
 
 VARIANTS = ("masked", "transparent")
-RETURN_RGB = (60, 210, 175)
+RETURN_RGB = (175, 60, 210)
+REVEAL_RGB = (60, 210, 175)
 
 
 def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False):
@@ -43,6 +44,12 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                            walkboxes=next(r.walkboxes for r in doc.rooms if r.name == "Harbor"),
                            box_routes=next(r.box_routes for r in doc.rooms if r.name == "Harbor"),
                            demo_walk_to_x=None, demo_walk_to_y=None)
+            if dynamic:
+                reveal = RoomHotspot("R06Reveal", "Reveal actor", "Reveal actor.",
+                                     250, 100, 16, 16,
+                                     sprite_pixels=bytes([len(room.palette)]) * 256)
+                room = replace(room, palette=(*room.palette, REVEAL_RGB),
+                               hotspots=(*room.hotspots, reveal))
         rooms.append(room)
     rooms = tuple(rooms)
     doc = replace(doc, rooms=rooms,
@@ -75,7 +82,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
     raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Raum wechseln", None, None, "Harbor", None)
     if dynamic:
-        raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+        raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
     return raw
 
@@ -131,8 +138,8 @@ def play_transfer(output, capture, process, dynamic=False):
     destination = sample("destination", 160, 220)
     revealed = []
     if dynamic:
-        click(234, 535)
-        click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
+        click(234, 563)
+        click(*colored_item_center(output, destination[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
         time.sleep(2)
         revealed = sample("revealed", 160, 220)
     click(234, 563)
