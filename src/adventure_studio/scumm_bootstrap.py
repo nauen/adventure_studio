@@ -608,9 +608,13 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                      f"            setActorZClip({transfer_plane(step)});\n",
                                      "            setCurrentActor(VAR_EGO);\n"))
             elif isinstance(step, WalkActorStep):
-                instructions.append(f"            walkActorTo({step.actor_id}, {step.x}, {step.y});\n")
+                instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
+                                    f"                walkActorTo({step.actor_id}, {step.x}, {step.y});\n"
+                                    "            }\n")
             elif isinstance(step, WaitActorStep):
-                instructions.append(f"            waitForActor({step.actor_id});\n")
+                instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
+                                    f"                waitForActor({step.actor_id});\n"
+                                    "            }\n")
             elif isinstance(step, FollowActorCameraStep):
                 instructions.append(f"            cameraFollowActor({step.actor_id});\n")
             elif isinstance(step, PanCameraStep):
@@ -684,9 +688,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             if isinstance(step, ObjectStateStep):
                 end_states[step.hotspot_id] = step.state
             elif isinstance(step, (MoveActorStep, WalkActorStep)):
-                end_positions[step.actor_id] = (step.x, step.y, room_name)
+                end_positions[step.actor_id] = (step.x, step.y, room_name, isinstance(step, WalkActorStep))
             elif isinstance(step, TransferActorZClipStep):
-                end_positions[step.actor_id] = (step.x, step.y, step.room)
+                end_positions[step.actor_id] = (step.x, step.y, step.room, False)
                 end_clipping[step.actor_id] = (transfer_plane(step), False)
             elif isinstance(step, ActorZClipStep):
                 end_clipping[step.actor_id] = (interaction_plane(step), True)
@@ -710,8 +714,12 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += inventory_action(step, "                ")
         for hotspot, state in end_states.items():
             commit += f"                setObjectState({hotspot},{state});\n"
-        for actor, (x, y, destination) in end_positions.items():
+        for actor, (x, y, destination, require_presence) in end_positions.items():
+            if require_presence:
+                commit += f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
             commit += f"                putActorAt({actor}, {x}, {y}, {destination});\n"
+            if require_presence:
+                commit += "                }\n"
         for actor, direction in end_directions.items():
             native_direction = actor_facing_angle(direction)
             commit += (f"                setCurrentActor({actor});\n"

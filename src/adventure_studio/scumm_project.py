@@ -831,6 +831,10 @@ def _validate_document(document: GameDocument) -> None:
         if actor.direction not in {direction.direction for direction in animation.directions}:
             raise ValueError("Animation trigger lacks the Actor's direction")
     sequence_groups = {}
+    transfer_destinations = {(step.actor_id, step.room)
+                             for interaction in document.interaction_sequences
+                             for step in interaction.steps
+                             if isinstance(step, TransferActorZClipStep)}
     for sequence in document.interaction_sequences:
         if not isinstance(sequence, InteractionSequence):
             raise ValueError("Invalid typed interaction sequence")
@@ -948,7 +952,9 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Actor transfers must finish the sequence before an optional room change")
             elif isinstance(step, (MoveActorStep, WalkActorStep)):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
-                if (actor is None or actor.room != room.name or type(step.x) is not int
+                if (actor is None or (actor.room != room.name and
+                        (not isinstance(step, WalkActorStep) or (actor.id, room.name) not in transfer_destinations))
+                        or type(step.x) is not int
                         or type(step.y) is not int
                         or not 0 <= step.x < room.geometry.room_width
                         or not 0 <= step.y < room.geometry.room_height):
@@ -964,14 +970,13 @@ def _validate_document(document: GameDocument) -> None:
                 pass
             elif isinstance(step, WaitActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
-                if actor is None or actor.room != room.name:
+                if actor is None or (actor.room != room.name and
+                                     (actor.id, room.name) not in transfer_destinations):
                     raise ValueError("Interaction wait requires an Actor in the sequence room")
             elif isinstance(step, ActorZClipStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
-                if (actor is None or (actor.room != room.name and not any(
-                        isinstance(transfer, TransferActorZClipStep)
-                        and transfer.actor_id == actor.id and transfer.room == room.name
-                        for interaction in document.interaction_sequences for transfer in interaction.steps))
+                if (actor is None or (actor.room != room.name and
+                        (actor.id, room.name) not in transfer_destinations)
                         or type(step.plane) is not int
                         or not -1 <= step.plane <= min(4, len(room.zplanes))):
                     raise ValueError("Actor Z-clip requires a room Actor and -1, 0 or an existing native room Z-plane (1–4)")
