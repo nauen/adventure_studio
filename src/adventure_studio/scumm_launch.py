@@ -317,11 +317,15 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_actor_zclip_dynamic_probe: bool = False,
                  native_actor_zclip_profile_restore_probe: bool = False,
                  native_transferred_actor_walk_probe: bool = False,
+                 native_transferred_actor_animation_probe: bool = False,
+                 native_transferred_actor_facing_probe: bool = False,
+                 native_transferred_actor_camera_probe: bool = False,
+                 native_transferred_actor_position_probe: bool = False,
                  native_actor_zclip_return_probe: bool = False,
                  native_two_actor_walk_probe: bool = False,
                  native_two_actor_capture_frames: int = 210,
                  native_two_actor_capture_interval: float = 0.07) -> None:
-    if (native_actor_zclip_dynamic_probe or native_actor_zclip_profile_restore_probe or native_transferred_actor_walk_probe) and not native_actor_zclip_transfer_probe:
+    if (native_actor_zclip_dynamic_probe or native_actor_zclip_profile_restore_probe or native_transferred_actor_walk_probe or native_transferred_actor_animation_probe or native_transferred_actor_facing_probe or native_transferred_actor_camera_probe or native_transferred_actor_position_probe) and not native_actor_zclip_transfer_probe:
         raise ValueError("Dynamic Actor clipping requires transfer probe")
     if native_actor_zclip_transfer_probe and (not scene_only or scene_walk_clicks or native_two_actor_walk_probe or native_actor_zclip_return_probe):
         raise ValueError("Actor Z-clip transfer requires isolated scene mode")
@@ -442,15 +446,19 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         save_path.mkdir(exist_ok=True)
     environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
 
-    def capture_frame(label: str) -> Path:
+    def capture_frame(label: str, *, on_framebuffer_capture=None) -> Path:
         image_path = output_directory / f"scummvm-{label}.xwd"
         preview_path = output_directory / f"scummvm-{label}.png"
+        capture_started = time.monotonic()
         capture = subprocess.run(
             ["xwd", "-root", "-silent", "-out", str(image_path)],
             capture_output=True, text=True, timeout=10, check=False,
         )
+        capture_finished = time.monotonic()
         if capture.returncode != 0 or not image_path.is_file() or image_path.stat().st_size < 1024:
             raise RuntimeError(f"X framebuffer capture failed: {capture.stderr}")
+        if on_framebuffer_capture is not None:
+            on_framebuffer_capture(capture_started, capture_finished)
         preview = subprocess.run(
             ["convert", str(image_path), str(preview_path)],
             capture_output=True, text=True, timeout=10, check=False,
@@ -560,7 +568,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             if scene_only:
                 if native_actor_zclip_transfer_probe:
                     from .scumm_actor_zclip_transfer_probe import play_transfer
-                    play_transfer(output_directory, capture_frame, process, dynamic=native_actor_zclip_dynamic_probe, restore_profile=native_actor_zclip_profile_restore_probe, walk=native_transferred_actor_walk_probe)
+                    play_transfer(output_directory, capture_frame, process, dynamic=native_actor_zclip_dynamic_probe, restore_profile=native_actor_zclip_profile_restore_probe, walk=native_transferred_actor_walk_probe, animation=native_transferred_actor_animation_probe, facing=native_transferred_actor_facing_probe, camera=native_transferred_actor_camera_probe, position=native_transferred_actor_position_probe)
                 if native_actor_zclip_return_probe:
                     from .scumm_actor_zclip_return_probe import play_room_return
                     play_room_return(output_directory, capture_frame, process)

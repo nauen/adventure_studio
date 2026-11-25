@@ -87,6 +87,27 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     set_costume_direction_speaking_sequence(raw, "Speaker", "N", invalid)
 
+    def test_transfer_gameplay_modes_use_distinct_costume_resource_names(self):
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        modes = ({}, {"profiles": True}, {"profiles": True, "entry_restore": True},
+                 {"dynamic": True}, {"restore_profile": True}, {"walk": True}, {"animation": True}, {"facing": True}, {"camera": True}, {"position": True})
+        names = set()
+        with tempfile.TemporaryDirectory() as directory:
+            for variant in ("masked", "transparent"):
+                for index, mode in enumerate(modes):
+                    root = Path(directory) / f"{variant}-{index}"
+                    doc = parse_document(author_transfer_project(root, variant, **mode))
+                    actor = next(a for a in doc.actors if a.id == ACTOR_IDS[0])
+                    self.assertNotIn(actor.costume, names)
+                    names.add(actor.costume)
+        self.assertEqual(len(names), 20)
+
+
+
+
+
+
     def test_transferred_actor_voice_uses_native_room_presence(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import scummc_room_source
