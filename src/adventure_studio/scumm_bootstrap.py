@@ -618,7 +618,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                     f"                waitForActor({step.actor_id});\n"
                                     "            }\n")
             elif isinstance(step, FollowActorCameraStep):
-                instructions.append(f"            cameraFollowActor({step.actor_id});\n")
+                instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
+                                    f"                cameraFollowActor({step.actor_id});\n"
+                                    "            }\n")
             elif isinstance(step, PanCameraStep):
                 instructions.append(f"            panCameraTo({step.x});\n")
             elif isinstance(step, WaitCameraStep):
