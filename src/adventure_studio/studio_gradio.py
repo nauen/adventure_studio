@@ -2146,7 +2146,11 @@ def make_app():
         native_kind.change(native_transfer_actor_choices, [native_state, native_room, native_kind, native_actor], [native_actor])
         native_room.change(native_room_update, [native_state, native_room],
                            [native_hotspot, native_target, native_actor, native_animation,
-                            native_actor_initial])
+                            native_actor_initial]).then(
+            native_transfer_actor_choices, [native_state, native_room, native_kind, native_actor],
+            [native_actor])
+        native_state.change(native_transfer_actor_choices,
+                            [native_state, native_room, native_kind, native_actor], [native_actor])
         def native_camera_fields(raw, room):
             if raw is None:
                 return gr.skip(), gr.skip(), gr.skip(), gr.skip()
