@@ -113,6 +113,19 @@ class FourMaskCameraProbeTests(unittest.TestCase):
         self.assertTrue(verify_four_mask_camera(groups)[
             "native_four_masks_world_anchored_camera_pan_and_return_passed"])
 
+    def test_control_selection_uses_comparable_real_camera_samples(self):
+        rows = trace(380, 360, 272, 240)
+        reference = select_actor_phases(trace(380, 392, 272, 0), 380, 360, 272)
+        rows[1]["camera_x"] = 328
+        rows[1]["screen_x"] = round(192 + 2 * (380 - 328 + 160))
+        rows.insert(2, {"frame": "matched", "seconds": .75, "camera_x": 400,
+                        "world_x": 380, "screen_x": 472, "actor_dark_pixels": 240})
+        selected = select_actor_phases(rows, 380, 360, 272, reference=reference)
+        self.assertEqual(selected["outgoing"]["frame"], "matched")
+        rows.pop(2)
+        with self.assertRaisesRegex(RuntimeError, "Camera phase mismatch"):
+            select_actor_phases(rows, 380, 360, 272, reference=reference)
+
     def test_returning_uses_real_separated_frame_not_just_nearest(self):
         world_x = 479
         camera_positions = (160, 400, 440, 480, 472, 432, 400, 368, 336, 160)
