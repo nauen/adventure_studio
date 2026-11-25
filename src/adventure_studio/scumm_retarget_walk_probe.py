@@ -110,8 +110,25 @@ def verify_native_walk_retarget(traces: dict, cameras: list[dict]) -> dict:
             # movement, not a discontinuous jump between real screenshots.
             # Use the existing R06 return-walk evidence speed envelope;
             # never interpolate missing screenshot positions.
-            if abs(delta) > 225 * delta_t + 15:
-                raise RuntimeError("Native retarget frames contain implausible teleport")
+            # The pixels were sampled somewhere inside each xwd acquisition,
+            # not when the later PNG conversion finished. Use the measured
+            # outer acquisition interval for the upper bound on travel time.
+            # Legacy traces without acquisition bounds retain the old check.
+            c0, c1 = camera_by_frame[first], camera_by_frame[second]
+            elapsed = delta_t
+            if all(key in row for row in (c0, c1) for key in
+                   ("capture_started_seconds", "capture_finished_seconds")):
+                for row in (c0, c1):
+                    if not (row["capture_started_seconds"] <= row["seconds"]
+                            == row["capture_finished_seconds"]):
+                        raise RuntimeError("Invalid native framebuffer acquisition timestamps")
+                if c0["capture_finished_seconds"] > c1["capture_started_seconds"]:
+                    raise RuntimeError("Overlapping native framebuffer acquisitions")
+                elapsed = c1["capture_finished_seconds"] - c0["capture_started_seconds"]
+            if abs(delta) > 225 * elapsed + 15:
+                raise RuntimeError(f"Native retarget frames contain implausible teleport: "
+                                   f"{first}->{second}, delta={delta}, "
+                                   f"elapsed={elapsed:.3f}s")
             segments.append({"from": first, "to": second,
                              "seconds": camera_by_frame[second]["seconds"],
                              "delta": delta,

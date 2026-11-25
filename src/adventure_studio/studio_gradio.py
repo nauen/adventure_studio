@@ -2307,7 +2307,8 @@ def make_app():
             view = dialogue_animation_update(raw, line, direction)
             restored, updated = switch_with_session(
                 raw, line, direction, sequence, session, file)
-            return (*view[:-2], restored, view[-1], updated)
+            return (*view[:-2], restored, view[-1], updated,
+                    speaking_draft_session_status(raw, line, direction, restored))
 
         def dialogue_animation_refresh(raw, line, direction, session):
             lines = dialogue_animation_lines(raw) if raw else ()
@@ -2365,7 +2366,8 @@ def make_app():
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status, native_dialogue_draft_session])
+             native_dialogue_direction_status, native_dialogue_draft_session,
+             native_dialogue_draft_save_status])
         native_dialogue_animation.input(
             dialogue_direction_animation_preview,
             [native_state, native_dialogue_animation_line,
@@ -2378,7 +2380,8 @@ def make_app():
                 raw, line, animation, direction)
             restored, updated = switch_with_session(
                 raw, line, direction, sequence, session, file)
-            return image, status, restored, updated
+            return image, status, restored, updated, speaking_draft_session_status(
+                raw, line, direction, restored)
 
         native_dialogue_direction.input(
             direction_with_session,
@@ -2386,7 +2389,8 @@ def make_app():
              native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_draft_session, native_file],
             [native_dialogue_direction_preview, native_dialogue_direction_status,
-             native_dialogue_speaking_sequence, native_dialogue_draft_session])
+             native_dialogue_speaking_sequence, native_dialogue_draft_session,
+             native_dialogue_draft_save_status])
         native_dialogue_speaking_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
@@ -2590,12 +2594,7 @@ def make_app():
             [native_state, native_dialogue_animation_line,
              native_dialogue_direction, native_dialogue_speaking_sequence],
             [native_dialogue_draft_save_status], show_progress="hidden")
-        for source in (native_dialogue_animation_line, native_dialogue_direction):
-            source.change(
-                speaking_draft_session_status,
-                [native_state, native_dialogue_animation_line,
-                 native_dialogue_direction, native_dialogue_speaking_sequence],
-                [native_dialogue_draft_save_status], show_progress="hidden")
+        # Target switches compute status from the restored draft atomically.
 
         native_dialogue_draft_step.change(
             dialogue_speaking_draft_step_preview,
