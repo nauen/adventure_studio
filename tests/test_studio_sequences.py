@@ -148,6 +148,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
                                        ("Auf Kamera warten", None, None)):
                 raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                            kind, actor_id, None, None, None, x)
+            raw = set_sequence_skippable(raw, "Cellar|R06TransferReturn|Open", True)
             doc = parse_document(raw)
             self.assertEqual(canonical_json(doc), raw)
             identity = "Cellar|R06TransferReturn|Open"
@@ -159,10 +160,14 @@ class NativeSequenceEditorTests(unittest.TestCase):
                        if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
             native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
                                                    (seq,), doc.actors, doc.costumes, room)
-            self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM) {{\n"
-                          f"                cameraFollowActor({actor});", native)
-            self.assertIn("panCameraTo(160);", native)
-            self.assertEqual(native.count("waitForCamera();"), 2)
+            normal, override = native.split("} override {", 1)
+            self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM)", normal)
+            self.assertIn(f"cameraFollowActor({actor});", normal)
+            self.assertIn("panCameraTo(160);", normal)
+            self.assertEqual(normal.count("waitForCamera();"), 2)
+            self.assertIn("panCameraTo(160);", override)
+            self.assertIn("waitForCamera();", override)
+            self.assertNotIn("cameraFollowActor(", override)
             with self.assertRaises(ValueError):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
