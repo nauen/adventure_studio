@@ -91,7 +91,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
         from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
         from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
         modes = ({}, {"profiles": True}, {"profiles": True, "entry_restore": True},
-                 {"dynamic": True}, {"restore_profile": True}, {"walk": True}, {"animation": True}, {"facing": True}, {"camera": True}, {"position": True}, {"elevation": True}, {"scale": True}, {"costume_change": True}, {"walk_speed": True})
+                 {"dynamic": True}, {"restore_profile": True}, {"walk": True}, {"animation": True}, {"facing": True}, {"camera": True}, {"position": True}, {"elevation": True}, {"scale": True}, {"costume_change": True}, {"walk_speed": True}, {"animation_speed": True})
         names = set()
         with tempfile.TemporaryDirectory() as directory:
             for variant in ("masked", "transparent"):
@@ -101,7 +101,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
                     actor = next(a for a in doc.actors if a.id == ACTOR_IDS[0])
                     self.assertNotIn(actor.costume, names)
                     names.add(actor.costume)
-        self.assertEqual(len(names), 28)
+        self.assertEqual(len(names), 30)
 
 
 
