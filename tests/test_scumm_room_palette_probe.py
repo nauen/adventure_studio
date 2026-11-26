@@ -1,9 +1,8 @@
 """Deterministic checks for native room palette verification."""
 import tempfile
 import unittest
+from importlib.util import find_spec
 from pathlib import Path
-
-from PIL import Image
 
 from adventure_studio.scumm_room_palette_probe import (
     authored_palette_room, room_palette_256, verify_palette_screenshot,
@@ -27,7 +26,9 @@ class NativeRoomPaletteTests(unittest.TestCase):
         self.assertNotEqual(swapped.palette[16], expected[16])
         self.assertEqual(duplicate.palette[255], duplicate.palette[254])
 
+    @unittest.skipUnless(find_spec("PIL"), "Native screenshot verification requires Pillow")
     def test_screenshot_verifier_accepts_all_256_and_rejects_bad_mapping(self):
+        from PIL import Image
         expected = room_palette_256()
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "palette.png"
