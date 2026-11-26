@@ -91,7 +91,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
         from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
         from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
         modes = ({}, {"profiles": True}, {"profiles": True, "entry_restore": True},
-                 {"dynamic": True}, {"restore_profile": True}, {"walk": True})
+                 {"dynamic": True}, {"restore_profile": True}, {"walk": True}, {"animation": True})
         names = set()
         with tempfile.TemporaryDirectory() as directory:
             for variant in ("masked", "transparent"):
@@ -101,8 +101,35 @@ class NativeSequenceEditorTests(unittest.TestCase):
                     actor = next(a for a in doc.actors if a.id == ACTOR_IDS[0])
                     self.assertNotIn(actor.costume, names)
                     names.add(actor.costume)
-        self.assertEqual(len(names), 12)
+        self.assertEqual(len(names), 14)
 
+
+
+    def test_transferred_actor_animation_uses_native_room_presence(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        with tempfile.TemporaryDirectory() as directory:
+            raw = author_transfer_project(Path(directory), "masked")
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                       "Actor animieren", ACTOR_IDS[0], "gesture", None, None)
+            doc = parse_document(raw)
+            self.assertEqual(canonical_json(doc), raw)
+            room = next(r for r in doc.rooms if r.name == "Cellar")
+            sequence = next(s for s in doc.interaction_sequences
+                            if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
+            native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
+                                                   (sequence,), doc.actors, doc.costumes, room)
+            actor = ACTOR_IDS[0]
+            self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM) {{\n"
+                          f"                animateActor({actor},24);", native)
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                     "Actor animieren", ACTOR_IDS[1], "gesture", None, None)
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                     "Actor animieren", actor, "MissingAnimation", None, None)
 
     def test_transferred_actor_walk_and_wait_use_native_room_presence(self):
         from adventure_studio.scumm_assets import scummc_room_source

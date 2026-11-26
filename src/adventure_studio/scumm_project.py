@@ -863,7 +863,8 @@ def _validate_document(document: GameDocument) -> None:
         for step_index, step in enumerate(sequence.steps):
             if isinstance(step, AnimateActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
-                if actor is None or actor.room != room.name:
+                if actor is None or (actor.room != room.name and
+                                     (actor.id, room.name) not in transfer_destinations):
                     raise ValueError("Interaction animation Actor must be in the sequence room")
                 costume = costumes_by_name[actor.costume]
                 animation = next((item for item in costume.animations if item.name == step.animation), None)
