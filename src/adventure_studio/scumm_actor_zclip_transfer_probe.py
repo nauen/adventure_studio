@@ -267,28 +267,46 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
                 raise RuntimeError("Native revealed Actor did not stabilize")
         revealed = sample("revealed", 160, 140 if walk else 220)
     if facing:
-        def facing_samples(phase):
-            rows = []
-            for i in range(8):
-                label = f"transfer-facing-{phase}-{i:02d}"
-                capture(label)
-                with Image.open(output / f"scummvm-{label}.png") as img:
-                    rgb = img.convert("RGB")
-                    center = 192 + 2 * 220
-                    # Use the full costume height: authored frame offset -23,
-                    # Actor feet at world Y=85, native scale two.
-                    top, bottom = 184 + 2 * (85 - 23), 184 + 2 * (85 + 1)
-                    middle = (top + bottom) // 2
-                    def dark(x0, x1, y0, y1):
-                        return sum(max(rgb.getpixel((x, y))) <= 24
-                                   for y in range(y0, y1) for x in range(x0, x1))
-                    rows.append({"frame": label,
+        def facing_measurement(label):
+            capture(label)
+            with Image.open(output / f"scummvm-{label}.png") as img:
+                rgb = img.convert("RGB")
+                center = 192 + 2 * 220
+                # Full authored costume height at native scale two.
+                top, bottom = 184 + 2 * (85 - 23), 184 + 2 * (85 + 1)
+                middle = (top + bottom) // 2
+                def dark(x0, x1, y0, y1):
+                    return sum(max(rgb.getpixel((x, y))) <= 24
+                               for y in range(y0, y1) for x in range(x0, x1))
+                return {"frame": label,
                         "left": dark(center-16, center, top, bottom),
                         "right": dark(center, center+16, top, bottom),
                         "top": dark(center-16, center+16, top, middle),
-                        "bottom": dark(center-16, center+16, middle, bottom)})
+                        "bottom": dark(center-16, center+16, middle, bottom)}
+
+        def facing_samples(phase):
+            rows = []
+            for i in range(8):
+                rows.append(facing_measurement(f"transfer-facing-{phase}-{i:02d}"))
                 time.sleep(.15)
             return rows
+
+        # The reveal establishes visibility before the native turn completes.
+        # Retain the transition frames, then measure eight consecutive frames
+        # independently; never discard or replace a failed acceptance frame.
+        west_settle = []
+        stable = 0
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline and stable < 3:
+            if process.poll() is not None:
+                raise RuntimeError("ScummVM exited during native west turn")
+            row = facing_measurement(f"transfer-facing-west-settle-{len(west_settle):03d}")
+            west_settle.append(row)
+            stable = stable + 1 if row["left"] >= 100 and row["right"] < 50 else 0
+            time.sleep(.15)
+        (output / "facing-west-transition.json").write_text(json.dumps(west_settle, indent=2))
+        if stable < 3:
+            raise RuntimeError(f"Native west turn did not settle: {west_settle}")
         facing_frames["W"] = facing_samples("west")
         for direction, color in (("N", NORTH_RGB), ("S", SOUTH_RGB)):
             previous = facing_frames[next(reversed(facing_frames))][-1]["frame"]
