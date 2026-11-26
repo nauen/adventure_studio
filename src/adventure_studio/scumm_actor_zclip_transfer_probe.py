@@ -180,6 +180,8 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             raw = append_sequence_step(raw, "Cellar", hotspot, "Close",
                 "Actor drehen", ACTOR_IDS[0], None, None, None, direction=direction)
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Objektzustand setzen", None, None, "R06Restore", 0)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Warten", None, None, None, 12)
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Actor drehen", ACTOR_IDS[0], None, None, None, direction="E")
@@ -344,28 +346,46 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             time.sleep(.15)
         escape_elapsed = time.monotonic() - started
     if facing:
-        def facing_samples(phase):
-            rows = []
-            for i in range(8):
-                label = f"transfer-facing-{phase}-{i:02d}"
-                capture(label)
-                with Image.open(output / f"scummvm-{label}.png") as img:
-                    rgb = img.convert("RGB")
-                    center = 192 + 2 * 220
-                    # Use the full costume height: authored frame offset -23,
-                    # Actor feet at world Y=85, native scale two.
-                    top, bottom = 256 + 2 * (85 - 23), 256 + 2 * (85 + 1)
-                    middle = (top + bottom) // 2
-                    def dark(x0, x1, y0, y1):
-                        return sum(max(rgb.getpixel((x, y))) <= 24
-                                   for y in range(y0, y1) for x in range(x0, x1))
-                    rows.append({"frame": label,
+        def facing_measurement(label):
+            capture(label)
+            with Image.open(output / f"scummvm-{label}.png") as img:
+                rgb = img.convert("RGB")
+                center = 192 + 2 * 220
+                # Full authored costume height at native scale two.
+                top, bottom = 184 + 2 * (85 - 23), 184 + 2 * (85 + 1)
+                middle = (top + bottom) // 2
+                def dark(x0, x1, y0, y1):
+                    return sum(max(rgb.getpixel((x, y))) <= 24
+                               for y in range(y0, y1) for x in range(x0, x1))
+                return {"frame": label,
                         "left": dark(center-16, center, top, bottom),
                         "right": dark(center, center+16, top, bottom),
                         "top": dark(center-16, center+16, top, middle),
-                        "bottom": dark(center-16, center+16, middle, bottom)})
+                        "bottom": dark(center-16, center+16, middle, bottom)}
+
+        def facing_samples(phase):
+            rows = []
+            for i in range(8):
+                rows.append(facing_measurement(f"transfer-facing-{phase}-{i:02d}"))
                 time.sleep(.15)
             return rows
+
+        # The reveal establishes visibility before the native turn completes.
+        # Retain the transition frames, then measure eight consecutive frames
+        # independently; never discard or replace a failed acceptance frame.
+        west_settle = []
+        stable = 0
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline and stable < 3:
+            if process.poll() is not None:
+                raise RuntimeError("ScummVM exited during native west turn")
+            row = facing_measurement(f"transfer-facing-west-settle-{len(west_settle):03d}")
+            west_settle.append(row)
+            stable = stable + 1 if row["left"] >= 100 and row["right"] < 50 else 0
+            time.sleep(.15)
+        (output / "facing-west-transition.json").write_text(json.dumps(west_settle, indent=2))
+        if stable < 3:
+            raise RuntimeError(f"Native west turn did not settle: {west_settle}")
         facing_frames["W"] = facing_samples("west")
         for direction, color in (("N", NORTH_RGB), ("S", SOUTH_RGB)):
             previous = facing_frames[next(reversed(facing_frames))][-1]["frame"]
@@ -376,9 +396,16 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         click(234, 563)
         click(*colored_item_center(output, facing_frames["S"][-1]["frame"], RESTORE_RGB, fuzz_percent=4))
         started = time.monotonic()
-        time.sleep(1)
-        subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=5)
-        time.sleep(.4)
+        # Close may first walk Ego to the hotspot. Do not send Escape until
+        # the native script has actually started (its marker disappears).
+        await_frame("transfer-facing-cutscene-start", lambda label:
+                    colored_item_pixels(output, label, RESTORE_RGB) < 40)
+        started = time.monotonic()
+        subprocess.run(["xdotool", "keydown", "Escape"], check=True, timeout=5)
+        try:
+            time.sleep(.25)
+        finally:
+            subprocess.run(["xdotool", "keyup", "Escape"], check=True, timeout=5)
         facing_frames["E"] = facing_samples("east-escape")
         escape_elapsed = time.monotonic() - started
         if escape_elapsed >= 10:

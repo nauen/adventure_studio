@@ -188,8 +188,11 @@ def run_visual_comparison(upstream: Path, generated: Path, destination: Path) ->
             "mask_enabled": occlusion,
             "box_scale": scale,
             "mask_authoring": "PNG → native project JSON → ZPxx",
+            # The 480-world-pixel native walk must finish before measuring
+            # the fixed endpoint crop. Six wall-clock seconds can truncate
+            # it on a loaded CI runner; use the existing longer scene window.
             **render_native_room(room, upstream, generated, destination, label,
-                                     scene_capture_seconds=20.0),
+                                 scene_capture_seconds=20.0),
         }
     results["comparison"] = verify_visual_effects(
         results["masked"]["dark_costume_pixels"],

@@ -281,6 +281,11 @@ class NativeSequenceEditorTests(unittest.TestCase):
             override_body, epilogue = override.split("\n            }\n", 1)
             self.assertEqual(override_body.count(guard), 1)
             self.assertEqual(epilogue.count(guard), 1)
+            for operator in ("+", "-"):
+                redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) {operator} 1);"
+                self.assertEqual(normal.count(redraw), 2)
+                self.assertEqual(override_body.count(redraw), 1)
+                self.assertEqual(epilogue.count(redraw), 1)
             self.assertIn("setActorZClip(1);", override_body)
             self.assertIn("setActorZClip(1);", epilogue)
 
@@ -313,6 +318,11 @@ class NativeSequenceEditorTests(unittest.TestCase):
             override_body, epilogue = override.split("\n            }\n", 1)
             self.assertEqual(override_body.count(guard), 1)
             self.assertEqual(epilogue.count(guard), 1)
+            for operator in ("+", "-"):
+                redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) {operator} 1);"
+                self.assertEqual(normal.count(redraw), 2)
+                self.assertEqual(override_body.count(redraw), 1)
+                self.assertEqual(epilogue.count(redraw), 1)
             self.assertIn("setActorZClip(1);", override_body)
             self.assertIn("setActorZClip(1);", epilogue)
             self.assertIn("setActorZClip(1);", override)
