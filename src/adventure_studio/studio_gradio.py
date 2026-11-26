@@ -990,14 +990,14 @@ def make_app():
                 native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
                 native_sound_add = gr.Button("VOC dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Höhe", "Actor Skalierung", "Actor Costume wechseln", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Höhe", "Actor Laufgeschwindigkeit", "Actor Skalierung", "Actor Costume wechseln", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum / Costume")
                 native_amount = gr.Number(label="Sekunden / Objektzustand (0–2) / Z-Clipping (0–4) / Raumprofil (-1) / Actor-Höhe (-127–127) / Actor-Skalierung (0–255)", value=1, precision=0)
             with gr.Row():
-                native_move_x = gr.Number(label="Actor-/Kamera-Ziel X", value=320, precision=0)
-                native_move_y = gr.Number(label="Actor-Ziel Y (Versetzen/Laufen)", value=100, precision=0)
+                native_move_x = gr.Number(label="Actor-/Kamera-Ziel X / Laufgeschwindigkeit X (1–16)", value=320, precision=0)
+                native_move_y = gr.Number(label="Actor-Ziel Y (Versetzen/Laufen) / Laufgeschwindigkeit Y (1–16)", value=100, precision=0)
                 native_face_direction = gr.Dropdown(label="Blickrichtung (Actor drehen)",
                                                     choices=["N", "E", "S", "W"], value="S")
             native_subtitle = gr.Textbox(label="Untertitel für gesprochene Zeile (Unicode, maximal 160 Zeichen)",
@@ -2132,7 +2132,7 @@ def make_app():
             document = parse_document(raw)
             if kind == "Actor-Raumtransfer mit Z-Clipping":
                 actors = tuple(a.id for a in document.actors)
-            elif kind in ("Actor Z-Clipping", "Actor Höhe", "Actor Skalierung", "Actor Costume wechseln", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor drehen", "Kamera folgt Actor", "Actor versetzen", "Gesprochene Zeile"):
+            elif kind in ("Actor Z-Clipping", "Actor Höhe", "Actor Laufgeschwindigkeit", "Actor Skalierung", "Actor Costume wechseln", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor drehen", "Kamera folgt Actor", "Actor versetzen", "Gesprochene Zeile"):
                 from .scumm_project import TransferActorZClipStep
                 transferred = {step.actor_id for sequence in document.interaction_sequences
                                for step in sequence.steps
