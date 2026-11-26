@@ -145,6 +145,12 @@ class WaitActorStep:
 
 
 @dataclass(frozen=True)
+class ActorAnimationSpeedStep:
+    actor_id: str
+    speed: int
+
+
+@dataclass(frozen=True)
 class ActorWalkSpeedStep:
     actor_id: str
     x_speed: int
@@ -262,7 +268,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorElevationStep | ActorWalkSpeedStep | ActorScaleStep | ActorCostumeStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorElevationStep | ActorWalkSpeedStep | ActorAnimationSpeedStep | ActorScaleStep | ActorCostumeStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -388,6 +394,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, WaitCameraStep)
                                                    else {"type": "wait_actor", **vars(step)}
                                                    if isinstance(step, WaitActorStep)
+                                                   else {"type": "actor_animation_speed", **vars(step)}
+                                                   if isinstance(step, ActorAnimationSpeedStep)
                                                    else {"type": "actor_walk_speed", **vars(step)}
                                                    if isinstance(step, ActorWalkSpeedStep)
                                                    else {"type": "actor_elevation", **vars(step)}
@@ -1009,6 +1017,12 @@ def _validate_document(document: GameDocument) -> None:
                 if actor is None or (actor.room != room.name and
                                      (actor.id, room.name) not in transfer_destinations):
                     raise ValueError("Interaction wait requires an Actor in the sequence room")
+            elif isinstance(step, ActorAnimationSpeedStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if (actor is None or (actor.room != room.name and
+                        (actor.id, room.name) not in transfer_destinations)
+                        or type(step.speed) is not int or not 1 <= step.speed <= 16):
+                    raise ValueError("Actor animation speed requires a room Actor and integer delay (1 to 16)")
             elif isinstance(step, ActorWalkSpeedStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or (actor.room != room.name and
@@ -1219,6 +1233,9 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "wait_actor":
                 step = _only(raw_step, {"type", "actor_id"}, {"type", "actor_id"})
                 steps.append(WaitActorStep(step["actor_id"]))
+            elif kind == "actor_animation_speed":
+                step = _only(raw_step, {"type", "actor_id", "speed"}, {"type", "actor_id", "speed"})
+                steps.append(ActorAnimationSpeedStep(step["actor_id"], step["speed"]))
             elif kind == "actor_walk_speed":
                 step = _only(raw_step, {"type", "actor_id", "x_speed", "y_speed"}, {"type", "actor_id", "x_speed", "y_speed"})
                 steps.append(ActorWalkSpeedStep(step["actor_id"], step["x_speed"], step["y_speed"]))
