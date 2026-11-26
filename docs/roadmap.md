@@ -1,19 +1,25 @@
 # Adventure Studio – aktive Produktroadmap
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; Studio/JSON-v1/Story → ScummC-v6 → unverändertes stock ScummVM. Kein NPC-Komfort nach #190.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; Studio/JSON-v1/Story → ScummC-v6 → unverändertes stock ScummVM. NPC-Komfort nach #190 beendet.
+- **Jetzt:** Genau eine Fähigkeit: R06 [#322](https://github.com/nauen/adventure_studio/pull/322), native Blickrichtung eines transferierten Actors im Zielraum.
+- **Abnahme:** Vier sichtbare Blickrichtungen, Escape-Endzustand, maskierte und transparente Kontrolle, Actor-Anwesenheit und Raumrückkehr im generierten stock-ScummVM-Spiel; vollständige Pflicht-CI.
+- **Blocker:** #327 integriert (`7ee9aee`), [Main-Core](https://github.com/nauen/adventure_studio/actions/runs/45849583588) grün. [Core #322](https://github.com/nauen/adventure_studio/actions/runs/45849629302) auf Vorgängerhead grün, native Abnahme auf neuem Head `69ddde8` offen: fehlenden, nicht authorierten Hide-Hotspot im Facing-Probe korrigiert. R06 bleibt V (Teil), ZP05+ fail-closed.
+- **Danach:** Genau ein Folgepaket: R06 [#323](https://github.com/nauen/adventure_studio/pull/323), native Interaktionskamera nach Actor-Raumtransfer; erst nach #322-Abnahme und Integration.
+
+## Konsolidierter Integrationsstand (26.11.2026)
+
 - **Integriert (26.11.2026):** R06 [#314](https://github.com/nauen/adventure_studio/pull/314), native Wiederherstellung raumspezifischer Actor-Z-Clipping-Profile in regulären und per Escape abgeschlossenen Interaktionen; maskierte und transparente Kontrolle in stock ScummVM bestanden. Merge `459a51ab6a5738d989e37a0334f13df941e0044b`, [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/45785194352) vollständig grün, [Authoring-Guard](https://github.com/nauen/adventure_studio/actions/runs/45785192359) grün; Core übersprungen.
 - **Integriert (26.11.2026):** R06 [#320](https://github.com/nauen/adventure_studio/pull/320), native Actor-Bewegung nach Raumwechsel mit Clipping-Kontrolle in stock ScummVM bestanden; [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/45803967171) 8/8 grün, Schritte 78/79 Gameplay und Evidenz erfolgreich. Merge `18f95154bfec1aaf6a6ed5b5dc9bfce8c42ab2b0`.
 - **Integriert (26.11.2026):** R06 [#321](https://github.com/nauen/adventure_studio/pull/321), native Aktionsanimation eines übertragenen Actors im Zielraum in stock ScummVM bestanden; [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/45821006309) 8/8 grün nach erfolgreicher Geometry-Wiederholung, Schritte 80/81 Gameplay und Evidenz erfolgreich. Merge `3bdb2b3131e8497527fe8eb72463f081dfa0973d`.
-- **Jetzt – genau eine aktive Entwicklungsfähigkeit:** R06 [#322](https://github.com/nauen/adventure_studio/pull/322), native Blickrichtung eines übertragenen Actors.
-- **Abnahme #322:** Studio/JSON-v1 → produktiver ScummC-v6-Export → stock ScummVM; sichtbare authorierte Blickrichtung im Zielraum, Anwesenheitskontrolle und Escape-Endzustand, vollständige Pflicht-CI.
-- **Integrationsblocker/Nachweis:** #322 auf main konsolidiert, Commit `975b2aa10dbb4b83b42d34151cd22d8414af5234`; neue native Abnahme offen. R06 bleibt V (Teil), ZP05+ fail-closed.
-- **Danach – genau ein Folgepaket:** R06 [#323](https://github.com/nauen/adventure_studio/pull/323), native Kamerasteuerung eines übertragenen Actors, erst nach Integration von #322.
 - **Integriert:** R06 [#313](https://github.com/nauen/adventure_studio/pull/313), dynamisches Z-Clipping nach Raumtransfer inklusive Escape und Redraw; Merge `20b2c07bca2d0187a8133c614bbe39422409013f`; [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/45749196708) alle acht relevanten Shards grün, Geometry-Schritt 74 erfolgreich. R06 bleibt V (Teil).
 - **Zurückgestellt:** #293/#295/#297/#299/#301/#303. Branches erhalten; ZP05+ fail-closed; R06 bleibt V (Teil).
 
 - **Integriert:** [#312](https://github.com/nauen/adventure_studio/pull/312), Zielraumprofile nur für anwesende Actors, Merge `00d391fa69fde03e6a80db9faccfa4de4e4812ee`; [Core](https://github.com/nauen/adventure_studio/actions/runs/45538837093) und [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/45538842077) erfolgreich; [Gameplay-Artefakt](https://github.com/nauen/adventure_studio/actions/runs/45538842077/artifacts/14992198888).
 - **Integriert:** [#311](https://github.com/nauen/adventure_studio/pull/311), wiederverwendbare Actor-Z-Clipping-Profile, Merge `9dbcb2a1870f5920a1ffe1d577a118b2dfdb6223`; [Core](https://github.com/nauen/adventure_studio/actions/runs/45523680607) und [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/45523686686) erfolgreich; [Gameplay-Artefakt](https://github.com/nauen/adventure_studio/actions/runs/45523686686/artifacts/14987105233). R06 bleibt V (Teil).
 - **Integriert:** R08 [#264](https://github.com/nauen/adventure_studio/pull/264) konkaver Korridor, R09 [#267](https://github.com/nauen/adventure_studio/pull/267) zwei reversible Gates über Raumrückkehr; beide Teilfähigkeiten, keine vollständige Matrixfreigabe.
+
+- **Integriert:** #327 Core-Testvertrag, Merge `7ee9aee`, Main-Core grün; keine Runtimeänderung.
+- **Zurückgestellt:** #323/#325/#326 sowie die älteren gestapelten R06-Proben; keine parallele Featureentwicklung.
 
 ## Letzter integrierter Nachweis
 
