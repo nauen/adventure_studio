@@ -15,6 +15,11 @@ class NativeRoomPaletteTests(unittest.TestCase):
         room = authored_palette_room()
         self.assertEqual(len(room.palette), 256)
         self.assertEqual(len(set(room.palette)), 256)
+        minimum_distance = min(
+            max(abs(a - b) for a, b in zip(room.palette[left], room.palette[right]))
+            for left in range(256) for right in range(left + 1, 256)
+        )
+        self.assertGreater(minimum_distance, 24)
         width = room.geometry.room_width
         grid_pixels = {
             room.pixels[(16 + row * 8 + y) * width + 16 + column * 8 + x]
