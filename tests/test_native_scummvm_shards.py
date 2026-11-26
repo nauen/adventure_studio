@@ -112,6 +112,14 @@ class NativeScummVMShardingTests(unittest.TestCase):
         self.assertEqual(observed_counts, expected_counts)
         self.assertTrue(set(required).issubset(seen))
 
+    def test_active_facing_gate_runs_before_legacy_geometry(self):
+        contents = WORKFLOW.read_text(encoding="utf-8")
+        names = [match.group(1) for match in STEP.finditer(contents)]
+        self.assertEqual(names.index("Verify native transferred Actor facing in destination room"),
+                         names.index("Retain native transferred Actor camera evidence") + 1)
+        self.assertEqual(names.index("Retain native transferred Actor facing evidence"),
+                         names.index("Verify native transferred Actor facing in destination room") + 1)
+
     def test_shards_keep_native_artifacts_and_independent_failures(self):
         contents = WORKFLOW.read_text(encoding="utf-8")
         self.assertIn("name: Native ScummVM – ${{ matrix.shard }}", contents)

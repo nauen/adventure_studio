@@ -107,7 +107,6 @@ class NativeSequenceEditorTests(unittest.TestCase):
 
 
 
-
     def test_transferred_actor_voice_uses_native_room_presence(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import scummc_room_source
@@ -189,6 +188,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
                                        ("Auf Kamera warten", None, None)):
                 raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                            kind, actor_id, None, None, None, x)
+            raw = set_sequence_skippable(raw, "Cellar|R06TransferReturn|Open", True)
             doc = parse_document(raw)
             self.assertEqual(canonical_json(doc), raw)
             identity = "Cellar|R06TransferReturn|Open"
@@ -200,10 +200,25 @@ class NativeSequenceEditorTests(unittest.TestCase):
                        if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
             native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
                                                    (seq,), doc.actors, doc.costumes, room)
-            self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM) {{\n"
-                          f"                cameraFollowActor({actor});", native)
-            self.assertIn("panCameraTo(160);", native)
-            self.assertEqual(native.count("waitForCamera();"), 2)
+            normal, override = native.split("} override {", 1)
+            self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM)", normal)
+            self.assertIn(f"cameraFollowActor({actor});", normal)
+            self.assertIn("panCameraTo(160);", normal)
+            self.assertEqual(normal.count("waitForCamera();"), 2)
+            self.assertIn("panCameraTo(160);", override)
+            self.assertIn("waitForCamera();", override)
+            self.assertNotIn("cameraFollowActor(", override)
+            from dataclasses import replace
+            # A final follow plus an authored camera wait must also settle
+            # on Escape, while a follow without a wait remains asynchronous.
+            for steps, expect_wait in ((seq.steps[:2], True), (seq.steps[:1], False)):
+                follow_native = inject_interaction_sequences(
+                    scummc_room_source(room), "Cellar",
+                    (replace(seq, steps=steps),), doc.actors, doc.costumes, room)
+                _, follow_override = follow_native.split("} override {", 1)
+                self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM)", follow_override)
+                self.assertIn(f"cameraFollowActor({actor});", follow_override)
+                self.assertEqual("waitForCamera();" in follow_override, expect_wait)
             with self.assertRaises(ValueError):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
@@ -327,7 +342,18 @@ class NativeSequenceEditorTests(unittest.TestCase):
             self.assertNotIn("setActorZClip(-1);", native)
             guard = f"if (getActorRoom({ACTOR_IDS[0]}) == VAR_ROOM)"
             self.assertEqual(normal.count(guard), 2)
-            self.assertEqual(override.count(guard), 1)
+            # Both the conditional override and the common cutscene exit
+            # must independently guard the same persistent clipping state.
+            override_body, epilogue = override.split("\n            }\n", 1)
+            self.assertEqual(override_body.count(guard), 1)
+            self.assertEqual(epilogue.count(guard), 1)
+            for operator in ("+", "-"):
+                redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) {operator} 1);"
+                self.assertEqual(normal.count(redraw), 2)
+                self.assertEqual(override_body.count(redraw), 1)
+                self.assertEqual(epilogue.count(redraw), 1)
+            self.assertIn("setActorZClip(1);", override_body)
+            self.assertIn("setActorZClip(1);", epilogue)
 
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source
@@ -353,7 +379,18 @@ class NativeSequenceEditorTests(unittest.TestCase):
             normal, override = native.split("} override {", 1)
             guard = f"if (getActorRoom({ACTOR_IDS[0]}) == VAR_ROOM)"
             self.assertEqual(normal.count(guard), 2)
-            self.assertEqual(override.count(guard), 1)
+            # Both the conditional override and the common cutscene exit
+            # must independently guard the same persistent clipping state.
+            override_body, epilogue = override.split("\n            }\n", 1)
+            self.assertEqual(override_body.count(guard), 1)
+            self.assertEqual(epilogue.count(guard), 1)
+            for operator in ("+", "-"):
+                redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) {operator} 1);"
+                self.assertEqual(normal.count(redraw), 2)
+                self.assertEqual(override_body.count(redraw), 1)
+                self.assertEqual(epilogue.count(redraw), 1)
+            self.assertIn("setActorZClip(1);", override_body)
+            self.assertIn("setActorZClip(1);", epilogue)
             self.assertIn("setActorZClip(1);", override)
             self.assertNotIn("setActorZClip(0);", override)
             with self.assertRaises(ValueError):
