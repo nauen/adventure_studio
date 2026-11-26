@@ -23,8 +23,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
         matches = list(STEP.finditer(contents))
         # Counts include real gameplay and evidence-retention steps. New native
         # capabilities change the matrix length; preserve the per-shard gates.
-        self.assertEqual(len(matches), 174)
-        expected_counts = {"actors": 26, "mask": 2, "geometry": 88, "story": 48}
+        self.assertEqual(len(matches), 176)
+        expected_counts = {"actors": 26, "mask": 2, "geometry": 90, "story": 48}
         observed_counts = {shard: 0 for shard in SHARDS}
         shared = {
             "Restore previously downloaded Ubuntu packages",
@@ -39,6 +39,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
             "Link generated room with upstream game bootstrap",
         }
         required = {
+            "Verify native transferred Actor walk speed and Escape": "geometry",
+            "Retain native transferred Actor walk speed evidence": "geometry",
             "Verify native transferred Actor costume and Escape": "geometry",
             "Retain native transferred Actor costume evidence": "geometry",
             "Verify native transferred Actor scale and Escape": "geometry",

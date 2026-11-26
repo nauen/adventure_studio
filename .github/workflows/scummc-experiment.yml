@@ -117,6 +117,20 @@ jobs:
       # common native ScummC bootstrap is built. Independent legacy gameplay
       # gates remain mandatory below, but cannot prevent this evidence from
       # running and uploading a failure report of its own.
+      - name: Verify native transferred Actor walk speed and Escape
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_transfer_probe /tmp/scummc-upstream /tmp/native-transferred-actor-walk-speed --walk-speed
+      - name: Retain native transferred Actor walk speed evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-transferred-actor-walk-speed
+          path: /tmp/native-transferred-actor-walk-speed
+          if-no-files-found: ignore
       - name: Verify native transferred Actor costume and Escape
         if: ${{ matrix.shard == 'geometry' }}
         env:
