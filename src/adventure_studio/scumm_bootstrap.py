@@ -634,9 +634,11 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                      "            }\n"))
             elif isinstance(step, FaceActorStep):
                 direction = actor_facing_angle(step.direction)
-                instructions.extend((f"            setCurrentActor({step.actor_id});\n",
-                                     f"            setActorDirection({direction});\n",
-                                     "            setCurrentActor(VAR_EGO);\n"))
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     f"                setActorDirection({direction});\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
             elif isinstance(step, MusicCueStep):
                 instructions.append(f"            startMusic({room_asset.music_id});\n"
                                     if step.operation == "start" else "            stopMusic();\n")
@@ -727,9 +729,17 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 commit += "                }\n"
         for actor, direction in end_directions.items():
             native_direction = actor_facing_angle(direction)
-            commit += (f"                setCurrentActor({actor});\n"
-                       f"                setActorDirection({native_direction});\n"
-                       "                setCurrentActor(VAR_EGO);\n")
+            # A later explicit transfer is committed before the facing state.
+            # In that case preserve the earlier facing on the moved Actor.
+            destination = end_positions.get(actor)
+            if destination is not None and destination[2] != room_name:
+                commit += f"                if (getActorRoom({actor}) == {destination[2]}) {{\n"
+            else:
+                commit += f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
+            commit += (f"                    setCurrentActor({actor});\n"
+                       f"                    setActorDirection({native_direction});\n"
+                       "                    setCurrentActor(VAR_EGO);\n"
+                       "                }\n")
         for actor, (plane, require_presence) in end_clipping.items():
             if require_presence:
                 commit += f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"

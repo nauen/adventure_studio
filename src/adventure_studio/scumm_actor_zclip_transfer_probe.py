@@ -24,15 +24,17 @@ REVEAL_RGB = (60, 210, 175)
 RESTORE_RGB = (210, 175, 60)
 ESCAPE_RGB = (190, 85, 155)
 ACTION_RGB = (95, 225, 135)
+NORTH_RGB = (95, 155, 225)
+SOUTH_RGB = (225, 95, 135)
 
 
-def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False, animation=False):
-    if walk or animation:
+def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False):
+    if walk or animation or facing:
         dynamic = True
     if variant not in VARIANTS:
         raise ValueError("Unknown transfer mask control")
     doc = parse_document(author_project(root, "transparent", initial=False))
-    name = ("R06AnimationTransfer" if animation else "R06WalkTransfer" if walk else "R06RestoreProfile" if restore_profile else "R06DynamicTransfer" if dynamic else "R06EntryProfile" if entry_restore else "R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
+    name = ("R06FacingTransfer" if facing else "R06AnimationTransfer" if animation else "R06WalkTransfer" if walk else "R06RestoreProfile" if restore_profile else "R06DynamicTransfer" if dynamic else "R06EntryProfile" if entry_restore else "R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
     previous = doc.costumes[-1].name
     rooms = []
     for room in doc.rooms:
@@ -55,12 +57,16 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                 for ident, color, x in (("R06Reveal", REVEAL_RGB, 250),
                                         ("R06Restore", RESTORE_RGB, 180),
                                         ("R06Hide", ESCAPE_RGB, 180),
-                                        ("R06Action", ACTION_RGB, 180)):
-                    if ident == "R06Restore" and not (restore_profile or walk):
+                                        ("R06Action", ACTION_RGB, 180),
+                                        ("R06North", NORTH_RGB, 70),
+                                        ("R06South", SOUTH_RGB, 110)):
+                    if ident == "R06Restore" and not (restore_profile or walk or facing):
                         continue
-                    if ident == "R06Hide" and (not dynamic or restore_profile or walk or animation):
+                    if ident == "R06Hide" and (not dynamic or restore_profile or walk or animation or facing):
                         continue
                     if ident == "R06Action" and not animation:
+                        continue
+                    if ident in ("R06North", "R06South") and not facing:
                         continue
                     hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
                                           sprite_pixels=bytes([len(room.palette)]) * 256)
@@ -82,6 +88,20 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             "S", ("ActionPose0", "ActionPose1"), loop=True),))
         costume = replace(costume, frames=(*costume.frames, *poses),
             animations=tuple(gesture if item.name == "gesture" else item
+                             for item in costume.animations))
+    if facing:
+        # Four cardinal stand frames with direction-specific silhouettes.
+        base = costume.frames[0]
+        directions = ("N", "E", "S", "W")
+        frames = tuple(replace(base, id=f"Facing{d}", pixels=bytes(
+            1 if (d == "N" and y < 12 or d == "S" and y >= 12
+                  or d == "W" and x < 8 or d == "E" and x >= 8) else 0
+            for y in range(base.height) for x in range(base.width)))
+            for d in directions)
+        stand = tuple(CostumeDirection(d, (f"Facing{d}",)) for d in directions)
+        costume = replace(costume, frames=(*costume.frames, *frames),
+            animations=tuple(replace(item, directions=stand)
+                             if item.name in ("stand", "init") else item
                              for item in costume.animations))
     doc = replace(doc, rooms=rooms,
         costumes=(*doc.costumes[:-1], costume),
@@ -117,12 +137,24 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
     if dynamic or restore_profile:
         raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
-    if dynamic and not restore_profile and not walk and not animation:
+    if dynamic and not restore_profile and not walk and not animation and not facing:
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
             "Warten", None, None, None, 12)
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 1)
         raw = set_sequence_skippable(raw, "Cellar|R06Hide|Close", True)
+    if facing:
+        for hotspot, direction in (("R06Reveal", "W"), ("R06North", "N"),
+                                   ("R06South", "S")):
+            raw = append_sequence_step(raw, "Cellar", hotspot, "Close",
+                "Actor drehen", ACTOR_IDS[0], None, None, None, direction=direction)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Objektzustand setzen", None, None, "R06Restore", 0)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Warten", None, None, None, 12)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Actor drehen", ACTOR_IDS[0], None, None, None, direction="E")
+        raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
     if animation:
         raw = append_sequence_step(raw, "Cellar", "R06Action", "Close",
             "Actor animieren", ACTOR_IDS[0], "gesture", None, None)
@@ -147,7 +179,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
     return raw
 
 
-def play_transfer(output, capture, process, dynamic=False, restore_profile=False, walk=False, animation=False):
+def play_transfer(output, capture, process, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False):
     def click(x, y):
         subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                        check=True, timeout=5)
@@ -200,7 +232,8 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     escape_elapsed = None
     motion, walk_escape = [], []
     action_frames, idle_frames = [], []
-    if walk or animation:
+    facing_frames = {}
+    if walk or animation or facing:
         dynamic = True
     if dynamic or restore_profile:
         click(234, 563)
@@ -233,6 +266,71 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             if stable < 3:
                 raise RuntimeError("Native revealed Actor did not stabilize")
         revealed = sample("revealed", 160, 140 if walk else 220)
+    if facing:
+        def facing_measurement(label):
+            capture(label)
+            with Image.open(output / f"scummvm-{label}.png") as img:
+                rgb = img.convert("RGB")
+                center = 192 + 2 * 220
+                # Full authored costume height at native scale two.
+                top, bottom = 184 + 2 * (85 - 23), 184 + 2 * (85 + 1)
+                middle = (top + bottom) // 2
+                def dark(x0, x1, y0, y1):
+                    return sum(max(rgb.getpixel((x, y))) <= 24
+                               for y in range(y0, y1) for x in range(x0, x1))
+                return {"frame": label,
+                        "left": dark(center-16, center, top, bottom),
+                        "right": dark(center, center+16, top, bottom),
+                        "top": dark(center-16, center+16, top, middle),
+                        "bottom": dark(center-16, center+16, middle, bottom)}
+
+        def facing_samples(phase):
+            rows = []
+            for i in range(8):
+                rows.append(facing_measurement(f"transfer-facing-{phase}-{i:02d}"))
+                time.sleep(.15)
+            return rows
+
+        # The reveal establishes visibility before the native turn completes.
+        # Retain the transition frames, then measure eight consecutive frames
+        # independently; never discard or replace a failed acceptance frame.
+        west_settle = []
+        stable = 0
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline and stable < 3:
+            if process.poll() is not None:
+                raise RuntimeError("ScummVM exited during native west turn")
+            row = facing_measurement(f"transfer-facing-west-settle-{len(west_settle):03d}")
+            west_settle.append(row)
+            stable = stable + 1 if row["left"] >= 100 and row["right"] < 50 else 0
+            time.sleep(.15)
+        (output / "facing-west-transition.json").write_text(json.dumps(west_settle, indent=2))
+        if stable < 3:
+            raise RuntimeError(f"Native west turn did not settle: {west_settle}")
+        facing_frames["W"] = facing_samples("west")
+        for direction, color in (("N", NORTH_RGB), ("S", SOUTH_RGB)):
+            previous = facing_frames[next(reversed(facing_frames))][-1]["frame"]
+            click(234, 563)
+            click(*colored_item_center(output, previous, color, fuzz_percent=4))
+            time.sleep(3)
+            facing_frames[direction] = facing_samples(direction)
+        click(234, 563)
+        click(*colored_item_center(output, facing_frames["S"][-1]["frame"], RESTORE_RGB, fuzz_percent=4))
+        started = time.monotonic()
+        # Close may first walk Ego to the hotspot. Do not send Escape until
+        # the native script has actually started (its marker disappears).
+        await_frame("transfer-facing-cutscene-start", lambda label:
+                    colored_item_pixels(output, label, RESTORE_RGB) < 40)
+        started = time.monotonic()
+        subprocess.run(["xdotool", "keydown", "Escape"], check=True, timeout=5)
+        try:
+            time.sleep(.25)
+        finally:
+            subprocess.run(["xdotool", "keyup", "Escape"], check=True, timeout=5)
+        facing_frames["E"] = facing_samples("east-escape")
+        escape_elapsed = time.monotonic() - started
+        if escape_elapsed >= 10:
+            raise RuntimeError("Facing Escape overlapped ordinary delay completion")
     if animation:
         def pose_samples(phase, count):
             rows = []
@@ -266,7 +364,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             raise RuntimeError("Escape observation overlapped ordinary delay completion")
         return rows, elapsed
 
-    if dynamic and not restore_profile and not walk and not animation:
+    if dynamic and not restore_profile and not walk and not animation and not facing:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], ESCAPE_RGB, fuzz_percent=4))
         escaped, escape_elapsed = bounded_escape("escaped")
@@ -297,10 +395,10 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         "before": before, "destination": destination, "returned": returned, "revealed": revealed, "restored": restored, "revealed_again": revealed_again,
         "restored_escape": restored_escape, "escaped": escaped,
         "escape_elapsed": escape_elapsed, "motion": motion, "walk_escape": walk_escape,
-        "idle_frames": idle_frames, "action_frames": action_frames}, indent=2))
+        "idle_frames": idle_frames, "action_frames": action_frames, "facing_frames": facing_frames}, indent=2))
 
 
-def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=False, animation=False):
+def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False):
     if walk:
         dynamic = True
         xs = [row["world_x"] for row in report["motion"]]
@@ -323,12 +421,19 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=
         if observed.count("left") < 2 or observed.count("right") < 2 or sum(
                 a != b for a, b in zip(observed, observed[1:])) < 2:
             raise RuntimeError(f"Native transferred Actor animation poses missing: {observed}")
+    if facing:
+        dynamic = True
+        for direction, dominant, other in (("W", "left", "right"),
+                ("N", "top", "bottom"), ("S", "bottom", "top"), ("E", "right", "left")):
+            rows = report["facing_frames"][direction]
+            if len(rows) != 8 or sum(r[dominant] >= 100 and r[other] < 50 for r in rows) < 6:
+                raise RuntimeError(f"Native transferred Actor facing missing: {direction}: {rows}")
     if (dynamic or restore_profile) and not animation and not (0 < report["escape_elapsed"] < 10):
         raise RuntimeError("Missing bounded native Escape evidence")
     phases = ["before", "destination"]
     if dynamic or restore_profile:
         phases.append("revealed")
-    if dynamic and not restore_profile and not walk and not animation:
+    if dynamic and not restore_profile and not walk and not animation and not facing:
         phases.append("escaped")
     if walk:
         phases.append("walk_escape")
@@ -349,21 +454,21 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=
             raise RuntimeError("Non-transferred reference Actor appeared in Cellar")
 
 
-def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False, animation=False):
+def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False):
     output.mkdir(parents=True, exist_ok=True)
     result = {}
     for variant in VARIANTS:
         root = output / variant
         resources = root / "build" / "resources"
         resources.mkdir(parents=True, exist_ok=True)
-        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic, restore_profile=restore_profile, walk=walk, animation=animation)
+        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic, restore_profile=restore_profile, walk=walk, animation=animation, facing=facing)
         (root / "build" / "project.json").write_text(raw)
         export_document(parse_document(raw), resources)
         game = compile_story_game(root / "build", upstream, root / "game")
         launch_smoke(game, root / "screenshots", scene_only=True, allow_static_scene=True,
-                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic, native_actor_zclip_profile_restore_probe=restore_profile, native_transferred_actor_walk_probe=walk, native_transferred_actor_animation_probe=animation)
+                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic, native_actor_zclip_profile_restore_probe=restore_profile, native_transferred_actor_walk_probe=walk, native_transferred_actor_animation_probe=animation, native_transferred_actor_facing_probe=facing)
         report = json.loads((root / "screenshots" / "transfer-report.json").read_text())
-        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile, walk=walk, animation=animation)
+        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile, walk=walk, animation=animation, facing=facing)
         result[variant] = report
     result["native_actor_zclip_transfer_verified"] = True
     if dynamic:
@@ -374,6 +479,8 @@ def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, re
         result["native_transferred_actor_walk_verified"] = True
     if animation:
         result["native_transferred_actor_animation_verified"] = True
+    if facing:
+        result["native_transferred_actor_facing_verified"] = True
     if entry_restore:
         result["native_present_actor_entry_profile_smoke_passed"] = True
     (output / "report.json").write_text(json.dumps(result, indent=2))
@@ -381,4 +488,4 @@ def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, re
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:], restore_profile="--restore-profile" in sys.argv[3:], walk="--walk" in sys.argv[3:], animation="--animation" in sys.argv[3:]), indent=2))
+    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:], restore_profile="--restore-profile" in sys.argv[3:], walk="--walk" in sys.argv[3:], animation="--animation" in sys.argv[3:], facing="--facing" in sys.argv[3:]), indent=2))

@@ -23,8 +23,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
         matches = list(STEP.finditer(contents))
         # Counts include real gameplay and evidence-retention steps. New native
         # capabilities change the matrix length; preserve the per-shard gates.
-        self.assertEqual(len(matches), 160)
-        expected_counts = {"actors": 26, "mask": 2, "geometry": 74, "story": 48}
+        self.assertEqual(len(matches), 162)
+        expected_counts = {"actors": 26, "mask": 2, "geometry": 76, "story": 48}
         observed_counts = {shard: 0 for shard in SHARDS}
         shared = {
             "Restore previously downloaded Ubuntu packages",
@@ -39,6 +39,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
             "Link generated room with upstream game bootstrap",
         }
         required = {
+            "Verify native transferred Actor facing in destination room": "geometry",
+            "Retain native transferred Actor facing evidence": "geometry",
             "Verify native transferred Actor action animation in destination room": "geometry",
             "Retain native transferred Actor animation evidence": "geometry",
             "Verify native transferred Actor walks in destination room": "geometry",
@@ -103,6 +105,14 @@ class NativeScummVMShardingTests(unittest.TestCase):
                     self.assertEqual(found, [required[name]])
         self.assertEqual(observed_counts, expected_counts)
         self.assertTrue(set(required).issubset(seen))
+
+    def test_active_facing_gate_runs_before_legacy_geometry(self):
+        contents = WORKFLOW.read_text(encoding="utf-8")
+        names = [match.group(1) for match in STEP.finditer(contents)]
+        self.assertEqual(names.index("Verify native transferred Actor facing in destination room"),
+                         names.index("Link generated room with upstream game bootstrap") + 1)
+        self.assertEqual(names.index("Retain native transferred Actor facing evidence"),
+                         names.index("Verify native transferred Actor facing in destination room") + 1)
 
     def test_shards_keep_native_artifacts_and_independent_failures(self):
         contents = WORKFLOW.read_text(encoding="utf-8")
