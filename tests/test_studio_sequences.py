@@ -136,6 +136,45 @@ class NativeSequenceEditorTests(unittest.TestCase):
                     append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                          "Actor Höhe", invalid_actor, None, None, elevation)
 
+    def test_transferred_actor_animation_speed_roundtrip_and_escape(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        with tempfile.TemporaryDirectory() as directory:
+            raw = author_transfer_project(Path(directory), "masked")
+            actor = ACTOR_IDS[0]
+            identity = "Cellar|R06TransferReturn|Open"
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                       "Actor Animationsgeschwindigkeit", actor, None, None, 8)
+            raw = set_sequence_skippable(raw, identity, True)
+            doc = parse_document(raw)
+            self.assertEqual(canonical_json(doc), raw)
+            self.assertEqual(sequence_step_fields(raw, identity, 0)[:5],
+                             ("Actor Animationsgeschwindigkeit", actor, None, None, 8))
+            room = next(r for r in doc.rooms if r.name == "Cellar")
+            seq = next(s for s in doc.interaction_sequences
+                       if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
+            native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
+                                                   (seq,), doc.actors, doc.costumes, room)
+            for code in native.split("} override {", 1):
+                self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM)", code)
+                self.assertIn("setActorAnimSpeed(8);", code)
+            restored = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                            "Actor Animationsgeschwindigkeit", actor, None, None, 2)
+            restored_doc = parse_document(restored)
+            restored_seq = next(s for s in restored_doc.interaction_sequences
+                if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
+            restored_native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
+                (restored_seq,), restored_doc.actors, restored_doc.costumes, room)
+            override = restored_native.split("} override {", 1)[1]
+            self.assertIn("setActorAnimSpeed(2);", override)
+            self.assertNotIn("setActorAnimSpeed(8);", override)
+            for invalid_actor, speed in ((ACTOR_IDS[1], 8), (actor, 0), (actor, 17), (actor, 2.5)):
+                with self.assertRaises(ValueError):
+                    append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                         "Actor Animationsgeschwindigkeit", invalid_actor, None, None, speed)
+
     def test_transferred_actor_walk_speed_roundtrip_and_escape(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
