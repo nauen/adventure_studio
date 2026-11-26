@@ -43,8 +43,9 @@ class NativeRoomPaletteTests(unittest.TestCase):
             path = Path(directory) / "palette.png"
             image = Image.new("RGB", (1024, 768), (0, 0, 0))
             for index, rgb in enumerate(expected):
+                quantized = tuple(max(0, channel - 7) for channel in rgb)
                 for ox, oy in ((2, 2), (4, 4), (6, 6)):
-                    image.putpixel(_sample_location(index, ox, oy), rgb)
+                    image.putpixel(_sample_location(index, ox, oy), quantized)
             image.save(path)
             result = verify_palette_screenshot(path, expected)
             self.assertEqual(result["verified_indices"], 256)
