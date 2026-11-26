@@ -7,8 +7,8 @@ import struct
 
 
 def original_voc_effect(frequency: int = 440, duration_ms: int = 1800) -> bytes:
-    """Create mono unsigned 8-bit PCM in a VOC 1.0 block for ScummC's -voc path."""
-    if not 100 <= frequency <= 2500 or not 100 <= duration_ms <= 5000:
+    """Create up to ten seconds of mono unsigned 8-bit PCM for ScummC's VOC path."""
+    if not 100 <= frequency <= 2500 or not 100 <= duration_ms <= 10000:
         raise ValueError("Invalid fixture sound parameters")
     rate = 11025
     samples = bytes(max(0, min(255, round(128 + 48 * math.sin(
