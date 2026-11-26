@@ -142,6 +142,17 @@ class NativeSequenceEditorTests(unittest.TestCase):
             self.assertIn("panCameraTo(160);", override)
             self.assertIn("waitForCamera();", override)
             self.assertNotIn("cameraFollowActor(", override)
+            from dataclasses import replace
+            # A final follow plus an authored camera wait must also settle
+            # on Escape, while a follow without a wait remains asynchronous.
+            for steps, expect_wait in ((seq.steps[:2], True), (seq.steps[:1], False)):
+                follow_native = inject_interaction_sequences(
+                    scummc_room_source(room), "Cellar",
+                    (replace(seq, steps=steps),), doc.actors, doc.costumes, room)
+                _, follow_override = follow_native.split("} override {", 1)
+                self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM)", follow_override)
+                self.assertIn(f"cameraFollowActor({actor});", follow_override)
+                self.assertEqual("waitForCamera();" in follow_override, expect_wait)
             with self.assertRaises(ValueError):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
