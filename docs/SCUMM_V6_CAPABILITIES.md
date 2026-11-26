@@ -1,12 +1,11 @@
-# Adventure Studio – SCUMM-v6-Funktionsmatrix
-
 Die unten stehende Matrix bleibt der einzige Katalog. Der aktuelle Integrationskopf hat Vorrang vor historischen Statusangaben; keine pauschale V-Freigabe.
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; Studio/JSON-v1/Story → ScummC-v6 → unverändertes stock ScummVM. NPC-Komfort nach #190 beendet.
-- **Jetzt:** Genau eine Fähigkeit: R06 [#322](https://github.com/nauen/adventure_studio/pull/322), native Blickrichtung eines transferierten Actors im Zielraum.
-- **Abnahme:** Vier sichtbare Blickrichtungen, Escape-Endzustand, maskierte und transparente Kontrolle, Actor-Anwesenheit und Raumrückkehr im generierten stock-ScummVM-Spiel; vollständige Pflicht-CI.
-- **Blocker:** #327 integriert (`7ee9aee`), [Main-Core](https://github.com/nauen/adventure_studio/actions/runs/45849583588) grün. [Core #322](https://github.com/nauen/adventure_studio/actions/runs/45849629302) auf Vorgängerhead grün, native Abnahme auf neuem Head `69ddde8` offen: fehlenden, nicht authorierten Hide-Hotspot im Facing-Probe korrigiert. R06 bleibt V (Teil), ZP05+ fail-closed.
-- **Danach:** Genau ein Folgepaket: R06 [#323](https://github.com/nauen/adventure_studio/pull/323), native Interaktionskamera nach Actor-Raumtransfer; erst nach #322-Abnahme und Integration.
+- **Konsolidierung:** #190, #314, #320, #321 und #322 sind integriert; Main-Core auf Merge-Head #322 grün ([45874655587](https://github.com/nauen/adventure_studio/actions/runs/45874655587)). R06 bleibt V (Teil).
+- **Pausiert:** #323 sowie gestapelte #325/#326/#328–#332; ältere #293/#295/#297/#299/#301/#303 bleiben offen. Keine Actor-/NPC-Folgepakete. #323 Native/Studio Run [45867120183](https://github.com/nauen/adventure_studio/actions/runs/45867120183) ist im Geometry-Shard fehlgeschlagen; Kamera-Probe war erfolgreich, ein nachfolgender Restore-Profile-Check scheiterte. Keine V- oder Merge-Freigabe.
+- **Jetzt – genau eine Fähigkeit:** R01 [#333](https://github.com/nauen/adventure_studio/issues/333), native Raum-Bitmap-Palettenfidelität mit 256 tatsächlich verwendeten Farben im unveränderten stock ScummVM.
+- **Abnahme:** Studio/RoomAsset → JSON-v1/Story → produktiver ScummC-v6-Export → Pixelprüfung des echten ScummVM-Screenshots für alle 256 Paletteneinträge; Roundtrip, negative Palettenkontrollen, Artefakte und betroffene Pflicht-CI grün.
+- **Danach:** Erst nach #333 genau eine Lücke in R06/R07/R08/R09 auswählen. ZP05+ bleibt fail-closed.
 
 ## Konsolidierter Integrationsstand (26.11.2026)
 
