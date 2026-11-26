@@ -155,7 +155,6 @@ def run(upstream: Path, generated: Path, destination: Path) -> dict:
     expected_palette = room_palette_256()
     results = {}
     for variant in ("correct", "swapped", "duplicate"):
-        room = authored_palette_room(variant)
         story_raw, story_room = _author_story_project(variant)
         rendered = render_native_room(
             story_room, upstream, generated, destination,
