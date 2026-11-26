@@ -39,6 +39,7 @@ class NativeRoomPaletteTests(unittest.TestCase):
             image.save(path)
             result = verify_palette_screenshot(path, expected)
             self.assertEqual(result["verified_indices"], 256)
+            image.putpixel(_sample_location(17, 2, 2), expected[16])
             image.putpixel(_sample_location(17, 4, 4), expected[16])
             image.save(path)
             with self.assertRaisesRegex(RuntimeError, "palette mismatch"):
