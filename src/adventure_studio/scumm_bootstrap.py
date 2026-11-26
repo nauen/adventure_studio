@@ -638,7 +638,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, ActorCostumeStep):
                 instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({step.actor_id});\n",
-                                     f"                setActorCostume(ResRoom.{step.costume}Cost);\n",
+                                     f"                setActorCostume(ResRoom::{step.costume}Cost);\n",
                                      "                setActorStanding();\n",
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
@@ -781,7 +781,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             target = destination[2] if destination is not None and destination[2] != room_name else "VAR_ROOM"
             commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
                        f"                    setCurrentActor({actor});\n"
-                       f"                    setActorCostume(ResRoom.{costume}Cost);\n"
+                       f"                    setActorCostume(ResRoom::{costume}Cost);\n"
                        "                    setActorStanding();\n"
                        "                    setCurrentActor(VAR_EGO);\n"
                        "                }\n")
