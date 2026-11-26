@@ -65,7 +65,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                 for ident, color, x in (("R06Reveal", REVEAL_RGB, 250),
                                         ("R06Restore", RESTORE_RGB, 180),
                                         ("R06Hide", ESCAPE_RGB, 180),
-                                        ("R06Action", ACTION_RGB, 180),
+                                        ("R06Action", ACTION_RGB, 110 if walk_speed else 180),
                                         ("R06North", NORTH_RGB, 70),
                                         ("R06South", SOUTH_RGB, 110)):
                     if ident == "R06Restore" and not (restore_profile or walk or facing or camera or position or elevation or scale or costume_change or walk_speed):
@@ -362,7 +362,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
                     if stable >= 3:
                         return rows
                     time.sleep(.04)
-                raise RuntimeError(f"Native speed destination not reached: {phase}: {rows}")
+                raise RuntimeError(f"Native speed destination not reached: {phase}: first={rows[:5]}, last={rows[-5:]}, count={len(rows)}")
             speed_slow = speed_samples("slow", 140)
         elif costume_change:
             def costume_samples(phase, alternate):
