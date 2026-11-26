@@ -33,13 +33,30 @@ SCREEN_SCALE = 2
 def room_palette_256() -> tuple[tuple[int, int, int], ...]:
     """Return 256 unique RGB entries while retaining the known sky colors."""
     colors = list(scrolling_fixture().palette)
-    for index in range(6, 256):
-        rgb = ((index * 53) % 256, (index * 97) % 256, (index * 193) % 256)
-        if rgb in colors:
-            raise RuntimeError(f"Palette generator produced duplicate entry {index}")
-        colors.append(rgb)
+    red_green = (0, 36, 73, 109, 146, 182, 219, 255)
+    blue = (0, 64, 128, 192, 255)
+    for red in red_green:
+        for green in red_green:
+            for blue_value in blue:
+                rgb = (red, green, blue_value)
+                if any(max(abs(a - b) for a, b in zip(rgb, existing)) <= 24
+                       for existing in colors):
+                    continue
+                colors.append(rgb)
+                if len(colors) == 256:
+                    break
+            if len(colors) == 256:
+                break
+        if len(colors) == 256:
+            break
     if len(colors) != 256 or len(set(colors)) != 256:
-        raise RuntimeError("The native room palette must contain 256 unique colors")
+        raise RuntimeError("The native room palette must contain 256 unique, distinguishable colors")
+    minimum_distance = min(
+        max(abs(a - b) for a, b in zip(colors[left], colors[right]))
+        for left in range(256) for right in range(left + 1, 256)
+    )
+    if minimum_distance <= 24:
+        raise RuntimeError("Palette controls need color separation above renderer quantization")
     return tuple(colors)
 
 
