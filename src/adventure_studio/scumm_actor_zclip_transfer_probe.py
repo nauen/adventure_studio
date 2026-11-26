@@ -337,7 +337,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             raise RuntimeError("Escape observation overlapped ordinary delay completion")
         return rows, elapsed
 
-    if dynamic and not restore_profile and not walk and not animation:
+    if dynamic and not restore_profile and not walk and not animation and not facing:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], ESCAPE_RGB, fuzz_percent=4))
         escaped, escape_elapsed = bounded_escape("escaped")
@@ -406,7 +406,7 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=
     phases = ["before", "destination"]
     if dynamic or restore_profile:
         phases.append("revealed")
-    if dynamic and not restore_profile and not walk and not animation:
+    if dynamic and not restore_profile and not walk and not animation and not facing:
         phases.append("escaped")
     if walk:
         phases.append("walk_escape")
