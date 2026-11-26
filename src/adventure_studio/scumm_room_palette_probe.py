@@ -105,15 +105,21 @@ def verify_palette_screenshot(screenshot: Path, expected_palette: tuple[tuple[in
             raise RuntimeError(f"Unexpected ScummVM screenshot dimensions: {image.size}")
         observations = []
         mismatches = []
+        maximum_channel_delta = 0
         for index, expected in enumerate(expected_palette):
             samples = [image.getpixel(_sample_location(index, ox, oy))
                        for ox, oy in ((2, 2), (4, 4), (6, 6))]
             counts = Counter(samples)
             observed, count = counts.most_common(1)[0]
+            channel_delta = max(abs(a - b) for a, b in zip(observed, expected))
+            maximum_channel_delta = max(maximum_channel_delta, channel_delta)
             row = {"index": index, "expected": list(expected),
-                   "observed": list(observed), "matching_samples": count}
+                   "observed": list(observed), "matching_samples": count,
+                   "maximum_channel_delta": channel_delta}
             observations.append(row)
-            if count < 2 or any(abs(a - b) > 3 for a, b in zip(observed, expected)):
+            # ScummVM's native room palette installation quantizes RGB.
+            # The test palette keeps every pair separated by >24/channel.
+            if count < 2 or channel_delta > 8:
                 mismatches.append(row)
     if mismatches:
         raise RuntimeError(
@@ -121,7 +127,8 @@ def verify_palette_screenshot(screenshot: Path, expected_palette: tuple[tuple[in
             f"{mismatches[:8]}"
         )
     return {"palette_entries": 256, "verified_indices": 256,
-            "sample_points_per_index": 3, "passed": True,
+            "sample_points_per_index": 3, "maximum_channel_delta": maximum_channel_delta,
+            "per_channel_tolerance": 8, "passed": True,
             "observations": observations}
 
 
