@@ -24,11 +24,13 @@ RESTORE_RGB = (210, 175, 60)
 ESCAPE_RGB = (190, 85, 155)
 
 
-def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False, restore_profile=False):
+def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False):
+    if walk:
+        dynamic = True
     if variant not in VARIANTS:
         raise ValueError("Unknown transfer mask control")
     doc = parse_document(author_project(root, "transparent", initial=False))
-    name = ("R06RestoreProfile" if restore_profile else "R06DynamicTransfer" if dynamic else "R06EntryProfile" if entry_restore else "R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
+    name = ("R06WalkTransfer" if walk else "R06RestoreProfile" if restore_profile else "R06DynamicTransfer" if dynamic else "R06EntryProfile" if entry_restore else "R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
     previous = doc.costumes[-1].name
     rooms = []
     for room in doc.rooms:
@@ -51,9 +53,9 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                 for ident, color, x in (("R06Reveal", REVEAL_RGB, 250),
                                         ("R06Restore", RESTORE_RGB, 180),
                                         ("R06Hide", ESCAPE_RGB, 180)):
-                    if ident == "R06Restore" and not restore_profile:
+                    if ident == "R06Restore" and not (restore_profile or walk):
                         continue
-                    if ident == "R06Hide" and (not dynamic or restore_profile):
+                    if ident == "R06Hide" and (not dynamic or restore_profile or walk):
                         continue
                     hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
                                           sprite_pixels=bytes([len(room.palette)]) * 256)
@@ -68,6 +70,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         interaction_sequences=tuple(s for s in doc.interaction_sequences
                     if (s.room, s.hotspot_id, s.verb) != ("Harbor", "Key", "Close")))
     # Real destination PNG, not a source-room mask or mocked runtime.
+    root.mkdir(parents=True, exist_ok=True)
     png = root / "cellar-zp01.png"
     cellar = next(room for room in doc.rooms if room.name == "Cellar")
     width, height = cellar.geometry.room_width, cellar.geometry.room_height
@@ -94,12 +97,24 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
     if dynamic or restore_profile:
         raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
-    if dynamic and not restore_profile:
+    if dynamic and not restore_profile and not walk:
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
             "Warten", None, None, None, 12)
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 1)
         raw = set_sequence_skippable(raw, "Cellar|R06Hide|Close", True)
+    if walk:
+        raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
+            "Actor laufen lassen", ACTOR_IDS[0], None, None, None, 140, 85)
+        raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
+            "Auf Actor warten", ACTOR_IDS[0], None, None, None)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Warten", None, None, None, 12)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Actor laufen lassen", ACTOR_IDS[0], None, None, None, 220, 85)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Auf Actor warten", ACTOR_IDS[0], None, None, None)
+        raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
     if restore_profile:
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Warten", None, None, None, 12)
@@ -109,7 +124,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
     return raw
 
 
-def play_transfer(output, capture, process, dynamic=False, restore_profile=False):
+def play_transfer(output, capture, process, dynamic=False, restore_profile=False, walk=False):
     def click(x, y):
         subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                        check=True, timeout=5)
@@ -160,41 +175,62 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     destination = sample("destination", 160, 220)
     revealed, restored, revealed_again, restored_escape, escaped = [], [], [], [], []
     escape_elapsed = None
+    motion, walk_escape = [], []
+    if walk:
+        dynamic = True
     if dynamic or restore_profile:
         click(234, 563)
         click(*colored_item_center(output, destination[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
-        deadline = time.monotonic() + 20
-        stable = 0
-        index = 0
-        while time.monotonic() < deadline and stable < 3:
-            if process.poll() is not None:
-                raise RuntimeError("ScummVM exited during clipping restoration")
-            label = f"transfer-reveal-settle-{index:03d}"
-            capture(label)
-            stable = stable + 1 if lane_pixels(label, 220, 160, 312, 343) >= 100 else 0
-            index += 1
-            time.sleep(.15)
-        if stable < 3:
-            raise RuntimeError("Native revealed Actor did not stabilize")
-        revealed = sample("revealed", 160, 220)
-    def bounded_escape(label):
+        if walk:
+            for i in range(60):
+                label = f"transfer-walk-{i:02d}"
+                capture(label)
+                with Image.open(output / f"scummvm-{label}.png") as img:
+                    rgb = img.convert("RGB")
+                    columns = [(x, sum(max(rgb.getpixel((x, y))) <= 24
+                                       for y in range(312, 343)))
+                               for x in range(432, 673)]
+                pixels = sum(n for _, n in columns)
+                if pixels >= 100:
+                    motion.append({"frame": label, "world_x": (sum(x*n for x,n in columns)/pixels - 192)/2})
+                time.sleep(.06)
+        else:
+            deadline = time.monotonic() + 20
+            stable = 0
+            index = 0
+            while time.monotonic() < deadline and stable < 3:
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited during clipping restoration")
+                label = f"transfer-reveal-settle-{index:03d}"
+                capture(label)
+                stable = stable + 1 if lane_pixels(label, 220, 160, 312, 343) >= 100 else 0
+                index += 1
+                time.sleep(.15)
+            if stable < 3:
+                raise RuntimeError("Native revealed Actor did not stabilize")
+        revealed = sample("revealed", 160, 140 if walk else 220)
+    def bounded_escape(label, previous_x=220, target_x=220):
         started = time.monotonic()
         time.sleep(1)
         capture("transfer-before-escape")
-        if lane_pixels("transfer-before-escape", 220, 160, 312, 343) < 100:
+        if lane_pixels("transfer-before-escape", previous_x, 160, 312, 343) < 100:
             raise RuntimeError("Actor not visible before native Escape")
         subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=5)
         time.sleep(.4)
-        rows = sample(label, 160, 220)
+        rows = sample(label, 160, target_x)
         elapsed = time.monotonic() - started
         if elapsed >= 10:
             raise RuntimeError("Escape observation overlapped ordinary delay completion")
         return rows, elapsed
 
-    if dynamic and not restore_profile:
+    if dynamic and not restore_profile and not walk:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], ESCAPE_RGB, fuzz_percent=4))
         escaped, escape_elapsed = bounded_escape("escaped")
+    if walk:
+        click(234, 563)
+        click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
+        walk_escape, escape_elapsed = bounded_escape("walk-escape", previous_x=140, target_x=220)
     if restore_profile:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
@@ -217,17 +253,26 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     (output / "transfer-report.json").write_text(json.dumps({
         "before": before, "destination": destination, "returned": returned, "revealed": revealed, "restored": restored, "revealed_again": revealed_again,
         "restored_escape": restored_escape, "escaped": escaped,
-        "escape_elapsed": escape_elapsed}, indent=2))
+        "escape_elapsed": escape_elapsed, "motion": motion, "walk_escape": walk_escape}, indent=2))
 
 
-def verify_transfer(report, variant, dynamic=False, restore_profile=False):
+def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=False):
+    if walk:
+        dynamic = True
+        xs = [row["world_x"] for row in report["motion"]]
+        if len(xs) < 5 or sum(155 < x < 205 for x in xs) < 2 or not all(abs(x-140) <= 12 for x in xs[-3:]):
+            raise RuntimeError(f"Native transferred Actor intermediate movement and destination missing: {xs}")
+        if not any(a-b >= 45 for i,a in enumerate(xs) for b in xs[i+1:]):
+            raise RuntimeError("Native transferred Actor did not walk left")
     if (dynamic or restore_profile) and not (0 < report["escape_elapsed"] < 10):
         raise RuntimeError("Missing bounded native Escape evidence")
     phases = ["before", "destination"]
     if dynamic or restore_profile:
         phases.append("revealed")
-    if dynamic and not restore_profile:
+    if dynamic and not restore_profile and not walk:
         phases.append("escaped")
+    if walk:
+        phases.append("walk_escape")
     if restore_profile:
         phases.extend(("restored", "revealed_again", "restored_escape"))
     phases.append("returned")
@@ -241,31 +286,33 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False):
             raise RuntimeError(f"Unexpected transferred Actor visibility: {variant} {phase}: {rows}")
         if phase in ("before", "returned") and sum(row["b_pixels"] >= 100 for row in rows) < 6:
             raise RuntimeError(f"Reference Actor changed in Harbor: {phase}")
-        if phase in ("destination", "revealed", "restored", "revealed_again", "restored_escape", "escaped") and any(row["b_pixels"] >= 100 for row in rows):
+        if phase in ("destination", "revealed", "restored", "revealed_again", "restored_escape", "escaped", "walk_escape") and any(row["b_pixels"] >= 100 for row in rows):
             raise RuntimeError("Non-transferred reference Actor appeared in Cellar")
 
 
-def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, restore_profile=False):
+def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False):
     output.mkdir(parents=True, exist_ok=True)
     result = {}
     for variant in VARIANTS:
         root = output / variant
         resources = root / "build" / "resources"
         resources.mkdir(parents=True, exist_ok=True)
-        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic, restore_profile=restore_profile)
+        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic, restore_profile=restore_profile, walk=walk)
         (root / "build" / "project.json").write_text(raw)
         export_document(parse_document(raw), resources)
         game = compile_story_game(root / "build", upstream, root / "game")
         launch_smoke(game, root / "screenshots", scene_only=True, allow_static_scene=True,
-                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic, native_actor_zclip_profile_restore_probe=restore_profile)
+                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic, native_actor_zclip_profile_restore_probe=restore_profile, native_transferred_actor_walk_probe=walk)
         report = json.loads((root / "screenshots" / "transfer-report.json").read_text())
-        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile)
+        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile, walk=walk)
         result[variant] = report
     result["native_actor_zclip_transfer_verified"] = True
     if dynamic:
         result["native_transferred_actor_dynamic_zclip_verified"] = True
     if restore_profile:
         result["native_interaction_room_zclip_profile_verified"] = True
+    if walk:
+        result["native_transferred_actor_walk_verified"] = True
     if entry_restore:
         result["native_present_actor_entry_profile_smoke_passed"] = True
     (output / "report.json").write_text(json.dumps(result, indent=2))
@@ -273,4 +320,4 @@ def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, re
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:], restore_profile="--restore-profile" in sys.argv[3:]), indent=2))
+    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:], restore_profile="--restore-profile" in sys.argv[3:], walk="--walk" in sys.argv[3:]), indent=2))

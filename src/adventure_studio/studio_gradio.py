@@ -1001,7 +1001,7 @@ def make_app():
                                                     choices=["N", "E", "S", "W"], value="S")
             native_subtitle = gr.Textbox(label="Untertitel für gesprochene Zeile (Unicode, maximal 160 Zeichen)",
                                          placeholder="Text, den die Spielfigur spricht")
-            gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten.")
+            gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten. Beide Aktionen wirken nur auf anwesende Actors, auch nach authoriertem Raumtransfer.")
             gr.Markdown("**Actor-Raumtransfer mit Z-Clipping:** Actor, Zielraum, X/Y und Ziel-Z-Ebene wählen. Transfer am Ende der Sequenz, optional gefolgt von einem Raumwechsel.")
             gr.Markdown("**Actor Z-Clipping:** 1–4 erzwingt eine vorhandene Raum-Z-Maske; 0 stellt die automatische Walkbox-Verdeckung wieder her. -1 stellt das authorierte Z-Clipping-Profil des aktuellen Raums wieder her. Die Aktion wirkt nur auf einen im aktuellen Raum anwesenden Actor, auch nach authoriertem Raumtransfer.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
@@ -2132,7 +2132,7 @@ def make_app():
             document = parse_document(raw)
             if kind == "Actor-Raumtransfer mit Z-Clipping":
                 actors = tuple(a.id for a in document.actors)
-            elif kind == "Actor Z-Clipping":
+            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten"):
                 from .scumm_project import TransferActorZClipStep
                 transferred = {step.actor_id for sequence in document.interaction_sequences
                                for step in sequence.steps
