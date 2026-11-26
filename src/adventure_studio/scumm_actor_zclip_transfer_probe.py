@@ -158,6 +158,8 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             # Native follow need not recenter an Actor already inside the viewport.
             ("Kamera schwenken", None, 480, None),
             ("Auf Kamera warten", None, None, None),
+            # Keep the reached endpoint observable before native follow changes it.
+            ("Warten", None, None, 2),
             ("Kamera folgt Actor", ACTOR_IDS[0], None, None),
             ("Auf Kamera warten", None, None, None),
             ("Warten", None, None, 3),
@@ -171,6 +173,8 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             # Native follow need not recenter an Actor already inside the viewport.
             ("Kamera schwenken", None, 480, None),
             ("Auf Kamera warten", None, None, None),
+            # Keep the reached endpoint observable before native follow changes it.
+            ("Warten", None, None, 2),
             ("Kamera folgt Actor", ACTOR_IDS[0], None, None),
             ("Auf Kamera warten", None, None, None),
             ("Warten", None, None, 30),
@@ -497,7 +501,8 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     if restore_profile:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
-        time.sleep(13)
+        # Preserve the accepted native delay plus redraw margin from main.
+        time.sleep(16)
         restored = sample("restored", 160, 220)
         click(234, 563)
         click(*colored_item_center(output, restored[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
