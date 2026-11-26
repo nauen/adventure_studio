@@ -288,9 +288,21 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         click(234, 563)
         click(*colored_item_center(output, destination[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
         if position:
-            await_frame("transfer-position-ready",
-                lambda label: lane_pixels(label, 140, 160, 312, 343) >= 100
-                and lane_pixels(label, 220, 160, 312, 343) < 25)
+            stable = 0
+            index = 0
+            deadline = time.monotonic() + 20
+            while time.monotonic() < deadline and stable < 3:
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited during native positioning")
+                label = f"transfer-position-settle-{index:03d}"
+                capture(label)
+                matches = (lane_pixels(label, 140, 160, 312, 343) >= 100
+                           and lane_pixels(label, 220, 160, 312, 343) < 25)
+                stable = stable + 1 if matches else 0
+                index += 1
+                time.sleep(.15)
+            if stable < 3:
+                raise RuntimeError("Native Actor position did not stabilize")
         elif camera:
             deadline = time.monotonic() + 25
             index = 0
