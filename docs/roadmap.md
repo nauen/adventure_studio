@@ -1,10 +1,13 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; Studio/JSON-v1/Story → ScummC-v6 → unverändertes stock ScummVM. NPC-Komfort nach #190 beendet.
-- **Jetzt:** Genau eine Fähigkeit: R06 [#322](https://github.com/nauen/adventure_studio/pull/322), native Blickrichtung eines transferierten Actors im Zielraum.
-- **Abnahme:** Vier sichtbare Blickrichtungen, Escape-Endzustand, maskierte und transparente Kontrolle, Actor-Anwesenheit und Raumrückkehr im generierten stock-ScummVM-Spiel; vollständige Pflicht-CI.
-- **Blocker:** #327 integriert (`7ee9aee`), [Main-Core](https://github.com/nauen/adventure_studio/actions/runs/45849583588) grün. [Core #322](https://github.com/nauen/adventure_studio/actions/runs/45849629302) auf Vorgängerhead grün, native Abnahme auf neuem Head `69ddde8` offen: fehlenden, nicht authorierten Hide-Hotspot im Facing-Probe korrigiert. R06 bleibt V (Teil), ZP05+ fail-closed.
-- **Danach:** Genau ein Folgepaket: R06 [#323](https://github.com/nauen/adventure_studio/pull/323), native Interaktionskamera nach Actor-Raumtransfer; erst nach #322-Abnahme und Integration.
+- **Konsolidierung:** PR #190 ist seit 11.11.2026 gemergt (f638cc68d3e09ce6b9082719717786e6d99cd09d). #314, #320, #321 und #322 sind ebenfalls integriert; #322 Merge-Commit ist cad5c05b0334982a12218b3c534069ba02631441 (18:16:54 UTC). Main-Core auf diesem Head ist grün: [Run 45874655587](https://github.com/nauen/adventure_studio/actions/runs/45874655587). R06 bleibt insgesamt **V (Teil)**; Merge ist kein pauschaler Gameplay-Abschluss.
+- **Offene R06-Kette pausiert:** #323 ist offen und hängt auf dem nun gemergten Facing-Branch; #325/#326/#328–#332 bauen gestapelt darauf auf. Ältere #293/#295/#297/#299/#301/#303 bleiben ebenfalls offen. Keine dieser PRs wird als integriert oder abgenommen behandelt; Branches bleiben erhalten. Keine weitere Actor-/NPC-Folgearbeit, bis der Raumgrafik-/Z-Masken-/Walkbox-Fokus abgearbeitet ist.
+- **CI-Blocker der Kette:** [Native/Studio PR #323 Run 45867120183](https://github.com/nauen/adventure_studio/actions/runs/45867120183) ist fehlgeschlagen: Actors, Mask, Story, Studio, Dialogue, Inventory und Language waren grün; Geometry rot. Der neue Kamera-Transfer-Probe selbst meldete native_transferred_actor_camera_verified=true, aber ein nachfolgender bestehender Restore-Profile-Probe scheiterte an der Sichtbarkeit des Actors nach der Wiederherstellung (erster Frame 992 Pixel, Folgeframes 0). Das ist ein echter offener Regression-/Abnahmebefund, keine Freigabe. #323 nicht mergen.
+- **Zurückgestellt:** #260 ist geschlossen/unmerged; #264 und #267 sind gemergt. R08 konkaver Korridor und R09 reversible Gates über Raumrückkehr sind Teilfähigkeiten, keine pauschale Matrixfreigabe.
+- **Jetzt – genau eine Fähigkeit:** R01 [#333](https://github.com/nauen/adventure_studio/issues/333), native Raum-Bitmap-Palettenfidelität mit 256 tatsächlich verwendeten Paletteinträgen über den bestehenden RoomAsset-/Studio-/JSON-v1-/Story-/ScummC-v6-Pfad.
+- **Abnahme #333:** echter stock-ScummVM-Rendernachweis aller 256 Farben per Screenshot-Pixelprüfung; unveränderter JSON-Roundtrip; Negativkontrollen für falsche/fehlende Palettenzuordnung; vollständige betroffene Core-/Studio-/Native-CI und persistierte Spiel-/Screenshot-Artefakte.
+- **Danach:** Erst nach vollständiger #333-Abnahme genau eine neue Lücke aus R06/R07/R08/R09 priorisieren. ZP05+ bleibt fail-closed.
 
 ## Konsolidierter Integrationsstand (26.11.2026)
 
