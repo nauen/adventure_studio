@@ -188,7 +188,8 @@ def run_visual_comparison(upstream: Path, generated: Path, destination: Path) ->
             "mask_enabled": occlusion,
             "box_scale": scale,
             "mask_authoring": "PNG → native project JSON → ZPxx",
-            **render_native_room(room, upstream, generated, destination, label),
+            **render_native_room(room, upstream, generated, destination, label,
+                                     scene_capture_seconds=20.0),
         }
     results["comparison"] = verify_visual_effects(
         results["masked"]["dark_costume_pixels"],
