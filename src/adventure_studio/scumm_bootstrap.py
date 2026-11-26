@@ -627,6 +627,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({step.actor_id});\n",
                                      f"                setActorZClip({interaction_plane(step)});\n",
+                                     # V6 forceClip does not invalidate the costume.
+                                     f"                setActorElevation(getActorElevation({step.actor_id}) + 1);\n",
+                                     f"                setActorElevation(getActorElevation({step.actor_id}) - 1);\n",
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
             elif isinstance(step, FaceActorStep):
@@ -732,6 +735,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 commit += f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
             commit += (f"                setCurrentActor({actor});\n"
                        f"                setActorZClip({plane});\n"
+                        f"                setActorElevation(getActorElevation({actor}) + 1);\n"
+                        f"                setActorElevation(getActorElevation({actor}) - 1);\n"
                        "                setCurrentActor(VAR_EGO);\n")
             if require_presence:
                 commit += "                }\n"
