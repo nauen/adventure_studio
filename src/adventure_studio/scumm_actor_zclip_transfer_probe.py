@@ -149,6 +149,8 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             raw = append_sequence_step(raw, "Cellar", hotspot, "Close",
                 "Actor drehen", ACTOR_IDS[0], None, None, None, direction=direction)
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Objektzustand setzen", None, None, "R06Restore", 0)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Warten", None, None, None, 12)
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Actor drehen", ACTOR_IDS[0], None, None, None, direction="E")
@@ -275,7 +277,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
                     center = 192 + 2 * 220
                     # Use the full costume height: authored frame offset -23,
                     # Actor feet at world Y=85, native scale two.
-                    top, bottom = 256 + 2 * (85 - 23), 256 + 2 * (85 + 1)
+                    top, bottom = 184 + 2 * (85 - 23), 184 + 2 * (85 + 1)
                     middle = (top + bottom) // 2
                     def dark(x0, x1, y0, y1):
                         return sum(max(rgb.getpixel((x, y))) <= 24
@@ -297,9 +299,16 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         click(234, 563)
         click(*colored_item_center(output, facing_frames["S"][-1]["frame"], RESTORE_RGB, fuzz_percent=4))
         started = time.monotonic()
-        time.sleep(1)
-        subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=5)
-        time.sleep(.4)
+        # Close may first walk Ego to the hotspot. Do not send Escape until
+        # the native script has actually started (its marker disappears).
+        await_frame("transfer-facing-cutscene-start", lambda label:
+                    colored_item_pixels(output, label, RESTORE_RGB) < 40)
+        started = time.monotonic()
+        subprocess.run(["xdotool", "keydown", "Escape"], check=True, timeout=5)
+        try:
+            time.sleep(.25)
+        finally:
+            subprocess.run(["xdotool", "keyup", "Escape"], check=True, timeout=5)
         facing_frames["E"] = facing_samples("east-escape")
         escape_elapsed = time.monotonic() - started
         if escape_elapsed >= 10:
