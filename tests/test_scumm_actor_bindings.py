@@ -102,10 +102,7 @@ class ActorBootstrapTests(unittest.TestCase):
             self.assertEqual(parse_document(canonical_json(doc)), doc)
             room = next(r for r in doc.rooms if r.name == "Harbor")
             native = inject_interaction_sequences(scummc_room_source(room), room.name, (seq,), doc.actors, doc.costumes, room)
-            self.assertEqual(native.count("setActorZClip(1);"), 3)
-            normal, override = native.split("} override {", 1)
-            self.assertEqual(normal.count("setActorZClip(1);"), 1)
-            self.assertEqual(override.count("setActorZClip(1);"), 2)
+            self.assertEqual(native.count("setActorZClip(1);"), 2)
             self.assertNotIn("setActorZClip(-1)", native)
             with self.assertRaises(ValueError):
                 set_actor_room_zclip(canonical_json(doc), "ForegroundWalker", "Cellar", None)
@@ -134,10 +131,7 @@ class ActorBootstrapTests(unittest.TestCase):
             native = inject_interaction_sequences(source, "Harbor", (replace(sequence, skippable=True),),
                                                   doc.actors, doc.costumes, room)
             self.assertEqual(native.count("putActorAt(ForegroundWalker, 100, 100, Cellar);"), 2)
-            self.assertEqual(native.count("setActorZClip(0);"), 3)
-            normal, override = native.split("} override {", 1)
-            self.assertEqual(normal.count("setActorZClip(0);"), 1)
-            self.assertEqual(override.count("setActorZClip(0);"), 2)
+            self.assertEqual(native.count("setActorZClip(0);"), 2)
 
     def test_room_entry_zclip_is_opt_in_and_restores_ego(self):
         import tempfile
