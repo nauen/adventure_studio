@@ -12,10 +12,13 @@ from collections import Counter
 from dataclasses import replace
 from pathlib import Path
 
-from .scumm_assets import destination_fixture, scrolling_fixture
-from .scumm_project import GameDocument, canonical_json, parse_document
+from .image_pipeline import IndexedImage
+from .scumm_assets import scrolling_fixture
+from .scumm_project import canonical_json, parse_document
 from .scumm_room_visual_probe import render_native_room
-from .studio_sequences import compose_story_project
+from .story_document import parse_story_document
+from .story_fixture_image import DeterministicStoryImageProvider
+from .story_to_scumm import compile_story_to_scumm
 
 
 GRID_X = 16
@@ -105,20 +108,46 @@ def verify_palette_screenshot(screenshot: Path, expected_palette: tuple[tuple[in
             "observations": observations}
 
 
-def _author_story_project(room, destination: Path) -> tuple[str, object]:
-    """Round-trip through the versioned project and existing Story adapter."""
-    document = GameDocument("native_room_palette_256",
-                            (room, destination_fixture()))
-    raw = canonical_json(document)
-    if parse_document(raw) != document:
-        raise RuntimeError("Room palette changed during the JSON-v1 roundtrip")
+class _PaletteStoryImageProvider:
+    """Feed the real Story compiler one deterministic indexed room image."""
+
+    def __init__(self, variant: str) -> None:
+        self.variant = variant
+        self.fallback = DeterministicStoryImageProvider()
+
+    def generate(self, request):
+        if request.asset_id == "scene-harbor-main":
+            room = authored_palette_room(self.variant)
+            if (request.width, request.height) != (
+                    room.geometry.room_width, room.geometry.room_height):
+                raise ValueError("Story requested unexpected Harbor bitmap geometry")
+            return IndexedImage(room.pixels, room.palette, request.width,
+                                request.height, "native-room-palette-256")
+        return self.fallback.generate(request)
+
+
+def _author_story_project(variant: str) -> tuple[str, object]:
+    """Compile the Story with the indexed provider, then JSON-v1 round-trip it."""
     story_path = Path(__file__).resolve().parents[2] / "examples" / "mini_story_chain.json"
-    story_raw = compose_story_project(story_path.read_text(encoding="utf-8"), raw)
-    story_document = parse_document(story_raw)
-    story_room = next((item for item in story_document.rooms if item.name == room.name), None)
-    if story_room is None or story_room.pixels != room.pixels or story_room.palette != room.palette:
-        raise RuntimeError("Room pixels or palette changed during Story composition")
-    return story_raw, story_room
+    story = parse_story_document(story_path.read_text(encoding="utf-8"))
+    document = compile_story_to_scumm(story, _PaletteStoryImageProvider(variant))
+    room = next((item for item in document.rooms if item.name == "Harbor"), None)
+    if room is None:
+        raise RuntimeError("Story compiler did not produce the Harbor room")
+    room = replace(room, demo_walk_to_x=None, demo_walk_to_y=None,
+                   ego_start_x=60, ego_start_y=180)
+    document = replace(document, rooms=tuple(
+        room if item.name == "Harbor" else item for item in document.rooms
+    ))
+    raw = canonical_json(document)
+    roundtrip = parse_document(raw)
+    if roundtrip != document:
+        raise RuntimeError("Room palette changed during the JSON-v1 roundtrip")
+    story_room = next(item for item in roundtrip.rooms if item.name == "Harbor")
+    expected = authored_palette_room(variant)
+    if story_room.pixels != expected.pixels or story_room.palette != expected.palette:
+        raise RuntimeError("Story image provider lost room pixels or palette")
+    return raw, story_room
 
 
 def run(upstream: Path, generated: Path, destination: Path) -> dict:
@@ -127,7 +156,7 @@ def run(upstream: Path, generated: Path, destination: Path) -> dict:
     results = {}
     for variant in ("correct", "swapped", "duplicate"):
         room = authored_palette_room(variant)
-        story_raw, story_room = _author_story_project(room, destination)
+        story_raw, story_room = _author_story_project(variant)
         rendered = render_native_room(
             story_room, upstream, generated, destination,
             f"room-palette-{variant}", allow_static_scene=True,
