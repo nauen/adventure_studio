@@ -112,9 +112,10 @@ class NativeSequenceEditorTests(unittest.TestCase):
             guard = f"if (getActorRoom({ACTOR_IDS[0]}) == VAR_ROOM)"
             self.assertEqual(normal.count(guard), 2)
             self.assertEqual(override.count(guard), 1)
-            redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) ^ 1);"
-            self.assertEqual(normal.count(redraw), 4)
-            self.assertEqual(override.count(redraw), 2)
+            for operator in ("+", "-"):
+                redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) {operator} 1);"
+                self.assertEqual(normal.count(redraw), 2)
+                self.assertEqual(override.count(redraw), 1)
             self.assertIn("setActorZClip(1);", override)
             self.assertNotIn("setActorZClip(0);", override)
             with self.assertRaises(ValueError):
