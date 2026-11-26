@@ -11,7 +11,7 @@ import tempfile
 import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
-                            FaceActorStep, ActorElevationStep, ActorScaleStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
+                            FaceActorStep, ActorElevationStep, ActorScaleStep, ActorCostumeStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
@@ -2745,7 +2745,7 @@ def _identity(sequence: InteractionSequence) -> str:
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorElevationStep | ActorScaleStep | ActorZClipStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorElevationStep | ActorScaleStep | ActorCostumeStep | ActorZClipStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2766,6 +2766,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return "Auf Kamera warten"
     if isinstance(step, ActorElevationStep):
         return f"Actor {step.actor_id}: Höhe {step.elevation} Pixel"
+    if isinstance(step, ActorCostumeStep):
+        return f"Actor {step.actor_id}: Costume {step.costume}"
     if isinstance(step, ActorScaleStep):
         return f"Actor {step.actor_id}: Skalierung {step.scale} / 255 (manuell)" if step.scale else f"Actor {step.actor_id}: automatische Walkbox-Skalierung"
     if isinstance(step, ActorZClipStep):
@@ -2863,6 +2865,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         if type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Actor-Höhe muss eine ganze Zahl sein")
         step = ActorElevationStep(actor_id, int(amount))
+    elif kind == "Actor Costume wechseln":
+        step = ActorCostumeStep(actor_id, target_id)
     elif kind == "Actor Skalierung":
         if type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Actor-Skalierung muss eine ganze Zahl sein")
@@ -2970,6 +2974,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Auf Kamera warten", None, None, None, 1, 320, 100, "S")
     if isinstance(step, ActorElevationStep):
         return ("Actor Höhe", step.actor_id, None, None, step.elevation, 320, 100, "S")
+    if isinstance(step, ActorCostumeStep):
+        return ("Actor Costume wechseln", step.actor_id, None, step.costume, 1, 320, 100, "S")
     if isinstance(step, ActorScaleStep):
         return ("Actor Skalierung", step.actor_id, None, None, step.scale, 320, 100, "S")
     if isinstance(step, ActorZClipStep):

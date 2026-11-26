@@ -282,7 +282,7 @@ def inject_inventory_declarations(header: str, icon_ids: tuple[str, ...]) -> str
     return header.replace(marker, marker + "".join(f"    object {icon_id}Icon;\n" for icon_id in icon_ids), 1)
 
 
-def inject_actor_bindings(source: str, header: str, actors, costumes, room_names: tuple[str, ...]
+def inject_actor_bindings(source: str, header: str, actors, costumes, room_names: tuple[str, ...], additional_costumes=()
                           ) -> tuple[str, str]:
     """Bind authored Actors through native ScummC symbols and ResRoom setup.
 
@@ -308,7 +308,7 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
         f'room {name};\n' for name in room_names[1:]), 1)
     header = header.replace(header_marker, header_marker + ''.join(
         f'actor {actor.id};\n' for actor in actors), 1)
-    needed = {actor.costume for actor in actors}
+    needed = {actor.costume for actor in actors} | set(additional_costumes)
     definitions = ''.join(
         f'    cost {name}Cost = "{name}.cost";\n' for name in sorted(needed))
     source = source.replace(cost_marker, cost_marker + definitions, 1)
@@ -517,7 +517,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
-                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorElevationStep, ActorScaleStep, ActorZClipStep,
+                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorElevationStep, ActorScaleStep, ActorCostumeStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, VoiceLineStep)
@@ -633,6 +633,13 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                      f"                setActorElevation({step.elevation});\n",
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
+            elif isinstance(step, ActorCostumeStep):
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     f"                setActorCostume({step.costume}Cost);\n",
+                                     "                setActorStanding();\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
             elif isinstance(step, ActorScaleStep):
                 instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({step.actor_id});\n",
@@ -713,6 +720,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_directions = {}
         end_elevations = {}
         end_scales = {}
+        end_costumes = {}
         end_clipping = {}
         final_camera = None
         final_camera_wait = False
@@ -729,6 +737,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_clipping[step.actor_id] = (transfer_plane(step), False)
             elif isinstance(step, ActorElevationStep):
                 end_elevations[step.actor_id] = step.elevation
+            elif isinstance(step, ActorCostumeStep):
+                end_costumes[step.actor_id] = step.costume
             elif isinstance(step, ActorScaleStep):
                 end_scales[step.actor_id] = step.scale
             elif isinstance(step, ActorZClipStep):
@@ -764,6 +774,15 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += f"                putActorAt({actor}, {x}, {y}, {destination});\n"
             if require_presence:
                 commit += "                }\n"
+        for actor, costume in end_costumes.items():
+            destination = end_positions.get(actor)
+            target = destination[2] if destination is not None and destination[2] != room_name else "VAR_ROOM"
+            commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
+                       f"                    setCurrentActor({actor});\n"
+                       f"                    setActorCostume({costume}Cost);\n"
+                       "                    setActorStanding();\n"
+                       "                    setCurrentActor(VAR_EGO);\n"
+                       "                }\n")
         for actor, direction in end_directions.items():
             native_direction = actor_facing_angle(direction)
             # A later explicit transfer is committed before the facing state.

@@ -151,6 +151,12 @@ class ActorElevationStep:
 
 
 @dataclass(frozen=True)
+class ActorCostumeStep:
+    actor_id: str
+    costume: str
+
+
+@dataclass(frozen=True)
 class ActorScaleStep:
     actor_id: str
     scale: int
@@ -249,7 +255,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorElevationStep | ActorScaleStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorElevationStep | ActorScaleStep | ActorCostumeStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -377,6 +383,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, WaitActorStep)
                                                    else {"type": "actor_elevation", **vars(step)}
                                                    if isinstance(step, ActorElevationStep)
+                                                   else {"type": "actor_costume", **vars(step)}
+                                                   if isinstance(step, ActorCostumeStep)
                                                    else {"type": "actor_scale", **vars(step)}
                                                    if isinstance(step, ActorScaleStep)
                                                    else {"type": "actor_zclip", **vars(step)}
@@ -998,6 +1006,19 @@ def _validate_document(document: GameDocument) -> None:
                         (actor.id, room.name) not in transfer_destinations)
                         or type(step.elevation) is not int or not -127 <= step.elevation <= 127):
                     raise ValueError("Actor elevation requires a room Actor and whole pixels (-127 to 127)")
+            elif isinstance(step, ActorCostumeStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if (actor is None or (actor.room != room.name and
+                        (actor.id, room.name) not in transfer_destinations)
+                        or not isinstance(step.costume, str) or step.costume not in costumes_by_name):
+                    raise ValueError("Actor costume change requires a room Actor and existing Costume")
+                original = costumes_by_name[actor.costume]
+                replacement = costumes_by_name[step.costume]
+                def animation_contract(asset):
+                    return {(a.name, a.index, tuple(sorted(d.direction for d in a.directions)))
+                            for a in asset.animations}
+                if animation_contract(original) != animation_contract(replacement):
+                    raise ValueError("Actor costume change requires matching animation names, slots and directions")
             elif isinstance(step, ActorScaleStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or (actor.room != room.name and
@@ -1185,6 +1206,9 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "actor_elevation":
                 step = _only(raw_step, {"type", "actor_id", "elevation"}, {"type", "actor_id", "elevation"})
                 steps.append(ActorElevationStep(step["actor_id"], step["elevation"]))
+            elif kind == "actor_costume":
+                step = _only(raw_step, {"type", "actor_id", "costume"}, {"type", "actor_id", "costume"})
+                steps.append(ActorCostumeStep(step["actor_id"], step["costume"]))
             elif kind == "actor_scale":
                 step = _only(raw_step, {"type", "actor_id", "scale"}, {"type", "actor_id", "scale"})
                 steps.append(ActorScaleStep(step["actor_id"], step["scale"]))
@@ -1524,6 +1548,8 @@ def _align_costume_room_palettes(document: GameDocument) -> tuple[tuple[RoomAsse
     entries are absolute *room* palette indices, not RGB entries of their own.
     """
     used_costumes = {actor.costume for actor in document.actors}
+    used_costumes.update(step.costume for sequence in document.interaction_sequences
+                         for step in sequence.steps if isinstance(step, ActorCostumeStep))
     if not used_costumes:
         return document.rooms, document.costumes
     linked = [costume for costume in document.costumes if costume.name in used_costumes]
