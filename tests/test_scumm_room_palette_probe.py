@@ -15,9 +15,13 @@ class NativeRoomPaletteTests(unittest.TestCase):
         room = authored_palette_room()
         self.assertEqual(len(room.palette), 256)
         self.assertEqual(len(set(room.palette)), 256)
-        self.assertEqual(set(room.pixels[16 * room.geometry.room_width + 16:
-                                        16 * room.geometry.room_width + 16 + 128]),
-                         set(range(16)))
+        width = room.geometry.room_width
+        grid_pixels = {
+            room.pixels[(16 + row * 8 + y) * width + 16 + column * 8 + x]
+            for row in range(16) for column in range(16)
+            for y in range(8) for x in range(8)
+        }
+        self.assertEqual(grid_pixels, set(range(256)))
 
     def test_swapped_and_duplicate_palette_controls_change_native_pixels(self):
         expected = room_palette_256()
