@@ -12,7 +12,8 @@ from adventure_studio.scumm_room_visual_probe import (black_costume_pixels,
 class NativeRoomVisualProbeTests(unittest.TestCase):
     @unittest.skipUnless(find_spec("PIL"), "PNG probe requires optional Pillow")
     def test_comparison_uses_validated_png_project_authoring(self):
-        def captured(room, upstream, generated, destination, label):
+        def captured(room, upstream, generated, destination, label, *, scene_capture_seconds):
+            self.assertEqual(scene_capture_seconds, 20.0)
             occluded = sum(room.zplanes[0].pixels)
             if label == "masked":
                 self.assertGreater(occluded, 0)
