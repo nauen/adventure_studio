@@ -309,6 +309,7 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
     header = header.replace(header_marker, header_marker + ''.join(
         f'actor {actor.id};\n' for actor in actors), 1)
     needed = {actor.costume for actor in actors} | set(additional_costumes)
+    header += '\n' + ''.join(f'cost {name}Cost;\n' for name in sorted(additional_costumes))
     definitions = ''.join(
         f'    cost {name}Cost = "{name}.cost";\n' for name in sorted(needed))
     source = source.replace(cost_marker, cost_marker + definitions, 1)
