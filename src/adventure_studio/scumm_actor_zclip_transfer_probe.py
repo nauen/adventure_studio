@@ -348,7 +348,9 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     if restore_profile:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
-        time.sleep(13)
+        # Allow the authored 12-second delay and the native redraw to finish.
+        # The subsequent eight-frame assertion still requires complete occlusion.
+        time.sleep(16)
         restored = sample("restored", 160, 220)
         click(234, 563)
         click(*colored_item_center(output, restored[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
