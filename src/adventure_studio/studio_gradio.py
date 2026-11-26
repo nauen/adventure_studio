@@ -1003,7 +1003,7 @@ def make_app():
                                          placeholder="Text, den die Spielfigur spricht")
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten.")
             gr.Markdown("**Actor-Raumtransfer mit Z-Clipping:** Actor, Zielraum, X/Y und Ziel-Z-Ebene wählen. Transfer am Ende der Sequenz, optional gefolgt von einem Raumwechsel.")
-            gr.Markdown("**Actor Z-Clipping:** 1–4 erzwingt eine vorhandene Raum-Z-Maske; 0 stellt die automatische Walkbox-Verdeckung wieder her.")
+            gr.Markdown("**Actor Z-Clipping:** 1–4 erzwingt eine vorhandene Raum-Z-Maske; 0 stellt die automatische Walkbox-Verdeckung wieder her. Die Aktion wirkt nur auf einen im aktuellen Raum anwesenden Actor, auch nach authoriertem Raumtransfer.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
             native_add_selected = gr.Button("Schritt an ausgewählte Variante anhängen")
@@ -2129,8 +2129,17 @@ def make_app():
         def native_transfer_actor_choices(raw, room, kind, selected):
             if raw is None:
                 return gr.skip()
-            actors = (tuple(a.id for a in parse_document(raw).actors)
-                      if kind == "Actor-Raumtransfer mit Z-Clipping" else project_choices(raw, room)[2])
+            document = parse_document(raw)
+            if kind == "Actor-Raumtransfer mit Z-Clipping":
+                actors = tuple(a.id for a in document.actors)
+            elif kind == "Actor Z-Clipping":
+                from .scumm_project import TransferActorZClipStep
+                transferred = {step.actor_id for sequence in document.interaction_sequences
+                               for step in sequence.steps
+                               if isinstance(step, TransferActorZClipStep) and step.room == room}
+                actors = tuple(a.id for a in document.actors if a.room == room or a.id in transferred)
+            else:
+                actors = project_choices(raw, room)[2]
             return gr.update(choices=[("Ego (für gesprochene Zeile)", None), *[(a, a) for a in actors]],
                              value=selected if selected in actors else (actors[0] if actors else None))
 

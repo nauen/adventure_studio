@@ -723,6 +723,19 @@ jobs:
           name: native-present-actor-entry-profile
           path: /tmp/native-present-actor-entry-profile
           if-no-files-found: ignore
+      - name: Verify dynamic native Actor clipping after room transfer
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_transfer_probe /tmp/scummc-upstream /tmp/native-dynamic-transferred-actor-zclip --dynamic
+      - name: Retain native transferred Actor dynamic clipping evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-dynamic-transferred-actor-zclip
+          path: /tmp/native-dynamic-transferred-actor-zclip
+          if-no-files-found: ignore
       - name: Verify four independently selected Studio-authored Z-plane layers in stock ScummVM
         if: ${{ matrix.shard == 'geometry' }}
         env:

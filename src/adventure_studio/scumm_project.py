@@ -968,7 +968,11 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction wait requires an Actor in the sequence room")
             elif isinstance(step, ActorZClipStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
-                if (actor is None or actor.room != room.name or type(step.plane) is not int
+                if (actor is None or (actor.room != room.name and not any(
+                        isinstance(transfer, TransferActorZClipStep)
+                        and transfer.actor_id == actor.id and transfer.room == room.name
+                        for interaction in document.interaction_sequences for transfer in interaction.steps))
+                        or type(step.plane) is not int
                         or not 0 <= step.plane <= min(4, len(room.zplanes))):
                     raise ValueError("Actor Z-clip requires a room Actor and 0 or an existing native room Z-plane (1–4)")
             elif isinstance(step, FaceActorStep):
