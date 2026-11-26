@@ -11,7 +11,7 @@ from PIL import Image
 from .scumm_actor_zclip_probe import author_project
 from .scumm_assets import CameraCue, RoomHotspot
 from .scumm_camera_zp01_probe import camera_from_sky
-from .scumm_launch import colored_item_center, colored_item_pixels, launch_smoke
+from .scumm_launch import close_rgb, colored_item_center, colored_item_pixels, launch_smoke, scene_pixel
 from .scumm_project import canonical_json, export_document, parse_document, InteractionSequence
 from .scumm_toolchain import compile_story_game
 from .scumm_two_actor_four_mask_probe import ACTOR_IDS
@@ -20,42 +20,45 @@ from .studio_sequences import append_sequence_step, import_room_zplane, set_sequ
 VARIANTS = ("masked", "transparent")
 RETURN_RGB = (175, 60, 210)
 REVEAL_RGB = (60, 210, 175)
-ESCAPE_RGB = (210, 175, 60)
+RESTORE_RGB = (210, 175, 60)
+ESCAPE_RGB = (190, 85, 155)
 
 
-def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False):
+def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False, restore_profile=False):
     if variant not in VARIANTS:
         raise ValueError("Unknown transfer mask control")
     doc = parse_document(author_project(root, "transparent", initial=False))
-    name = ("R06DynamicTransfer" if dynamic else "R06EntryProfile" if entry_restore else "R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
+    name = ("R06RestoreProfile" if restore_profile else "R06DynamicTransfer" if dynamic else "R06EntryProfile" if entry_restore else "R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
     previous = doc.costumes[-1].name
     rooms = []
     for room in doc.rooms:
         if room.name == "Harbor":
             room = replace(room, camera_cues=(CameraCue("set", x=320),))
         elif room.name == "Cellar":
-            # A unique visible return object is a room identity marker and
-            # a real interaction target, not a background color assumption.
-            portal = RoomHotspot("R06TransferReturn", "return passage", "Go upstairs.",
+            # Story composition replaces the original fixture hotspots.
+            # Author a dedicated, independently coloured return interaction.
+            return_color = len(room.palette)
+            stairs = RoomHotspot("R06TransferReturn", "Return to harbor", "Return to harbor.",
                                  285, 100, 16, 16,
-                                 sprite_pixels=bytes([len(room.palette)]) * 256)
+                                 sprite_pixels=bytes([return_color]) * 256)
             room = replace(room, palette=(*room.palette, RETURN_RGB),
-                           hotspots=(*room.hotspots, portal),
+                           hotspots=(*room.hotspots, stairs),
                            camera_cues=(CameraCue("set", x=160),),
                            walkboxes=next(r.walkboxes for r in doc.rooms if r.name == "Harbor"),
                            box_routes=next(r.box_routes for r in doc.rooms if r.name == "Harbor"),
                            demo_walk_to_x=None, demo_walk_to_y=None)
-            if dynamic:
-                reveal = RoomHotspot("R06Reveal", "Reveal actor", "Reveal actor.",
-                                     250, 100, 16, 16,
-                                     sprite_pixels=bytes([len(room.palette)]) * 256)
-                room = replace(room, palette=(*room.palette, REVEAL_RGB),
-                               hotspots=(*room.hotspots, reveal))
-                hide = RoomHotspot("R06Hide", "Hide actor", "Hide actor.",
-                                   180, 100, 16, 16,
-                                   sprite_pixels=bytes([len(room.palette)]) * 256)
-                room = replace(room, palette=(*room.palette, ESCAPE_RGB),
-                               hotspots=(*room.hotspots, hide))
+            if dynamic or restore_profile:
+                for ident, color, x in (("R06Reveal", REVEAL_RGB, 250),
+                                        ("R06Restore", RESTORE_RGB, 180),
+                                        ("R06Hide", ESCAPE_RGB, 180)):
+                    if ident == "R06Restore" and not restore_profile:
+                        continue
+                    if ident == "R06Hide" and (not dynamic or restore_profile):
+                        continue
+                    hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
+                                          sprite_pixels=bytes([len(room.palette)]) * 256)
+                    room = replace(room, palette=(*room.palette, color),
+                                   hotspots=(*room.hotspots, hotspot))
         rooms.append(room)
     rooms = tuple(rooms)
     doc = replace(doc, rooms=rooms,
@@ -72,6 +75,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         255 if variant == "masked" and 180 <= x < 260 and 45 <= y < 110 else 0
         for y in range(height) for x in range(width))).save(png)
     raw = import_room_zplane(canonical_json(doc), "Cellar", 1, str(png))
+    profiles = profiles or restore_profile
     if profiles:
         from .studio_actors import set_actor_room_zclip
         raw = set_actor_room_zclip(raw, ACTOR_IDS[0], "Cellar", 1, entry_restore)
@@ -87,18 +91,25 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", -1 if profiles else 0, 240, 85)
     raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Raum wechseln", None, None, "Harbor", None)
-    if dynamic:
+    if dynamic or restore_profile:
         raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
+    if dynamic and not restore_profile:
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
             "Warten", None, None, None, 12)
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 1)
         raw = set_sequence_skippable(raw, "Cellar|R06Hide|Close", True)
+    if restore_profile:
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Warten", None, None, None, 12)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Actor Z-Clipping", ACTOR_IDS[0], None, None, -1)
+        raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
     return raw
 
 
-def play_transfer(output, capture, process, dynamic=False):
+def play_transfer(output, capture, process, dynamic=False, restore_profile=False):
     def click(x, y):
         subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                        check=True, timeout=5)
@@ -147,14 +158,11 @@ def play_transfer(output, capture, process, dynamic=False):
                 and colored_item_pixels(output, label, (255, 220, 75)) < 10)
     time.sleep(2)
     destination = sample("destination", 160, 220)
-    revealed, escaped = [], []
+    revealed, restored, revealed_again, restored_escape, escaped = [], [], [], [], []
     escape_elapsed = None
-    if dynamic:
+    if dynamic or restore_profile:
         click(234, 563)
         click(*colored_item_center(output, destination[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
-        # The native transition can take longer than the initial sleep.
-        # Retain every settling frame and require the original full sample
-        # window afterwards; never relax the visibility threshold.
         deadline = time.monotonic() + 20
         stable = 0
         index = 0
@@ -169,8 +177,7 @@ def play_transfer(output, capture, process, dynamic=False):
         if stable < 3:
             raise RuntimeError("Native revealed Actor did not stabilize")
         revealed = sample("revealed", 160, 220)
-        click(234, 563)
-        click(*colored_item_center(output, revealed[-1]["frame"], ESCAPE_RGB, fuzz_percent=4))
+    def bounded_escape(label):
         started = time.monotonic()
         time.sleep(1)
         capture("transfer-before-escape")
@@ -178,56 +185,87 @@ def play_transfer(output, capture, process, dynamic=False):
             raise RuntimeError("Actor not visible before native Escape")
         subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=5)
         time.sleep(.4)
-        escaped = sample("escaped", 160, 220)
-        escape_elapsed = time.monotonic() - started
-        if escape_elapsed >= 10:
+        rows = sample(label, 160, 220)
+        elapsed = time.monotonic() - started
+        if elapsed >= 10:
             raise RuntimeError("Escape observation overlapped ordinary delay completion")
+        return rows, elapsed
+
+    if dynamic and not restore_profile:
+        click(234, 563)
+        click(*colored_item_center(output, revealed[-1]["frame"], ESCAPE_RGB, fuzz_percent=4))
+        escaped, escape_elapsed = bounded_escape("escaped")
+    if restore_profile:
+        click(234, 563)
+        click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
+        # Allow the authored 12-second delay and the native redraw to finish.
+        # The subsequent eight-frame assertion still requires complete occlusion.
+        time.sleep(16)
+        restored = sample("restored", 160, 220)
+        click(234, 563)
+        click(*colored_item_center(output, restored[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
+        time.sleep(2)
+        revealed_again = sample("revealed-again", 160, 220)
+        click(234, 563)
+        click(*colored_item_center(output, revealed_again[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
+        restored_escape, escape_elapsed = bounded_escape("restored-escape")
     click(234, 563)
     click(*colored_item_center(output, destination[-1]["frame"], RETURN_RGB, fuzz_percent=4))
     await_frame("transfer-back", harbor)
     time.sleep(1)
     returned = sample("returned", 320, 240)
     (output / "transfer-report.json").write_text(json.dumps({
-        "before": before, "destination": destination, "returned": returned, "revealed": revealed, "escaped": escaped,
+        "before": before, "destination": destination, "returned": returned, "revealed": revealed, "restored": restored, "revealed_again": revealed_again,
+        "restored_escape": restored_escape, "escaped": escaped,
         "escape_elapsed": escape_elapsed}, indent=2))
 
 
-def verify_transfer(report, variant, dynamic=False):
-    if dynamic and not (0 < report["escape_elapsed"] < 10):
+def verify_transfer(report, variant, dynamic=False, restore_profile=False):
+    if (dynamic or restore_profile) and not (0 < report["escape_elapsed"] < 10):
         raise RuntimeError("Missing bounded native Escape evidence")
-    for phase in (("before", "destination", "revealed", "escaped", "returned") if dynamic else ("before", "destination", "returned")):
+    phases = ["before", "destination"]
+    if dynamic or restore_profile:
+        phases.append("revealed")
+    if dynamic and not restore_profile:
+        phases.append("escaped")
+    if restore_profile:
+        phases.extend(("restored", "revealed_again", "restored_escape"))
+    phases.append("returned")
+    for phase in phases:
         rows = report[phase]
         if len(rows) != 8:
             raise RuntimeError(f"Missing native transfer screenshots: {phase}")
-        visible = phase not in ("destination", "escaped") or variant == "transparent"
+        visible = phase not in ("destination", "restored", "restored_escape", "escaped") or variant == "transparent"
         count = sum(row["a_pixels"] >= 100 for row in rows)
         if (visible and count < 6) or (not visible and any(row["a_pixels"] >= 25 for row in rows)):
             raise RuntimeError(f"Unexpected transferred Actor visibility: {variant} {phase}: {rows}")
         if phase in ("before", "returned") and sum(row["b_pixels"] >= 100 for row in rows) < 6:
             raise RuntimeError(f"Reference Actor changed in Harbor: {phase}")
-        if phase in ("destination", "revealed", "escaped") and any(row["b_pixels"] >= 100 for row in rows):
+        if phase in ("destination", "revealed", "restored", "revealed_again", "restored_escape", "escaped") and any(row["b_pixels"] >= 100 for row in rows):
             raise RuntimeError("Non-transferred reference Actor appeared in Cellar")
 
 
-def run(upstream, output, profiles=False, entry_restore=False, dynamic=False):
+def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, restore_profile=False):
     output.mkdir(parents=True, exist_ok=True)
     result = {}
     for variant in VARIANTS:
         root = output / variant
         resources = root / "build" / "resources"
         resources.mkdir(parents=True, exist_ok=True)
-        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic)
+        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic, restore_profile=restore_profile)
         (root / "build" / "project.json").write_text(raw)
         export_document(parse_document(raw), resources)
         game = compile_story_game(root / "build", upstream, root / "game")
         launch_smoke(game, root / "screenshots", scene_only=True, allow_static_scene=True,
-                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic)
+                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic, native_actor_zclip_profile_restore_probe=restore_profile)
         report = json.loads((root / "screenshots" / "transfer-report.json").read_text())
-        verify_transfer(report, variant, dynamic=dynamic)
+        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile)
         result[variant] = report
     result["native_actor_zclip_transfer_verified"] = True
     if dynamic:
         result["native_transferred_actor_dynamic_zclip_verified"] = True
+    if restore_profile:
+        result["native_interaction_room_zclip_profile_verified"] = True
     if entry_restore:
         result["native_present_actor_entry_profile_smoke_passed"] = True
     (output / "report.json").write_text(json.dumps(result, indent=2))
@@ -235,4 +273,4 @@ def run(upstream, output, profiles=False, entry_restore=False, dynamic=False):
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:]), indent=2))
+    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:], restore_profile="--restore-profile" in sys.argv[3:]), indent=2))

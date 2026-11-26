@@ -87,6 +87,60 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     set_costume_direction_speaking_sequence(raw, "Speaker", "N", invalid)
 
+    def test_transfer_gameplay_modes_use_distinct_costume_resource_names(self):
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        modes = ({}, {"profiles": True}, {"profiles": True, "entry_restore": True},
+                 {"dynamic": True}, {"restore_profile": True})
+        names = set()
+        with tempfile.TemporaryDirectory() as directory:
+            for variant in ("masked", "transparent"):
+                for index, mode in enumerate(modes):
+                    root = Path(directory) / f"{variant}-{index}"
+                    doc = parse_document(author_transfer_project(root, variant, **mode))
+                    actor = next(a for a in doc.actors if a.id == ACTOR_IDS[0])
+                    self.assertNotIn(actor.costume, names)
+                    names.add(actor.costume)
+        self.assertEqual(len(names), 10)
+
+    def test_transferred_actor_restores_authored_room_profile_in_native_interaction(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            raw = author_transfer_project(root, "masked")
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                     "Actor Z-Clipping", ACTOR_IDS[0], None, None, -1)
+            raw = author_transfer_project(root, "masked", profiles=True)
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                       "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                       "Warten", None, None, None, 2)
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                       "Actor Z-Clipping", ACTOR_IDS[0], None, None, -1)
+            raw = set_sequence_skippable(raw, "Cellar|R06TransferReturn|Open", True)
+            doc = parse_document(raw)
+            self.assertEqual(canonical_json(doc), raw)
+            room = next(room for room in doc.rooms if room.name == "Cellar")
+            sequence = next(s for s in doc.interaction_sequences
+                            if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
+            native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
+                                                   (sequence,), doc.actors, doc.costumes, room)
+            normal, override = native.split("} override {", 1)
+            self.assertLess(normal.index("setActorZClip(0);"), normal.index("setActorZClip(1);"))
+            self.assertIn("setActorZClip(1);", override)
+            self.assertNotIn("setActorZClip(-1);", native)
+            guard = f"if (getActorRoom({ACTOR_IDS[0]}) == VAR_ROOM)"
+            self.assertEqual(normal.count(guard), 2)
+            self.assertEqual(override.count(guard), 1)
+            for operator in ("+", "-"):
+                redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) {operator} 1);"
+                self.assertEqual(normal.count(redraw), 2)
+                self.assertEqual(override.count(redraw), 1)
+
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
@@ -161,7 +215,15 @@ class NativeSequenceEditorTests(unittest.TestCase):
         self.assertIn("setCurrentActor(VAR_EGO);", normal)
         self.assertIn("setActorZClip(0);", override)
         self.assertNotIn("setActorZClip(1);", override)
-        for plane in (-1, 2, 5, 1.5, True):
+        restored = replace_sequence_step(raw, identity, 2, "Actor Z-Clipping",
+                                         "Guide", None, None, -1)
+        restored_doc = parse_document(restored)
+        restored_native = inject_interaction_sequences(scummc_room_source(restored_doc.rooms[0]), "Harbor",
+                                                         restored_doc.interaction_sequences, restored_doc.actors,
+                                                         restored_doc.costumes, restored_doc.rooms[0])
+        self.assertIn("setActorZClip(0);", restored_native.split("} override {", 1)[1])
+        self.assertNotIn("setActorZClip(-1);", restored_native)
+        for plane in (-2, 2, 5, 1.5, True):
             with self.assertRaises(ValueError):
                 replace_sequence_step(raw, identity, 0, "Actor Z-Clipping",
                                       "Guide", None, None, plane)
