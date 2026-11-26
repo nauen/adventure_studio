@@ -12,7 +12,7 @@ import time
 
 from .scumm_dialogue_probe import (_capture, _click, _color_count,
                                    ACTOR_RGB, ANSWER_RGB, initial_dialogue_ready)
-from .scumm_four_facing_probe import ACTOR_REGION, FACING_COLORS, scan_costume_colors
+from .scumm_four_facing_probe import ACTOR_REGION, scan_costume_colors
 from .scumm_launch import close_rgb, scene_pixel
 
 
@@ -42,18 +42,15 @@ def observed_independent_line_pairs(baseline: tuple[int, ...],
         ("blue", "yellow")[index - 2] for index in sorted(second))
 
 
-def _speaking_and_ending_pixels(frame: Path) -> tuple[tuple[int, ...], int]:
-    """Measure all five native pose colors from the same decoded crop."""
+def _ending_pixels(frame: Path) -> int:
+    """Count the magenta closing pose in the NPC's real native screen region."""
     from PIL import Image
 
-    left, right, top, bottom = ACTOR_REGION
     with Image.open(frame) as source:
-        histogram = source.convert("RGB").crop((left, top, right, bottom)).getcolors(
-            (right - left) * (bottom - top))
-    colors = tuple(color for _, color in FACING_COLORS) + ((200, 45, 205),)
-    counts = tuple(sum(count for count, pixel in histogram
-                       if close_rgb(pixel, color, 25)) for color in colors)
-    return counts[:4], counts[4]
+        image = source.convert("RGB")
+        left, right, top, bottom = ACTOR_REGION
+        return sum(close_rgb(image.getpixel((x, y)), (200, 45, 205), 25)
+                   for y in range(top, bottom) for x in range(left, right))
 
 
 def run(game_directory: Path, output: Path, two_lines: bool = False,
@@ -84,32 +81,29 @@ def run(game_directory: Path, output: Path, two_lines: bool = False,
                 time.sleep(0.3)
             else:
                 raise RuntimeError("Native dialogue room/actor was not ready")
-            baseline, ending_baseline = _speaking_and_ending_pixels(output / "scummvm-before.png")
+            baseline = scan_costume_colors(output / "scummvm-before.png")
+            ending_baseline = (_ending_pixels(output / "scummvm-before.png")
+                               if ending else 0)
             _click(330, 560)
             _click(192 + 185 * 2 + 16, 184 + 110 * 2 + 16)
             samples: list[tuple[int, ...]] = []
             red_captured = False
             observed: tuple[str, ...] = ()
             ending_seen = False
-            report["measurements"] = []
-            report["baseline"] = baseline
-            report["ending_baseline"] = ending_baseline
-            started = time.monotonic()
             def retain_observed_frame(label):
                 # Save the actual measured frame instead of taking another
                 # screenshot while the native animation continues.
                 shutil.copyfile(output / "scummvm-current.png",
                                 output / f"scummvm-{label}.png")
 
-            for sample in range(480 if ending else 240 if two_lines else 120):
+            for sample in range(240 if two_lines else 120):
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited during animated NPC line")
                 _capture(output, "current")
-                row, magenta = _speaking_and_ending_pixels(output / "scummvm-current.png")
+                row = scan_costume_colors(output / "scummvm-current.png")
                 samples.append(row)
-                report["measurements"].append({"sample": sample, "elapsed": time.monotonic() - started,
-                                               "colors": row, "magenta": magenta})
                 if ending:
+                    magenta = _ending_pixels(output / "scummvm-current.png")
                     if magenta >= ending_baseline + 16 and not ending_seen:
                         if not observed_speaking_change(baseline, samples):
                             raise RuntimeError("Native ending pose started before the first speaking frames")
@@ -117,7 +111,6 @@ def run(game_directory: Path, output: Path, two_lines: bool = False,
                         retain_observed_frame("frame-ending")
                     if not ending_seen and any(row[index] >= baseline[index] + 16
                                                for index in (2, 3)):
-                        retain_observed_frame("unexpected-second-before-ending")
                         raise RuntimeError("Second NPC line started before its native ending pose")
                 if sample in (0, 8, 20, 40):
                     retain_observed_frame(f"checkpoint-{sample:03d}")
@@ -137,8 +130,7 @@ def run(game_directory: Path, output: Path, two_lines: bool = False,
                     break
                 # Avoid phase-locking screenshot samples to short alternating
                 # COST frames: a fixed interval can repeatedly miss one pose.
-                time.sleep((0.005, 0.012, 0.020)[sample % 3] if ending else
-                           (0.04, 0.07, 0.11)[sample % 3] if two_lines else 0.10)
+                time.sleep((0.04, 0.07, 0.11)[sample % 3] if two_lines else 0.10)
             report["two_frames_visible"] = observed_speaking_change(baseline, samples)
             report["peak_pixels"] = {
                 name: max(row[index] for row in samples)
