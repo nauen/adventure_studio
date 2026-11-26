@@ -60,7 +60,9 @@ def authored_palette_room(variant: str = "correct"):
         for y in range(top, top + CELL_SIZE):
             start = y * width + left
             pixels[start:start + CELL_SIZE] = bytes([index]) * CELL_SIZE
-    return replace(original, pixels=bytes(pixels), palette=tuple(palette))
+    return replace(original, pixels=bytes(pixels), palette=tuple(palette),
+                   demo_walk_to_x=None, demo_walk_to_y=None,
+                   ego_start_x=280, ego_start_y=180)
 
 
 def _sample_location(index: int, offset_x: int, offset_y: int) -> tuple[int, int]:
