@@ -598,21 +598,20 @@ def main() -> None:
             expect(sequence_input).to_have_value("SpeakAlt, Speak, SpeakAlt", timeout=20000)
             select_option(page, "native-dialogue-line", first[0])
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
-            direction_status = page.locator("#native-dialogue-direction-status input, #native-dialogue-direction-status textarea")
             select_option(page, "native-dialogue-direction", "Süd")
-            expect(direction_status).to_have_value(re.compile(r"· Süd(?::| ·)"), timeout=20000)
+            # The previous direction has the same sequence text. Wait for the
+            # direction-specific callback result before editing the new draft.
+            expect(page.locator("#native-dialogue-direction-status input, #native-dialogue-direction-status textarea")).to_have_value(
+                re.compile(r"· Süd: mehrere Frames/Kommandos"), timeout=20000)
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             sequence_input.fill("SpeakAlt")
-            sequence_input.press("Tab")
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             select_option(page, "native-dialogue-direction", "Nord")
-            expect(direction_status).to_have_value(re.compile(r"· Nord(?::| ·)"), timeout=20000)
             expect(sequence_input).to_have_value("Speak, SpeakAlt", timeout=20000)
             expect(draft_save_status).to_contain_text(
                 "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             sequence_input.fill("SpeakAlt, Speak")
-            sequence_input.press("Tab")
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen an der Sprechfolge", timeout=20000)
             page.locator("#native-dialogue-direction-sequence-apply").click()

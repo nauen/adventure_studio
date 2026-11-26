@@ -155,6 +155,9 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         raw = set_sequence_skippable(raw, "Cellar|R06Hide|Close", True)
     if camera:
         for kind, actor, x, amount in (
+            # Native follow need not recenter an Actor already inside the viewport.
+            ("Kamera schwenken", None, 480, None),
+            ("Auf Kamera warten", None, None, None),
             ("Kamera folgt Actor", ACTOR_IDS[0], None, None),
             ("Auf Kamera warten", None, None, None),
             ("Warten", None, None, 3),
@@ -165,6 +168,9 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                 kind, actor, None, None, amount, x)
     if camera:
         for kind, actor, x, amount in (
+            # Native follow need not recenter an Actor already inside the viewport.
+            ("Kamera schwenken", None, 480, None),
+            ("Auf Kamera warten", None, None, None),
             ("Kamera folgt Actor", ACTOR_IDS[0], None, None),
             ("Auf Kamera warten", None, None, None),
             ("Warten", None, None, 30),
@@ -323,7 +329,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         def focused(label):
             with Image.open(output / f"scummvm-{label}.png") as img:
                 x = camera_from_sky(img)
-            return x is not None and abs(x-220) <= 8
+            return x is not None and abs(x-220) <= 8 and lane_pixels(label, 220, round(x), 312, 343) >= 100
         await_frame("transfer-camera-before-escape", focused)
         if time.monotonic() - started >= 18:
             raise RuntimeError("Camera focus too late for bounded Escape evidence")
@@ -569,8 +575,11 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=
     if camera:
         dynamic = True
         rows = report["camera_frames"]
+        away = next((i for i, row in enumerate(rows)
+                     if abs(row["camera_x"] - 480) <= 5), None)
         focused = next((i for i, row in enumerate(rows)
-                        if abs(row["camera_x"] - 220) <= 8 and row["a_pixels"] >= 100), None)
+                        if away is not None and i > away
+                        and abs(row["camera_x"] - 220) <= 8 and row["a_pixels"] >= 100), None)
         if focused is None or not any(abs(row["camera_x"] - 160) <= 5
                                        and row["a_pixels"] >= 100 for row in rows[focused+1:]):
             raise RuntimeError(f"Native transferred Actor camera focus/return missing: {rows}")
