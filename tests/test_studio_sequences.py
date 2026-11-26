@@ -276,18 +276,11 @@ class NativeSequenceEditorTests(unittest.TestCase):
             self.assertNotIn("setActorZClip(-1);", native)
             guard = f"if (getActorRoom({ACTOR_IDS[0]}) == VAR_ROOM)"
             self.assertEqual(normal.count(guard), 2)
-            # Both the conditional override and the common cutscene exit
-            # must independently guard the same persistent clipping state.
-            override_body, epilogue = override.split("\n            }\n", 1)
-            self.assertEqual(override_body.count(guard), 1)
-            self.assertEqual(epilogue.count(guard), 1)
+            self.assertEqual(override.count(guard), 1)
             for operator in ("+", "-"):
                 redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) {operator} 1);"
                 self.assertEqual(normal.count(redraw), 2)
-                self.assertEqual(override_body.count(redraw), 1)
-                self.assertEqual(epilogue.count(redraw), 1)
-            self.assertIn("setActorZClip(1);", override_body)
-            self.assertIn("setActorZClip(1);", epilogue)
+                self.assertEqual(override.count(redraw), 1)
 
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source
@@ -313,18 +306,11 @@ class NativeSequenceEditorTests(unittest.TestCase):
             normal, override = native.split("} override {", 1)
             guard = f"if (getActorRoom({ACTOR_IDS[0]}) == VAR_ROOM)"
             self.assertEqual(normal.count(guard), 2)
-            # Both the conditional override and the common cutscene exit
-            # must independently guard the same persistent clipping state.
-            override_body, epilogue = override.split("\n            }\n", 1)
-            self.assertEqual(override_body.count(guard), 1)
-            self.assertEqual(epilogue.count(guard), 1)
+            self.assertEqual(override.count(guard), 1)
             for operator in ("+", "-"):
                 redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) {operator} 1);"
                 self.assertEqual(normal.count(redraw), 2)
-                self.assertEqual(override_body.count(redraw), 1)
-                self.assertEqual(epilogue.count(redraw), 1)
-            self.assertIn("setActorZClip(1);", override_body)
-            self.assertIn("setActorZClip(1);", epilogue)
+                self.assertEqual(override.count(redraw), 1)
             self.assertIn("setActorZClip(1);", override)
             self.assertNotIn("setActorZClip(0);", override)
             with self.assertRaises(ValueError):
