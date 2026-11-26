@@ -12,8 +12,6 @@ from collections import Counter
 from dataclasses import replace
 from pathlib import Path
 
-from PIL import Image
-
 from .scumm_assets import destination_fixture, scrolling_fixture
 from .scumm_project import GameDocument, canonical_json, parse_document
 from .scumm_room_visual_probe import render_native_room
@@ -77,6 +75,8 @@ def verify_palette_screenshot(screenshot: Path, expected_palette: tuple[tuple[in
     """Verify every palette index at its authored room coordinate in ScummVM."""
     if len(expected_palette) != 256 or len(set(expected_palette)) != 256:
         raise ValueError("Expected palette must contain 256 unique RGB entries")
+    from PIL import Image
+
     with Image.open(screenshot) as source:
         image = source.convert("RGB")
         if image.width < 1024 or image.height < 768:
