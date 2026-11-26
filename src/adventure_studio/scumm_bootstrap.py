@@ -688,6 +688,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_directions = {}
         end_clipping = {}
         final_camera = None
+        final_camera_wait = False
         inventory_steps = []
         final_music = None
         final_sounds = {}
@@ -705,6 +706,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_directions[step.actor_id] = step.direction
             elif isinstance(step, (FollowActorCameraStep, PanCameraStep)):
                 final_camera = step
+                final_camera_wait = False
+            elif isinstance(step, WaitCameraStep):
+                final_camera_wait = True
             elif isinstance(step, PickupObjectStep):
                 inventory_steps.append(step)
                 end_states[step.hotspot_id] = 0
@@ -759,7 +763,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             actor = final_camera.actor_id
             commit += (f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
                        f"                    cameraFollowActor({actor});\n"
-                       "                }\n")
+                       + ("                    waitForCamera();\n" if final_camera_wait else "")
+                       + "                }\n")
         if final_music is not None:
             commit += (f"                startMusic({room_asset.music_id});\n"
                        if final_music == "start" else "                stopMusic();\n")
