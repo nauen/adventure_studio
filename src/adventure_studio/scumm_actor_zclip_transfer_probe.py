@@ -161,7 +161,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Warten", None, None, None, 12)
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
-            "Actor Skalierung", ACTOR_IDS[0], None, None, 255)
+            "Actor Skalierung", ACTOR_IDS[0], None, None, 0)
         raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
     if elevation:
         raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
@@ -315,7 +315,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             def scale_measure(label):
                 with Image.open(output / f"scummvm-{label}.png") as img:
                     rgb = img.convert("RGB")
-                    coords = [(x, y) for y in range(286, 355) for x in range(600, 665)
+                    coords = [(x, y) for y in range(286, 355) for x in range(610, 653)
                               if max(rgb.getpixel((x, y))) <= 24]
                 if not coords:
                     return {"frame": label, "pixels": 0, "width": 0, "height": 0, "center": 0, "bottom": 0}

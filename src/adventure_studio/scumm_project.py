@@ -1002,8 +1002,8 @@ def _validate_document(document: GameDocument) -> None:
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or (actor.room != room.name and
                         (actor.id, room.name) not in transfer_destinations)
-                        or type(step.scale) is not int or not 1 <= step.scale <= 255):
-                    raise ValueError("Actor scale requires a room Actor and native scale (1 to 255)")
+                        or type(step.scale) is not int or not 0 <= step.scale <= 255):
+                    raise ValueError("Actor scale requires a room Actor and native scale (0 auto, 1 to 255 manual)")
             elif isinstance(step, ActorZClipStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or (actor.room != room.name and

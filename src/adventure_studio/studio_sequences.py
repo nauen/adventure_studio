@@ -2767,7 +2767,7 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
     if isinstance(step, ActorElevationStep):
         return f"Actor {step.actor_id}: Höhe {step.elevation} Pixel"
     if isinstance(step, ActorScaleStep):
-        return f"Actor {step.actor_id}: Skalierung {step.scale} / 255"
+        return f"Actor {step.actor_id}: Skalierung {step.scale} / 255 (manuell)" if step.scale else f"Actor {step.actor_id}: automatische Walkbox-Skalierung"
     if isinstance(step, ActorZClipStep):
         return f"Actor {step.actor_id}: Z-Clipping {'Raumprofil' if step.plane == -1 else step.plane or 'automatisch'}"
     if isinstance(step, FaceActorStep):

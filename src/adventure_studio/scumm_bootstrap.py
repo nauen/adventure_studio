@@ -636,7 +636,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, ActorScaleStep):
                 instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({step.actor_id});\n",
-                                     f"                setActorScale({step.scale});\n",
+                                     ("                setActorFollowBoxes();\n" if step.scale == 0 else
+                                      f"                setActorIgnoreBoxes();\n                setActorScale({step.scale});\n"),
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
             elif isinstance(step, ActorZClipStep):
@@ -789,7 +790,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             target = destination[2] if destination is not None and destination[2] != room_name else "VAR_ROOM"
             commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
                        f"                    setCurrentActor({actor});\n"
-                       f"                    setActorScale({scale});\n"
+                       + ("                    setActorFollowBoxes();\n" if scale == 0 else
+                          f"                    setActorIgnoreBoxes();\n                    setActorScale({scale});\n") +
                        "                    setCurrentActor(VAR_EGO);\n"
                        "                }\n")
         clipping_commit = ""

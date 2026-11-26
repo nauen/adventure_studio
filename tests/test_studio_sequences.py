@@ -160,7 +160,16 @@ class NativeSequenceEditorTests(unittest.TestCase):
             for code in native.split("} override {", 1):
                 self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM)", code)
                 self.assertIn("setActorScale(128);", code)
-            for invalid_actor, scale in ((ACTOR_IDS[1], 128), (actor, 256), (actor, 0)):
+                self.assertIn("setActorIgnoreBoxes();", code)
+            restored = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                            "Actor Skalierung", actor, None, None, 0)
+            restored_doc = parse_document(restored)
+            restored_seq = next(s for s in restored_doc.interaction_sequences
+                if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
+            restored_native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
+                (restored_seq,), restored_doc.actors, restored_doc.costumes, room)
+            self.assertIn("setActorFollowBoxes();", restored_native.split("} override {", 1)[1])
+            for invalid_actor, scale in ((ACTOR_IDS[1], 128), (actor, 256), (actor, -1)):
                 with self.assertRaises(ValueError):
                     append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                          "Actor Skalierung", invalid_actor, None, None, scale)
