@@ -309,7 +309,8 @@ def inject_actor_bindings(source: str, header: str, actors, costumes, room_names
     header = header.replace(header_marker, header_marker + ''.join(
         f'actor {actor.id};\n' for actor in actors), 1)
     needed = {actor.costume for actor in actors} | set(additional_costumes)
-    header += '\n' + ''.join(f'cost {name}Cost;\n' for name in sorted(additional_costumes))
+    header = header.replace('room ResRoom {', 'room ResRoom {\n' + ''.join(
+        f'    cost {name}Cost;\n' for name in sorted(additional_costumes)), 1)
     definitions = ''.join(
         f'    cost {name}Cost = "{name}.cost";\n' for name in sorted(needed))
     source = source.replace(cost_marker, cost_marker + definitions, 1)
@@ -637,7 +638,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, ActorCostumeStep):
                 instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({step.actor_id});\n",
-                                     f"                setActorCostume({step.costume}Cost);\n",
+                                     f"                setActorCostume(ResRoom.{step.costume}Cost);\n",
                                      "                setActorStanding();\n",
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
@@ -780,7 +781,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             target = destination[2] if destination is not None and destination[2] != room_name else "VAR_ROOM"
             commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
                        f"                    setCurrentActor({actor});\n"
-                       f"                    setActorCostume({costume}Cost);\n"
+                       f"                    setActorCostume(ResRoom.{costume}Cost);\n"
                        "                    setActorStanding();\n"
                        "                    setCurrentActor(VAR_EGO);\n"
                        "                }\n")
