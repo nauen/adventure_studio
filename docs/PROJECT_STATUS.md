@@ -1,3 +1,23 @@
+## Verbindlicher Stand – 27.11.2026 (korrigierte Reihenfolge)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime: Studio/JSON-v1/Story → ScummC-v6 → unverändertes stock ScummVM. NPC-Komfort nach #190 beendet.
+- **Konsolidierung:** Geprüfter main-Stand [eb741ce](https://github.com/nauen/adventure_studio/commit/eb741ce8ca182cf0b90334410761b0eff788558f), [Core 45999196693](https://github.com/nauen/adventure_studio/actions/runs/45999196693) erfolgreich; spätere Core-Versuche desselben SHA abgebrochen. 27 offene PRs zum Prüfzeitpunkt. Integrierte Teilfähigkeiten R01 #335, R06 #323/#325, R07 #258, R08 #264, R09 #267 bleiben Teilnachweise. Kein pauschales V.
+- **Jetzt – genau eine Fähigkeit:** [#355](https://github.com/nauen/adventure_studio/pull/355), native dynamische Actor-Walkbox-Führung (R08/A05, Zusammenspiel mit R06). Modell/JSON-v1/Studio → ScummC `setActorFollowBoxes`/`setActorIgnoreBoxes`; Anwesenheitsguard und Wiederherstellung des letzten Modus bei Escape. Keine neue Runtime.
+- **Abnahme im Spiel:** Begrenzter Lauf bis X≈370, freier Lauf bis X≈440, nach Escape erneuter begrenzter Lauf. Vollständiger Nachweis mit unverändertem stock ScummVM, Artefakt/Report, Core und Gesamtpflichtgate auf aktuellem Head. Explizite Z-Clipping-/Skalierungsverträge bei Integration erhalten.
+- **Blocker mit Nachweis:** Vorheriger Head 3bcd169, [Core](https://github.com/nauen/adventure_studio/actions/runs/45999144152) grün, [Actor-Job](https://github.com/nauen/adventure_studio/actions/runs/45999152613/job/140507098214) rot. [Originalartefakt 15197657800](https://github.com/nauen/adventure_studio/actions/runs/45999152613/artifacts/15197657800): Screenshot-Pixelmessung X=372 begrenzt, X=442 frei; Restore-Start und Check-Follow ohne Bild. ScummVM-Log: `strip drawn to 146 below window bottom 144`, Assertion `top >= 0 && bottom <= vs->h`. Testobjekte Y=130/H=16 überschreiten den 144-Pixel-Spielbereich. [Korrektur 698b3bf](https://github.com/nauen/adventure_studio/commit/698b3bf9f774c9e8805becc3b160874383ee0187) setzt Y=120 und meldet Interpreterabbruch unmittelbar; Bewegungsgrenzen unverändert. [Core 46000791031](https://github.com/nauen/adventure_studio/actions/runs/46000791031), [Native/Studio 46000802088](https://github.com/nauen/adventure_studio/actions/runs/46000802088) noch nicht abgeschlossen. Kein vollständiger Gameplay-Nachweis, kein Merge.
+- **Danach – genau ein Folgepaket:** [#350](https://github.com/nauen/adventure_studio/pull/350), native Actor-Zeichenebene und Escape integrieren; vorhandenen Gameplay-Beleg nutzen, rotes Geometry-Pflichtgate ursächlich prüfen. Erst nach vollständiger #355-Abnahme aktivieren.
+
+### Offene Abnahme/Integration – keine parallele Produktentwicklung
+
+- #350 [Gesamtgate 45994511162](https://github.com/nauen/adventure_studio/actions/runs/45994511162) rot (Geometry: Actor B camera follow resumes); [Artefakt](https://github.com/nauen/adventure_studio/actions/runs/45994511162/artifacts/15195418170) Gameplay-Teilbeleg.
+- #353 [Gesamtgate 45995788559](https://github.com/nauen/adventure_studio/actions/runs/45995788559) rot (Geometry: rendezvous stillness/A-first B-second release); [Artefakt](https://github.com/nauen/adventure_studio/actions/runs/45995788559/artifacts/15195927049) Paletten-Gameplay-Teilbeleg.
+- #357 [Actor-Job](https://github.com/nauen/adventure_studio/actions/runs/45999162322/job/140506309059) rot (Richtungssperre/Escape). #348 [Mask-Job](https://github.com/nauen/adventure_studio/actions/runs/45991905870/job/140482936603) rot (IM03). #338 Sprechfarbe/Position nicht abgenommen; #329 [Gesamtgate](https://github.com/nauen/adventure_studio/actions/runs/45986072883) rot.
+- #326/#328/#330/#331/#332: produktbezogene Teilbelege, Gesamtgates zum Prüfzeitpunkt laufend. #352/#359: aktuelle Core-/Native-Abnahme ausstehend. Details im vorherigen Statusprotokoll.
+- #293/#295/#297/#299/#301/#303, #336, #339–#343 und alle übrigen offenen Feature-PRs bleiben erhalten, aber zurückgestellt. ZP05+ bleibt fail-closed. Keine weiteren Features oder Merges ohne priorisiertes Paket und bestandene Pflichtgates.
+- **Arbeitsregel:** Konsolidieren → eine native Lücke priorisieren → diese durch den produktiven Exportpfad bis vollständiger ScummVM-Evidenz und Integration führen → erst dann nächstes Paket. Laufende oder rote CI ist kein Grund, ein weiteres Feature zu beginnen. Statusangaben nur auf belegtem Head aktualisieren.
+
+## Vorheriger Stand (historisch; durch obige Nutzerentscheidung ersetzt)
+
 ## Verbindlicher Stand – 27.11.2026
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; Studio/JSON-v1/Story → ScummC-v6 → unverändertes stock ScummVM. NPC-Komfort nach #190 beendet.
