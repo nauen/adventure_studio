@@ -283,6 +283,10 @@ class InteractionSequence:
     skippable: bool = False
     condition_variable: str | None = None
     condition_operator: str = "=="
+    condition_second_target: str | None = None
+    condition_second_value: int | None = None
+    condition_second_operator: str = "=="
+    condition_join: str = "and"
 
 
 @dataclass(frozen=True)
@@ -334,6 +338,8 @@ def game_variable_names(document: GameDocument) -> tuple[str, ...]:
              for step in sequence.steps if isinstance(step, SetGameVariableStep)}
     names.update(sequence.condition_variable for sequence in document.interaction_sequences
                  if sequence.condition_variable is not None)
+    names.update(sequence.condition_second_target[4:] for sequence in document.interaction_sequences
+                 if sequence.condition_second_target is not None and sequence.condition_second_target.startswith("var:"))
     return tuple(sorted(names))
 
 
@@ -399,6 +405,11 @@ def document_dict(document: GameDocument) -> dict:
                                            if sequence.condition_variable is not None else {}),
                                         **({"condition_operator": sequence.condition_operator}
                                            if sequence.condition_operator != "==" else {}),
+                                        **({"condition_second_target": sequence.condition_second_target,
+                                            "condition_second_value": sequence.condition_second_value,
+                                            "condition_second_operator": sequence.condition_second_operator,
+                                            "condition_join": sequence.condition_join}
+                                           if sequence.condition_second_target is not None else {}),
                                         **({"skippable": True} if sequence.skippable else {}),
                                         "steps": [({"type": "animate_actor", **vars(step)}
                                                    if isinstance(step, AnimateActorStep)
@@ -934,6 +945,25 @@ def _validate_document(document: GameDocument) -> None:
                 or type(sequence.condition_state) is not int
                 or not 0 <= sequence.condition_state <= 2):
             raise ValueError("Interaction condition requires a valid room object and native state")
+        second = sequence.condition_second_target
+        if second is None:
+            if (sequence.condition_second_value is not None or sequence.condition_second_operator != "=="
+                    or sequence.condition_join != "and"):
+                raise ValueError("Second condition requires a target")
+        else:
+            if (not isinstance(second, str) or sequence.condition_state is None
+                    or sequence.condition_join not in ("and", "or")
+                    or sequence.condition_second_operator not in ("==", "!=", "<", "<=", ">", ">=")
+                    or type(sequence.condition_second_value) is not int):
+                raise ValueError("Combined condition requires two valid comparisons")
+            if second.startswith("var:"):
+                game_variable_symbol(second[4:])
+                if not -32768 <= sequence.condition_second_value <= 32767:
+                    raise ValueError("Second variable value outside signed 16-bit range")
+            elif (second not in {hotspot.id for hotspot in room.hotspots}
+                    or sequence.condition_second_operator != "=="
+                    or not 0 <= sequence.condition_second_value <= 2):
+                raise ValueError("Second object condition requires a room object and native state")
         for step_index, step in enumerate(sequence.steps):
             if isinstance(step, AnimateActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
@@ -1115,6 +1145,10 @@ def _validate_document(document: GameDocument) -> None:
         if len(group) < 2:
             continue
         guards = [item for item in group if item.condition_hotspot_id is not None or item.condition_variable is not None]
+        if any(item.condition_second_target is not None for item in guards):
+            if len(guards) != 1 or len(group) != 2:
+                raise ValueError("Combined condition supports one guarded branch and one fallback")
+            continue
         if (len(guards) < len(group) - 1
                 or len({(item.condition_hotspot_id, item.condition_variable) for item in guards}) != 1
                 or any(max(a, c) <= min(b, d)
@@ -1237,7 +1271,8 @@ def parse_document(source: str) -> GameDocument:
     interaction_sequences = []
     for raw_sequence in raw_sequences:
         item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps",
-                                    "condition_hotspot_id", "condition_state", "skippable", "condition_variable", "condition_operator"},
+                                    "condition_hotspot_id", "condition_state", "skippable", "condition_variable", "condition_operator", "condition_second_target",
+                                    "condition_second_value", "condition_second_operator", "condition_join"},
                      {"room", "hotspot_id", "verb", "steps"})
         if not isinstance(item["steps"], list):
             raise ValueError("Interaction steps must be a list")
@@ -1342,7 +1377,11 @@ def parse_document(source: str) -> GameDocument:
                                                          item.get("condition_state"),
                                                          item.get("skippable", False),
                                                          item.get("condition_variable"),
-                                                         item.get("condition_operator", "==")))
+                                                         item.get("condition_operator", "=="),
+                                                         item.get("condition_second_target"),
+                                                         item.get("condition_second_value"),
+                                                         item.get("condition_second_operator", "=="),
+                                                         item.get("condition_join", "and")))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",
