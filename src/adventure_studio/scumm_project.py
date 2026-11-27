@@ -299,6 +299,7 @@ class InteractionSequence:
     condition_second_operator: str = "=="
     condition_join: str = "and"
     condition_inventory_id: str | None = None
+    condition_used_item_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -418,6 +419,9 @@ def document_dict(document: GameDocument) -> dict:
                                         **({"condition_inventory_id": sequence.condition_inventory_id,
                                             "condition_state": sequence.condition_state}
                                            if sequence.condition_inventory_id is not None else {}),
+                                        **({"condition_used_item_id": sequence.condition_used_item_id,
+                                            "condition_state": sequence.condition_state}
+                                           if sequence.condition_used_item_id is not None else {}),
                                         **({"condition_operator": sequence.condition_operator}
                                            if sequence.condition_operator != "==" else {}),
                                         **({"condition_second_target": sequence.condition_second_target,
@@ -939,8 +943,12 @@ def _validate_document(document: GameDocument) -> None:
         if room is None or not isinstance(sequence.hotspot_id, str) or sequence.hotspot_id not in {
                 hotspot.id for hotspot in room.hotspots}:
             raise ValueError("Interaction sequence requires an existing room hotspot")
-        if sequence.verb not in ("Push", "Pull", "Open", "Close", "TalkTo", "LookAt"):
+        if sequence.verb not in ("Push", "Pull", "Open", "Close", "TalkTo", "LookAt", "Use"):
             raise ValueError("Unsupported interaction sequence verb")
+        if sequence.verb == "Use":
+            if (any(rule.target_id == sequence.hotspot_id for rule in room.use_rules)
+                    or any(sequence.hotspot_id in (rule.first_id, rule.second_id) for rule in room.combine_rules)):
+                raise ValueError("Use sequence conflicts with an existing use or combination rule")
         if sequence.verb == "TalkTo":
             hotspot = next(h for h in room.hotspots if h.id == sequence.hotspot_id)
             dialogue_targets = {rule.speaker_id for rule in room.talk_rules}
@@ -960,7 +968,15 @@ def _validate_document(document: GameDocument) -> None:
         if sequence.condition_operator not in ("==", "!=", "<", "<=", ">", ">=") or (
                 sequence.condition_variable is None and sequence.condition_operator != "=="):
             raise ValueError("Only variable conditions support numeric comparisons")
-        if sequence.condition_variable is not None:
+        if sequence.condition_used_item_id is not None:
+            if (sequence.verb != "Use" or not isinstance(sequence.condition_used_item_id, str)
+                    or sequence.condition_used_item_id not in inventory_ids
+                    or sequence.condition_used_item_id == sequence.hotspot_id
+                    or sequence.condition_hotspot_id is not None or sequence.condition_variable is not None
+                    or sequence.condition_inventory_id is not None
+                    or type(sequence.condition_state) is not int or sequence.condition_state != 1):
+                raise ValueError("Used-item condition requires Use, a different pickup object and value 1")
+        elif sequence.condition_variable is not None:
             game_variable_symbol(sequence.condition_variable)
             if (sequence.condition_hotspot_id is not None or sequence.condition_inventory_id is not None
                     or type(sequence.condition_state) is not int
@@ -1194,13 +1210,17 @@ def _validate_document(document: GameDocument) -> None:
     for group in sequence_groups.values():
         if len(group) < 2:
             continue
-        guards = [item for item in group if item.condition_hotspot_id is not None or item.condition_variable is not None or item.condition_inventory_id is not None]
+        guards = [item for item in group if item.condition_hotspot_id is not None or item.condition_variable is not None or item.condition_inventory_id is not None or item.condition_used_item_id is not None]
         if any(item.condition_second_target is not None for item in guards):
             if len(guards) != 1 or len(group) != 2:
                 raise ValueError("Combined condition supports one guarded branch and one fallback")
             continue
+        if guards and all(item.condition_used_item_id is not None for item in guards):
+            if len(guards) < len(group) - 1 or len({item.condition_used_item_id for item in guards}) != len(guards):
+                raise ValueError("Use alternatives need distinct input items and at most one fallback")
+            continue
         if (len(guards) < len(group) - 1
-                or len({(item.condition_hotspot_id, item.condition_variable, item.condition_inventory_id) for item in guards}) != 1
+                or len({(item.condition_hotspot_id, item.condition_variable, item.condition_inventory_id, item.condition_used_item_id) for item in guards}) != 1
                 or any(max(a, c) <= min(b, d)
                        for i, first in enumerate(guards) for second in guards[i+1:]
                        for a, b in comparison_ranges(first.condition_operator, first.condition_state)
@@ -1322,7 +1342,7 @@ def parse_document(source: str) -> GameDocument:
     for raw_sequence in raw_sequences:
         item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps",
                                     "condition_hotspot_id", "condition_state", "skippable", "condition_variable", "condition_operator", "condition_second_target",
-                                    "condition_second_value", "condition_second_operator", "condition_join", "condition_inventory_id"},
+                                    "condition_second_value", "condition_second_operator", "condition_join", "condition_inventory_id", "condition_used_item_id"},
                      {"room", "hotspot_id", "verb", "steps"})
         if not isinstance(item["steps"], list):
             raise ValueError("Interaction steps must be a list")
@@ -1438,7 +1458,8 @@ def parse_document(source: str) -> GameDocument:
                                                          item.get("condition_second_value"),
                                                          item.get("condition_second_operator", "=="),
                                                          item.get("condition_join", "and"),
-                                                         item.get("condition_inventory_id")))
+                                                         item.get("condition_inventory_id"),
+                                                         item.get("condition_used_item_id")))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",

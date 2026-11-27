@@ -27,7 +27,7 @@ from .scumm_costume import CostumeAnimation, CostumeDirection
 from .scumm_assets import CameraCue, ScaleCurve, Walkbox, ZPlane
 
 
-VERBS = ("Push", "Pull", "Open", "Close", "TalkTo", "LookAt")
+VERBS = ("Push", "Pull", "Open", "Close", "TalkTo", "LookAt", "Use")
 
 
 def room_camera_form_values(raw: str, room_name: str) -> tuple[int, int, str, bool]:
@@ -2669,6 +2669,8 @@ def sequence_choices(raw: str) -> tuple[tuple[str, str], ...]:
     return tuple((f"{item.room} / {item.hotspot_id} / {item.verb}"
                   + (f" [wenn Variable {item.condition_variable} {item.condition_operator} {item.condition_state}]"
                      if item.condition_variable is not None else
+                     f" [mit {item.condition_used_item_id}]"
+                     if item.condition_used_item_id is not None else
                      f" [wenn Inventar {item.condition_inventory_id}: {'vorhanden' if item.condition_state else 'fehlt'}]"
                      if item.condition_inventory_id is not None else
                      f" [wenn {item.condition_hotspot_id}={item.condition_state}]"
@@ -2689,6 +2691,8 @@ def sequence_steps(raw: str, identity: str) -> tuple[str, ...]:
 def sequence_condition_fields(raw: str, identity: str | None) -> tuple[str | None, int]:
     sequence = next((item for item in parse_document(raw).interaction_sequences
                      if _identity(item) == identity), None)
+    if sequence and sequence.condition_used_item_id is not None:
+        return ("used:" + sequence.condition_used_item_id, 1)
     if sequence and sequence.condition_inventory_id is not None:
         return ("inv:" + sequence.condition_inventory_id, sequence.condition_state)
     if sequence and sequence.condition_variable is not None:
@@ -2757,7 +2761,9 @@ def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
     sequences = list(document.interaction_sequences)
     variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
     inventory = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("inv:") else None
-    sequences[index] = replace(sequences[index], condition_hotspot_id=None if variable is not None or inventory is not None else hotspot_id,
+    used_item = hotspot_id[5:] if isinstance(hotspot_id, str) and hotspot_id.startswith("used:") else None
+    sequences[index] = replace(sequences[index], condition_hotspot_id=None if variable is not None or inventory is not None or used_item is not None else hotspot_id,
+                               condition_used_item_id=used_item,
                                condition_inventory_id=inventory,
                                condition_variable=variable, condition_state=condition_state,
                                condition_operator=operator if variable is not None else "==",
@@ -2779,7 +2785,9 @@ def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
         raise ValueError("Alternative benötigt ein Objekt und einen ganzen Zustand")
     variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
     inventory = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("inv:") else None
-    variant = replace(original, condition_hotspot_id=None if variable is not None or inventory is not None else hotspot_id,
+    used_item = hotspot_id[5:] if isinstance(hotspot_id, str) and hotspot_id.startswith("used:") else None
+    variant = replace(original, condition_hotspot_id=None if variable is not None or inventory is not None or used_item is not None else hotspot_id,
+                               condition_used_item_id=used_item,
                                condition_inventory_id=inventory,
                       condition_variable=variable, condition_state=int(state),
                       condition_operator=operator if variable is not None else "==",
@@ -2790,9 +2798,12 @@ def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
 def _identity(sequence: InteractionSequence) -> str:
     base = f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
     if sequence.condition_second_target is not None:
-        first = ("inv:" + sequence.condition_inventory_id if sequence.condition_inventory_id is not None
+        first = ("used:" + sequence.condition_used_item_id if sequence.condition_used_item_id is not None
+                 else "inv:" + sequence.condition_inventory_id if sequence.condition_inventory_id is not None
                  else "var:" + sequence.condition_variable if sequence.condition_variable is not None else sequence.condition_hotspot_id)
         return f"{base}|{first}|{sequence.condition_state}|{sequence.condition_operator}|{sequence.condition_join}|{sequence.condition_second_target}|{sequence.condition_second_operator}|{sequence.condition_second_value}"
+    if sequence.condition_used_item_id is not None:
+        return f"{base}|used:{sequence.condition_used_item_id}|1"
     if sequence.condition_inventory_id is not None:
         return f"{base}|inv:{sequence.condition_inventory_id}|{sequence.condition_state}"
     if sequence.condition_variable is not None:
@@ -2984,7 +2995,7 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
     index = next((index for index, item in enumerate(sequences)
                   if (item.room, item.hotspot_id, item.verb) == key
                   and item.condition_hotspot_id is None and item.condition_variable is None
-                  and item.condition_inventory_id is None), None)
+                  and item.condition_inventory_id is None and item.condition_used_item_id is None), None)
     if index is None:
         sequences.append(InteractionSequence(room, hotspot_id, verb, (step,)))
     else:
