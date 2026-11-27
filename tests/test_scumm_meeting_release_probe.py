@@ -91,6 +91,13 @@ class NativeMeetingReleaseTests(unittest.TestCase):
                   ACTOR_IDS[1]: screenshot_rows(b)}
         self.assertTrue(verify_native_rendezvous_release(
             tracks)["native_rendezvous_staggered_release_verified"])
+        follow_b_tracks = {
+            ACTOR_IDS[0]: screenshot_rows(a)[:28],
+            ACTOR_IDS[1]: screenshot_rows(b),
+        }
+        proof = verify_native_rendezvous_release(follow_b_tracks)
+        self.assertTrue(proof["native_rendezvous_staggered_release_verified"])
+        self.assertGreaterEqual(len(proof["b_after_frames"]), 3)
         immediate_b = b[:19] + [415, 435, 455, 475, 495, 515, 535, 545] + [545] * 7
         with self.assertRaisesRegex(RuntimeError, "stationary B"):
             verify_native_rendezvous_release({
