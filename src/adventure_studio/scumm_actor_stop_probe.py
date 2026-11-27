@@ -114,17 +114,22 @@ def run(upstream, destination):
         if point is None:
             raise RuntimeError(f"Native interaction target missing: {label}")
         x, y = point
-        for px, py in ((234,563),(round(x),round(y))):
+        for i, (px, py) in enumerate(((234,563),(round(x),round(y)))):
             subprocess.run(["xdotool","mousemove",str(px),str(py),"click","1"], check=True, timeout=10)
-            time.sleep(.2)
+            if i == 0:
+                time.sleep(.2)
+        # Do not sleep after the hotspot input: the native walk is already running.
 
-    def await_position(label, predicate, timeout=20):
+    def await_position(label, predicate, timeout=20, retain_attempts=False):
         deadline = time.monotonic()+timeout
+        attempt = 0
         while time.monotonic() < deadline:
             if game.poll() is not None:
                 raise RuntimeError("ScummVM exited during native walk")
             try:
-                x = position(label)
+                frame = f"{label}-{attempt:03d}" if retain_attempts else label
+                attempt += 1
+                x = position(frame)
                 if x is not None and predicate(x):
                     return x
             except ValueError:
@@ -152,7 +157,12 @@ def run(upstream, destination):
             time.sleep(1.5)
             normal = stationary("normal-stopped")
             click("escape-click", CONTROLS[1])
-            await_position("escape-moving", lambda x: 195<x<230)
+            # Normal walk already reached X261 on the first moving frame.
+            # Catch genuine movement well before the destination without
+            # depending on a narrow early frame window or adding a click sleep.
+            before_escape = await_position("escape-moving", lambda x: 195<x<360,
+                                           timeout=5, retain_attempts=True)
+            escape_started = time.monotonic()
             subprocess.run(["xdotool","keydown","Escape"], check=True, timeout=5)
             try:
                 time.sleep(.25)
@@ -160,10 +170,16 @@ def run(upstream, destination):
                 subprocess.run(["xdotool","keyup","Escape"], check=True, timeout=5)
             time.sleep(.5)
             escaped = stationary("escape-stopped")
+            escape_proof_seconds = time.monotonic()-escape_started
+            if escaped[-1] < before_escape-4 or escape_proof_seconds >= 12:
+                raise RuntimeError(
+                    f"Escape stop teleported backward or was not proved before delay: "
+                    f"{before_escape} -> {escaped}, {escape_proof_seconds:.3f}s")
             click("resume-click", CONTROLS[2])
             resumed = await_position("resumed", lambda x: abs(x-455)<10)
-            report = {"normal":normal, "escaped":escaped, "resumed_x":resumed,
-                      "native_actor_stop_verified":True}
+            report = {"normal":normal, "before_escape_x":before_escape,
+                      "escaped":escaped, "escape_proof_seconds":escape_proof_seconds,
+                      "resumed_x":resumed, "native_actor_stop_verified":True}
             (destination / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
             return report
         finally:
