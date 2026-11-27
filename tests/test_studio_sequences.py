@@ -307,6 +307,18 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 self.assertEqual(normal.count(redraw), 2)
                 self.assertEqual(override.count(redraw), 1)
 
+    def test_restore_profile_probe_hotspot_does_not_move_the_actor(self):
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        with tempfile.TemporaryDirectory() as directory:
+            raw = author_transfer_project(Path(directory), "masked", restore_profile=True)
+            doc = parse_document(raw)
+            room = next(room for room in doc.rooms if room.name == "Cellar")
+            actor = next(actor for actor in doc.actors if actor.id == "actor-a")
+            hotspot = next(hotspot for hotspot in room.hotspots
+                           if hotspot.id == "R06Restore")
+            self.assertEqual((hotspot.x, hotspot.y), (220, 85))
+            self.assertEqual((actor.x, actor.y), (220, 85))
+
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
