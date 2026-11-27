@@ -159,8 +159,8 @@ def run(upstream, destination):
             deadline = time.monotonic() + 25
             while time.monotonic() < deadline:
                 frame("transferred-away")
-                if (colored_item_pixels(frames, "transferred-away", RETURN_RGB, fuzz_percent=4) < 40
-                        and colored_item_pixels(frames, "transferred-away", ESCAPE_RGB, fuzz_percent=4) >= 40):
+                if (colored_item_pixels(frames, "transferred-away", RETURN_RGB) < 40
+                        and colored_item_pixels(frames, "transferred-away", ESCAPE_RGB) >= 40):
                     break
                 time.sleep(.3)
             else:
@@ -175,8 +175,8 @@ def run(upstream, destination):
                 if game.poll() is not None:
                     raise RuntimeError("ScummVM exited during absent-speaker control")
                 frame("absent")
-                if (colored_item_pixels(frames, "absent", ESCAPE_RGB, fuzz_percent=4) < 40
-                        and colored_item_pixels(frames, "absent", REVEAL_RGB, fuzz_percent=4) >= 40):
+                if (colored_item_pixels(frames, "absent", ESCAPE_RGB) < 40
+                        and colored_item_pixels(frames, "absent", REVEAL_RGB) >= 40):
                     break
                 time.sleep(.3)
             else:
