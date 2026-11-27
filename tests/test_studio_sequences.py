@@ -383,6 +383,9 @@ class NativeSequenceEditorTests(unittest.TestCase):
         self.assertEqual(doc.interaction_sequences[0].steps[0], ActorStandAnimationStep("Guide", "rest"))
         self.assertEqual(sequence_step_fields(raw, identity, 0)[:3],
                          ("Actor Standanimation", "Guide", "rest"))
+        from adventure_studio.studio_sequences import actor_animations
+        self.assertEqual(actor_animations(raw, "Guide", "Actor Standanimation"), ("stand", "rest"))
+        self.assertEqual(actor_animations(raw, "Guide"), ("rest",))
         source = inject_interaction_sequences(scummc_room_source(room), "Harbor",
             doc.interaction_sequences, doc.actors, doc.costumes, room)
         normal, override = source.split("} override {", 1)

@@ -2171,16 +2171,19 @@ def make_app():
         native_state.change(native_camera_fields, [native_state, native_room],
                             [native_camera_ego_x, native_camera_ego_y,
                              native_camera_cues, native_camera_stationary])
-        def native_actor_update(raw, actor):
-            animations = actor_animations(raw, actor) if raw is not None else ()
+        def native_actor_update(raw, actor, kind, selected):
+            animations = actor_animations(raw, actor, kind) if raw is not None else ()
+            initial_choices = actor_animations(raw, actor) if raw is not None else ()
             initial = next((item.initial_animation for item in parse_document(raw).actors
                             if item.id == actor), None) if raw is not None else None
-            return (gr.update(choices=animations, value=animations[0] if animations else None),
-                    gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in animations]],
+            return (gr.update(choices=animations, value=selected if selected in animations else
+                              (animations[0] if animations else None)),
+                    gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in initial_choices]],
                               value=initial))
 
-        native_actor.change(native_actor_update, [native_state, native_actor],
-                            [native_animation, native_actor_initial])
+        for event in (native_actor.change, native_kind.change):
+            event(native_actor_update, [native_state, native_actor, native_kind, native_animation],
+                  [native_animation, native_actor_initial])
         def native_actor_zclip_update(raw, actor_id):
             actor = next((actor for actor in parse_document(raw).actors if actor.id == actor_id), None) if raw is not None else None
             return (actor.initial_zclip, actor.reset_zclip_on_room_entry) if actor else (0, False)
@@ -2226,7 +2229,7 @@ def make_app():
             sequence_room = identity.split("|", 1)[0] if identity else None
             rooms, objects, actors = project_choices(raw, sequence_room)
             actors = native_action_actor_ids(raw, sequence_room, fields[0])
-            animations = actor_animations(raw, fields[1]) if fields[1] else ()
+            animations = actor_animations(raw, fields[1], fields[0]) if fields[1] else ()
             return (fields[0], gr.update(choices=[("Ego (für gesprochene Zeile)", None),
                                                  *[(item, item) for item in actors]], value=fields[1]),
                     gr.update(choices=animations, value=fields[2]),

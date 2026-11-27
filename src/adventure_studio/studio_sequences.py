@@ -23,7 +23,7 @@ from .story_to_scumm import compile_story_to_scumm
 from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render_costume_frame,
                             costume_timeline_images, render_costume_preview,
                             render_costume_frame_sequence_preview)
-from .scumm_costume import CostumeAnimation, CostumeDirection
+from .scumm_costume import CostumeAnimation, CostumeDirection, stand_animation_frame
 from .scumm_assets import CameraCue, ScaleCurve, Walkbox, ZPlane
 
 
@@ -2796,12 +2796,21 @@ def project_choices(raw: str, room_name: str | None = None) -> tuple[tuple[str, 
     return rooms, objects, actors
 
 
-def actor_animations(raw: str, actor_id: str | None) -> tuple[str, ...]:
+def actor_animations(raw: str, actor_id: str | None, kind: str = "Actor animieren") -> tuple[str, ...]:
     document = parse_document(raw)
     actor = next((actor for actor in document.actors if actor.id == actor_id), None)
     if actor is None:
         return ()
     costume = next(costume for costume in document.costumes if costume.name == actor.costume)
+    if kind == "Actor Standanimation":
+        choices = []
+        for animation in costume.animations:
+            try:
+                stand_animation_frame(costume, animation.name)
+            except ValueError:
+                continue
+            choices.append(animation.name)
+        return tuple(choices)
     return tuple(animation.name for animation in costume.animations
                  if animation.index is not None
                  and actor.direction in {direction.direction for direction in animation.directions})
