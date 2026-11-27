@@ -23,7 +23,7 @@ from .story_to_scumm import compile_story_to_scumm
 from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render_costume_frame,
                             costume_timeline_images, render_costume_preview,
                             render_costume_frame_sequence_preview)
-from .scumm_costume import CostumeAnimation, CostumeDirection, stand_animation_frame, walk_animation_frame, talk_animation_frame
+from .scumm_costume import CostumeAnimation, CostumeDirection, stand_animation_frame, walk_animation_frame, talk_animation_frame, talk_stop_animation_frame
 from .scumm_assets import CameraCue, ScaleCurve, Walkbox, ZPlane
 
 
@@ -2751,7 +2751,8 @@ def _describe(step: ActorStandAnimationStep | ActorWalkAnimationStep | ActorTalk
     if isinstance(step, ActorWalkAnimationStep):
         return f"Actor {step.actor_id}: Laufanimation {step.animation}"
     if isinstance(step, ActorTalkAnimationStep):
-        return f"Actor {step.actor_id}: Sprechanimation {step.animation}"
+        return (f"Actor {step.actor_id}: Sprechanimation {step.animation}"
+                + (f" → {step.stop_animation}" if step.stop_animation is not None else ""))
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2824,11 +2825,20 @@ def actor_animations(raw: str, actor_id: str | None, kind: str = "Actor animiere
                 continue
             choices.append(animation.name)
         return tuple(choices)
-    if kind == "Actor Sprechanimation":
+    if kind in ("Actor Sprechanimation", "Actor Sprechende"):
         choices = []
         for animation in costume.animations:
             try:
                 talk_animation_frame(costume, animation.name)
+            except ValueError:
+                continue
+            choices.append(animation.name)
+        return tuple(choices)
+    if kind == "Actor Sprechende-Ziel":
+        choices = []
+        for animation in costume.animations:
+            try:
+                talk_stop_animation_frame(costume, animation.name)
             except ValueError:
                 continue
             choices.append(animation.name)
@@ -2850,6 +2860,10 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         step = ActorWalkAnimationStep(actor_id, animation)
     elif kind == "Actor Sprechanimation":
         step = ActorTalkAnimationStep(actor_id, animation)
+    elif kind == "Actor Sprechende":
+        if not isinstance(target_id, str) or not target_id:
+            raise ValueError("Sprechendanimation auswählen")
+        step = ActorTalkAnimationStep(actor_id, animation, target_id)
     elif kind == "Objektzustand setzen":
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Objektzustand muss eine ganze Zahl sein")
@@ -2984,7 +2998,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
     if isinstance(step, ActorWalkAnimationStep):
         return ("Actor Laufanimation", step.actor_id, step.animation, None, 1, 320, 100, "S")
     if isinstance(step, ActorTalkAnimationStep):
-        return ("Actor Sprechanimation", step.actor_id, step.animation, None, 1, 320, 100, "S")
+        return ("Actor Sprechende" if step.stop_animation is not None else "Actor Sprechanimation",
+                step.actor_id, step.animation, step.stop_animation, 1, 320, 100, "S")
     if isinstance(step, AnimateActorStep):
         return ("Actor animieren", step.actor_id, step.animation, None, 1, 320, 100, "S")
     if isinstance(step, MoveActorStep):

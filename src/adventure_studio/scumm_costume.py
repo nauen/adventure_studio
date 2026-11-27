@@ -105,6 +105,19 @@ def talk_animation_frame(costume: CostumeAsset, name: str) -> int:
     return animation.index
 
 
+def talk_stop_animation_frame(costume: CostumeAsset, name: str) -> int:
+    """Resolve the native second setActorTalkFrame operand, not a gesture opcode."""
+    animation = next((item for item in costume.animations if item.name == name), None)
+    if animation is None or {d.direction for d in animation.directions} != _DIRECTIONS:
+        raise ValueError("Talk-stop animation requires all four COST directions")
+    if name == "talkStop" and animation.index is None:
+        return 5
+    if (type(animation.index) is not int or animation.index % 4
+            or not 24 <= animation.index <= 52):
+        raise ValueError("Talk-stop animation requires default talkStop or explicit COST group 24..52 aligned to four")
+    return animation.index
+
+
 def validate_costume(costume: CostumeAsset) -> None:
     if not _IDENTIFIER.fullmatch(costume.name):
         raise ValueError("Invalid native costume name")

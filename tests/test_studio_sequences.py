@@ -525,6 +525,49 @@ class NativeSequenceEditorTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 replace_sequence_step(raw, identity, 0, "Actor Sprechanimation", "Guide", invalid, None, None)
 
+    def test_actor_talk_stop_roundtrip_and_escape_pair(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_costume import CostumeDirection, talk_stop_animation_frame
+        from adventure_studio.scumm_project import ActorTalkAnimationStep
+        from adventure_studio.studio_sequences import actor_animations
+        room = scrolling_fixture()
+        costume = gesture_fixture()
+        directions = tuple(CostumeDirection(d, ("Pose2",)) for d in ("N", "E", "S", "W"))
+        alternative = replace(costume.animations[-1], name="reaction", index=28, directions=directions)
+        costume = replace(costume, animations=(*costume.animations[:-1],
+            replace(costume.animations[1], name="talkStart"),
+            replace(costume.animations[1], name="talkStop"), alternative))
+        raw = canonical_json(GameDocument("TalkStopAnimation", (room, destination_fixture()),
+            (costume,), (ActorAsset("Guide", costume.name, "Harbor", 280, 85, "S"),)))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Sprechende", "Guide", "talkStart", "reaction", None)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close", "Warten", None, None, None, 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Sprechende", "Guide", "talkStart", "talkStop", None)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.interaction_sequences[0].steps[0],
+                         ActorTalkAnimationStep("Guide", "talkStart", "reaction"))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:4],
+                         ("Actor Sprechende", "Guide", "talkStart", "reaction"))
+        self.assertEqual(actor_animations(raw, "Guide", "Actor Sprechende-Ziel"), ("talkStop", "reaction"))
+        source = inject_interaction_sequences(scummc_room_source(room), "Harbor",
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        normal, override = source.split("} override {", 1)
+        override = override.split("case LookAt:", 1)[0]
+        self.assertIn("setActorTalkFrame(4,28);", normal)
+        self.assertIn("setActorTalkFrame(4,5);", override)
+        self.assertNotIn("setActorTalkFrame(4,28);", override)
+        self.assertEqual(talk_stop_animation_frame(costume, "reaction"), 28)
+        for invalid in ("stand", "talkStart", "missing"):
+            with self.assertRaises(ValueError):
+                replace_sequence_step(raw, identity, 0, "Actor Sprechende",
+                                      "Guide", "talkStart", invalid, None)
+
     def test_actor_zclip_roundtrip_native_export_and_escape(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import ZPlane, scummc_room_source
