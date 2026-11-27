@@ -87,23 +87,45 @@ def run(upstream, destination):
             baseline_start = offset()
             time.sleep(1)
             baseline_end = offset()
-            click(234, 563)
-            click(*colored_item_center(frames, "cellar", REVEAL_RGB, fuzz_percent=4))
-            deadline = time.monotonic() + 20
-            heard = None
+            baseline = activity(pcm_path.read_bytes()[baseline_start:baseline_end])
+
+            def play_voice(label):
+                frame("cellar")
+                click(234, 563)
+                click(*colored_item_center(frames, "cellar", REVEAL_RGB, fuzz_percent=4))
+                deadline = time.monotonic() + 20
+                while time.monotonic() < deadline:
+                    if game.poll() is not None:
+                        raise RuntimeError("ScummVM exited during native voice")
+                    first = offset()
+                    time.sleep(.4)
+                    last = offset()
+                    data = pcm_path.read_bytes() if pcm_path.exists() else b""
+                    if last-first >= 8192 and activity(data[first:last]) > baseline + .1:
+                        frame(label)
+                        return first, last
+                raise RuntimeError("No native VOC PCM activity after destination click")
+
+            # First finish the authored interaction without Escape. Require
+            # a sustained quiet PCM window, then exercise the same native
+            # interaction again to prove it is available after completion.
+            normal_heard = play_voice("speaking-normal")
+            deadline = time.monotonic() + 25
+            normal_quiet = None
             while time.monotonic() < deadline:
                 if game.poll() is not None:
-                    raise RuntimeError("ScummVM exited during native voice")
+                    raise RuntimeError("ScummVM exited during normal native voice completion")
                 first = offset()
-                time.sleep(.4)
+                time.sleep(1.5)
                 last = offset()
-                data = pcm_path.read_bytes() if pcm_path.exists() else b""
-                if last-first >= 8192 and activity(data[first:last]) > activity(data[baseline_start:baseline_end]) + .1:
-                    heard = (first, last)
+                data = pcm_path.read_bytes()
+                if last-first >= 8192 and activity(data[first:last]) <= baseline + .05:
+                    normal_quiet = (first, last)
                     break
-            if heard is None:
-                raise RuntimeError("No native VOC PCM activity after destination click")
-            frame("speaking")
+            if normal_quiet is None:
+                raise RuntimeError("Native VOC did not return to silence without Escape")
+            frame("after-normal")
+            heard = play_voice("speaking")
             subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=10)
             time.sleep(1)
             after_start = offset()
@@ -121,12 +143,18 @@ def run(upstream, destination):
                 game.wait(timeout=5)
     pcm = pcm_path.read_bytes()
     report = {"before": activity(pcm[baseline_start:baseline_end]),
+              "during_normal": activity(pcm[normal_heard[0]:normal_heard[1]]),
+              "after_normal": activity(pcm[normal_quiet[0]:normal_quiet[1]]),
+              "normal_completed_without_escape": True,
+              "replayed_after_normal_completion": True,
               "during": activity(pcm[heard[0]:heard[1]]),
               "after_escape": activity(pcm[after_start:after_end]),
               "pcm_bytes": len(pcm), "escape_sent": True,
               "subtitle_frame": "scummvm-speaking.png"}
     report["native_transferred_actor_voice_audio_verified"] = (
         baseline_end-baseline_start >= 8192 and after_end-after_start >= 8192
+        and report["during_normal"] > report["before"] + .1
+        and report["during_normal"] > report["after_normal"] + .1
         and report["during"] > report["before"] + .1
         and report["during"] > report["after_escape"] + .1)
     (destination / "report.json").write_text(json.dumps(report, indent=2))
