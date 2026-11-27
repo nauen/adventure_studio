@@ -2129,7 +2129,7 @@ def make_app():
             document = parse_document(raw)
             if kind == "Actor-Raumtransfer mit Z-Clipping":
                 actors = tuple(a.id for a in document.actors)
-            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor drehen", "Kamera folgt Actor", "Actor versetzen"):
+            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor drehen", "Kamera folgt Actor", "Actor versetzen", "Gesprochene Zeile"):
                 from .scumm_project import TransferActorZClipStep
                 transferred = {step.actor_id for sequence in document.interaction_sequences
                                for step in sequence.steps
@@ -2144,7 +2144,8 @@ def make_app():
                 return gr.skip()
             actors = native_action_actor_ids(raw, room, kind)
             return gr.update(choices=[("Ego (für gesprochene Zeile)", None), *[(a, a) for a in actors]],
-                             value=selected if selected in actors else (actors[0] if actors else None))
+                             value=selected if selected in actors or (kind == "Gesprochene Zeile" and selected is None)
+                             else (actors[0] if actors else None))
 
         native_kind.change(native_transfer_actor_choices, [native_state, native_room, native_kind, native_actor], [native_actor])
         native_room.change(native_room_update, [native_state, native_room],

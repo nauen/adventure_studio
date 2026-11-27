@@ -76,6 +76,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                         continue
                     if ident in ("R06North", "R06South") and not facing:
                         continue
+                    # Keep Ego's verb walk destination away from the measured Actor lane.
                     hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
                                           sprite_pixels=bytes([len(room.palette)]) * 256)
                     room = replace(room, palette=(*room.palette, color),

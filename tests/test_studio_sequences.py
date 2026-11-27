@@ -107,6 +107,47 @@ class NativeSequenceEditorTests(unittest.TestCase):
 
 
 
+    def test_transferred_actor_voice_uses_native_room_presence(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import SoundAsset
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        with tempfile.TemporaryDirectory() as directory:
+            raw = author_transfer_project(Path(directory), "masked")
+            doc = parse_document(raw)
+            raw = canonical_json(replace(doc, sound_assets=(*doc.sound_assets,
+                SoundAsset("CellarGreeting", "Cellar", original_voc_effect()),
+                SoundAsset("CellarGreetingDE", "Cellar", original_voc_effect(330)))))
+            actor = ACTOR_IDS[0]
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                       "Gesprochene Zeile", actor, None, "CellarGreeting", None,
+                                       subtitle="Hello from the cellar.")
+            identity = "Cellar|R06TransferReturn|Open"
+            raw = edit_voice_variant(raw, identity, 0, "de", "CellarGreetingDE", "Hallo aus dem Keller.")
+            raw = set_sequence_skippable(raw, identity, True)
+            doc = parse_document(raw)
+            self.assertEqual(canonical_json(doc), raw)
+            room = next(r for r in doc.rooms if r.name == "Cellar")
+            seq = next(s for s in doc.interaction_sequences
+                       if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
+            native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
+                                                   (seq,), doc.actors, doc.costumes, room)
+            normal, override = native.split("} override {", 1)
+            guard = f"if (getActorRoom({actor}) == VAR_ROOM)"
+            self.assertLess(normal.index(guard), normal.index("startSound(CellarGreeting"))
+            self.assertIn(f"actorSay({actor},", normal)
+            self.assertIn("waitForMessage();", normal)
+            for sound in ("CellarGreeting", "CellarGreetingDE"):
+                self.assertIn(f"startSound({sound});", normal)
+                self.assertIn(f"stopSound({sound});", normal)
+                self.assertIn(f"stopSound({sound});", override)
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                     "Gesprochene Zeile", ACTOR_IDS[1], None, "CellarGreeting", None,
+                                     subtitle="Not present.")
+
     def test_transferred_actor_position_uses_native_room_presence(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
@@ -318,6 +359,9 @@ class NativeSequenceEditorTests(unittest.TestCase):
             self.assertEqual(sequences["R06Reveal"].steps[-1], ObjectStateStep("R06Restore", 1))
             self.assertEqual(sequences["R06Restore"].steps[0], ObjectStateStep("R06Restore", 0))
             self.assertEqual(sequences["R06Restore"].steps[1], DelayStep(12))
+            room = next(room for room in doc.rooms if room.name == "Cellar")
+            restore = next(hotspot for hotspot in room.hotspots if hotspot.id == "R06Restore")
+            self.assertEqual((restore.x, restore.y), (180, 100))
 
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source

@@ -665,6 +665,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                             f"{indent}waitForMessage();\n"
                             f"{indent}stopSound({sound_id});\n")
 
+                voice_start = len(instructions)
                 if step.variants:
                     for variant in step.variants:
                         code = int.from_bytes(variant.language.encode("ascii"), "big")
@@ -675,6 +676,12 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                         + "            }\n")
                 else:
                     instructions.append(line(step.sound_id, step.text, "            "))
+                if step.actor_id is not None:
+                    voice_body = "".join(instructions[voice_start:])
+                    instructions[voice_start:] = [
+                        f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
+                        + "".join("    " + row for row in voice_body.splitlines(keepends=True))
+                        + "            }\n"]
             else:
                 raise ValueError("Unsupported native interaction step")
         return "".join(instructions)
