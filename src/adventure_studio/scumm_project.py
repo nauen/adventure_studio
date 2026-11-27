@@ -92,6 +92,7 @@ class AnimateActorStep:
 class SetGameVariableStep:
     name: str
     value: int
+    relative: bool = False
 
 
 def game_variable_symbol(name: str) -> str:
@@ -281,6 +282,7 @@ class InteractionSequence:
     condition_state: int | None = None
     skippable: bool = False
     condition_variable: str | None = None
+    condition_operator: str = "=="
 
 
 @dataclass(frozen=True)
@@ -395,10 +397,13 @@ def document_dict(document: GameDocument) -> dict:
                                         **({"condition_variable": sequence.condition_variable,
                                             "condition_state": sequence.condition_state}
                                            if sequence.condition_variable is not None else {}),
+                                        **({"condition_operator": sequence.condition_operator}
+                                           if sequence.condition_operator != "==" else {}),
                                         **({"skippable": True} if sequence.skippable else {}),
                                         "steps": [({"type": "animate_actor", **vars(step)}
                                                    if isinstance(step, AnimateActorStep)
-                                                   else {"type": "set_game_variable", **vars(step)}
+                                                   else {"type": "set_game_variable", "name": step.name, "value": step.value,
+                                                         **({"relative": True} if step.relative else {})}
                                                    if isinstance(step, SetGameVariableStep)
                                                    else {"type": "object_class", **vars(step)}
                                                    if isinstance(step, ObjectClassStep)
@@ -914,6 +919,9 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError("Interaction sequence requires ordered steps")
         if type(sequence.skippable) is not bool:
             raise ValueError("Interaction skip setting must be boolean")
+        if sequence.condition_operator not in ("==", "!=", "<", "<=", ">", ">=") or (
+                sequence.condition_variable is None and sequence.condition_operator != "=="):
+            raise ValueError("Only variable conditions support numeric comparisons")
         if sequence.condition_variable is not None:
             game_variable_symbol(sequence.condition_variable)
             if (sequence.condition_hotspot_id is not None or type(sequence.condition_state) is not int
@@ -940,7 +948,8 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction animation lacks Actor direction")
             elif isinstance(step, SetGameVariableStep):
                 game_variable_symbol(step.name)
-                if type(step.value) is not int or not -32768 <= step.value <= 32767:
+                if (type(step.relative) is not bool or type(step.value) is not int
+                        or not -32768 <= step.value <= 32767):
                     raise ValueError("Game variable requires a signed 16-bit integer")
             elif isinstance(step, ObjectClassStep):
                 if (not isinstance(step.hotspot_id, str)
@@ -1088,13 +1097,30 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction facing requires an Actor in the room and a cardinal direction")
             else:
                 raise ValueError("Unsupported interaction sequence step")
+    def comparison_ranges(operator, value):
+        low, high = -32768, 32767
+        return {"==": ((value, value),), "!=": ((low, value-1), (value+1, high)),
+                "<": ((low, value-1),), "<=": ((low, value),),
+                ">": ((value+1, high),), ">=": ((value, high),)}[operator]
+
+    snapshots = {}
+    for sequence in document.interaction_sequences:
+        if sequence.skippable:
+            names = snapshots.setdefault((sequence.room, sequence.hotspot_id), set())
+            names.update(step.name for step in sequence.steps
+                         if isinstance(step, SetGameVariableStep) and step.relative)
+    if any(len(names) > 8 for names in snapshots.values()):
+        raise ValueError("At most eight variable snapshots per native object verb block")
     for group in sequence_groups.values():
         if len(group) < 2:
             continue
         guards = [item for item in group if item.condition_hotspot_id is not None or item.condition_variable is not None]
         if (len(guards) < len(group) - 1
                 or len({(item.condition_hotspot_id, item.condition_variable) for item in guards}) != 1
-                or len({item.condition_state for item in guards}) != len(guards)):
+                or any(max(a, c) <= min(b, d)
+                       for i, first in enumerate(guards) for second in guards[i+1:]
+                       for a, b in comparison_ranges(first.condition_operator, first.condition_state)
+                       for c, d in comparison_ranges(second.condition_operator, second.condition_state))):
             raise ValueError("Interaction alternatives need distinct states of one object or variable and at most one fallback")
     variable_names = game_variable_names(document)
     reserved = {game_variable_symbol(name) for name in variable_names}
@@ -1211,7 +1237,7 @@ def parse_document(source: str) -> GameDocument:
     interaction_sequences = []
     for raw_sequence in raw_sequences:
         item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps",
-                                    "condition_hotspot_id", "condition_state", "skippable", "condition_variable"},
+                                    "condition_hotspot_id", "condition_state", "skippable", "condition_variable", "condition_operator"},
                      {"room", "hotspot_id", "verb", "steps"})
         if not isinstance(item["steps"], list):
             raise ValueError("Interaction steps must be a list")
@@ -1225,8 +1251,8 @@ def parse_document(source: str) -> GameDocument:
                              {"type", "actor_id", "animation"})
                 steps.append(AnimateActorStep(step["actor_id"], step["animation"]))
             elif kind == "set_game_variable":
-                step = _only(raw_step, {"type", "name", "value"}, {"type", "name", "value"})
-                steps.append(SetGameVariableStep(step["name"], step["value"]))
+                step = _only(raw_step, {"type", "name", "value", "relative"}, {"type", "name", "value"})
+                steps.append(SetGameVariableStep(step["name"], step["value"], step.get("relative", False)))
             elif kind == "object_class":
                 step = _only(raw_step, {"type", "hotspot_id", "class_id", "enabled"},
                              {"type", "hotspot_id", "class_id", "enabled"})
@@ -1315,7 +1341,8 @@ def parse_document(source: str) -> GameDocument:
                                                          item.get("condition_hotspot_id"),
                                                          item.get("condition_state"),
                                                          item.get("skippable", False),
-                                                         item.get("condition_variable")))
+                                                         item.get("condition_variable"),
+                                                         item.get("condition_operator", "==")))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",

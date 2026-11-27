@@ -597,7 +597,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                     f"                animateActor({actor.id},{animation.index});\n"
                                     "            }\n")
             elif isinstance(step, SetGameVariableStep):
-                instructions.append(f"            {game_variable_symbol(step.name)} = {step.value};\n")
+                symbol = game_variable_symbol(step.name)
+                expression = f"{symbol} + ({step.value})" if step.relative else str(step.value)
+                instructions.append(f"            {symbol} = {expression};\n")
             elif isinstance(step, ObjectClassStep):
                 value = step.class_id | (128 if step.enabled else 0)
                 instructions.append(f"            setObjectClass({step.hotspot_id},[{value}]);\n")
@@ -717,7 +719,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         final_sounds = {}
         for step in sequence.steps:
             if isinstance(step, SetGameVariableStep):
-                end_game_variables[step.name] = step.value
+                end_game_variables.setdefault(step.name, []).append(step)
             elif isinstance(step, ObjectClassStep):
                 end_object_classes[(step.hotspot_id, step.class_id)] = step.enabled
             elif isinstance(step, MoveObjectStep):
@@ -763,8 +765,18 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += inventory_action(step, "                ")
         for hotspot, (x, y) in end_object_positions.items():
             commit += f"                drawObjectAt({hotspot},{x // 8},{y // 8});\n"
-        for name, value in end_game_variables.items():
-            commit += f"                {game_variable_symbol(name)} = {value};\n"
+        snapshot = ""
+        for name, operations in end_game_variables.items():
+            symbol = game_variable_symbol(name)
+            last_set = max((i for i, step in enumerate(operations) if not step.relative), default=-1)
+            if last_set >= 0:
+                commit += f"                {symbol} = {operations[last_set].value};\n"
+            else:
+                local = "ASBefore_" + name
+                snapshot += f"            {local} = {symbol};\n"
+                commit += f"                {symbol} = {local};\n"
+            for step in operations[last_set+1:]:
+                commit += f"                {symbol} = {symbol} + ({step.value});\n"
         for (hotspot, class_id), enabled in end_object_classes.items():
             value = class_id | (128 if enabled else 0)
             commit += f"                setObjectClass({hotspot},[{value}]);\n"
@@ -825,7 +837,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                        if final_music == "start" else "                stopMusic();\n")
         for sound_id, operation in final_sounds.items():
             commit += f"                {operation}Sound({sound_id});\n"
-        return ("            cutscene(0) {\n"
+        return (snapshot + "            cutscene(0) {\n"
                 + "                try {\n"
                 + "".join("        " + line for line in actions.splitlines(True))
                 + "                } override {\n"
@@ -860,14 +872,15 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             raise ValueError(f"Conflicting native interaction verb on {sequence.hotspot_id}")
         if len(group) == 1:
             expression = condition_expression(sequence)
-            guard = (f"            if({expression} != {sequence.condition_state}) return;\n"
+            inverse = {"==": "!=", "!=": "==", "<": ">=", "<=": ">", ">": "<=", ">=": "<"}
+            guard = (f"            if({expression} {inverse[sequence.condition_operator]} {sequence.condition_state}) return;\n"
                      if expression is not None else "")
             native = (f"        case {sequence.verb}:\n" + guard
                       + playable_sequence(sequence) + "            return;\n")
         else:
             native = f"        case {sequence.verb}:\n"
             for branch in (item for item in group if condition_expression(item) is not None):
-                native += (f"            if({condition_expression(branch)} == "
+                native += (f"            if({condition_expression(branch)} {branch.condition_operator} "
                            f"{branch.condition_state}) {{\n"
                            + "".join("    " + line for line in playable_sequence(branch).splitlines(True))
                            + "                return;\n            }\n")
@@ -875,7 +888,21 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             if fallback is not None:
                 native += playable_sequence(fallback)
             native += "            return;\n"
-        source = source[:start] + segment.replace(verb_marker, verb_marker + native, 1) + source[end:]
+        # ScummC declares verb-local variables before the case labels.
+        # Insert the snapshots once per object, even with several verbs.
+        local_names = sorted({step.name for item in active if item.hotspot_id == sequence.hotspot_id
+                              and item.skippable for step in item.steps
+                              if isinstance(step, SetGameVariableStep) and step.relative})
+        declarations = "".join(f"            int ASBefore_{name};\n" for name in local_names
+                               if f"int ASBefore_{name};" not in segment)
+        if declarations:
+            segment = segment.replace(verb_marker, verb_marker + declarations, 1)
+        # Keep declarations ahead of every case, including later groups.
+        insertion = segment.index(verb_marker) + len(verb_marker)
+        while segment.startswith("            int ASBefore_", insertion):
+            insertion = segment.index("\n", insertion) + 1
+        segment = segment[:insertion] + native + segment[insertion:]
+        source = source[:start] + segment + source[end:]
     return source
 
 

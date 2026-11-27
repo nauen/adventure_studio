@@ -2667,7 +2667,7 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
 def sequence_choices(raw: str) -> tuple[tuple[str, str], ...]:
     document = parse_document(raw)
     return tuple((f"{item.room} / {item.hotspot_id} / {item.verb}"
-                  + (f" [wenn Variable {item.condition_variable}={item.condition_state}]"
+                  + (f" [wenn Variable {item.condition_variable} {item.condition_operator} {item.condition_state}]"
                      if item.condition_variable is not None else
                      f" [wenn {item.condition_hotspot_id}={item.condition_state}]"
                      if item.condition_hotspot_id is not None else " [sonst/immer]"),
@@ -2709,8 +2709,14 @@ def set_sequence_skippable(raw: str, identity: str, enabled: bool) -> str:
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
 
 
+def sequence_condition_operator(raw: str, identity: str | None) -> str:
+    sequence = next((item for item in parse_document(raw).interaction_sequences
+                     if _identity(item) == identity), None)
+    return sequence.condition_operator if sequence else "=="
+
+
 def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
-                           state: int | float | None) -> str:
+                           state: int | float | None, operator: str = "==") -> str:
     """Set or clear a native object-state guard on an existing verb sequence."""
     document = parse_document(raw)
     index = next((i for i, item in enumerate(document.interaction_sequences)
@@ -2726,12 +2732,13 @@ def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
     sequences = list(document.interaction_sequences)
     variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
     sequences[index] = replace(sequences[index], condition_hotspot_id=None if variable is not None else hotspot_id,
-                               condition_variable=variable, condition_state=condition_state)
+                               condition_variable=variable, condition_state=condition_state,
+                               condition_operator=operator if variable is not None else "==")
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
 
 
 def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
-                               state: int | float | None) -> str:
+                               state: int | float | None, operator: str = "==") -> str:
     """Copy the selected action sequence as an independently editable state branch."""
     document = parse_document(raw)
     original = next((item for item in document.interaction_sequences
@@ -2742,14 +2749,16 @@ def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
         raise ValueError("Alternative benötigt ein Objekt und einen ganzen Zustand")
     variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
     variant = replace(original, condition_hotspot_id=None if variable is not None else hotspot_id,
-                      condition_variable=variable, condition_state=int(state))
+                      condition_variable=variable, condition_state=int(state),
+                      condition_operator=operator if variable is not None else "==")
     return _checked(replace(document, interaction_sequences=(*document.interaction_sequences, variant)))
 
 
 def _identity(sequence: InteractionSequence) -> str:
     base = f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
     if sequence.condition_variable is not None:
-        return f"{base}|var:{sequence.condition_variable}|{sequence.condition_state}"
+        suffix = "" if sequence.condition_operator == "==" else f"|{sequence.condition_operator}"
+        return f"{base}|var:{sequence.condition_variable}|{sequence.condition_state}{suffix}"
     return (base if sequence.condition_hotspot_id is None else
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
@@ -2796,7 +2805,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | SetGameVari
                 + (" [" + ", ".join(item.language for item in step.variants) + "]"
                    if step.variants else ""))
     if isinstance(step, SetGameVariableStep):
-        return f"Spielvariable {step.name} = {step.value}"
+        return (f"Spielvariable {step.name}: Änderung {step.value:+d}" if step.relative
+                else f"Spielvariable {step.name} = {step.value}")
     if isinstance(step, ObjectClassStep):
         return f"Objekt {step.hotspot_id}: Klasse {step.class_id} {'setzen' if step.enabled else 'entfernen'}"
     if isinstance(step, MoveObjectStep):
@@ -2830,12 +2840,12 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
                 direction: str | None, subtitle: str | None = None):
     if kind == "Actor animieren":
         step = AnimateActorStep(actor_id, animation)
-    elif kind == "Spielvariable setzen":
+    elif kind in ("Spielvariable setzen", "Spielvariable ändern"):
         if not isinstance(target_id, str) or not target_id.startswith("var:"):
             raise ValueError("Variable als var:Name im Zielfeld eingeben")
         if type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Variablenwert muss ganzzahlig sein")
-        step = SetGameVariableStep(target_id[4:], int(amount))
+        step = SetGameVariableStep(target_id[4:], int(amount), kind == "Spielvariable ändern")
     elif kind in ("Objektklasse setzen", "Objektklasse entfernen", "Objekt anklickbar", "Objekt unanklickbar"):
         if kind in ("Objekt anklickbar", "Objekt unanklickbar"):
             step = ObjectClassStep(target_id, 32, kind == "Objekt unanklickbar")
@@ -3026,7 +3036,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Gesprochene Zeile", step.actor_id, None, step.sound_id,
                 1, 320, 100, "S", step.text)
     if isinstance(step, SetGameVariableStep):
-        return ("Spielvariable setzen", None, None, "var:" + step.name, step.value, 320, 100, "S")
+        return ("Spielvariable ändern" if step.relative else "Spielvariable setzen",
+                None, None, "var:" + step.name, step.value, 320, 100, "S")
     if isinstance(step, ObjectClassStep):
         kind = ("Objekt unanklickbar" if step.enabled else "Objekt anklickbar") if step.class_id == 32 else (
             "Objektklasse setzen" if step.enabled else "Objektklasse entfernen")

@@ -26,7 +26,7 @@ from .studio_export import export_playable, export_native_project
 from .studio_sequences import (actor_animations, append_sequence_step, append_selected_sequence_step,
                                modify_sequence_step,
                                replace_sequence_step, sequence_step_fields,
-                               sequence_condition_fields, set_sequence_condition,
+                               sequence_condition_fields, sequence_condition_operator, set_sequence_condition,
                                duplicate_sequence_variant, sequence_skip_enabled,
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
@@ -991,7 +991,7 @@ def make_app():
                 native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
                 native_sound_add = gr.Button("VOC dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Sprechfarbe", "Actor Sprechtext-Position", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objekt versetzen", "Objektzustand setzen", "Objekt anklickbar", "Objekt unanklickbar", "Objektklasse setzen", "Objektklasse entfernen", "Spielvariable setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Sprechfarbe", "Actor Sprechtext-Position", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objekt versetzen", "Objektzustand setzen", "Objekt anklickbar", "Objekt unanklickbar", "Objektklasse setzen", "Objektklasse entfernen", "Spielvariable setzen", "Spielvariable ändern", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum / Spielvariable (var:Name)", allow_custom_value=True)
@@ -1010,12 +1010,15 @@ def make_app():
             gr.Markdown("**Objekt versetzen:** Ein Raumobjekt mit Bild auswählen und X/Y in Raumpixeln (Vielfache von 8) angeben. Die native Aktion verschiebt Bild und Hotspot und setzt Bildzustand 1. Danach kann ein weiterer Objektzustand gesetzt werden. Inventargegenstände sind ausgeschlossen.")
             gr.Markdown("**Objekt anklickbar / unanklickbar:** Ändert die native Untouchable-Klasse (32), ohne den Bildzustand zu ändern. **Objektklasse setzen / entfernen:** Andere native oder spielinterne Klassen 1–32 einzeln ändern; bestehende Klassen bleiben erhalten.")
             gr.Markdown("**Spielvariable setzen:** Im Zielfeld `var:Quest` eingeben oder auswählen und einen ganzzahligen Wert setzen. Variablen beginnen bei 0, gelten raumübergreifend und sind in den Interaktionsbedingungen auswählbar.")
+            gr.Markdown("**Spielvariable ändern:** Positive oder negative Differenz zum aktuellen Wert. Vergleichsoperatoren gelten für Spielvariablen; alternative Bedingungen dürfen sich nicht überschneiden.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
             native_add_selected = gr.Button("Schritt an ausgewählte Variante anhängen")
             with gr.Row():
                 native_condition_object = gr.Dropdown(
                     label="Interaktion nur bei Objektzustand oder Spielvariable", choices=[("Immer ausführen", None)])
+                native_condition_operator = gr.Dropdown(label="Vergleich (Spielvariable)",
+                    choices=["==", "!=", "<", "<=", ">", ">="], value="==")
                 native_condition_state = gr.Number(label="Erforderlicher Zustand / Variablenwert",
                                                    value=0, precision=0)
                 native_condition_save = gr.Button("Bedingung speichern")
@@ -2204,17 +2207,17 @@ def make_app():
                                [native_step, native_steps])
         def native_condition_update(raw, identity):
             if raw is None:
-                return gr.update(choices=[("Immer ausführen", None)], value=None), 0
+                return gr.update(choices=[("Immer ausführen", None)], value=None), 0, "=="
             room = identity.split("|", 1)[0] if identity else None
             _, objects, _ = project_choices(raw, room)
             target, state = sequence_condition_fields(raw, identity)
             return (gr.update(choices=[("Immer ausführen", None),
                                        *[(item, item) for item in objects],
                                        *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]], value=target),
-                    state)
+                    state, sequence_condition_operator(raw, identity))
 
         native_sequence.change(native_condition_update, [native_state, native_sequence],
-                               [native_condition_object, native_condition_state])
+                               [native_condition_object, native_condition_state, native_condition_operator])
         native_sequence.change(lambda raw, identity: sequence_skip_enabled(raw, identity)
                                if raw is not None else False,
                                [native_state, native_sequence], [native_skippable])
@@ -2223,11 +2226,11 @@ def make_app():
                                [native_state, *native_outputs, native_report])
         native_condition_save.click(lambda *args: native_edit(set_sequence_condition, *args),
                                     [native_state, native_sequence, native_condition_object,
-                                     native_condition_state],
+                                     native_condition_state, native_condition_operator],
                                     [native_state, *native_outputs, native_report])
         native_variant_add.click(lambda *args: native_edit(duplicate_sequence_variant, *args),
                                  [native_state, native_sequence, native_condition_object,
-                                  native_condition_state],
+                                  native_condition_state, native_condition_operator],
                                  [native_state, *native_outputs, native_report])
         def native_step_update(raw, identity, number):
             fields = sequence_step_fields(raw, identity, number)
