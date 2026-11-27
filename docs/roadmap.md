@@ -1,10 +1,10 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
-- **Jetzt:** #366 – native IM03/ZP04-Verdeckung (R07/R06-Anschluss).
-- **Abnahme:** native Pixelmessung maskiert/transparent/falscher BOXD bei unabhängigen ZP01–03.
-- **Blocker:** Drei unabhängig verlinkte stock-ScummVM-Spiele mit transparenten IM03/ZP01–03 und ZP04 maskiert/transparent/falscher BOXD-Zuweisung (4/4/3). [Core](https://github.com/nauen/adventure_studio/actions/runs/46012233061), [Native](https://github.com/nauen/adventure_studio/actions/runs/46012244891); Runner-Warteschlange, Gameplay offen. #348/#363/#364/#365 bleiben Integrationsvoraussetzungen.
-- **Danach:** R06 dynamische Actor-Laufanimations-Zuordnung. #365 Gameplay belegt; #336 Final-Follow nach aktueller main-Integration erneut in CI; siehe [PROJECT_STATUS](PROJECT_STATUS.md).
+- **Jetzt:** #368 – native dynamische Actor-Laufanimations-Zuordnung (R06/A04).
+- **Abnahme:** alternative und wiederhergestellte Laufpose an mindestens drei echten bewegten Positionen; unveränderte Standpose bei Ankunft.
+- **Blocker:** Neue [Core](https://github.com/nauen/adventure_studio/actions/runs/46014083545) und [Native](https://github.com/nauen/adventure_studio/actions/runs/46014093542) nach Importkorrektur; Gameplay offen. #359 Integration vorausgesetzt. Alternative Laufpose und wiederhergestellte Standardlaufpose an mindestens drei tatsächlich unterschiedlichen bewegten Positionen, unveränderte Standpose an beiden Ankünften.
+- **Danach:** R06 dynamische native Actor-Sprechanimations-Zuordnung nach Abnahme und Bestandsprüfung. IM01–03/ZP01–04 Gameplay belegt, Integration offen; siehe [PROJECT_STATUS](PROJECT_STATUS.md).
 
 Nach Gameplay-Nachweis sofort ein Folgepaket aufnehmen; Merge-Pflichtgates unverändert.
 
