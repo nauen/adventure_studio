@@ -1511,6 +1511,20 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/chain-fixture /tmp/chain-smoke --chain-only
+      - name: Play authored counter and lever puzzle through native goal room
+        if: ${{ matrix.shard == 'story' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_puzzle_workflow_probe /tmp/scummc-upstream /tmp/native-puzzle-workflow
+      - name: Retain authored native puzzle workflow evidence
+        if: ${{ always() && matrix.shard == 'story' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-puzzle-workflow
+          path: /tmp/native-puzzle-workflow
+          if-no-files-found: ignore
       - name: Compile v2 recipe story and its inventory combination
         if: ${{ matrix.shard == 'story' }}
         env:

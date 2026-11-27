@@ -24,7 +24,7 @@ from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_ob
                               inject_language_keys, inject_language_room_probe, inject_multilingual_charset,
                               inject_screen_language_verbs, retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
-from .scumm_project import VoiceLineStep, parse_document
+from .scumm_project import VoiceLineStep, parse_document, game_variable_names, game_variable_symbol
 
 
 def _voice_charset(document, resources: Path, upstream: Path,
@@ -166,6 +166,11 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
         bootstrap, header, document.actors, document.costumes,
         tuple(room.name for room in document.rooms))
     header = inject_actor_initial_flags(header, document.actors)
+    for name in game_variable_names(document):
+        symbol = game_variable_symbol(name)
+        if symbol in header or symbol in bootstrap:
+            raise ValueError(f"Native game variable symbol conflicts with bootstrap: {symbol}")
+        header += f"\nint {symbol};\n"
     if document.actors:
         cost_compiler = _tool(upstream, "cost")
         for costume_name in sorted({actor.costume for actor in document.actors}):
