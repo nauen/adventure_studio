@@ -27,7 +27,7 @@ from .scumm_costume import CostumeAnimation, CostumeDirection
 from .scumm_assets import CameraCue, ScaleCurve, Walkbox, ZPlane
 
 
-VERBS = ("Push", "Pull", "Open", "Close", "TalkTo", "LookAt", "Use")
+VERBS = ("Push", "Pull", "Open", "Close", "TalkTo", "LookAt", "Use", "Give")
 
 
 def room_camera_form_values(raw: str, room_name: str) -> tuple[int, int, str, bool]:

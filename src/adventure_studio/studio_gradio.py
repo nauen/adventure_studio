@@ -903,7 +903,8 @@ def make_app():
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum", elem_id="native-room")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt", elem_id="native-hotspot")
-                native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close", "TalkTo", "LookAt", "Use"], value="Open")
+                native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close", "TalkTo", "LookAt", "Use", "Give"], value="Open")
+            gr.Markdown("**Give (Gib an):** Ziel-NPC oder Zielobjekt und ausgewählten Inventargegenstand als Bedingung wählen. Eine Übergabe entfernt den Gegenstand nur, wenn die Sequenz den entsprechenden Verbrauchsschritt enthält. Falsche Gegenstände können eine eigene Reaktion auslösen.")
             gr.Markdown("**Use (Benutze mit):** Als auslösendes Objekt das Ziel wählen, danach als erste Bedingung den benutzten Inventargegenstand (Wert 1) auswählen. Mehrere unterschiedliche Gegenstände können eigene Varianten auslösen. Vorhandene Verwendungs-/Kombinationsregeln bleiben geschützt.")
             gr.Markdown("**LookAt (Schau an):** Eine bedingte Interaktion kann abhängig vom Rätselzustand einen anderen Hinweis geben. Wenn keine Bedingung passt und keine eigene Standardvariante existiert, bleibt die normale Objektbeschreibung erhalten.")
             gr.Markdown("**TalkTo (Rede mit):** Startet eine freie, bedingte Interaktion über das native Sprechverb. Vorhandene lineare Dialoge oder Dialogbäume desselben Hotspots bleiben geschützt; ein konkurrierender TalkTo-Schritt wird abgelehnt.")
@@ -2229,7 +2230,7 @@ def make_app():
                        *[(f"Inventar: {name}", "inv:" + name) for name in inventory],
                        *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(document)]]
             second, value, operator, join = sequence_second_condition_fields(raw, identity)
-            used = [(f"Benutzter Gegenstand: {name}", "used:" + name) for name in inventory] if identity and identity.split("|")[2] == "Use" else []
+            used = [(f"Ausgewählter Gegenstand: {name}", "used:" + name) for name in inventory] if identity and identity.split("|")[2] in ("Use", "Give") else []
             return (gr.update(choices=[("Immer ausführen", None), *choices, *used], value=target),
                     state, sequence_condition_operator(raw, identity),
                     gr.update(choices=[("Keine", None), *choices], value=second), value, operator, join)

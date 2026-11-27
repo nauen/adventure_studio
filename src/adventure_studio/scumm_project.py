@@ -943,7 +943,7 @@ def _validate_document(document: GameDocument) -> None:
         if room is None or not isinstance(sequence.hotspot_id, str) or sequence.hotspot_id not in {
                 hotspot.id for hotspot in room.hotspots}:
             raise ValueError("Interaction sequence requires an existing room hotspot")
-        if sequence.verb not in ("Push", "Pull", "Open", "Close", "TalkTo", "LookAt", "Use"):
+        if sequence.verb not in ("Push", "Pull", "Open", "Close", "TalkTo", "LookAt", "Use", "Give"):
             raise ValueError("Unsupported interaction sequence verb")
         if sequence.verb == "Use":
             if (any(rule.target_id == sequence.hotspot_id for rule in room.use_rules)
@@ -969,13 +969,13 @@ def _validate_document(document: GameDocument) -> None:
                 sequence.condition_variable is None and sequence.condition_operator != "=="):
             raise ValueError("Only variable conditions support numeric comparisons")
         if sequence.condition_used_item_id is not None:
-            if (sequence.verb != "Use" or not isinstance(sequence.condition_used_item_id, str)
+            if (sequence.verb not in ("Use", "Give") or not isinstance(sequence.condition_used_item_id, str)
                     or sequence.condition_used_item_id not in inventory_ids
                     or sequence.condition_used_item_id == sequence.hotspot_id
                     or sequence.condition_hotspot_id is not None or sequence.condition_variable is not None
                     or sequence.condition_inventory_id is not None
                     or type(sequence.condition_state) is not int or sequence.condition_state != 1):
-                raise ValueError("Used-item condition requires Use, a different pickup object and value 1")
+                raise ValueError("Selected-item condition requires Use or Give, a different pickup object and value 1")
         elif sequence.condition_variable is not None:
             game_variable_symbol(sequence.condition_variable)
             if (sequence.condition_hotspot_id is not None or sequence.condition_inventory_id is not None
@@ -1219,7 +1219,7 @@ def _validate_document(document: GameDocument) -> None:
             continue
         if guards and all(item.condition_used_item_id is not None for item in guards):
             if len(guards) < len(group) - 1 or len({item.condition_used_item_id for item in guards}) != len(guards):
-                raise ValueError("Use alternatives need distinct input items and at most one fallback")
+                raise ValueError("Use/Give alternatives need distinct input items and at most one fallback")
             continue
         if (len(guards) < len(group) - 1
                 or len({(item.condition_hotspot_id, item.condition_variable, item.condition_inventory_id, item.condition_used_item_id) for item in guards}) != 1
