@@ -516,7 +516,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  room_asset=None, sound_assets=(), voice_charset=None,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
-    from .scumm_project import (AnimateActorStep, ObjectStateStep, ObjectClassStep, MoveObjectStep, DelayStep,
+    from .scumm_project import (AnimateActorStep, ObjectStateStep, SetGameVariableStep, game_variable_symbol, ObjectClassStep, MoveObjectStep, DelayStep,
                                 MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
@@ -596,6 +596,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n"
                                     f"                animateActor({actor.id},{animation.index});\n"
                                     "            }\n")
+            elif isinstance(step, SetGameVariableStep):
+                instructions.append(f"            {game_variable_symbol(step.name)} = {step.value};\n")
             elif isinstance(step, ObjectClassStep):
                 value = step.class_id | (128 if step.enabled else 0)
                 instructions.append(f"            setObjectClass({step.hotspot_id},[{value}]);\n")
@@ -704,6 +706,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_states = {}
         end_object_positions = {}
         end_object_classes = {}
+        end_game_variables = {}
         end_positions = {}
         end_directions = {}
         end_talk_colors = {}
@@ -715,7 +718,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         final_music = None
         final_sounds = {}
         for step in sequence.steps:
-            if isinstance(step, ObjectClassStep):
+            if isinstance(step, SetGameVariableStep):
+                end_game_variables[step.name] = step.value
+            elif isinstance(step, ObjectClassStep):
                 end_object_classes[(step.hotspot_id, step.class_id)] = step.enabled
             elif isinstance(step, MoveObjectStep):
                 end_object_positions[step.hotspot_id] = (step.x, step.y)
@@ -760,6 +765,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += inventory_action(step, "                ")
         for hotspot, (x, y) in end_object_positions.items():
             commit += f"                drawObjectAt({hotspot},{x // 8},{y // 8});\n"
+        for name, value in end_game_variables.items():
+            commit += f"                {game_variable_symbol(name)} = {value};\n"
         for (hotspot, class_id), enabled in end_object_classes.items():
             value = class_id | (128 if enabled else 0)
             commit += f"                setObjectClass({hotspot},[{value}]);\n"
@@ -831,6 +838,13 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 + "            }\n"
                 + transition)
 
+    def condition_expression(sequence):
+        if sequence.condition_variable is not None:
+            return game_variable_symbol(sequence.condition_variable)
+        if sequence.condition_hotspot_id is not None:
+            return f"getObjectState({sequence.condition_hotspot_id})"
+        return None
+
     for group in grouped.values():
         sequence = group[0]
         marker = f"    object {sequence.hotspot_id} {{\n"
@@ -847,19 +861,19 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         if segment.count(verb_marker) != 1 or f"        case {sequence.verb}:\n" in segment:
             raise ValueError(f"Conflicting native interaction verb on {sequence.hotspot_id}")
         if len(group) == 1:
-            guard = (f"            if(getObjectState({sequence.condition_hotspot_id}) != "
-                     f"{sequence.condition_state}) return;\n"
-                     if sequence.condition_hotspot_id is not None else "")
+            expression = condition_expression(sequence)
+            guard = (f"            if({expression} != {sequence.condition_state}) return;\n"
+                     if expression is not None else "")
             native = (f"        case {sequence.verb}:\n" + guard
                       + playable_sequence(sequence) + "            return;\n")
         else:
             native = f"        case {sequence.verb}:\n"
-            for branch in (item for item in group if item.condition_hotspot_id is not None):
-                native += (f"            if(getObjectState({branch.condition_hotspot_id}) == "
+            for branch in (item for item in group if condition_expression(item) is not None):
+                native += (f"            if({condition_expression(branch)} == "
                            f"{branch.condition_state}) {{\n"
                            + "".join("    " + line for line in playable_sequence(branch).splitlines(True))
                            + "                return;\n            }\n")
-            fallback = next((item for item in group if item.condition_hotspot_id is None), None)
+            fallback = next((item for item in group if condition_expression(item) is None), None)
             if fallback is not None:
                 native += playable_sequence(fallback)
             native += "            return;\n"

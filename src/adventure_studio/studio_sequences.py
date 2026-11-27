@@ -12,7 +12,7 @@ import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
-                            InteractionSequence, ObjectStateStep, ObjectClassStep, MoveObjectStep, PickupObjectStep,
+                            InteractionSequence, ObjectStateStep, SetGameVariableStep, ObjectClassStep, MoveObjectStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
                             DialogueVoiceCue, DialogueAnimationCue,
@@ -2667,7 +2667,9 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
 def sequence_choices(raw: str) -> tuple[tuple[str, str], ...]:
     document = parse_document(raw)
     return tuple((f"{item.room} / {item.hotspot_id} / {item.verb}"
-                  + (f" [wenn {item.condition_hotspot_id}={item.condition_state}]"
+                  + (f" [wenn Variable {item.condition_variable}={item.condition_state}]"
+                     if item.condition_variable is not None else
+                     f" [wenn {item.condition_hotspot_id}={item.condition_state}]"
                      if item.condition_hotspot_id is not None else " [sonst/immer]"),
                   _identity(item))
                  for item in document.interaction_sequences)
@@ -2683,6 +2685,8 @@ def sequence_steps(raw: str, identity: str) -> tuple[str, ...]:
 def sequence_condition_fields(raw: str, identity: str | None) -> tuple[str | None, int]:
     sequence = next((item for item in parse_document(raw).interaction_sequences
                      if _identity(item) == identity), None)
+    if sequence and sequence.condition_variable is not None:
+        return ("var:" + sequence.condition_variable, sequence.condition_state)
     return ((sequence.condition_hotspot_id, sequence.condition_state)
             if sequence and sequence.condition_hotspot_id is not None else (None, 0))
 
@@ -2720,8 +2724,9 @@ def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
     else:
         condition_state = int(state)
     sequences = list(document.interaction_sequences)
-    sequences[index] = replace(sequences[index], condition_hotspot_id=hotspot_id,
-                               condition_state=condition_state)
+    variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
+    sequences[index] = replace(sequences[index], condition_hotspot_id=None if variable is not None else hotspot_id,
+                               condition_variable=variable, condition_state=condition_state)
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
 
 
@@ -2735,17 +2740,21 @@ def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
         raise ValueError("Bitte eine vorhandene Interaktion wählen")
     if hotspot_id is None or state is None or type(state) not in (int, float) or int(state) != state:
         raise ValueError("Alternative benötigt ein Objekt und einen ganzen Zustand")
-    variant = replace(original, condition_hotspot_id=hotspot_id, condition_state=int(state))
+    variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
+    variant = replace(original, condition_hotspot_id=None if variable is not None else hotspot_id,
+                      condition_variable=variable, condition_state=int(state))
     return _checked(replace(document, interaction_sequences=(*document.interaction_sequences, variant)))
 
 
 def _identity(sequence: InteractionSequence) -> str:
     base = f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
+    if sequence.condition_variable is not None:
+        return f"{base}|var:{sequence.condition_variable}|{sequence.condition_state}"
     return (base if sequence.condition_hotspot_id is None else
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | ObjectClassStep | MoveObjectStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | SetGameVariableStep | ObjectClassStep | MoveObjectStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2786,6 +2795,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | ObjectClass
         return (f"Sprachzeile {step.sound_id} ({step.actor_id or 'Ego'}): {step.text}"
                 + (" [" + ", ".join(item.language for item in step.variants) + "]"
                    if step.variants else ""))
+    if isinstance(step, SetGameVariableStep):
+        return f"Spielvariable {step.name} = {step.value}"
     if isinstance(step, ObjectClassStep):
         return f"Objekt {step.hotspot_id}: Klasse {step.class_id} {'setzen' if step.enabled else 'entfernen'}"
     if isinstance(step, MoveObjectStep):
@@ -2819,6 +2830,12 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
                 direction: str | None, subtitle: str | None = None):
     if kind == "Actor animieren":
         step = AnimateActorStep(actor_id, animation)
+    elif kind == "Spielvariable setzen":
+        if not isinstance(target_id, str) or not target_id.startswith("var:"):
+            raise ValueError("Variable als var:Name im Zielfeld eingeben")
+        if type(amount) not in (int, float) or int(amount) != amount:
+            raise ValueError("Variablenwert muss ganzzahlig sein")
+        step = SetGameVariableStep(target_id[4:], int(amount))
     elif kind in ("Objektklasse setzen", "Objektklasse entfernen", "Objekt anklickbar", "Objekt unanklickbar"):
         if kind in ("Objekt anklickbar", "Objekt unanklickbar"):
             step = ObjectClassStep(target_id, 32, kind == "Objekt unanklickbar")
@@ -2907,7 +2924,7 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
     sequences = list(document.interaction_sequences)
     index = next((index for index, item in enumerate(sequences)
                   if (item.room, item.hotspot_id, item.verb) == key
-                  and item.condition_hotspot_id is None), None)
+                  and item.condition_hotspot_id is None and item.condition_variable is None), None)
     if index is None:
         sequences.append(InteractionSequence(room, hotspot_id, verb, (step,)))
     else:
@@ -3008,6 +3025,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
     if isinstance(step, VoiceLineStep):
         return ("Gesprochene Zeile", step.actor_id, None, step.sound_id,
                 1, 320, 100, "S", step.text)
+    if isinstance(step, SetGameVariableStep):
+        return ("Spielvariable setzen", None, None, "var:" + step.name, step.value, 320, 100, "S")
     if isinstance(step, ObjectClassStep):
         kind = ("Objekt unanklickbar" if step.enabled else "Objekt anklickbar") if step.class_id == 32 else (
             "Objektklasse setzen" if step.enabled else "Objektklasse entfernen")
