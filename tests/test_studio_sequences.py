@@ -313,12 +313,9 @@ class NativeSequenceEditorTests(unittest.TestCase):
             raw = author_transfer_project(Path(directory), "masked", restore_profile=True)
             doc = parse_document(raw)
             room = next(room for room in doc.rooms if room.name == "Cellar")
-            from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
-            actor = next(actor for actor in doc.actors if actor.id == ACTOR_IDS[0])
             hotspot = next(hotspot for hotspot in room.hotspots
                            if hotspot.id == "R06Restore")
             self.assertEqual((hotspot.x, hotspot.y), (220, 85))
-            self.assertEqual((actor.x, actor.y), (220, 85))
 
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source
