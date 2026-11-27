@@ -1,5 +1,22 @@
 # Adventure Studio – aktive Produktroadmap
 
+**Nutzerentscheidung 27.11.2026: Produktworkflow vor technischen Spezialdetails.**
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Erster Meilenstein:** Ein vollständiges, in Adventure Studio erstelltes mehrraumiges Adventure, in stock ScummVM bis zum Spielende spielbar.
+- **Jetzt:** Bestehenden Autorenworkflow und offene Produkt-PRs prüfen; erste konkrete Workflow-Lücke unmittelbar implementieren oder integrieren. Keine weitere isolierte Actor-Pose als Folgepaket.
+- **Abnahme:** Regulärer Studio-Projektworkflow mit Speicherung/erneutem Laden, nativer Export und tatsächliches Gameplay bis zum erreichbaren Ende. Teilnachweise bleiben als solche gekennzeichnet.
+- **Blocker:** Konkrete erste fehlende Produktfunktion noch nicht ermittelt; offene Integrationsgates separat konsolidieren.
+- **Danach:** Nächsten konkreten Produktblocker ohne Warten auf unabhängige Gesamtgates bearbeiten; Merge erst mit grünen Pflichtgates.
+
+Die verbindliche Prioritätenfolge steht in [PRODUCT_VISION](PRODUCT_VISION.md#verbindlicher-erster-produktmeilenstein-vollständiges-referenzadventure),
+der aktuelle Paketstand in [PROJECT_STATUS](PROJECT_STATUS.md). Die
+Funktionsmatrix bleibt der einzige technische Katalog, nicht die Reihenfolge
+der Implementierung. Bereits vorhandene Fähigkeiten wiederverwenden.
+Keine neue Spezialfähigkeit ohne konkreten Nutzen für das Referenzadventure.
+
+## Historischer Roadmap-Kopf (ersetzt, keine aktive Paketauswahl)
+
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
 - **Jetzt:** #368 – native dynamische Actor-Laufanimations-Zuordnung (R06/A04).
 - **Abnahme:** alternative und wiederhergestellte Laufpose an mindestens drei echten bewegten Positionen; unveränderte Standpose bei Ankunft.

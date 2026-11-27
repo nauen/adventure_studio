@@ -69,6 +69,32 @@ nachweisen. Kein neuer Engine-Befehl ohne Versions-/Bytecode-Beweis.
 - [Architekturaudit](docs/architecture-audit.md) und
   [ADR-0001](docs/adr/0001-domain-and-export-boundaries.md) beachten.
 
+## Verbindliche Produktpriorität (Nutzerentscheidung 27.11.2026)
+
+Der Maßstab ist ein vollständiges, mit Adventure Studio erstelltes und in
+unverändertem ScummVM spielbares mehrraumiges Adventure – nicht die Anzahl
+abgedeckter Opcodes, Spezialposen, PRs oder Einzelproben. Die native
+SCUMM-v6-Kompatibilität und das Ziel vollständiger Engine-Abdeckung bleiben
+bestehen, bestimmen aber nicht allein die Reihenfolge der Produktarbeit.
+
+- Zuerst den vorhandenen durchgängigen Autorenworkflow auf main und die
+  bereits implementierten offenen PRs prüfen. Vorhandene Funktionen nutzen
+  und integrieren, nicht doppelt entwickeln.
+- Fehlende Funktionen nach ihrem Nutzen für das vollständige Adventure
+  priorisieren; jedes neue Paket muss einen konkreten Autoren- oder
+  Spielerblocker des Referenzspiels beseitigen.
+- Keine neuen isolierten Actor-Posen, Chore-Bindungen, Opcode-Varianten oder
+  zusätzlichen Kombinationsproben als Selbstzweck. Nur dann aufnehmen, wenn
+  eine konkrete benötigte Spielmechanik ohne sie nicht funktioniert.
+- Ein vertikales Produktpaket zur Zeit. Bei bewiesenem Gameplay sofort den
+  nächsten produktrelevanten Blocker bearbeiten; ausstehende Gesamtgates
+  separat konsolidieren. Keine Merge-Freigabe ohne Pflichtgates.
+- Tests und Dokumentation unterstützen die Produktarbeit; reine
+  Statusabfragen oder neue Probes ohne konkrete offene Produktlücke sind
+  kein Produktfortschritt. Bei laufender CI den nächsten konkreten
+  Implementierungsschritt vorbereiten oder belegte Integrationsfehler
+  beheben, ohne laufende Nachweise unnötig abzubrechen.
+
 ## Wahl des Arbeitspakets
 
 - Das oberste unverblockierte, nutzbare Arbeitspaket aus
