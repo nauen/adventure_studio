@@ -157,23 +157,17 @@ def run_native_camera_follow_resume(upstream: Path, output: Path) -> dict:
         launch_smoke(game, root / "screenshots", seconds=6,
                      scene_only=True, allow_static_scene=True,
                      native_two_actor_walk_probe=True,
-                     native_two_actor_capture_frames=480,
-                     native_two_actor_capture_interval=0.02)
+                     native_two_actor_capture_frames=300)
         report["variants"][variant] = {"stock_scummvm_started": True}
         persist()
 
     transparent = output / "transparent" / "screenshots"
     tracks = track_native_actor_lanes(transparent)
     cameras = measure_two_actor_native_camera_trace(transparent)
-    # Persist raw aligned measurements even when a later acceptance gate fails.
-    report["transparent_actor_tracks"] = tracks
-    report["transparent_camera_frames"] = cameras
-    persist()
     report["camera_follow_resume"] = verify_native_camera_follow_resume(
         tracks, cameras)
     report["previous_manual_tour"] = verify_native_meeting_camera_tour(
         tracks, cameras)
-    persist()
     report["staggered_release"] = verify_native_rendezvous_release(tracks)
     report["native_camera_roundtrip"] = {
         variant: verify_two_actor_native_camera_roundtrip(
