@@ -26,15 +26,16 @@ ESCAPE_RGB = (190, 85, 155)
 ACTION_RGB = (95, 225, 135)
 NORTH_RGB = (95, 155, 225)
 SOUTH_RGB = (225, 95, 135)
+SPEED_ACTOR_RGB = (245, 35, 145)
 
 
-def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False, elevation=False, scale=False, costume_change=False):
-    if walk or animation or facing or camera or position or elevation or scale or costume_change:
+def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False, elevation=False, scale=False, costume_change=False, walk_speed=False):
+    if walk or animation or facing or camera or position or elevation or scale or costume_change or walk_speed:
         dynamic = True
     if variant not in VARIANTS:
         raise ValueError("Unknown transfer mask control")
     doc = parse_document(author_project(root, "transparent", initial=False))
-    name = ("R06CostumeTransfer" if costume_change else "R06ScaleTransfer" if scale else "R06ElevationTransfer" if elevation else "R06PositionTransfer" if position else "R06CameraTransfer" if camera else "R06FacingTransfer" if facing else "R06AnimationTransfer" if animation else "R06WalkTransfer" if walk else "R06RestoreProfile" if restore_profile else "R06DynamicTransfer" if dynamic else "R06EntryProfile" if entry_restore else "R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
+    name = ("R06SpeedTransfer" if walk_speed else "R06CostumeTransfer" if costume_change else "R06ScaleTransfer" if scale else "R06ElevationTransfer" if elevation else "R06PositionTransfer" if position else "R06CameraTransfer" if camera else "R06FacingTransfer" if facing else "R06AnimationTransfer" if animation else "R06WalkTransfer" if walk else "R06RestoreProfile" if restore_profile else "R06DynamicTransfer" if dynamic else "R06EntryProfile" if entry_restore else "R06Profile" if profiles else "R06Transfer") + variant.title() + "Costume"
     previous = doc.costumes[-1].name
     rooms = []
     for room in doc.rooms:
@@ -65,25 +66,34 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                 for ident, color, x in (("R06Reveal", REVEAL_RGB, 250),
                                         ("R06Restore", RESTORE_RGB, 180),
                                         ("R06Hide", ESCAPE_RGB, 180),
-                                        ("R06Action", ACTION_RGB, 180),
+                                        ("R06Action", ACTION_RGB, 250 if walk_speed else 180),
                                         ("R06North", NORTH_RGB, 70),
                                         ("R06South", SOUTH_RGB, 110)):
-                    if ident == "R06Restore" and not (restore_profile or walk or facing or camera or position or elevation or scale or costume_change):
+                    if ident == "R06Restore" and not (restore_profile or walk or facing or camera or position or elevation or scale or costume_change or walk_speed):
                         continue
-                    if ident == "R06Hide" and (not dynamic or restore_profile or walk or animation or facing or camera or position or elevation or scale or costume_change):
+                    if ident == "R06Hide" and (not dynamic or restore_profile or walk or animation or facing or camera or position or elevation or scale or costume_change or walk_speed):
                         continue
-                    if ident == "R06Action" and not animation:
+                    if ident == "R06Action" and not (animation or walk_speed):
                         continue
                     if ident in ("R06North", "R06South") and not facing:
                         continue
                     # Keep Ego's verb walk destination away from the measured Actor lane.
-                    hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
+                    hotspot_x, hotspot_y = x, 100
+                    if walk_speed and ident == "R06Action":
+                        hotspot_x, hotspot_y = 140, 85
+                    hotspot = RoomHotspot(ident, ident, ident, hotspot_x, hotspot_y, 16, 16,
                                           sprite_pixels=bytes([len(room.palette)]) * 256)
                     room = replace(room, palette=(*room.palette, color),
                                    hotspots=(*room.hotspots, hotspot))
         rooms.append(room)
     rooms = tuple(rooms)
     costume = replace(doc.costumes[-1], name=name)
+    if walk_speed:
+        # Distinguish authored Costume pixels from the upstream black Ego.
+        # Keep the other nontransparent index black for transfer controls.
+        palette = list(costume.palette)
+        palette[costume.palette_first + 2] = SPEED_ACTOR_RGB
+        costume = replace(costume, palette=tuple(palette))
     if animation:
         # Native gesture frames have distinct silhouettes; standing/walking
         # resources stay unchanged. A persistent final pose is observable.
@@ -150,7 +160,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
     if dynamic or restore_profile:
         raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 0)
-    if dynamic and not restore_profile and not walk and not animation and not facing and not camera and not position and not elevation and not scale and not costume_change:
+    if dynamic and not restore_profile and not walk and not animation and not facing and not camera and not position and not elevation and not scale and not costume_change and not walk_speed:
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
             "Objektzustand setzen", None, None, "R06Hide", 0)
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
@@ -158,6 +168,22 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
             "Actor Z-Clipping", ACTOR_IDS[0], None, None, 1)
         raw = set_sequence_skippable(raw, "Cellar|R06Hide|Close", True)
+    if walk_speed:
+        for kind, x, y in (("Actor Laufgeschwindigkeit", 2, 1),
+                           ("Actor laufen lassen", 140, 85), ("Auf Actor warten", 320, 100)):
+            raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
+                kind, ACTOR_IDS[0], None, None, 1, x, y)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Objektzustand setzen", None, None, "R06Restore", 0)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Warten", None, None, None, 12)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Actor Laufgeschwindigkeit", ACTOR_IDS[0], None, None, 1, 8, 4)
+        raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
+        raw = append_sequence_step(raw, "Cellar", "R06Action", "Close",
+            "Actor laufen lassen", ACTOR_IDS[0], None, None, None, 220, 85)
+        raw = append_sequence_step(raw, "Cellar", "R06Action", "Close",
+            "Auf Actor warten", ACTOR_IDS[0], None, None, None)
     if costume_change:
         raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
             "Actor Costume wechseln", ACTOR_IDS[0], None, name + "Alt", None)
@@ -270,7 +296,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
     return raw
 
 
-def play_transfer(output, capture, process, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False, elevation=False, scale=False, costume_change=False):
+def play_transfer(output, capture, process, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False, elevation=False, scale=False, costume_change=False, walk_speed=False):
     def click(x, y):
         subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
                        check=True, timeout=5)
@@ -329,12 +355,34 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     elevation_raised, elevation_restored = [], []
     scale_small, scale_full = [], []
     costume_alternate, costume_original = [], []
-    if walk or animation or facing or camera or position or elevation or scale or costume_change:
+    speed_slow, speed_fast = [], []
+    if walk or animation or facing or camera or position or elevation or scale or costume_change or walk_speed:
         dynamic = True
     if dynamic or restore_profile:
         click(234, 563)
         click(*colored_item_center(output, destination[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
-        if costume_change:
+        if walk_speed:
+            def speed_samples(phase, target):
+                rows = []
+                started = time.monotonic()
+                stable = 0
+                while time.monotonic() - started < 35:
+                    label = f"transfer-speed-{phase}-{len(rows):03d}"
+                    capture(label)
+                    with Image.open(output / f"scummvm-{label}.png") as img:
+                        rgb = img.convert("RGB")
+                        columns = [(x, sum(all(abs(a-b) <= 4 for a,b in zip(rgb.getpixel((x,y)), SPEED_ACTOR_RGB))
+                                           for y in range(296,363))) for x in range(432,673)]
+                    pixels = sum(n for _,n in columns)
+                    pos = (sum(x*n for x,n in columns)/pixels - 192)/2 if pixels >= 100 else None
+                    rows.append({"frame": label, "seconds": time.monotonic()-started, "world_x": pos})
+                    stable = stable+1 if pos is not None and abs(pos-target) <= 9 else 0
+                    if stable >= 3:
+                        return rows
+                    time.sleep(.04)
+                raise RuntimeError(f"Native speed destination not reached: {phase}: first={rows[:5]}, last={rows[-5:]}, count={len(rows)}")
+            speed_slow = speed_samples("slow", 140)
+        elif costume_change:
             def costume_samples(phase, alternate):
                 rows = []
                 def measure(label):
@@ -483,7 +531,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
                 time.sleep(.15)
             if stable < 3:
                 raise RuntimeError("Native revealed Actor did not stabilize")
-        if not elevation and not scale and not costume_change:
+        if not elevation and not scale and not costume_change and not walk_speed:
             revealed = sample("revealed", 160, 140 if walk or position else 220)
     if camera:
         # A camera shift to the Actor proves that the delayed cutscene
@@ -652,6 +700,23 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             raise RuntimeError("Escape observation overlapped ordinary delay completion")
         return rows, elapsed
 
+    if walk_speed:
+        click(234, 563)
+        click(*colored_item_center(output, speed_slow[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
+        started = time.monotonic()
+        await_frame("transfer-speed-cutscene-start", lambda label:
+                    colored_item_pixels(output, label, RESTORE_RGB) < 40)
+        subprocess.run(["xdotool", "keydown", "Escape"], check=True, timeout=5)
+        try:
+            time.sleep(.25)
+        finally:
+            subprocess.run(["xdotool", "keyup", "Escape"], check=True, timeout=5)
+        escape_elapsed = time.monotonic() - started
+        time.sleep(1)
+        capture("transfer-speed-fast-ready")
+        click(234, 563)
+        click(*colored_item_center(output, "transfer-speed-fast-ready", ACTION_RGB, fuzz_percent=4))
+        speed_fast = speed_samples("fast", 220)
     if costume_change:
         click(234, 563)
         click(*colored_item_center(output, costume_alternate[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
@@ -708,7 +773,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         click(*colored_item_center(output, position_normal[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
         _, escape_elapsed = bounded_escape("position-escape", previous_x=140, target_x=220, start_marker=RESTORE_RGB)
         position_escape = position_samples("escape")
-    if dynamic and not restore_profile and not walk and not animation and not facing and not camera and not position and not elevation and not scale and not costume_change:
+    if dynamic and not restore_profile and not walk and not animation and not facing and not camera and not position and not elevation and not scale and not costume_change and not walk_speed:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], ESCAPE_RGB, fuzz_percent=4))
         if colored_item_pixels(output, revealed[-1]["frame"], ESCAPE_RGB) < 40:
@@ -783,10 +848,10 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         "before": before, "destination": destination, "returned": returned, "revealed": revealed, "restored": restored, "revealed_again": revealed_again,
         "restored_escape": restored_escape, "escaped": escaped,
         "escape_elapsed": escape_elapsed, "motion": motion, "walk_escape": walk_escape,
-        "idle_frames": idle_frames, "action_frames": action_frames, "facing_frames": facing_frames, "camera_frames": camera_frames, "camera_escape_frames": camera_escape_frames, "position_normal": position_normal, "position_escape": position_escape, "elevation_raised": elevation_raised, "elevation_restored": elevation_restored, "scale_small": scale_small, "scale_full": scale_full, "costume_alternate": costume_alternate, "costume_original": costume_original}, indent=2))
+        "idle_frames": idle_frames, "action_frames": action_frames, "facing_frames": facing_frames, "camera_frames": camera_frames, "camera_escape_frames": camera_escape_frames, "position_normal": position_normal, "position_escape": position_escape, "elevation_raised": elevation_raised, "elevation_restored": elevation_restored, "scale_small": scale_small, "scale_full": scale_full, "costume_alternate": costume_alternate, "costume_original": costume_original, "speed_slow": speed_slow, "speed_fast": speed_fast}, indent=2))
 
 
-def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False, elevation=False, scale=False, costume_change=False):
+def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False, elevation=False, scale=False, costume_change=False, walk_speed=False):
     if walk:
         dynamic = True
         xs = [row["world_x"] for row in report["motion"]]
@@ -833,6 +898,24 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=
         if not (0 < report["escape_elapsed"] < 28) or len(escaped) < 3 or not all(
                 abs(row["camera_x"]-160) <= 5 and row["a_pixels"] >= 100 for row in escaped[-3:]):
             raise RuntimeError(f"Native camera Escape return not observed: {escaped}")
+    if walk_speed:
+        dynamic = True
+        durations = []
+        for phase, start, target in (("speed_slow", 220, 140), ("speed_fast", 140, 220)):
+            rows = report[phase]
+            observed = [r for r in rows if r["world_x"] is not None]
+            if len(observed) < 3 or not all(abs(r["world_x"]-target) <= 9 for r in observed[-3:]):
+                raise RuntimeError(f"Native walk speed endpoint missing: {phase}")
+            middle = [r for r in observed if 150 < r["world_x"] < 210]
+            if not middle:
+                raise RuntimeError(f"Native walk speed intermediate motion missing: {phase}")
+            departure = next((i for i,r in enumerate(observed) if abs(r["world_x"]-start) > 9), None)
+            if departure is None or not any(abs(r["world_x"]-start) <= 9 for r in observed[:departure]):
+                raise RuntimeError(f"Native walk speed start not observed: {phase}")
+            arrival = next(r["seconds"] for r in observed[departure:] if abs(r["world_x"]-target) <= 9)
+            durations.append(arrival - observed[departure-1]["seconds"])
+        if durations[0] <= durations[1]*1.5 or report["escape_elapsed"] >= 10:
+            raise RuntimeError(f"Native walk speed or bounded Escape not demonstrated: {durations}")
     if costume_change:
         dynamic = True
         for phase, alternate in (("costume_alternate", True), ("costume_original", False)):
@@ -875,9 +958,9 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=
     if (dynamic or restore_profile) and not animation and not camera and not (0 < report["escape_elapsed"] < 10):
         raise RuntimeError("Missing bounded native Escape evidence")
     phases = ["before", "destination"]
-    if (dynamic or restore_profile) and not elevation and not scale and not costume_change:
+    if (dynamic or restore_profile) and not elevation and not scale and not costume_change and not walk_speed:
         phases.append("revealed")
-    if dynamic and not restore_profile and not walk and not animation and not facing and not camera and not position and not elevation and not scale and not costume_change:
+    if dynamic and not restore_profile and not walk and not animation and not facing and not camera and not position and not elevation and not scale and not costume_change and not walk_speed:
         phases.append("escaped")
     if walk:
         phases.append("walk_escape")
@@ -898,21 +981,21 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=
             raise RuntimeError("Non-transferred reference Actor appeared in Cellar")
 
 
-def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False, elevation=False, scale=False, costume_change=False):
+def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False, elevation=False, scale=False, costume_change=False, walk_speed=False):
     output.mkdir(parents=True, exist_ok=True)
     result = {}
     for variant in VARIANTS:
         root = output / variant
         resources = root / "build" / "resources"
         resources.mkdir(parents=True, exist_ok=True)
-        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic, restore_profile=restore_profile, walk=walk, animation=animation, facing=facing, camera=camera, position=position, elevation=elevation, scale=scale, costume_change=costume_change)
+        raw = author_transfer_project(root, variant, profiles=profiles or entry_restore, entry_restore=entry_restore, dynamic=dynamic, restore_profile=restore_profile, walk=walk, animation=animation, facing=facing, camera=camera, position=position, elevation=elevation, scale=scale, costume_change=costume_change, walk_speed=walk_speed)
         (root / "build" / "project.json").write_text(raw)
         export_document(parse_document(raw), resources)
         game = compile_story_game(root / "build", upstream, root / "game")
         launch_smoke(game, root / "screenshots", scene_only=True, allow_static_scene=True,
-                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic, native_actor_zclip_profile_restore_probe=restore_profile, native_transferred_actor_walk_probe=walk, native_transferred_actor_animation_probe=animation, native_transferred_actor_facing_probe=facing, native_transferred_actor_camera_probe=camera, native_transferred_actor_position_probe=position, native_transferred_actor_elevation_probe=elevation, native_transferred_actor_scale_probe=scale, native_transferred_actor_costume_probe=costume_change)
+                     native_actor_zclip_transfer_probe=True, native_actor_zclip_dynamic_probe=dynamic, native_actor_zclip_profile_restore_probe=restore_profile, native_transferred_actor_walk_probe=walk, native_transferred_actor_animation_probe=animation, native_transferred_actor_facing_probe=facing, native_transferred_actor_camera_probe=camera, native_transferred_actor_position_probe=position, native_transferred_actor_elevation_probe=elevation, native_transferred_actor_scale_probe=scale, native_transferred_actor_costume_probe=costume_change, native_transferred_actor_walk_speed_probe=walk_speed)
         report = json.loads((root / "screenshots" / "transfer-report.json").read_text())
-        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile, walk=walk, animation=animation, facing=facing, camera=camera, position=position, elevation=elevation, scale=scale, costume_change=costume_change)
+        verify_transfer(report, variant, dynamic=dynamic, restore_profile=restore_profile, walk=walk, animation=animation, facing=facing, camera=camera, position=position, elevation=elevation, scale=scale, costume_change=costume_change, walk_speed=walk_speed)
         result[variant] = report
     result["native_actor_zclip_transfer_verified"] = True
     if dynamic:
@@ -929,6 +1012,8 @@ def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, re
         result["native_transferred_actor_camera_verified"] = True
     if position:
         result["native_transferred_actor_position_verified"] = True
+    if walk_speed:
+        result["native_transferred_actor_walk_speed_verified"] = True
     if costume_change:
         result["native_transferred_actor_costume_verified"] = True
     if scale:
@@ -942,4 +1027,4 @@ def run(upstream, output, profiles=False, entry_restore=False, dynamic=False, re
 
 
 if __name__ == "__main__":
-    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:], restore_profile="--restore-profile" in sys.argv[3:], walk="--walk" in sys.argv[3:], animation="--animation" in sys.argv[3:], facing="--facing" in sys.argv[3:], camera="--camera" in sys.argv[3:], position="--position" in sys.argv[3:], elevation="--elevation" in sys.argv[3:], scale="--scale" in sys.argv[3:], costume_change="--costume" in sys.argv[3:]), indent=2))
+    print(json.dumps(run(Path(sys.argv[1]), Path(sys.argv[2]), profiles="--profiles" in sys.argv[3:], entry_restore="--entry-restore" in sys.argv[3:], dynamic="--dynamic" in sys.argv[3:], restore_profile="--restore-profile" in sys.argv[3:], walk="--walk" in sys.argv[3:], animation="--animation" in sys.argv[3:], facing="--facing" in sys.argv[3:], camera="--camera" in sys.argv[3:], position="--position" in sys.argv[3:], elevation="--elevation" in sys.argv[3:], scale="--scale" in sys.argv[3:], costume_change="--costume" in sys.argv[3:], walk_speed="--walk-speed" in sys.argv[3:]), indent=2))
