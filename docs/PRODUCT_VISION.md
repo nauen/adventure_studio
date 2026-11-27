@@ -1,6 +1,6 @@
 # Adventure Studio – Produktvision und unverrückbares Ziel
 
-Stand: 2026-11-07. Dieses Dokument beschreibt **das Produktziel**, nicht den
+Stand: 2026-11-27. Dieses Dokument beschreibt **das Produktziel**, nicht den
 aktuellen Implementierungsstand. Für den Stand siehe [PROJECT_STATUS](PROJECT_STATUS.md),
 für die technische Abdeckung [SCUMM-v6-Funktionsmatrix](SCUMM_V6_CAPABILITIES.md).
 
@@ -59,10 +59,37 @@ sondern typische vollständige Adventures gestalten zu können.
   vorrangig, wenn sie eine benötigte Spielfunktion ermöglicht oder
   eine konkrete Kompatibilitätslücke schließt.
 
+## Verbindlicher erster Produktmeilenstein: vollständiges Referenzadventure
+
+Ein über den regulären Adventure-Studio-Autorenworkflow erstelltes,
+mehrraumiges Point-and-Click-Adventure mit eigener Grafik, begehbaren
+Bereichen, Tiefenwirkung, NPCs, Inventar, Rätseln, Dialogen und einem
+erreichbaren Spielende. Es muss als Projekt speicherbar und erneut
+bearbeitbar sein und ohne Zusatzruntime in stock ScummVM spielbar sein.
+Es ist ein vertikaler Produktnachweis, **keine** Reduktion des langfristigen
+SCUMM-v6-Scopes auf ein kleines Testspiel.
+
+Produktprioritäten in dieser Reihenfolge (vorhandene Funktionen nicht
+erneut implementieren):
+
+1. Räume mit eigenen Hintergrundbildern gestalten.
+2. Begehbare Bereiche, Perspektive, Tiefenebenen und Verdeckung definieren.
+3. Räume durch Türen und Übergänge verbinden.
+4. Spielfiguren und NPCs platzieren und sinnvoll handeln lassen.
+5. Gegenstände, Inventar und kombinierbare Objekte authoren.
+6. Rätsel, Bedingungen, Spielvariablen und Konsequenzen definieren.
+7. Dialoge und eine zusammenhängende Geschichte gestalten.
+8. Das vollständige Adventure exportieren, in ScummVM durchspielen und das Spielende erreichen.
+
+Die Funktionen müssen gemeinsam im normalen Projektworkflow funktionieren.
+Eine Spezialfähigkeit (z. B. dynamische Sprechend- oder Initialpose) erhält
+erst Priorität, wenn ein konkretes benötigtes Szenario sie voraussetzt.
+Die Funktionsmatrix bleibt der technische Katalog, nicht die Aufgabenreihenfolge.
+
 ## Reihenfolge der Produktphasen
 
-1. Vollständige native SCUMM-v6-Mechaniken und Ressourcenexport.
-2. Durchgängiger visueller Adventure-Editor.
+1. Durchgängiger Autorenworkflow und vollständiges natives Referenzadventure; fehlende Mechaniken und Ressourcenexport bedarfsgerecht ergänzen.
+2. Vollständige native SCUMM-v6-Abdeckung und Ausbau des visuellen Editors anhand weiterer konkreter Spielszenarien.
 3. Cineastischer Shot-/Cutscene-Editor auf dem nativen Compilervertrag.
 4. KI-gestützte, überprüfbare Spielentwicklung.
 5. Produktreife und komfortable Distribution.

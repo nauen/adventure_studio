@@ -2,6 +2,14 @@
 
 Einziger Funktionskatalog. Aktive Paketauswahl und CI-/PR-Konsolidierung ausschließlich in [PROJECT_STATUS.md](PROJECT_STATUS.md); Reihenfolge in [roadmap.md](roadmap.md). Historische Statusprotokolle unten sind keine aktiven Aufträge. Keine pauschale V-Freigabe.
 
+**Priorisierungsregel (27.11.2026):** Die Matrix ist ein technischer
+Abdeckungs- und Evidenzkatalog, keine lineare Entwicklungsreihenfolge.
+Neue Pakete werden ausschließlich nach konkretem Nutzen für das vollständige
+Referenzadventure gemäß [PRODUCT_VISION](PRODUCT_VISION.md) und dem aktiven
+[PROJECT_STATUS](PROJECT_STATUS.md) gewählt. Isolierte Chore-/Pose-/Opcode-
+Details ohne benötigtes Spielszenario sind zurückgestellt. Historische
+Paketangaben haben keine aktive Priorität.
+
 ## Historischer Integrationsstand (26.11.2026) – nicht aktive Paketauswahl
 
 - **Integriert (26.11.2026):** R06 [#314](https://github.com/nauen/adventure_studio/pull/314), native Wiederherstellung raumspezifischer Actor-Z-Clipping-Profile in regulären und per Escape abgeschlossenen Interaktionen; maskierte und transparente Kontrolle in stock ScummVM bestanden. Merge `459a51ab6a5738d989e37a0334f13df941e0044b`, [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/45785194352) vollständig grün, [Authoring-Guard](https://github.com/nauen/adventure_studio/actions/runs/45785192359) grün; Core übersprungen.
