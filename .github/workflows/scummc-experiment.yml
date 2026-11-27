@@ -1014,6 +1014,20 @@ jobs:
             /tmp/native-voc-effects/screenshots/scummvm-after.png
             /tmp/native-voc-effects/screenshots/scummvm.log
           if-no-files-found: ignore
+      - name: Verify native Actor subtitle color and position after Escape
+        if: ${{ matrix.shard == 'actors' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install Pillow
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_talk_presentation_probe /tmp/scummc-upstream /tmp/native-actor-talk-presentation
+      - name: Retain native Actor subtitle presentation evidence
+        if: ${{ always() && matrix.shard == 'actors' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-actor-talk-presentation
+          path: /tmp/native-actor-talk-presentation
+          if-no-files-found: ignore
       - name: Play Studio VOC voice line with native subtitle and Escape
         if: ${{ matrix.shard == 'actors' }}
         env:
