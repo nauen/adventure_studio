@@ -954,7 +954,7 @@ def _validate_document(document: GameDocument) -> None:
             elif isinstance(step, (MoveActorStep, WalkActorStep)):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or (actor.room != room.name and
-                        (not isinstance(step, WalkActorStep) or (actor.id, room.name) not in transfer_destinations))
+                        (actor.id, room.name) not in transfer_destinations)
                         or type(step.x) is not int
                         or type(step.y) is not int
                         or not 0 <= step.x < room.geometry.room_width

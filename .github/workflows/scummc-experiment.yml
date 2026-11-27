@@ -113,10 +113,38 @@ jobs:
         # its linked resource tree must contain the requested native chunks.
         # This is NOT a visual ScummVM occlusion/walking acceptance test.
         # Kept separate from the existing screenshot baseline.
+      - name: Verify native 256-color room bitmap palette in stock ScummVM
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_room_palette_probe /tmp/scummc-upstream /tmp/generated-room /tmp/native-room-palette-256
+      - name: Retain native 256-color room palette evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-room-palette-256
+          path: /tmp/native-room-palette-256
+          if-no-files-found: ignore
       # Run the sole active R06 product-path acceptance immediately after the
       # common native ScummC bootstrap is built. Independent legacy gameplay
       # gates remain mandatory below, but cannot prevent this evidence from
       # running and uploading a failure report of its own.
+      - name: Verify native transferred Actor positioning in destination room
+        if: ${{ matrix.shard == 'geometry' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_zclip_transfer_probe /tmp/scummc-upstream /tmp/native-transferred-actor-position --position
+      - name: Retain native transferred Actor position evidence
+        if: ${{ always() && matrix.shard == 'geometry' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-transferred-actor-position
+          path: /tmp/native-transferred-actor-position
+          if-no-files-found: ignore
       - name: Verify native transferred Actor camera follow and return
         if: ${{ matrix.shard == 'geometry' }}
         env:

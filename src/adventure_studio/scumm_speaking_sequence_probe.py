@@ -136,6 +136,9 @@ def run(game_directory: Path, output: Path, two_lines: bool = False,
                 if ending:
                     if magenta >= ending_baseline + 16 and not ending_seen:
                         if not observed_speaking_change(baseline, samples):
+                            report["failed_samples"] = samples
+                            report["baseline"] = baseline
+                            retain_observed_frame("failed-ending-order")
                             raise RuntimeError("Native ending pose started before the first speaking frames")
                         ending_seen = True
                         retain_observed_frame("frame-ending")

@@ -1,12 +1,15 @@
 # Adventure Studio – aktive Produktroadmap
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; Studio/JSON-v1/Story → ScummC-v6 → unverändertes stock ScummVM. NPC-Komfort nach #190 beendet.
-- **Jetzt:** Genau eine Fähigkeit: R06 [#322](https://github.com/nauen/adventure_studio/pull/322), native Blickrichtung eines transferierten Actors im Zielraum.
-- **Abnahme:** Vier sichtbare Blickrichtungen, Escape-Endzustand, maskierte und transparente Kontrolle, Actor-Anwesenheit und Raumrückkehr im generierten stock-ScummVM-Spiel; vollständige Pflicht-CI.
-- **Blocker:** #327 integriert (`7ee9aee`), [Main-Core](https://github.com/nauen/adventure_studio/actions/runs/45849583588) grün. [Core #322](https://github.com/nauen/adventure_studio/actions/runs/45849629302) auf Vorgängerhead grün, native Abnahme auf neuem Head `69ddde8` offen: fehlenden, nicht authorierten Hide-Hotspot im Facing-Probe korrigiert. R06 bleibt V (Teil), ZP05+ fail-closed.
-- **Danach:** Genau ein Folgepaket: R06 [#323](https://github.com/nauen/adventure_studio/pull/323), native Interaktionskamera nach Actor-Raumtransfer; erst nach #322-Abnahme und Integration.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Jetzt:** #365 – native IM03/ZP03-Verdeckung (R07/R06-Anschluss).
+- **Abnahme:** Native Pixelmessung maskiert/transparent/falscher BOXD bei unabhängigen ZP01/ZP02.
+- **Blocker:** Drei unabhängig verlinkte stock-ScummVM-Spiele mit transparenten IM03/ZP01–02: ZP03 maskiert/transparent/falscher BOXD-Index (3/3/2). [Core](https://github.com/nauen/adventure_studio/actions/runs/46010994504), [Native](https://github.com/nauen/adventure_studio/actions/runs/46011006493) gestartet; Gameplay offen. #348/#363/#364 sind Integrationsvoraussetzungen.
+- **Danach:** IM03/ZP04. #352 Geometry-Fix 3850258 offen; #363/#364 Gameplay belegt, Integration offen; [PROJECT_STATUS](PROJECT_STATUS.md).
 
-## Konsolidierter Integrationsstand (26.11.2026)
+Nach Gameplay-Nachweis sofort ein Folgepaket aufnehmen; Merge-Pflichtgates unverändert.
+
+
+## Historischer Integrationsstand (26.11.2026) – nicht aktive Paketauswahl
 
 - **Integriert (26.11.2026):** R06 [#314](https://github.com/nauen/adventure_studio/pull/314), native Wiederherstellung raumspezifischer Actor-Z-Clipping-Profile in regulären und per Escape abgeschlossenen Interaktionen; maskierte und transparente Kontrolle in stock ScummVM bestanden. Merge `459a51ab6a5738d989e37a0334f13df941e0044b`, [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/45785194352) vollständig grün, [Authoring-Guard](https://github.com/nauen/adventure_studio/actions/runs/45785192359) grün; Core übersprungen.
 - **Integriert (26.11.2026):** R06 [#320](https://github.com/nauen/adventure_studio/pull/320), native Actor-Bewegung nach Raumwechsel mit Clipping-Kontrolle in stock ScummVM bestanden; [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/45803967171) 8/8 grün, Schritte 78/79 Gameplay und Evidenz erfolgreich. Merge `18f95154bfec1aaf6a6ed5b5dc9bfce8c42ab2b0`.
