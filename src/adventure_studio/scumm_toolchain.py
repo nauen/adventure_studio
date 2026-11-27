@@ -24,7 +24,7 @@ from .scumm_bootstrap import (inject_inventory_declarations, inject_inventory_ob
                               inject_language_keys, inject_language_room_probe, inject_multilingual_charset,
                               inject_screen_language_verbs, retarget_upstream_bootstrap)
 from .scumm_font_probe import verify_char_resource
-from .scumm_project import VoiceLineStep, parse_document
+from .scumm_project import VoiceLineStep, parse_document, resolve_actor_palette_steps
 
 
 def _voice_charset(document, resources: Path, upstream: Path,
@@ -129,6 +129,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                        stock_fonts_probe: bool = False) -> Path:
     """Compile and link all validated rooms; return a loadable research fixture."""
     document = parse_document((build_directory / "project.json").read_text(encoding="utf-8"))
+    native_sequences = resolve_actor_palette_steps(document)
     resources = build_directory / "resources"
     icon_ids = tuple(sorted(h.id for room in document.rooms for h in room.hotspots if h.pickup))
     manifest = (resources / "inventory-ids.txt").read_text(encoding="ascii").strip()
@@ -292,7 +293,7 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
                                                    document.animation_triggers,
                                                    document.actors, document.costumes)
         rendered = inject_interaction_sequences(rendered, room.name,
-                                                document.interaction_sequences,
+                                                native_sequences,
                                                 document.actors, document.costumes, room,
                                                 document.sound_assets, voice_charset,
                                                 document.default_voice_language)

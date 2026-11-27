@@ -152,7 +152,11 @@ def run_native_staggered_departure(upstream: Path, output: Path) -> dict:
         launch_smoke(game, root / "screenshots", seconds=6,
                      scene_only=True, allow_static_scene=True,
                      native_two_actor_walk_probe=True,
-                     native_two_actor_capture_frames=300)
+                     # A delayed capture previously skipped an intermediate
+                     # approach position (302 -> 358) under CI load. Retain
+                     # more real frames without relaxing the movement gate.
+                     native_two_actor_capture_frames=480,
+                     native_two_actor_capture_interval=0.025)
         report["variants"][variant] = {"stock_scummvm_started": True}
         persist()
 
