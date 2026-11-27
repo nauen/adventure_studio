@@ -190,7 +190,8 @@ def run_reciprocal_focus(upstream: Path, output: Path) -> dict:
                      scene_only=True, allow_static_scene=True,
                      native_two_actor_walk_probe=True,
                      native_two_actor_capture_frames=330,
-                     native_two_actor_capture_interval=0.02)
+                     native_two_actor_capture_interval=0.02,
+                     native_two_actor_defer_preview=True)
         report["variants"][variant] = {"native_game_started": True}
         persist()
 
@@ -204,8 +205,13 @@ def run_reciprocal_focus(upstream: Path, output: Path) -> dict:
         for variant in ("masked", "transparent", "wrong-box")
     }
     report["mask_comparison"] = measure_two_actor_native_mask_comparison(output, traces)
+    camera_frames = measure_two_actor_native_camera_trace(transparent)
+    # Retain actual observations even when the strict focus gate fails.
+    report["native_focus_observations"] = {"actor_tracks": traces,
+                                           "camera_frames": camera_frames}
+    persist()
     report["visual_reciprocal_focus"] = verify_native_reciprocal_focus(
-        traces, measure_two_actor_native_camera_trace(transparent))
+        traces, camera_frames)
     report["complete_r06_276_acceptance"] = True
     persist()
     return report

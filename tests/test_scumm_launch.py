@@ -10,6 +10,28 @@ from adventure_studio.scumm_launch import authored_item_center, close_rgb, color
 
 
 class ScummLaunchTests(unittest.TestCase):
+    def test_deferred_native_previews_require_two_actor_capture(self):
+        with self.assertRaisesRegex(ValueError, "Deferred native previews"):
+            launch_smoke(Path("/tmp/game"), Path("/tmp/output"),
+                         native_two_actor_defer_preview=True)
+
+    def test_convert_framebuffer_preview_uses_existing_raw_frame(self):
+        from adventure_studio.scumm_launch import convert_framebuffer_preview
+        with tempfile.TemporaryDirectory() as tmp:
+            raw = Path(tmp) / "frame.xwd"
+            png = Path(tmp) / "frame.png"
+            raw.write_bytes(b"native framebuffer")
+            png.write_bytes(b"p" * 64)
+            with patch("adventure_studio.scumm_launch.subprocess.run",
+                       return_value=CompletedProcess([], 0, stderr="")) as run:
+                self.assertEqual(convert_framebuffer_preview(raw, png), png)
+                self.assertEqual(run.call_args.args[0], ["convert", str(raw), str(png)])
+                self.assertEqual(raw.read_bytes(), b"native framebuffer")
+            with patch("adventure_studio.scumm_launch.subprocess.run",
+                       return_value=CompletedProcess([], 1, stderr="decode failed")):
+                with self.assertRaisesRegex(RuntimeError, "decode failed"):
+                    convert_framebuffer_preview(raw, png)
+
     def test_open_story_door_exit_retries_once_after_real_open_state(self):
         # The stock-ScummVM --puzzle-only story previously lacked the
         # retry already available to recipe games. Do not retry while
