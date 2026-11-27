@@ -1511,6 +1511,20 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/chain-fixture /tmp/chain-smoke --chain-only
+      - name: Play native Use puzzle with wrong and correct inventory items
+        if: ${{ matrix.shard == 'story' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_use_interaction_probe /tmp/scummc-upstream /tmp/native-use-interaction
+      - name: Retain native Use puzzle evidence
+        if: ${{ always() && matrix.shard == 'story' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-use-interaction
+          path: /tmp/native-use-interaction
+          if-no-files-found: ignore
       - name: Play contextual LookAt clues before and after puzzle state change
         if: ${{ matrix.shard == 'story' }}
         env:
