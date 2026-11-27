@@ -53,6 +53,32 @@ def _ending_pixels(frame: Path) -> int:
                    for y in range(top, bottom) for x in range(left, right))
 
 
+def _measure_current_frame(output: Path, *, ending: bool) -> tuple[tuple[int, ...], int]:
+    """Acquire one real framebuffer and scan the actor crop only once."""
+    from PIL import Image
+    from .scumm_four_facing_probe import FACING_COLORS
+
+    raw = output / "dialogue-current.xwd"
+    preview = output / "scummvm-current.png"
+    subprocess.run(["xwd", "-root", "-silent", "-out", str(raw)],
+                   check=True, timeout=10, capture_output=True)
+    with Image.open(raw) as source:
+        rgb = source.convert("RGB")
+        left, right, top, bottom = ACTOR_REGION
+        region = rgb.crop((left, top, right, bottom))
+        colors = [color for _, color in FACING_COLORS]
+        if ending:
+            colors.append((200, 45, 205))
+        # Count actual pixels by histogram instead of repeating Python
+        # getpixel calls and decoding the same full screenshot twice.
+        histogram = region.getcolors(maxcolors=region.width * region.height)
+        counts = tuple(sum(n for n, pixel in histogram
+                           if close_rgb(pixel, color, 25)) for color in colors)
+        rgb.save(preview, compress_level=1)
+    raw.unlink()
+    return counts[:4], counts[4] if ending else 0
+
+
 def run(game_directory: Path, output: Path, two_lines: bool = False,
         ending: bool = False) -> dict:
     if not os.environ.get("DISPLAY"):
@@ -99,11 +125,9 @@ def run(game_directory: Path, output: Path, two_lines: bool = False,
             for sample in range(240 if two_lines else 120):
                 if process.poll() is not None:
                     raise RuntimeError("ScummVM exited during animated NPC line")
-                _capture(output, "current")
-                row = scan_costume_colors(output / "scummvm-current.png")
+                row, magenta = _measure_current_frame(output, ending=ending)
                 samples.append(row)
                 if ending:
-                    magenta = _ending_pixels(output / "scummvm-current.png")
                     if magenta >= ending_baseline + 16 and not ending_seen:
                         if not observed_speaking_change(baseline, samples):
                             raise RuntimeError("Native ending pose started before the first speaking frames")
@@ -130,7 +154,7 @@ def run(game_directory: Path, output: Path, two_lines: bool = False,
                     break
                 # Avoid phase-locking screenshot samples to short alternating
                 # COST frames: a fixed interval can repeatedly miss one pose.
-                time.sleep((0.04, 0.07, 0.11)[sample % 3] if two_lines else 0.10)
+                time.sleep((0.01, 0.02, 0.03)[sample % 3] if two_lines else 0.10)
             report["two_frames_visible"] = observed_speaking_change(baseline, samples)
             report["peak_pixels"] = {
                 name: max(row[index] for row in samples)
