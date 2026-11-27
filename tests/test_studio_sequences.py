@@ -207,6 +207,12 @@ class NativeSequenceEditorTests(unittest.TestCase):
         self.assertIn('egoSay("The key fits.");', native)
         with self.assertRaises(ValueError):
             set_sequence_condition(raw, "Cellar|Stairs|Use|used:Key|1", "used:Door", 1)
+        with self.assertRaises(ValueError):
+            set_sequence_condition(raw, "Cellar|Stairs|Use|used:Key|1",
+                                   "used:Key", 1, "==", "var:Bypass", 1, "==", "or")
+        valid = set_sequence_condition(raw, "Cellar|Stairs|Use|used:Key|1",
+                                       "used:Key", 1, "==", "var:Ready", 1, "==", "and")
+        self.assertEqual(parse_document(valid).interaction_sequences[0].condition_join, "and")
         old = canonical_json(GameDocument("UseConflict", (scrolling_fixture(), cellar)))
         with self.assertRaises(ValueError):
             append_sequence_step(old, "Harbor", "Door", "Use",

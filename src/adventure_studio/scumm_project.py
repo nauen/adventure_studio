@@ -996,6 +996,8 @@ def _validate_document(document: GameDocument) -> None:
                 or not 0 <= sequence.condition_state <= 2):
             raise ValueError("Interaction condition requires a valid room object and native state")
         second = sequence.condition_second_target
+        if sequence.condition_used_item_id is not None and sequence.condition_join != "and":
+            raise ValueError("Selected inventory item must remain mandatory; use AND for additional conditions")
         if second is None:
             if (sequence.condition_second_value is not None or sequence.condition_second_operator != "=="
                     or sequence.condition_join != "and"):
