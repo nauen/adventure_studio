@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .palette_animation import PaletteCycle
 from .scumm_costume import (CostumeAnimation, CostumeAsset, CostumeDirection,
-                           CostumeFrame, validate_costume, write_costume_sources, stand_animation_frame, walk_animation_frame)
+                           CostumeFrame, validate_costume, write_costume_sources, stand_animation_frame, walk_animation_frame, talk_animation_frame)
 from .scumm_assets import (CameraCue, CombineRule, RoomAsset, RoomHotspot, ScaleCurve, TalkChoice,
                            TalkRule, UseRule, Walkbox, ZPlane, _validate, write_game_sources)
 from .targets import RoomGeometry
@@ -90,6 +90,12 @@ class ActorStandAnimationStep:
 
 @dataclass(frozen=True)
 class ActorWalkAnimationStep:
+    actor_id: str
+    animation: str
+
+
+@dataclass(frozen=True)
+class ActorTalkAnimationStep:
     actor_id: str
     animation: str
 
@@ -249,7 +255,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[ActorStandAnimationStep | ActorWalkAnimationStep | AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[ActorStandAnimationStep | ActorWalkAnimationStep | ActorTalkAnimationStep | AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -363,6 +369,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, ActorStandAnimationStep)
                                                    else {"type": "actor_walk_animation", **vars(step)}
                                                    if isinstance(step, ActorWalkAnimationStep)
+                                                   else {"type": "actor_talk_animation", **vars(step)}
+                                                   if isinstance(step, ActorTalkAnimationStep)
                                                    else {"type": "set_object_state", **vars(step)}
                                                    if isinstance(step, ObjectStateStep)
                                                    else {"type": "move_actor", **vars(step)}
@@ -889,6 +897,12 @@ def _validate_document(document: GameDocument) -> None:
                                      (actor.id, room.name) not in transfer_destinations):
                     raise ValueError("Walk animation requires an Actor in the sequence room")
                 walk_animation_frame(costumes_by_name[actor.costume], step.animation)
+            elif isinstance(step, ActorTalkAnimationStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if actor is None or (actor.room != room.name and
+                                     (actor.id, room.name) not in transfer_destinations):
+                    raise ValueError("Talk animation requires an Actor in the sequence room")
+                talk_animation_frame(costumes_by_name[actor.costume], step.animation)
             elif isinstance(step, AnimateActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if actor is None or (actor.room != room.name and
@@ -1157,6 +1171,10 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "animation"},
                              {"type", "actor_id", "animation"})
                 steps.append(ActorWalkAnimationStep(step["actor_id"], step["animation"]))
+            elif kind == "actor_talk_animation":
+                step = _only(raw_step, {"type", "actor_id", "animation"},
+                             {"type", "actor_id", "animation"})
+                steps.append(ActorTalkAnimationStep(step["actor_id"], step["animation"]))
             elif kind == "set_object_state":
                 step = _only(raw_step, {"type", "hotspot_id", "state"},
                              {"type", "hotspot_id", "state"})

@@ -1042,6 +1042,20 @@ jobs:
           name: native-actor-walk-animation
           path: /tmp/native-actor-walk-animation
           if-no-files-found: ignore
+      - name: Verify native Actor talk animation binding and Escape
+        if: ${{ matrix.shard == 'actors' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_talk_animation_probe /tmp/scummc-upstream /tmp/native-actor-talk-animation
+      - name: Retain native Actor talk animation evidence
+        if: ${{ always() && matrix.shard == 'actors' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-actor-talk-animation
+          path: /tmp/native-actor-talk-animation
+          if-no-files-found: ignore
       - name: Play Studio VOC voice line with native subtitle and Escape
         if: ${{ matrix.shard == 'actors' }}
         env:
