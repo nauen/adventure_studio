@@ -115,10 +115,17 @@ def verify_native_rendezvous_release(traces: dict) -> dict:
     ]
     if len(a_departing) < 3:
         raise RuntimeError("Native Actor A did not visibly depart before stationary B")
+    # Joint frames establish the meeting and A-first release. Once A has
+    # departed, following B may move A off screen; B's own costume pixels
+    # still prove its subsequent movement without inventing A observations.
+    b_track = sorted(traces[ACTOR_IDS[1]], key=lambda row: row["seconds"])
     b_departing = [
-        row for row in measured
-        if row["seconds"] > a_departing[-1]["seconds"]
-        and 5 <= row["b_delta"] <= 55
+        {"frame": right["frame"], "seconds": right["seconds"],
+         "b_x": right["world_x"], "b_delta": right["world_x"] - left["world_x"]}
+        for left, right in zip(b_track, b_track[1:])
+        if left["seconds"] >= a_departing[-1]["seconds"]
+        and 0 < right["seconds"] - left["seconds"] <= 1.5
+        and 5 <= right["world_x"] - left["world_x"] <= 55
     ]
     if len(b_departing) < 3:
         raise RuntimeError("Native Actor B did not subsequently depart from meeting")
