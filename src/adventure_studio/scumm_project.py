@@ -89,6 +89,18 @@ class AnimateActorStep:
 
 
 @dataclass(frozen=True)
+class SetGameVariableStep:
+    name: str
+    value: int
+
+
+def game_variable_symbol(name: str) -> str:
+    if not isinstance(name, str) or re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,31}", name) is None:
+        raise ValueError("Game variable needs an ASCII identifier of 1 to 32 characters")
+    return "ASGameVar_" + name
+
+
+@dataclass(frozen=True)
 class ObjectClassStep:
     hotspot_id: str
     class_id: int
@@ -264,10 +276,11 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | ObjectClassStep | MoveObjectStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | SetGameVariableStep | ObjectClassStep | MoveObjectStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
+    condition_variable: str | None = None
 
 
 @dataclass(frozen=True)
@@ -312,6 +325,14 @@ def _decode_pixels(encoded: object) -> bytes:
 
 def _encode_pixels(pixels: bytes | None) -> str | None:
     return base64.b64encode(pixels).decode("ascii") if pixels is not None else None
+
+
+def game_variable_names(document: GameDocument) -> tuple[str, ...]:
+    names = {step.name for sequence in document.interaction_sequences
+             for step in sequence.steps if isinstance(step, SetGameVariableStep)}
+    names.update(sequence.condition_variable for sequence in document.interaction_sequences
+                 if sequence.condition_variable is not None)
+    return tuple(sorted(names))
 
 
 def document_dict(document: GameDocument) -> dict:
@@ -371,9 +392,14 @@ def document_dict(document: GameDocument) -> dict:
                                         **({"condition_hotspot_id": sequence.condition_hotspot_id,
                                             "condition_state": sequence.condition_state}
                                            if sequence.condition_hotspot_id is not None else {}),
+                                        **({"condition_variable": sequence.condition_variable,
+                                            "condition_state": sequence.condition_state}
+                                           if sequence.condition_variable is not None else {}),
                                         **({"skippable": True} if sequence.skippable else {}),
                                         "steps": [({"type": "animate_actor", **vars(step)}
                                                    if isinstance(step, AnimateActorStep)
+                                                   else {"type": "set_game_variable", **vars(step)}
+                                                   if isinstance(step, SetGameVariableStep)
                                                    else {"type": "object_class", **vars(step)}
                                                    if isinstance(step, ObjectClassStep)
                                                    else {"type": "move_object", **vars(step)}
@@ -888,7 +914,12 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError("Interaction sequence requires ordered steps")
         if type(sequence.skippable) is not bool:
             raise ValueError("Interaction skip setting must be boolean")
-        if (sequence.condition_hotspot_id is None) != (sequence.condition_state is None):
+        if sequence.condition_variable is not None:
+            game_variable_symbol(sequence.condition_variable)
+            if (sequence.condition_hotspot_id is not None or type(sequence.condition_state) is not int
+                    or not -32768 <= sequence.condition_state <= 32767):
+                raise ValueError("Variable condition requires one named variable and a signed 16-bit value")
+        elif (sequence.condition_hotspot_id is None) != (sequence.condition_state is None):
             raise ValueError("Interaction condition requires both an object and a state")
         if sequence.condition_hotspot_id is not None and (
                 sequence.condition_hotspot_id not in {hotspot.id for hotspot in room.hotspots}
@@ -907,6 +938,10 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction animation requires named, indexed Costume animation")
                 if actor.direction not in {direction.direction for direction in animation.directions}:
                     raise ValueError("Interaction animation lacks Actor direction")
+            elif isinstance(step, SetGameVariableStep):
+                game_variable_symbol(step.name)
+                if type(step.value) is not int or not -32768 <= step.value <= 32767:
+                    raise ValueError("Game variable requires a signed 16-bit integer")
             elif isinstance(step, ObjectClassStep):
                 if (not isinstance(step.hotspot_id, str)
                         or step.hotspot_id not in {hotspot.id for hotspot in room.hotspots}
@@ -1056,11 +1091,18 @@ def _validate_document(document: GameDocument) -> None:
     for group in sequence_groups.values():
         if len(group) < 2:
             continue
-        guards = [item for item in group if item.condition_hotspot_id is not None]
+        guards = [item for item in group if item.condition_hotspot_id is not None or item.condition_variable is not None]
         if (len(guards) < len(group) - 1
-                or len({item.condition_hotspot_id for item in guards}) != 1
+                or len({(item.condition_hotspot_id, item.condition_variable) for item in guards}) != 1
                 or len({item.condition_state for item in guards}) != len(guards)):
-            raise ValueError("Interaction alternatives need distinct states of one object and at most one fallback")
+            raise ValueError("Interaction alternatives need distinct states of one object or variable and at most one fallback")
+    variable_names = game_variable_names(document)
+    reserved = {game_variable_symbol(name) for name in variable_names}
+    symbols = ({room.name for room in document.rooms}
+               | {hotspot.id for room in document.rooms for hotspot in room.hotspots}
+               | {actor.id for actor in document.actors})
+    if len(variable_names) > 128 or reserved & symbols:
+        raise ValueError("Too many game variables or native variable symbol conflict")
 
 
 def parse_document(source: str) -> GameDocument:
@@ -1169,7 +1211,7 @@ def parse_document(source: str) -> GameDocument:
     interaction_sequences = []
     for raw_sequence in raw_sequences:
         item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps",
-                                    "condition_hotspot_id", "condition_state", "skippable"},
+                                    "condition_hotspot_id", "condition_state", "skippable", "condition_variable"},
                      {"room", "hotspot_id", "verb", "steps"})
         if not isinstance(item["steps"], list):
             raise ValueError("Interaction steps must be a list")
@@ -1182,6 +1224,9 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "animation"},
                              {"type", "actor_id", "animation"})
                 steps.append(AnimateActorStep(step["actor_id"], step["animation"]))
+            elif kind == "set_game_variable":
+                step = _only(raw_step, {"type", "name", "value"}, {"type", "name", "value"})
+                steps.append(SetGameVariableStep(step["name"], step["value"]))
             elif kind == "object_class":
                 step = _only(raw_step, {"type", "hotspot_id", "class_id", "enabled"},
                              {"type", "hotspot_id", "class_id", "enabled"})
@@ -1269,7 +1314,8 @@ def parse_document(source: str) -> GameDocument:
                                                          item["verb"], tuple(steps),
                                                          item.get("condition_hotspot_id"),
                                                          item.get("condition_state"),
-                                                         item.get("skippable", False)))
+                                                         item.get("skippable", False),
+                                                         item.get("condition_variable")))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",
