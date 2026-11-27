@@ -1,10 +1,10 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
-- **Jetzt:** #363 – native IM03/ZP01-Verdeckung (R07/R06-Anschluss).
-- **Abnahme:** Stock-ScummVM-Pixelvergleich verdeckt / transparent / falscher Walkbox-Z-Index; vollständige Pflichtgates.
-- **Blocker:** Neue native Abnahme noch offen: drei getrennt verlinkte stock-ScummVM-Spiele (weiße IM03-Maske, transparente IM03-Maske, falscher BOXD-Index). IM01/IM02 und Raum-Masken unverändert bzw. im Probe transparent. [Core](https://github.com/nauen/adventure_studio/actions/runs/46009888778) und [Native](https://github.com/nauen/adventure_studio/actions/runs/46009898994) laufen. #348 bleibt Integrationsvoraussetzung; keine ungeprüfte Vereinigung der Branches.
-- **Danach:** IM03/ZP02. #348 Bildfolge und sechs Actor-Teilfähigkeiten gameplay-belegt, Integration offen; [PROJECT_STATUS](PROJECT_STATUS.md).
+- **Jetzt:** #364 – native IM03/ZP02-Verdeckung (R07/R06-Anschluss).
+- **Abnahme:** Native Pixelmessung maskiert/transparent/falscher BOXD bei unabhängiger ZP01.
+- **Blocker:** Drei unabhängig verlinkte stock-ScummVM-Spiele mit transparenter IM03/ZP01 und sonst unveränderten Masken: ZP02 maskiert/transparent/falscher BOXD-Index. [Core](https://github.com/nauen/adventure_studio/actions/runs/46010415448) und [Native](https://github.com/nauen/adventure_studio/actions/runs/46010424538); Gameplay noch offen. #348/#363 sind Integrationsvoraussetzungen.
+- **Danach:** IM03/ZP03. #363 ZP01 und #348 Bildfolge gameplay-belegt; Integration offen, siehe [PROJECT_STATUS](PROJECT_STATUS.md).
 
 Nach Gameplay-Nachweis sofort ein Folgepaket aufnehmen; Merge-Pflichtgates unverändert.
 
