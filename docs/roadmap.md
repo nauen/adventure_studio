@@ -1,12 +1,12 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
-- **Jetzt:** #350 native Actor-Zeichenebene/Escape (R06/A05). [#350](https://github.com/nauen/adventure_studio/pull/350), native Actor-Zeichenebene/Escape. Autoren steuern Actor-zu-Actor-Zeichenreihenfolge über Studio/JSON-v1/ScummC `setActorLayer`; Raum-Z-Masken unverändert. Frühere native Probe B→A→B erfolgreich ([Artefakt 15195418170](https://github.com/nauen/adventure_studio/actions/runs/45994511162/artifacts/15195418170)), Core grün.
-- **Abnahme:** B→A→B durch native Zeichenebene und Escape; vollständige stock-ScummVM- und Core-Pflichtgates.
-- **Blocker:** [Geometry-Job](https://github.com/nauen/adventure_studio/actions/runs/45994511162/job/140490671815) rot: `Native Actor B did not subsequently depart from meeting`. [Artefakt 15196924032](https://github.com/nauen/adventure_studio/actions/runs/45994511162/artifacts/15196924032) zeigt B-Bewegung +28/+32/+32 Pixel (X=423/511/543); letzter Schritt ohne sichtbaren A. [Fix 53eddb5](https://github.com/nauen/adventure_studio/commit/53eddb5f5af3f00d93a4d2e0285a59c881aafc48) nutzt B-eigene Zeit-/Pixelspur nach gemeinsam belegtem A-Abgang, unveränderte Mindestanzahl und Zeitgrenze, gezielter Regressionstest. Neue CI ausstehend.
-- **Danach:** #353 native Actor-Palettenzuordnung vollständig integrieren. #355 Gameplay erfolgreich, Gesamtgate und Merge offen; siehe [PROJECT_STATUS](PROJECT_STATUS.md). Nur ein aktives Produktpaket.
+- **Jetzt:** #353 – native dynamische Actor-Palettenzuordnung (R06/A05).
+- **Abnahme:** Tatsächlicher Farbwechsel und Originalpalette nach Escape in stock ScummVM. Frühere Gameplay-Evidenz: [15195927049](https://github.com/nauen/adventure_studio/actions/runs/45995788559/artifacts/15195927049). Aktuelle vollständige Pflichtgates offen.
+- **Blocker:** [Geometry-Fehler](https://github.com/nauen/adventure_studio/actions/runs/45995788559/job/140494765704) bei Rendezvous, nicht im Paletten-Gameplay. Original-[Artefakt 15198071352](https://github.com/nauen/adventure_studio/actions/runs/45995788559/artifacts/15198071352) zeigt in B-Annäherung X=262→302→358→395 (12,514/12,686/12,919/13,150 s): +56 überschreitet den unveränderten 55-Pixel-Grenzwert; nur zwei gültige Schritte. [Fix bc7ae1a](https://github.com/nauen/adventure_studio/commit/bc7ae1aa3acfa31056ee98d0e95e8285c655d1be) erhöht echte Aufnahmezahl 300→480, Pause 70→25 ms; keine synthetischen Bilder oder Schwellenänderung. [Core](https://github.com/nauen/adventure_studio/actions/runs/46003202312), [Native](https://github.com/nauen/adventure_studio/actions/runs/46003213681) ausstehend; Wirksamkeit noch nicht belegt.
+- **Danach:** #352 nativer Actor-Laufstopp/Wiederaufnahme. #355 und #350: Gameplay belegt, Integration offen. Details in [PROJECT_STATUS](PROJECT_STATUS.md).
 
-Ältere operative Prioritäten sind historisch.
+Ältere operative Prioritäten sind historisch. Nach belegtem Gameplay sofort ein Folgepaket aufnehmen; Merge-Gates bleiben verpflichtend.
 
 ## Historischer Integrationsstand (26.11.2026) – nicht aktive Paketauswahl
 

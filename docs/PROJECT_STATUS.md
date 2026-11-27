@@ -1,3 +1,22 @@
+## Verbindlicher Stand – 27.11.2026 (nach Zeichenebenen-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
+- **Konsolidierung:** #358 auf main (4eb504e); #360 aktualisiert, Merge ausstehend. #355 [Gameplay](https://github.com/nauen/adventure_studio/actions/runs/46000802088/artifacts/15198662109) auf 698b3bf: je acht stabile X=372/442/372 inklusive Escape. [Core](https://github.com/nauen/adventure_studio/actions/runs/46000791031) und Actor-Shard grün, [Gesamtgate](https://github.com/nauen/adventure_studio/actions/runs/46000802088) läuft; Merge offen.
+- **Offene Integration:** #350 [Gameplay](https://github.com/nauen/adventure_studio/actions/runs/45994511162/artifacts/15195418170) auf 996f2a5: Actor-Zeichenebene B→A→B mit je 672/0 bzw. 0/672 Pixeln, Escape 0,349 s. Produktpfad unverändert; Geometry-Fix 53eddb5 in [Core](https://github.com/nauen/adventure_studio/actions/runs/46002751781) und [Native](https://github.com/nauen/adventure_studio/actions/runs/46002760362) noch offen; kein Merge.
+- **Jetzt – genau eine Fähigkeit:** [#353](https://github.com/nauen/adventure_studio/pull/353) dynamische native Actor-Palettenzuordnung (R06/A05): Studio/JSON-v1/ScummC setActorPalette, tatsächliche verlinkte COST-Slots, raumbezogene Zielpalette und 255 für COST-Original. [Gameplay-Artefakt](https://github.com/nauen/adventure_studio/actions/runs/45995788559/artifacts/15195927049) auf 52bdc81: Original 672/0, Farbwechsel 0/672, Escape 672/0, 0,349 s; native_actor_palette_verified=true.
+- **Abnahme:** Native sichtbare Farbänderung und Rückkehr zur ursprünglichen COST-Palette nach Escape; korrekt verlinkte Slots, vollständige Pflichtgates auf aktuellem Head.
+- **Blocker:** [Geometry-Fehler](https://github.com/nauen/adventure_studio/actions/runs/45995788559/job/140494765704) bei Rendezvous, nicht im Paletten-Gameplay. Original-[Artefakt 15198071352](https://github.com/nauen/adventure_studio/actions/runs/45995788559/artifacts/15198071352) zeigt in B-Annäherung X=262→302→358→395 (12,514/12,686/12,919/13,150 s): +56 überschreitet den unveränderten 55-Pixel-Grenzwert; nur zwei gültige Schritte. [Fix bc7ae1a](https://github.com/nauen/adventure_studio/commit/bc7ae1aa3acfa31056ee98d0e95e8285c655d1be) erhöht echte Aufnahmezahl 300→480, Pause 70→25 ms; keine synthetischen Bilder oder Schwellenänderung. [Core](https://github.com/nauen/adventure_studio/actions/runs/46003202312), [Native](https://github.com/nauen/adventure_studio/actions/runs/46003213681) ausstehend; Wirksamkeit noch nicht belegt.
+- **Danach:** #352 nativer Actor-Laufstopp und Wiederaufnahme; nach Gameplay-Konsolidierung aktivieren.
+- **Arbeitsregel (Nutzerentscheidung 27.11.):** Nach nachgewiesenem Gameplay sofort genau ein natives Folgepaket aufnehmen, laufende Pflichtgates als offene Integration führen. Merge nur bei grünen Pflichtgates und kompatibler Integration; keine parallele neue Implementierung, kein NPC-Komfort.
+
+### Offene Integration / zurückgestellte Pakete
+
+- #355/#350: Gameplay belegt; Gesamtgates offen (siehe oben). #353 einzig aktives Paket.
+- #352 [Core](https://github.com/nauen/adventure_studio/actions/runs/46000044163) grün, [Native](https://github.com/nauen/adventure_studio/actions/runs/46000052265) läuft; noch keine neue Abnahme behauptet.
+- #357 [Actor-Job](https://github.com/nauen/adventure_studio/actions/runs/45999162322/job/140506309059) rot; #348 [Mask-Job](https://github.com/nauen/adventure_studio/actions/runs/45991905870/job/140482936603) rot; #338 und #329 offen. #326/#328/#330/#331/#332/#359 sowie sonstige offene PRs siehe historischer Stand. Branches bleiben erhalten; ZP05+ fail-closed.
+
+## Vorheriger Stand (historisch; durch obige Nutzerentscheidung ersetzt)
+
 ## Verbindlicher Stand – 27.11.2026 (nach Walkbox-Gameplay-Nachweis)
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
