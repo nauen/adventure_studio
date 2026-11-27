@@ -182,6 +182,31 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_give_sequence_preserves_use_and_consumes_only_selected_item(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        harbor, cellar = scrolling_fixture(), destination_fixture()
+        raw = canonical_json(GameDocument("GiveKey", (harbor, cellar)))
+        raw = append_sequence_step(raw, "Cellar", "Stairs", "Give",
+                                   "Gegenstand verbrauchen / übergeben", None, None, "inv:Key", None)
+        raw = set_sequence_condition(raw, "Cellar|Stairs|Give", "used:Key", 1)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        source = inject_interaction_sequences(scummc_room_source(harbor), harbor.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, harbor)
+        self.assertEqual(source.count("case Preposition:"), 1)
+        self.assertIn("if(vrb == Give)", source)
+        self.assertIn('sntcPrepo[0] = "to";', source)
+        self.assertIn('sntcPrepo[0] = "with";', source)
+        self.assertIn("case Use:", source)
+        native = inject_interaction_sequences(scummc_room_source(cellar), cellar.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, cellar)
+        self.assertIn("case Give:", native)
+        self.assertIn("objB == Key && getObjectOwner(Key) == VAR_EGO", native)
+        self.assertIn("setObjectOwner(Key,0);", native)
+        with self.assertRaises(ValueError):
+            set_sequence_condition(raw, "Cellar|Stairs|Give|used:Key|1", "used:Key", 0)
+
     def test_use_sequence_selected_inventory_item_and_cross_room_preposition(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import scummc_room_source

@@ -524,6 +524,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
     used_items = {item.condition_used_item_id for item in sequences if item.condition_used_item_id is not None}
+    given_items = {item.condition_used_item_id for item in sequences
+                   if item.verb == "Give" and item.condition_used_item_id is not None}
     # The upstream sentence handler needs the inventory item Preposition entry
     # before it selects the second object, even when the item originates elsewhere.
     if room_asset is not None:
@@ -536,14 +538,21 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             if end == -1:
                 end = source.index("    local script entry()", start)
             segment = source[start:end]
-            if "        case Preposition:\n" not in segment:
+            prep_case = "        case Preposition:\n"
+            if prep_case not in segment:
                 verb = "        verb(int vrb, int objA, int objB) {\n"
                 if segment.count(verb) != 1:
-                    raise ValueError("Missing native pickup verb for used-item sequence")
-                segment = segment.replace(verb, verb + "        case Preposition:\n"
+                    raise ValueError("Missing native pickup verb for selected-item sequence")
+                segment = segment.replace(verb, verb + prep_case
                                           '            sntcPrepo[0] = "with";\n'
                                           "            return;\n", 1)
-                source = source[:start] + segment + source[end:]
+            if hotspot.id in given_items:
+                segment = segment.replace(prep_case, prep_case +
+                    "            if(vrb == Give) {\n"
+                    '                sntcPrepo[0] = "to";\n'
+                    "                return;\n"
+                    "            }\n", 1)
+            source = source[:start] + segment + source[end:]
     if not active:
         return source
     def transfer_plane(step):
