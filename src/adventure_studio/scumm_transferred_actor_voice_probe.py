@@ -7,6 +7,8 @@ import subprocess
 import sys
 import time
 
+from PIL import Image
+
 from .scumm_actor_zclip_transfer_probe import author_transfer_project, RETURN_RGB, REVEAL_RGB
 from .scumm_launch import colored_item_center, colored_item_pixels
 from .scumm_project import SoundAsset, canonical_json, export_document, parse_document
@@ -35,6 +37,14 @@ def run(upstream, destination):
         "Gesprochene Zeile", ACTOR_IDS[0], None, "CellarVoice", None,
         subtitle="I am speaking from the cellar. Listen to my voice.")
     raw = set_sequence_skippable(raw, "Cellar|R06Reveal|Close", True)
+    # Same room and sound, but transfer the speaker away before the line.
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+        "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", 0, 240, 85)
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+        "Gesprochene Zeile", ACTOR_IDS[0], None, "CellarVoice", None,
+        subtitle="The absent speaker must not speak here.")
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+        "Objektzustand setzen", None, None, "R06TransferReturn", 0)
     (build / "project.json").write_text(raw, encoding="utf-8")
     export_document(parse_document(raw), resources)
     game_dir = compile_story_game(build, upstream, destination / "game")
@@ -134,6 +144,34 @@ def run(upstream, destination):
             frame("after-escape")
             if game.poll() is not None:
                 raise RuntimeError("ScummVM exited after Escape")
+
+            # Let the previous native message expire before the negative control.
+            time.sleep(8)
+            frame("before-absent")
+            absent_start = offset()
+            click(234, 535)
+            click(*colored_item_center(frames, "before-absent", RETURN_RGB, fuzz_percent=4))
+            deadline = time.monotonic() + 25
+            while time.monotonic() < deadline:
+                if game.poll() is not None:
+                    raise RuntimeError("ScummVM exited during absent-speaker control")
+                frame("absent")
+                if (colored_item_pixels(frames, "absent", RETURN_RGB, fuzz_percent=4) < 40
+                        and colored_item_pixels(frames, "absent", REVEAL_RGB, fuzz_percent=4) >= 40):
+                    break
+                time.sleep(.3)
+            else:
+                raise RuntimeError("Absent-speaker interaction did not complete in Cellar")
+            time.sleep(1.5)
+            absent_end = offset()
+            frame("absent")
+            # The distinct 16px-wide authored actor occupies this lane at x=220.
+            # Ego walks to the return hotspot at x=285, outside the lane.
+            with Image.open(frames / "scummvm-absent.png") as image:
+                actor_pixels = sum(max(pixel) <= 24 for pixel in
+                    image.convert("RGB").crop((616, 312, 648, 343)).getdata())
+            if actor_pixels >= 25:
+                raise RuntimeError(f"Absent speaker still visible in Cellar: {actor_pixels} pixels")
         finally:
             game.terminate()
             try:
@@ -149,6 +187,9 @@ def run(upstream, destination):
               "replayed_after_normal_completion": True,
               "during": activity(pcm[heard[0]:heard[1]]),
               "after_escape": activity(pcm[after_start:after_end]),
+              "absent_audio": activity(pcm[absent_start:absent_end]),
+              "absent_actor_pixels": actor_pixels,
+              "absent_interaction_completed": True,
               "pcm_bytes": len(pcm), "escape_sent": True,
               "subtitle_frame": "scummvm-speaking.png"}
     report["native_transferred_actor_voice_audio_verified"] = (
@@ -156,7 +197,10 @@ def run(upstream, destination):
         and report["during_normal"] > report["before"] + .1
         and report["during_normal"] > report["after_normal"] + .1
         and report["during"] > report["before"] + .1
-        and report["during"] > report["after_escape"] + .1)
+        and report["during"] > report["after_escape"] + .1
+        and absent_end-absent_start >= 8192
+        and report["absent_audio"] <= report["before"] + .05
+        and report["absent_actor_pixels"] < 25)
     (destination / "report.json").write_text(json.dumps(report, indent=2))
     if not report["native_transferred_actor_voice_audio_verified"]:
         raise RuntimeError(f"Native transferred Actor VOC not audible/stopped: {report}")
