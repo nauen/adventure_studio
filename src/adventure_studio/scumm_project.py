@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .palette_animation import PaletteCycle
 from .scumm_costume import (CostumeAnimation, CostumeAsset, CostumeDirection,
-                           CostumeFrame, validate_costume, write_costume_sources, stand_animation_frame, walk_animation_frame, talk_animation_frame)
+                           CostumeFrame, validate_costume, write_costume_sources, stand_animation_frame, walk_animation_frame, talk_animation_frame, talk_stop_animation_frame)
 from .scumm_assets import (CameraCue, CombineRule, RoomAsset, RoomHotspot, ScaleCurve, TalkChoice,
                            TalkRule, UseRule, Walkbox, ZPlane, _validate, write_game_sources)
 from .targets import RoomGeometry
@@ -98,6 +98,7 @@ class ActorWalkAnimationStep:
 class ActorTalkAnimationStep:
     actor_id: str
     animation: str
+    stop_animation: str | None = None
 
 
 @dataclass(frozen=True)
@@ -369,7 +370,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, ActorStandAnimationStep)
                                                    else {"type": "actor_walk_animation", **vars(step)}
                                                    if isinstance(step, ActorWalkAnimationStep)
-                                                   else {"type": "actor_talk_animation", **vars(step)}
+                                                   else {"type": "actor_talk_animation", "actor_id": step.actor_id, "animation": step.animation,
+                                                         **({"stop_animation": step.stop_animation} if step.stop_animation is not None else {})}
                                                    if isinstance(step, ActorTalkAnimationStep)
                                                    else {"type": "set_object_state", **vars(step)}
                                                    if isinstance(step, ObjectStateStep)
@@ -903,6 +905,8 @@ def _validate_document(document: GameDocument) -> None:
                                      (actor.id, room.name) not in transfer_destinations):
                     raise ValueError("Talk animation requires an Actor in the sequence room")
                 talk_animation_frame(costumes_by_name[actor.costume], step.animation)
+                if step.stop_animation is not None:
+                    talk_stop_animation_frame(costumes_by_name[actor.costume], step.stop_animation)
             elif isinstance(step, AnimateActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if actor is None or (actor.room != room.name and
@@ -1172,9 +1176,9 @@ def parse_document(source: str) -> GameDocument:
                              {"type", "actor_id", "animation"})
                 steps.append(ActorWalkAnimationStep(step["actor_id"], step["animation"]))
             elif kind == "actor_talk_animation":
-                step = _only(raw_step, {"type", "actor_id", "animation"},
+                step = _only(raw_step, {"type", "actor_id", "animation", "stop_animation"},
                              {"type", "actor_id", "animation"})
-                steps.append(ActorTalkAnimationStep(step["actor_id"], step["animation"]))
+                steps.append(ActorTalkAnimationStep(step["actor_id"], step["animation"], step.get("stop_animation")))
             elif kind == "set_object_state":
                 step = _only(raw_step, {"type", "hotspot_id", "state"},
                              {"type", "hotspot_id", "state"})

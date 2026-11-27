@@ -988,7 +988,7 @@ def make_app():
                 native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
                 native_sound_add = gr.Button("VOC dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor Sprechanimation", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor Sprechanimation", "Actor Sprechende", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
@@ -1003,6 +1003,7 @@ def make_app():
             gr.Markdown("**Actor Standanimation:** Wählt eine vollständig richtungsbelegte COST-Animation als native Standanimation aus. Die Pose wird beim nächsten nativen Laufende oder Standwechsel wirksam; die Zuordnung allein startet keine Animation. Standard-Stand oder explizite COST-Gruppe 24–52 (durch 4 teilbar).")
             gr.Markdown("**Actor Laufanimation:** Bindet eine vollständig richtungsbelegte COST-Animation an die native Laufbewegung. Standard-Lauf oder explizite COST-Gruppe 24–52 (durch 4 teilbar); die Zuordnung allein startet keine Animation und verändert weder Laufziel noch Standpose.")
             gr.Markdown("**Actor Sprechanimation:** Bindet eine vierfach richtungsbelegte COST-Animation an den nächsten nativen Sprechbeginn. Standard talkStart oder explizite Gruppe 24–52; ein vierfach richtungsbelegtes natives talkStop ohne expliziten Index ist erforderlich und bleibt die Rückkehrpose. Die Zuordnung startet keine Sprachzeile.")
+            gr.Markdown("**Actor Sprechende:** Wähle die Sprechbeginn-Animation und im Zielfeld die unabhängige Sprechendanimation. Beide nativen Gruppen werden gemeinsam gesetzt; die Aktion startet keine Sprachzeile.")
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten. Beide Aktionen wirken nur auf anwesende Actors, auch nach authoriertem Raumtransfer.")
             gr.Markdown("**Actor-Raumtransfer mit Z-Clipping:** Actor, Zielraum, X/Y und Ziel-Z-Ebene wählen. Transfer am Ende der Sequenz, optional gefolgt von einem Raumwechsel.")
             gr.Markdown("**Actor Z-Clipping:** 1–4 erzwingt eine vorhandene Raum-Z-Maske; 0 stellt die automatische Walkbox-Verdeckung wieder her. -1 stellt das authorierte Z-Clipping-Profil des aktuellen Raums wieder her. Die Aktion wirkt nur auf einen im aktuellen Raum anwesenden Actor, auch nach authoriertem Raumtransfer.")
@@ -2132,7 +2133,7 @@ def make_app():
             document = parse_document(raw)
             if kind == "Actor-Raumtransfer mit Z-Clipping":
                 actors = tuple(a.id for a in document.actors)
-            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor Sprechanimation", "Actor drehen", "Kamera folgt Actor", "Actor versetzen"):
+            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor Sprechanimation", "Actor Sprechende", "Actor drehen", "Kamera folgt Actor", "Actor versetzen"):
                 from .scumm_project import TransferActorZClipStep
                 transferred = {step.actor_id for sequence in document.interaction_sequences
                                for step in sequence.steps
@@ -2186,6 +2187,23 @@ def make_app():
         for event in (native_actor.change, native_kind.change):
             event(native_actor_update, [native_state, native_actor, native_kind, native_animation],
                   [native_animation, native_actor_initial])
+        def native_action_target_choices(raw, room, actor, kind, selected):
+            if raw is None:
+                return gr.skip()
+            if kind == "Actor Sprechende":
+                choices = actor_animations(raw, actor, "Actor Sprechende-Ziel")
+                return gr.update(label="Sprechendanimation", choices=choices,
+                                 value=selected if selected in choices else (choices[0] if choices else None))
+            rooms, objects, _ = project_choices(raw, room)
+            choices = [*[(f"Objekt: {name}", name) for name in objects],
+                       *[(f"Raum: {name}", name) for name in rooms],
+                       *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)]]
+            return gr.update(label="Zielobjekt / Zielraum", choices=choices,
+                             value=selected if selected in {value for _, value in choices} else None)
+
+        for event in (native_actor.change, native_kind.change, native_room.change, native_state.change):
+            event(native_action_target_choices,
+                  [native_state, native_room, native_actor, native_kind, native_target], [native_target])
         def native_actor_zclip_update(raw, actor_id):
             actor = next((actor for actor in parse_document(raw).actors if actor.id == actor_id), None) if raw is not None else None
             return (actor.initial_zclip, actor.reset_zclip_on_room_entry) if actor else (0, False)
@@ -2235,10 +2253,7 @@ def make_app():
             return (fields[0], gr.update(choices=[("Ego (für gesprochene Zeile)", None),
                                                  *[(item, item) for item in actors]], value=fields[1]),
                     gr.update(choices=animations, value=fields[2]),
-                    gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
-                                       *[(f"Raum: {name}", name) for name in rooms],
-                                       *[(f"Sound: {name}", name) for name in room_sound_ids(raw, sequence_room)]],
-                              value=fields[3]),
+                    native_action_target_choices(raw, sequence_room, fields[1], fields[0], fields[3]),
                     fields[4], fields[5], fields[6], fields[7], fields[8] if len(fields) > 8 else "")
 
         native_step.change(native_step_update, [native_state, native_sequence, native_step],
