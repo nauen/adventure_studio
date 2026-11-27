@@ -77,14 +77,8 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                         continue
                     if ident in ("R06North", "R06South") and not facing:
                         continue
-                    # Keep the restore-profile trigger beneath the authored Actor.
-                    # Otherwise SCUMM walks Ego to the hotspot before the probe
-                    # measures the restored world position, invalidating the
-                    # stationary-Actor visibility check.
-                    hotspot_x, hotspot_y = ((220, 85)
-                        if ident == "R06Restore" and restore_profile
-                        and not (walk or facing or camera or position or elevation or scale or costume_change or walk_speed)
-                        else (x, 100))
+                    # Keep Ego's verb walk destination away from the measured Actor lane.
+                    hotspot_x, hotspot_y = x, 100
                     if walk_speed and ident == "R06Action":
                         hotspot_x, hotspot_y = 140, 85
                     hotspot = RoomHotspot(ident, ident, ident, hotspot_x, hotspot_y, 16, 16,
