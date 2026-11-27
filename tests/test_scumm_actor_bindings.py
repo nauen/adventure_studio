@@ -528,5 +528,45 @@ class ActorBootstrapTests(unittest.TestCase):
             parse_document(json.dumps(data))
 
 
+    def test_final_follow_escape_requires_native_actor_and_camera_evidence(self):
+        from copy import deepcopy
+        from adventure_studio.scumm_actor_zclip_transfer_probe import verify_transfer
+
+        def phase(a, b):
+            return [{"frame": str(i), "a_pixels": a, "b_pixels": b} for i in range(8)]
+
+        def camera(x, pixels):
+            return {"camera_x": x, "a_pixels": pixels}
+
+        report = {
+            "before": phase(992, 992), "destination": phase(0, 0),
+            "revealed": phase(992, 0), "returned": phase(992, 992),
+            "camera_frames": [camera(480, 0), camera(216, 992),
+                              *[camera(160, 992) for _ in range(3)]],
+            "camera_escape_frames": [camera(160, 992) for _ in range(3)],
+            "escape_elapsed": 3.0,
+            "camera_follow_escape_frames": [camera(216, 992) for _ in range(3)],
+            "follow_escape_elapsed": 3.5,
+        }
+        verify_transfer(report, "masked", camera=True)
+        transparent = deepcopy(report)
+        transparent["destination"] = phase(992, 0)
+        verify_transfer(transparent, "transparent", camera=True)
+        for invalid in (
+            [camera(160, 992) for _ in range(3)],
+            [camera(216, 0) for _ in range(3)],
+            [camera(216, 992) for _ in range(2)],
+            [camera(216, 992), camera(480, 0), camera(216, 992)],
+        ):
+            changed = deepcopy(report)
+            changed["camera_follow_escape_frames"] = invalid
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(RuntimeError, "final-follow Escape"):
+                verify_transfer(changed, "masked", camera=True)
+        changed = deepcopy(report)
+        changed["follow_escape_elapsed"] = 30.0
+        with self.assertRaisesRegex(RuntimeError, "final-follow Escape"):
+            verify_transfer(changed, "masked", camera=True)
+
+
 if __name__ == '__main__':
     unittest.main()
