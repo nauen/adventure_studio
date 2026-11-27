@@ -517,7 +517,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
-                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
+                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorLayerStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, VoiceLineStep)
@@ -627,6 +627,15 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            panCameraTo({step.x});\n")
             elif isinstance(step, WaitCameraStep):
                 instructions.append("            waitForCamera();\n")
+            elif isinstance(step, ActorLayerStep):
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     f"                setActorLayer({step.layer});\n",
+                                     # Changing depth alone does not mark the costume dirty.
+                                     f"                setActorElevation(getActorElevation({step.actor_id}) + 1);\n",
+                                     f"                setActorElevation(getActorElevation({step.actor_id}) - 1);\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
             elif isinstance(step, ActorZClipStep):
                 instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({step.actor_id});\n",
@@ -692,6 +701,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_positions = {}
         end_directions = {}
         end_clipping = {}
+        end_layers = {}
         final_camera = None
         final_camera_wait = False
         inventory_steps = []
@@ -705,6 +715,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, TransferActorZClipStep):
                 end_positions[step.actor_id] = (step.x, step.y, step.room, False)
                 end_clipping[step.actor_id] = (transfer_plane(step), False)
+            elif isinstance(step, ActorLayerStep):
+                end_layers[step.actor_id] = step.layer
             elif isinstance(step, ActorZClipStep):
                 end_clipping[step.actor_id] = (interaction_plane(step), True)
             elif isinstance(step, FaceActorStep):
@@ -749,6 +761,16 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 commit += f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
             commit += (f"                    setCurrentActor({actor});\n"
                        f"                    setActorDirection({native_direction});\n"
+                       "                    setCurrentActor(VAR_EGO);\n"
+                       "                }\n")
+        for actor, layer in end_layers.items():
+            destination = end_positions.get(actor)
+            target = destination[2] if destination is not None and destination[2] != room_name else "VAR_ROOM"
+            commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
+                       f"                    setCurrentActor({actor});\n"
+                       f"                    setActorLayer({layer});\n"
+                       f"                    setActorElevation(getActorElevation({actor}) + 1);\n"
+                       f"                    setActorElevation(getActorElevation({actor}) - 1);\n"
                        "                    setCurrentActor(VAR_EGO);\n"
                        "                }\n")
         clipping_commit = ""
