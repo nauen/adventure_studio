@@ -1,3 +1,16 @@
+## Verbindlicher Stand – 27.11.2026 (nach IM03-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Offene Integration:** #355/#350/#353/#352/#357/#359 Gameplay belegt, Gesamtgates offen. Einzelbelege siehe vorherigen Stand.
+- **Offene Integration:** #348 [Originalreport 15203400969](https://github.com/nauen/adventure_studio/actions/runs/46009390308/artifacts/15203400969), Head a646231: IM01/IM02/IM03/IM01 mit 4096/0/0, 0/4096/0, 0/0/4096, 4096/0/0 echten Farb-Pixeln und realen Hotspot-Klicks; native_im03_verified=true. [Core](https://github.com/nauen/adventure_studio/actions/runs/46009384602) grün, [Gesamtgate](https://github.com/nauen/adventure_studio/actions/runs/46009390308) offen.
+- **Jetzt – genau eine Fähigkeit:** [#363](https://github.com/nauen/adventure_studio/pull/363) IM03/ZP01 auf dem gameplay-verifizierten #348-Head aufgebaut (Commit [3029936](https://github.com/nauen/adventure_studio/commit/3029936efa4b30a82d99f9ef5791374544045f00)), eigenständiger PNG-Import/JSON-v1/Story-Erhalt/Studio-Auswahl/ScummC-BMP-Writer. IM03/ZP02+ fail-closed.
+- **Abnahme:** Drei unabhängige native Spiele, sichtbare Actor-Pixel transparent und falsche BOXD-Zuweisung jeweils mindestens 100; verdeckt höchstens ein Drittel der kleineren Gegenprobe. Vollständige Pflichtgates.
+- **Blocker:** Neue native Abnahme noch offen: drei getrennt verlinkte stock-ScummVM-Spiele (weiße IM03-Maske, transparente IM03-Maske, falscher BOXD-Index). IM01/IM02 und Raum-Masken unverändert bzw. im Probe transparent. [Core](https://github.com/nauen/adventure_studio/actions/runs/46009888778) und [Native](https://github.com/nauen/adventure_studio/actions/runs/46009898994) laufen. #348 bleibt Integrationsvoraussetzung; keine ungeprüfte Vereinigung der Branches.
+- **Danach:** IM03/ZP02 nach bewiesenem ZP01, mit unabhängiger ZP01 und falscher BOXD-Gegenprobe.
+- **Arbeitsregel:** Nach nachgewiesenem Gameplay unmittelbar ein natives Folgepaket; offene Gesamtgates separat führen. Merge nur bei vollständigen Pflichtgates. Keine pauschale V-Freigabe.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
 ## Verbindlicher Stand – 27.11.2026 (nach Standanimations-Gameplay)
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
