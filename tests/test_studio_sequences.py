@@ -182,6 +182,33 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_consume_inventory_across_rooms_native_guard_and_escape(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import ConsumeInventoryStep
+        raw = canonical_json(GameDocument("HandOverKey", (scrolling_fixture(), destination_fixture())))
+        identity = "Cellar|Stairs|TalkTo"
+        raw = append_sequence_step(raw, "Cellar", "Stairs", "TalkTo",
+                                   "Gegenstand verbrauchen / übergeben", None, None, "inv:Key", None)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.interaction_sequences[0].steps[0], ConsumeInventoryStep("Key"))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[3], "inv:Key")
+        room = doc.rooms[1]
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        normal, override = native.split("} override {", 1)
+        self.assertIn("object Key;", normal)
+        for code in (normal, override):
+            self.assertIn("if(getObjectOwner(Key) == VAR_EGO)", code)
+            self.assertIn("setObjectOwner(Key,0);", code)
+            self.assertIn("setObjectState(Key,0);", code)
+        for target in ("inv:Door", "inv:Missing", "Key"):
+            with self.assertRaises(ValueError):
+                replace_sequence_step(raw, identity, 0, "Gegenstand verbrauchen / übergeben",
+                                      None, None, target, None)
+
     def test_native_talk_to_sequence_respects_inventory_and_existing_dialogue(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import scummc_room_source, TalkRule, TalkChoice

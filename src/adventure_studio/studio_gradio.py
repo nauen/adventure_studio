@@ -393,6 +393,7 @@ def make_app():
                 gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
                                    *[(f"Raum: {name}", name) for name in rooms],
                                    *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)],
+                                       *[(f"Inventar: {name}", "inv:" + name) for name in sorted({h.id for r in parse_document(raw).rooms for h in r.hotspots if h.pickup})],
                                        *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]],
                           value=objects[0] if objects else room),
                 gr.update(choices=sequences, value=identity),
@@ -991,10 +992,10 @@ def make_app():
                 native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
                 native_sound_add = gr.Button("VOC dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Sprechfarbe", "Actor Sprechtext-Position", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objekt versetzen", "Objektzustand setzen", "Objekt anklickbar", "Objekt unanklickbar", "Objektklasse setzen", "Objektklasse entfernen", "Spielvariable setzen", "Spielvariable ändern", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Textzeile ohne Audio", "Gesprochene Zeile"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Sprechfarbe", "Actor Sprechtext-Position", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objekt versetzen", "Objektzustand setzen", "Objekt anklickbar", "Objekt unanklickbar", "Objektklasse setzen", "Objektklasse entfernen", "Spielvariable setzen", "Spielvariable ändern", "Gegenstand aufnehmen", "Gegenstand verbrauchen / übergeben", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Textzeile ohne Audio", "Gesprochene Zeile"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
-                native_target = gr.Dropdown(label="Zielobjekt / Zielraum / Spielvariable (var:Name)", allow_custom_value=True)
+                native_target = gr.Dropdown(label="Zielobjekt / Zielraum / Inventar / Spielvariable (var:Name)", allow_custom_value=True)
                 native_amount = gr.Number(label="Sekunden / Objektzustand (0–2) / Z-Clipping (0–4) / Raumprofil (-1) / Sprechfarbe (0–255) / Objektklasse (1–32) / Variablenwert (-32768–32767)", value=1, precision=0)
             with gr.Row():
                 native_move_x = gr.Number(label="Actor-/Objekt-/Kamera-Ziel X / Sprechtext-Offset X", value=320, precision=0)
@@ -1033,6 +1034,7 @@ def make_app():
             with gr.Row():
                 native_skippable = gr.Checkbox(label="Mit Escape überspringbar", value=False)
                 native_skip_save = gr.Button("Skip-Einstellung speichern")
+            gr.Markdown("**Gegenstand verbrauchen / übergeben:** Ein Inventarobjekt aus einem beliebigen Raum auswählen. Nur wenn Ego es besitzt, wird es nativ entfernt. Für eine daran gebundene Belohnung eine Inventarbesitz-Bedingung verwenden.")
             gr.Markdown("Beim Überspringen übernimmt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen sowie Inventaraufnahmen und -kombinationen** der Sequenz. Für *Inventar kombinieren* ein Ergebnisobjekt mit vorhandener Raum-Kombinationsregel wählen. *Raum wechseln* muss der letzte Schritt sein; der Wechsel erfolgt nach dem normalen Ablauf oder nach Escape und dem Setzen aller Endzustände.")
             gr.Markdown("*Musik starten/stoppen* nutzt die MIDI-Ressource des Sequenzraums. Beim Escape wird der letzte Musikzustand der Folge ausgeführt. Die Raumzuweisung startet Musik auch beim normalen Betreten des Raums.")
             gr.Markdown("*Sound starten/stoppen* verwendet einen zuvor für den Raum importierten VOC-Effekt. Mehrere Effekte bleiben unabhängig; beim Escape wird der jeweils letzte Zustand pro Sound gesetzt.")
@@ -2134,6 +2136,7 @@ def make_app():
                     gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
                                        *[(f"Raum: {name}", name) for name in rooms],
                                        *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)],
+                                       *[(f"Inventar: {name}", "inv:" + name) for name in sorted({h.id for r in parse_document(raw).rooms for h in r.hotspots if h.pickup})],
                                        *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]],
                               value=objects[0] if objects else room),
                     gr.update(choices=[("Ego (für gesprochene Zeile)", None), *[(item, item) for item in actors]],
@@ -2259,6 +2262,7 @@ def make_app():
                     gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
                                        *[(f"Raum: {name}", name) for name in rooms],
                                        *[(f"Sound: {name}", name) for name in room_sound_ids(raw, sequence_room)],
+                                       *[(f"Inventar: {name}", "inv:" + name) for name in sorted({h.id for r in parse_document(raw).rooms for h in r.hotspots if h.pickup})],
                                        *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]],
                               value=fields[3]),
                     fields[4], fields[5], fields[6], fields[7], fields[8] if len(fields) > 8 else "")

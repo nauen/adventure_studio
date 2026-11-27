@@ -202,6 +202,11 @@ class PickupObjectStep:
 
 
 @dataclass(frozen=True)
+class ConsumeInventoryStep:
+    hotspot_id: str
+
+
+@dataclass(frozen=True)
 class CombineInventoryStep:
     result_id: str
 
@@ -283,7 +288,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | SetGameVariableStep | ObjectClassStep | MoveObjectStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | TextLineStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | SetGameVariableStep | ObjectClassStep | MoveObjectStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | ConsumeInventoryStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | TextLineStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -456,6 +461,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, FaceActorStep)
                                                    else {"type": "pickup_object", **vars(step)}
                                                    if isinstance(step, PickupObjectStep)
+                                                   else {"type": "consume_inventory", **vars(step)}
+                                                   if isinstance(step, ConsumeInventoryStep)
                                                    else {"type": "combine_inventory", **vars(step)}
                                                    if isinstance(step, CombineInventoryStep)
                                                    else {"type": "change_room", **vars(step)}
@@ -1036,6 +1043,9 @@ def _validate_document(document: GameDocument) -> None:
                 if not isinstance(step.hotspot_id, str) or step.hotspot_id not in {
                         hotspot.id for hotspot in room.hotspots if hotspot.pickup}:
                     raise ValueError("Interaction pickup requires a pickable room object")
+            elif isinstance(step, ConsumeInventoryStep):
+                if not isinstance(step.hotspot_id, str) or step.hotspot_id not in inventory_ids:
+                    raise ValueError("Inventory consumption requires a project pickup object")
             elif isinstance(step, CombineInventoryStep):
                 if not isinstance(step.result_id, str) or step.result_id not in {
                         rule.result_id for rule in room.combine_rules}:
@@ -1383,6 +1393,9 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "pickup_object":
                 step = _only(raw_step, {"type", "hotspot_id"}, {"type", "hotspot_id"})
                 steps.append(PickupObjectStep(step["hotspot_id"]))
+            elif kind == "consume_inventory":
+                step = _only(raw_step, {"type", "hotspot_id"}, {"type", "hotspot_id"})
+                steps.append(ConsumeInventoryStep(step["hotspot_id"]))
             elif kind == "combine_inventory":
                 step = _only(raw_step, {"type", "result_id"}, {"type", "result_id"})
                 steps.append(CombineInventoryStep(step["result_id"]))

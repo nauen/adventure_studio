@@ -519,7 +519,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     from .scumm_project import (AnimateActorStep, ObjectStateStep, SetGameVariableStep, game_variable_symbol, ObjectClassStep, MoveObjectStep, DelayStep,
                                 MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
-                                PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
+                                PickupObjectStep, ConsumeInventoryStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, TextLineStep, VoiceLineStep)
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
@@ -546,7 +546,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     costumes_by_name = {costume.name: costume for costume in costumes}
     recipes = {rule.result_id: rule for rule in room_asset.combine_rules} if room_asset else {}
     targets = {step.hotspot_id for sequence in active for step in sequence.steps
-               if isinstance(step, (ObjectStateStep, ObjectClassStep, MoveObjectStep, PickupObjectStep))}
+               if isinstance(step, (ObjectStateStep, ObjectClassStep, MoveObjectStep, PickupObjectStep, ConsumeInventoryStep))}
     targets.update(step.result_id for sequence in active for step in sequence.steps
                    if isinstance(step, CombineInventoryStep))
     targets.update(item.condition_hotspot_id for item in active if item.condition_hotspot_id is not None)
@@ -573,6 +573,12 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         grouped.setdefault((sequence.hotspot_id, sequence.verb), []).append(sequence)
 
     def inventory_action(step, indent):
+        if isinstance(step, ConsumeInventoryStep):
+            # Never remove an uncollected room object.
+            return (f"{indent}if(getObjectOwner({step.hotspot_id}) == VAR_EGO) {{\n"
+                    f"{indent}    setObjectOwner({step.hotspot_id},0);\n"
+                    f"{indent}    setObjectState({step.hotspot_id},0);\n"
+                    f"{indent}}}\n")
         if isinstance(step, PickupObjectStep):
             return (f"{indent}if(getObjectOwner({step.hotspot_id}) != VAR_EGO) "
                     f"pickupObject({step.hotspot_id},VAR_ROOM);\n"
@@ -612,7 +618,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            drawObjectAt({step.hotspot_id},{step.x // 8},{step.y // 8});\n")
             elif isinstance(step, ObjectStateStep):
                 instructions.append(f"            setObjectState({step.hotspot_id},{step.state});\n")
-            elif isinstance(step, (PickupObjectStep, CombineInventoryStep)):
+            elif isinstance(step, (PickupObjectStep, ConsumeInventoryStep, CombineInventoryStep)):
                 instructions.append(inventory_action(step, "            "))
             elif isinstance(step, DelayStep):
                 instructions.append(f"            delaySeconds({step.seconds});\n")
@@ -772,7 +778,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, PickupObjectStep):
                 inventory_steps.append(step)
                 end_states[step.hotspot_id] = 0
-            elif isinstance(step, CombineInventoryStep):
+            elif isinstance(step, (ConsumeInventoryStep, CombineInventoryStep)):
                 inventory_steps.append(step)
             elif isinstance(step, MusicCueStep):
                 final_music = step.operation

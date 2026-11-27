@@ -12,7 +12,7 @@ import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
-                            InteractionSequence, ObjectStateStep, SetGameVariableStep, ObjectClassStep, MoveObjectStep, PickupObjectStep,
+                            InteractionSequence, ObjectStateStep, SetGameVariableStep, ObjectClassStep, MoveObjectStep, PickupObjectStep, ConsumeInventoryStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, TextLineStep, VoiceLineStep, VoiceVariant,
                             DialogueVoiceCue, DialogueAnimationCue,
@@ -2831,6 +2831,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | SetGameVari
         return f"Actor {step.actor_id}: Richtung {step.direction}"
     if isinstance(step, PickupObjectStep):
         return f"Inventar: {step.hotspot_id} aufnehmen"
+    if isinstance(step, ConsumeInventoryStep):
+        return f"Inventar: {step.hotspot_id} verbrauchen / übergeben"
     if isinstance(step, CombineInventoryStep):
         return f"Inventar: zu {step.result_id} kombinieren"
     if isinstance(step, ChangeRoomStep):
@@ -2904,6 +2906,10 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         step = ObjectStateStep(target_id, int(amount))
     elif kind == "Gegenstand aufnehmen":
         step = PickupObjectStep(target_id)
+    elif kind == "Gegenstand verbrauchen / übergeben":
+        if not isinstance(target_id, str) or not target_id.startswith("inv:"):
+            raise ValueError("Inventargegenstand als Ziel auswählen")
+        step = ConsumeInventoryStep(target_id[4:])
     elif kind == "Inventar kombinieren":
         step = CombineInventoryStep(target_id)
     elif kind == "Raum wechseln":
@@ -3066,6 +3072,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Warten", None, None, None, step.seconds, 320, 100, "S")
     if isinstance(step, PickupObjectStep):
         return ("Gegenstand aufnehmen", None, None, step.hotspot_id, 1, 320, 100, "S")
+    if isinstance(step, ConsumeInventoryStep):
+        return ("Gegenstand verbrauchen / übergeben", None, None, "inv:" + step.hotspot_id, 1, 320, 100, "S")
     if isinstance(step, CombineInventoryStep):
         return ("Inventar kombinieren", None, None, step.result_id, 1, 320, 100, "S")
     if isinstance(step, ChangeRoomStep):
