@@ -1,12 +1,12 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
-- **Jetzt:** #352 – nativer Actor-Laufstopp und Wiederaufnahme (R06/A05).
-- **Abnahme:** Regulärer Stopp und Escape-Stopp vor Ziel, zehn stabile Positionsmessungen je Stopp, erneuter nativer Lauf bis X≈455 in stock ScummVM.
-- **Blocker:** [Actor-Job 140510533256](https://github.com/nauen/adventure_studio/actions/runs/46000052265/job/140510533256) rot: Native Actor position missing: before. [Originalartefakt 15198302559](https://github.com/nauen/adventure_studio/actions/runs/46000052265/artifacts/15198302559) zeigt Guide und gleichfarbige Ego-Pixel. Alte Erkennung X=268 statt 180; auf demselben Originalbild korrigierte Erkennung X=182 (eindeutige dichte Costume-Spalten 24–55 relativ zum ROI). [Fix ba149f5](https://github.com/nauen/adventure_studio/commit/ba149f5bfd6704e6a5c629e6125c33a70d654b97) und zwei Regressionstests gepusht; keine Änderung der Gameplay-Schwellen. [Core](https://github.com/nauen/adventure_studio/actions/runs/46003794523), [Native](https://github.com/nauen/adventure_studio/actions/runs/46003808284) ausstehend.
-- **Danach:** #359 native Standanimations-Zuordnung. #355/#350/#353 Gameplay belegt, Gesamtgates offen; [PROJECT_STATUS](PROJECT_STATUS.md).
+- **Jetzt:** #359 – native Standanimations-Zuordnung (R06/A05).
+- **Abnahme:** Alternative Standpose nach nativer Ankunft und Rückkehr zur Originalpose nach Escape und erneutem Lauf in stock ScummVM.
+- **Blocker:** [Originalartefakt 15201780522](https://github.com/nauen/adventure_studio/actions/runs/46004531320/artifacts/15201780522) auf 2f5075e zeigt nach Ankunft weiterhin Walking (0/0/1536). Binär-COST: rest @24 belegt 96–99; bisher setActorStandFrame(6) adressiert leere 24–27. [Produktfix f20015f](https://github.com/nauen/adventure_studio/commit/f20015fe4f89fd83ca4fdc9123aec95c20b992d1) emittiert Gruppe 24 direkt, Default 3, fail-closed auf explizite ausgerichtete Gruppen 24..52; UI/Tests angepasst. [Core](https://github.com/nauen/adventure_studio/actions/runs/46007784438), [Native](https://github.com/nauen/adventure_studio/actions/runs/46007792927) gestartet, neue Gameplay-Abnahme offen. Alter Inventory-Job scheiterte vor Spielstart an HTTP403 des Microsoft-APT-Repos.
+- **Danach:** #348 native IM03-Objektbildfolge mit Z-Masken. #355/#350/#353/#352/#357 Gameplay belegt, Gesamtgates offen; [PROJECT_STATUS](PROJECT_STATUS.md).
 
-Nach Gameplay-Abnahme sofort ein Folgepaket aufnehmen; Merge-Pflichtgates unverändert.
+Nach Gameplay-Nachweis sofort ein Folgepaket aufnehmen; Merge-Pflichtgates unverändert.
 
 
 ## Historischer Integrationsstand (26.11.2026) – nicht aktive Paketauswahl
