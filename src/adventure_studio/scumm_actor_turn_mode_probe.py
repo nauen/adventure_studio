@@ -20,11 +20,35 @@ COLORS = ((215, 140, 27), (44, 240, 149), (242, 38, 117), (132, 85, 245))
 MARKERS = ((191, 61, 220), (42, 195, 243), (45, 130, 210))
 
 
+def measure_direction(lane):
+    """Measure one unique dense native costume block, not sparse Ego pixels."""
+    columns = [[0] * lane.width for _ in COLORS]
+    for i, pixel in enumerate(lane.getdata()):
+        for direction, rgb in enumerate(COLORS):
+            if all(abs(a-b) <= 7 for a,b in zip(pixel,rgb)):
+                columns[direction][i % lane.width] += 1
+    density = [sum(values) for values in zip(*columns)]
+    blocks = []
+    start = None
+    for x, count in enumerate((*density, 0)):
+        if count >= 24:
+            if start is None:
+                start = x
+        elif start is not None:
+            if x-start >= 8 and sum(density[start:x]) >= 100:
+                blocks.append((start, x))
+            start = None
+    if len(blocks) != 1:
+        return None, [sum(values) for values in columns]
+    left, right = blocks[0]
+    return (left+right-1)/2, [sum(values[left:right]) for values in columns]
+
+
 def run(upstream, destination):
     build = destination / "build"
     room = scrolling_fixture()
     index = len(room.palette)
-    controls = tuple(RoomHotspot(name, name, name, x, 130, 16, 16,
+    controls = tuple(RoomHotspot(name, name, name, x, 120, 16, 16,
                                 sprite_pixels=bytes([index+i])*256)
                      for i, (name, x) in enumerate((("LockedWalk", 210), ("Unlock", 250),
                                                     ("CheckTurn", 290))))
@@ -95,20 +119,19 @@ def run(upstream, destination):
     def await_pose(label, target_x, direction, timeout=25):
         deadline=time.monotonic()+timeout
         samples=[]
+        counts=[]
         while time.monotonic()<deadline:
             if game.poll() is not None:
                 raise RuntimeError("ScummVM exited during direction lock")
             image=capture(label)
             anchor=center(points(image,MARKERS[0]))
-            # Exclude Ego at y=130, whose costume can share a direction color.
             lane=image.crop((0,96,image.width,181))
-            colored=[points(lane,c) for c in COLORS]
-            actor=center(colored[DIRECTIONS.index(direction)])
-            counts=[len(p) for p in colored]
-            if anchor is not None and actor is not None:
-                x=218+(actor[0]-anchor[0])/2
-                if abs(x-target_x)<10 and all(n<40 for i,n in enumerate(counts)
-                                              if DIRECTIONS[i]!=direction):
+            actor_x, counts=measure_direction(lane)
+            if anchor is not None and actor_x is not None:
+                x=218+(actor_x-anchor[0])/2
+                if (abs(x-target_x)<10 and counts[DIRECTIONS.index(direction)]>=100
+                        and all(n<40 for i,n in enumerate(counts)
+                                if DIRECTIONS[i]!=direction)):
                     samples.append({"x":x,"direction":direction,"pixels":counts})
                     if len(samples)==5:
                         return samples
@@ -129,6 +152,8 @@ def run(upstream, destination):
             click("unlock-click",MARKERS[1])
             deadline=time.monotonic()+20
             while time.monotonic()<deadline:
+                if game.poll() is not None:
+                    raise RuntimeError("ScummVM exited before direction unlock")
                 if center(points(capture("unlock-start"),MARKERS[1])) is None:
                     break
                 time.sleep(.2)
@@ -141,6 +166,8 @@ def run(upstream, destination):
             finally:
                 subprocess.run(["xdotool","keyup","Escape"],check=True,timeout=5)
             time.sleep(.5)
+            if game.poll() is not None:
+                raise RuntimeError("ScummVM exited after direction unlock Escape")
             click("check-click",MARKERS[2])
             restored=await_pose("unlocked-arrival",440,"E")
             report={"initial":initial,"locked":locked,"restored":restored,
