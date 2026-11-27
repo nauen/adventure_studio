@@ -283,6 +283,8 @@ jobs:
               - 'tests/test_scumm_camera_resume_probe.py'
               - 'tests/test_scumm_retarget_walk_probe.py'
               - 'src/adventure_studio/scumm_object_zmask_probe.py'
+              - 'src/adventure_studio/scumm_room_palette_probe.py'
+              - 'tests/test_scumm_room_palette_probe.py'
               - 'src/adventure_studio/scumm_camera_probe.py'
               - 'src/adventure_studio/scumm_camera_zp01_probe.py'
               - 'src/adventure_studio/studio_sequences.py'
