@@ -23,8 +23,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
         matches = list(STEP.finditer(contents))
         # Counts include real gameplay and evidence-retention steps. New native
         # capabilities change the matrix length; preserve the per-shard gates.
-        self.assertEqual(len(matches), 178)
-        expected_counts = {"actors": 26, "mask": 2, "geometry": 92, "story": 48}
+        self.assertEqual(len(matches), 180)
+        expected_counts = {"actors": 26, "mask": 2, "geometry": 94, "story": 48}
         observed_counts = {shard: 0 for shard in SHARDS}
         shared = {
             "Restore previously downloaded Ubuntu packages",
@@ -39,6 +39,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
             "Link generated room with upstream game bootstrap",
         }
         required = {
+            "Verify native transferred Actor animation speed and Escape": "geometry",
+            "Retain native transferred Actor animation speed evidence": "geometry",
             "Verify native transferred Actor walk speed and Escape": "geometry",
             "Retain native transferred Actor walk speed evidence": "geometry",
             "Verify native transferred Actor costume and Escape": "geometry",
@@ -129,8 +131,12 @@ class NativeScummVMShardingTests(unittest.TestCase):
                          names.index("Link generated room with upstream game bootstrap") + 1)
         self.assertEqual(names.index("Retain native 256-color room palette evidence"),
                          names.index("Verify native 256-color room bitmap palette in stock ScummVM") + 1)
-        self.assertEqual(names.index("Verify native transferred Actor walk speed and Escape"),
+        self.assertEqual(names.index("Verify native transferred Actor animation speed and Escape"),
                          names.index("Retain native 256-color room palette evidence") + 1)
+        self.assertEqual(names.index("Retain native transferred Actor animation speed evidence"),
+                         names.index("Verify native transferred Actor animation speed and Escape") + 1)
+        self.assertEqual(names.index("Verify native transferred Actor walk speed and Escape"),
+                         names.index("Retain native transferred Actor animation speed evidence") + 1)
         self.assertEqual(names.index("Retain native transferred Actor walk speed evidence"),
                          names.index("Verify native transferred Actor walk speed and Escape") + 1)
         self.assertEqual(names.index("Verify native transferred Actor costume and Escape"),
