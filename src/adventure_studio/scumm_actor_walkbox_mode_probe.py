@@ -22,7 +22,8 @@ def run(upstream, destination):
     build = destination / "build"
     room = scrolling_fixture()
     index = len(room.palette)
-    controls = tuple(RoomHotspot(name, name, name, x, 130, 16, 16,
+    # Keep the complete object sprite within the 144-pixel SCUMM viewport.
+    controls = tuple(RoomHotspot(name, name, name, x, 120, 16, 16,
                                 sprite_pixels=bytes([index+i])*256)
                      for i, (name, x) in enumerate((("Constrained", 210), ("FreeWalk", 250),
                                                     ("Restore", 290), ("CheckFollow", 330))))
@@ -115,6 +116,8 @@ def run(upstream, destination):
             click("restore-click", MARKERS[2])
             deadline = time.monotonic()+20
             while time.monotonic() < deadline:
+                if game.poll() is not None:
+                    raise RuntimeError("ScummVM exited before Escape during walkbox restore")
                 if center(capture("restore-start"), MARKERS[2]) is None:
                     break
                 time.sleep(.2)
@@ -127,6 +130,8 @@ def run(upstream, destination):
             finally:
                 subprocess.run(["xdotool","keyup","Escape"], check=True, timeout=5)
             time.sleep(.5)
+            if game.poll() is not None:
+                raise RuntimeError("ScummVM exited during Escape walkbox restore")
             click("check-follow-click", MARKERS[3])
             restored = await_stable("restored", lambda x: 350<x<380)
             report = {"constrained": constrained, "free": free, "restored": restored,
