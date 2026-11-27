@@ -12,7 +12,7 @@ import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
-                            InteractionSequence, ObjectStateStep, MoveObjectStep, PickupObjectStep,
+                            InteractionSequence, ObjectStateStep, ObjectClassStep, MoveObjectStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
                             DialogueVoiceCue, DialogueAnimationCue,
@@ -2745,7 +2745,7 @@ def _identity(sequence: InteractionSequence) -> str:
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveObjectStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | ObjectClassStep | MoveObjectStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2786,6 +2786,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveObjectS
         return (f"Sprachzeile {step.sound_id} ({step.actor_id or 'Ego'}): {step.text}"
                 + (" [" + ", ".join(item.language for item in step.variants) + "]"
                    if step.variants else ""))
+    if isinstance(step, ObjectClassStep):
+        return f"Objekt {step.hotspot_id}: Klasse {step.class_id} {'setzen' if step.enabled else 'entfernen'}"
     if isinstance(step, MoveObjectStep):
         return f"Objekt {step.hotspot_id}: zu ({step.x}, {step.y}) setzen (Bildzustand 1)"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
@@ -2817,6 +2819,13 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
                 direction: str | None, subtitle: str | None = None):
     if kind == "Actor animieren":
         step = AnimateActorStep(actor_id, animation)
+    elif kind in ("Objektklasse setzen", "Objektklasse entfernen", "Objekt anklickbar", "Objekt unanklickbar"):
+        if kind in ("Objekt anklickbar", "Objekt unanklickbar"):
+            step = ObjectClassStep(target_id, 32, kind == "Objekt unanklickbar")
+        else:
+            if type(amount) not in (int, float) or int(amount) != amount:
+                raise ValueError("Objektklasse muss eine ganze Zahl sein")
+            step = ObjectClassStep(target_id, int(amount), kind == "Objektklasse setzen")
     elif kind == "Objekt versetzen":
         if any(type(value) not in (int, float) or int(value) != value for value in (x, y)):
             raise ValueError("Objektposition benötigt ganzzahlige X/Y-Pixelwerte")
@@ -2999,6 +3008,10 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
     if isinstance(step, VoiceLineStep):
         return ("Gesprochene Zeile", step.actor_id, None, step.sound_id,
                 1, 320, 100, "S", step.text)
+    if isinstance(step, ObjectClassStep):
+        kind = ("Objekt unanklickbar" if step.enabled else "Objekt anklickbar") if step.class_id == 32 else (
+            "Objektklasse setzen" if step.enabled else "Objektklasse entfernen")
+        return (kind, None, None, step.hotspot_id, step.class_id, 320, 100, "S")
     if isinstance(step, MoveObjectStep):
         return ("Objekt versetzen", None, None, step.hotspot_id, 1, step.x, step.y, "S")
     return ("Objektzustand setzen", None, None, step.hotspot_id, step.state, 320, 100, "S")

@@ -182,6 +182,43 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_object_class_author_edit_remove_and_native_escape(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        raw = canonical_json(GameDocument("ObjectClass", (scrolling_fixture(), destination_fixture())))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Objekt unanklickbar", None, None, "Door", None)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Objektklasse setzen", None, None, "Door", 5)
+        raw = replace_sequence_step(raw, identity, 1, "Objektklasse setzen",
+            None, None, "Door", 6)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Objekt anklickbar", None, None, "Door", None)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:5],
+            ("Objekt unanklickbar", None, None, "Door", 32))
+        self.assertEqual(sequence_step_fields(raw, identity, 1)[:5],
+            ("Objektklasse setzen", None, None, "Door", 6))
+        room = doc.rooms[0]
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        normal, override = native.split("} override {", 1)
+        self.assertIn("setObjectClass(Door,[160]);", normal)
+        self.assertNotIn("setObjectClass(Door,[160]);", override)
+        for code in (normal, override):
+            self.assertIn("setObjectClass(Door,[134]);", code)
+            self.assertIn("setObjectClass(Door,[32]);", code)
+            self.assertNotIn("setObjectClass(Door,[133]);", code)
+        removed = modify_sequence_step(raw, identity, 2, "Entfernen")
+        self.assertEqual(len(sequence_steps(removed, identity)), 2)
+        for target, value in (("Door", 0), ("Door", 33), ("Door", 2.5), ("Stairs", 6)):
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Harbor", "Key", "Close",
+                    "Objektklasse setzen", None, None, target, value)
+
     def test_object_move_author_edit_remove_and_native_escape(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
