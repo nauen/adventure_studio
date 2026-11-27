@@ -76,7 +76,15 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                         continue
                     if ident in ("R06North", "R06South") and not facing:
                         continue
-                    hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
+                    # The restore-profile probe measures the Actor at its
+                    # authored X220/Y85 position after the interaction. Keep its
+                    # trigger under the Actor so SCUMM does not first walk Ego to
+                    # the hotspot (which would move the Actor to X180).
+                    hotspot_x, hotspot_y = ((220, 85)
+                        if ident == "R06Restore" and restore_profile
+                        and not (walk or facing or camera or position)
+                        else (x, 100))
+                    hotspot = RoomHotspot(ident, ident, ident, hotspot_x, hotspot_y, 16, 16,
                                           sprite_pixels=bytes([len(room.palette)]) * 256)
                     room = replace(room, palette=(*room.palette, color),
                                    hotspots=(*room.hotspots, hotspot))
