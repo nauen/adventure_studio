@@ -1,3 +1,17 @@
+## Verbindlicher Stand – 27.11.2026 (nach IM03/ZP03-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Konsolidierung:** #362 gemergt (3735708). #355/#350/#353/#352/#357/#359/#348 Gameplay belegt; Gesamtgates offen. Einzelbelege im vorherigen Stand.
+- **Offene Integration R06:** #336 R06 native Final-Follow nach Escape: [alter vollständiger Native/Studio-Lauf](https://github.com/nauen/adventure_studio/actions/runs/45937021657) grün, [Originalartefakt 15170594328](https://github.com/nauen/adventure_studio/actions/runs/45937021657/artifacts/15170594328): in maskiertem und transparentem Spiel je drei stabile Frames Kamera X216 und 992 Actor-Pixel, Escape 3,520/3,304 s. Basis #323 integriert; auf main 3735708 konfliktbewusst übertragen, [Head f24cd3d](https://github.com/nauen/adventure_studio/commit/f24cd3df05ce3b2fc78a8b2b2335301242534f7b), PR auf main umgestellt. Neuere Positionsprüfung erhalten; XWD-Rohaufnahmen mit nachgelagerter PNG-Konvertierung übernommen. Neue Gesamtgates erforderlich.
+- **Offene Integration R07:** #365 IM03/ZP03: [Originalartefakt 15205050225](https://github.com/nauen/adventure_studio/actions/runs/46011006493/artifacts/15205050225) auf 5f31e84: 108 maskierte Actor-Pixel, 1388 transparent, 1388 falscher BOXD-Index; native_im03_zp03_verified=true, Core grün, Gesamtgate offen. #363/#364 ZP01/ZP02 Originalnachweise und korrigierte Core-Gates grün; neue native Gesamtgates offen.
+- **Jetzt – genau eine Fähigkeit:** [#366](https://github.com/nauen/adventure_studio/pull/366) native IM03/ZP04 auf gameplay-verifiziertem #365-Head, [Commit 8d0885e](https://github.com/nauen/adventure_studio/commit/8d0885e5b78b14a8c10cfa2313a8cf298059555e). Studio/JSON-v1/Story/ScummC/BMP; alle drei Vorgängerebenen erforderlich; ZP05+ fail-closed. Bereits vorbereitet, jetzt aktive Gameplay-Abnahme.
+- **Abnahme:** drei tatsächliche native Kontrollspiele, beide Gegenproben mindestens 100 Actor-Pixel, verdeckt höchstens ein Drittel der kleineren Gegenprobe; alle vorherigen Gates bleiben.
+- **Blocker:** Drei unabhängig verlinkte stock-ScummVM-Spiele mit transparenten IM03/ZP01–03 und ZP04 maskiert/transparent/falscher BOXD-Zuweisung (4/4/3). [Core](https://github.com/nauen/adventure_studio/actions/runs/46012233061), [Native](https://github.com/nauen/adventure_studio/actions/runs/46012244891); Runner-Warteschlange, Gameplay offen. #348/#363/#364/#365 bleiben Integrationsvoraussetzungen.
+- **Danach:** R06 native dynamische Actor-Laufanimations-Zuordnung (Walk-Frame-Bindung) nach bewiesenem ZP04; alte R06-Integrationen getrennt weiterführen.
+- **Arbeitsregel:** Nach Gameplay sofort ein natives Folgepaket; offene Gesamtgates separat. Merge erst bei grünen Pflichtgates; kein pauschales V.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
 ## Verbindlicher Stand – 27.11.2026 (nach IM03/ZP02-Gameplay)
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
