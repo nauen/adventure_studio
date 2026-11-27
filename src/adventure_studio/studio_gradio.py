@@ -57,7 +57,6 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                discard_dialogue_speaking_draft,
                                discard_selected_dialogue_speaking_draft,
                                save_all_dialogue_speaking_drafts,
-                               dialogue_speaking_draft_save_status,
                                dialogue_speaking_timeline, edit_dialogue_speaking_timeline,
                                dialogue_speaking_timeline_preview,
                                dialogue_animation_phase_selection,
@@ -2310,8 +2309,7 @@ def make_app():
             view = dialogue_animation_update(raw, line, direction)
             restored, updated = switch_with_session(
                 raw, line, direction, sequence, session, file)
-            return (*view[:-2], restored, view[-1], updated,
-                    speaking_draft_session_status(raw, line, direction, restored))
+            return (*view[:-2], restored, view[-1], updated)
 
         def dialogue_animation_refresh(raw, line, direction, session):
             lines = dialogue_animation_lines(raw) if raw else ()
@@ -2369,8 +2367,7 @@ def make_app():
             [native_dialogue_animation, native_dialogue_reset, native_dialogue_speaking_frame,
              native_dialogue_speaking_preview, native_dialogue_direction_preview,
              native_dialogue_speaking_sequence,
-             native_dialogue_direction_status, native_dialogue_draft_session,
-             native_dialogue_draft_save_status])
+             native_dialogue_direction_status, native_dialogue_draft_session])
         native_dialogue_animation.input(
             dialogue_direction_animation_preview,
             [native_state, native_dialogue_animation_line,
@@ -2383,8 +2380,7 @@ def make_app():
                 raw, line, animation, direction)
             restored, updated = switch_with_session(
                 raw, line, direction, sequence, session, file)
-            return image, status, restored, updated, speaking_draft_session_status(
-                raw, line, direction, restored)
+            return image, status, restored, updated
 
         native_dialogue_direction.input(
             direction_with_session,
@@ -2392,8 +2388,7 @@ def make_app():
              native_dialogue_direction,
              native_dialogue_speaking_sequence, native_dialogue_draft_session, native_file],
             [native_dialogue_direction_preview, native_dialogue_direction_status,
-             native_dialogue_speaking_sequence, native_dialogue_draft_session,
-             native_dialogue_draft_save_status])
+             native_dialogue_speaking_sequence, native_dialogue_draft_session])
         native_dialogue_speaking_frame.input(
             dialogue_speaking_frame_preview,
             [native_state, native_dialogue_animation_line, native_dialogue_speaking_frame],
@@ -2581,23 +2576,28 @@ def make_app():
         # The line/direction switch records the outgoing textbox atomically.
         # A separate textbox.input writer races with that switch and can
         # overwrite the session's new target with a stale event result.
-        def speaking_draft_session_status(raw, line, direction, sequence):
-            status = dialogue_speaking_draft_save_status(raw, line, direction, sequence)
-            if status == "Ungespeicherte Änderungen an der Sprechfolge":
-                status += " · Entwurf bleibt bei Zeilen- und Richtungswechsel in dieser Sitzung erhalten."
-            return status
-
-        native_dialogue_speaking_sequence.change(
-            speaking_draft_session_status,
-            [native_state, native_dialogue_animation_line,
-             native_dialogue_direction, native_dialogue_speaking_sequence],
-            [native_dialogue_draft_save_status], show_progress="hidden")
-        native_state.change(
-            speaking_draft_session_status,
-            [native_state, native_dialogue_animation_line,
-             native_dialogue_direction, native_dialogue_speaking_sequence],
-            [native_dialogue_draft_save_status], show_progress="hidden")
-        # Target switches compute status from the restored draft atomically.
+        # The status is a pure comparison of two browser fields. Server-side
+        # queued callbacks can publish a stale status after a newer text edit.
+        # Use the same persisted sequence as the beforeunload guard, and
+        # recompute immediately when either field or the selected line changes.
+        draft_status_js = """(line, sequence, saved) => {
+            if (!line) return "Bitte eine Sprecher-Dialogzeile auswählen";
+            const frames = value => (value || "").trim()
+                ? value.split(",").map(part => part.trim()).join(",") : "";
+            return frames(sequence) === frames(saved)
+                ? "Sprechfolge entspricht dem gespeicherten Stand"
+                : "Ungespeicherte Änderungen an der Sprechfolge · Entwurf bleibt bei Zeilen- und Richtungswechsel in dieser Sitzung erhalten.";
+        }"""
+        for source in (native_dialogue_speaking_sequence,
+                       native_dialogue_saved_sequence,
+                       native_dialogue_animation_line):
+            source.change(
+                fn=None,
+                inputs=[native_dialogue_animation_line,
+                        native_dialogue_speaking_sequence,
+                        native_dialogue_saved_sequence],
+                outputs=[native_dialogue_draft_save_status],
+                js=draft_status_js, queue=False, show_progress="hidden")
 
         native_dialogue_draft_step.change(
             dialogue_speaking_draft_step_preview,
