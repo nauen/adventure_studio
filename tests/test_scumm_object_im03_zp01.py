@@ -7,7 +7,7 @@ import unittest
 
 from adventure_studio.scumm_assets import scrolling_fixture, destination_fixture, scummc_room_source, write_room_sources
 from adventure_studio.scumm_project import GameDocument, canonical_json, parse_document
-from adventure_studio.studio_sequences import import_object_third_image, import_object_zplane
+from adventure_studio.studio_sequences import compose_story_project, import_object_third_image, import_object_zplane
 
 
 @unittest.skipUnless(find_spec("PIL"), "PNG authoring requires Pillow")
@@ -52,3 +52,23 @@ class IM03ZP01Tests(unittest.TestCase):
                                                           for h in doc.rooms[0].hotspots))
                 with self.assertRaises(ValueError):
                     scummc_room_source(room)
+
+    def test_story_composition_retains_third_image_mask(self):
+        from PIL import Image
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        raw = compose_story_project(story)
+        room = next(r for r in parse_document(raw).rooms if r.name == "Harbor")
+        with TemporaryDirectory() as d:
+            png = Path(d) / "third.png"
+            mask = Path(d) / "mask.png"
+            Image.new("RGB", (16, 16), room.palette[2]).save(png)
+            Image.new("L", (16, 16), 255).save(mask)
+            raw = import_object_third_image(raw, "Harbor", "Door", str(png))
+            raw = import_object_zplane(raw, "Harbor", "Door", str(mask), 3, 1)
+            composed = parse_document(compose_story_project(story, raw))
+            harbor = next(r for r in composed.rooms if r.name == "Harbor")
+            door = next(h for h in harbor.hotspots if h.id == "Door")
+            self.assertEqual(door.third_object_zplane_pixels, bytes([1]) * 256)
+            self.assertIsNotNone(door.third_sprite_pixels)
+            self.assertIn('"DoorThird.bmp", { "DoorThirdZ01.bmp" }', scummc_room_source(harbor))
