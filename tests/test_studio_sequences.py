@@ -182,6 +182,22 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_sequence_room_transition_declares_destination_without_exit_hotspot(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        harbor = scrolling_fixture()
+        harbor = replace(harbor, hotspots=tuple(replace(h, exit_destination=None)
+                                               for h in harbor.hotspots), use_rules=())
+        raw = canonical_json(GameDocument("SequenceTransition", (harbor, destination_fixture())))
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Raum wechseln", None, None, "Cellar", None)
+        doc = parse_document(raw)
+        native = inject_interaction_sequences(scummc_room_source(harbor), harbor.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, harbor)
+        self.assertEqual(native.count("room Cellar;"), 1)
+        self.assertLess(native.index("room Cellar;"), native.index("startRoom(Cellar);"))
+
     def test_combined_object_variable_conditions_author_and_export(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences

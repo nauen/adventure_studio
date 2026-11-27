@@ -538,7 +538,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         return actor.initial_zclip if room_name == actor.room else dict(actor.room_zclips)[room_name]
 
     destinations = {step.room for sequence in active for step in sequence.steps
-                    if isinstance(step, TransferActorZClipStep)}
+                    if isinstance(step, (TransferActorZClipStep, ChangeRoomStep))}
     source = "".join(f"room {target};\n" for target in sorted(destinations)
                      if f"room {target};\n" not in source) + source
     room_sounds = tuple(asset for asset in sound_assets if asset.room == room_name)
