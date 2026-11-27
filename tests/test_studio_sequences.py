@@ -426,6 +426,9 @@ class NativeSequenceEditorTests(unittest.TestCase):
             self.assertEqual(sequences["R06Reveal"].steps[-1], ObjectStateStep("R06Restore", 1))
             self.assertEqual(sequences["R06Restore"].steps[0], ObjectStateStep("R06Restore", 0))
             self.assertEqual(sequences["R06Restore"].steps[1], DelayStep(12))
+            room = next(room for room in doc.rooms if room.name == "Cellar")
+            restore = next(hotspot for hotspot in room.hotspots if hotspot.id == "R06Restore")
+            self.assertEqual((restore.x, restore.y), (180, 100))
 
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source
