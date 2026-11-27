@@ -1,3 +1,17 @@
+## Verbindlicher Stand – 27.11.2026 (nach Paletten-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
+- **Offene Integration:** #355 native Walkbox-Führung: [Artefakt 15198662109](https://github.com/nauen/adventure_studio/actions/runs/46000802088/artifacts/15198662109), je acht Messungen X=372/442/372, Escape. Core/Actor-Shard grün, [Gesamtgate](https://github.com/nauen/adventure_studio/actions/runs/46000802088) läuft, Merge offen.
+- **Offene Integration:** #350 native Actor-Zeichenebene: auf aktuellem Head 53eddb5 erneut B→A→B, 0/672→672/0→0/672 Pixel, Escape 0,349 s, native_actor_layer_verified=true ([neues Artefakt 15199387061](https://github.com/nauen/adventure_studio/actions/runs/46002760362/artifacts/15199387061)). [Core](https://github.com/nauen/adventure_studio/actions/runs/46002751781) grün, [Gesamtgate](https://github.com/nauen/adventure_studio/actions/runs/46002760362) läuft.
+- **Offene Integration:** #353 native Palettenzuordnung: [Gameplay 15195927049](https://github.com/nauen/adventure_studio/actions/runs/45995788559/artifacts/15195927049), 672/0→0/672→672/0 inklusive Escape; Aufnahmedichte-Fix bc7ae1a in [Core](https://github.com/nauen/adventure_studio/actions/runs/46003202312) und [Native](https://github.com/nauen/adventure_studio/actions/runs/46003213681) noch nicht abgenommen.
+- **Jetzt – genau eine Fähigkeit:** [#352](https://github.com/nauen/adventure_studio/pull/352) nativer Actor-Laufstopp mit StopActorStep, Studio/JSON-v1 und produktivem ScummC setActorStanding. Escape verwirft nicht abgewartetes Laufziel, ohne an dieses zu teleportieren; anschließendes Laufen muss möglich bleiben.
+- **Abnahme:** Stock ScummVM: regulärer Stopp und Escape-Stopp vor X=470, jeweils zehn stabile Positionen; danach erneuter nativer Lauf bis X≈455. Core und vollständige Pflichtgates grün.
+- **Blocker:** [Actor-Job 140510533256](https://github.com/nauen/adventure_studio/actions/runs/46000052265/job/140510533256) rot: Native Actor position missing: before. [Originalartefakt 15198302559](https://github.com/nauen/adventure_studio/actions/runs/46000052265/artifacts/15198302559) zeigt Guide und gleichfarbige Ego-Pixel. Alte Erkennung X=268 statt 180; auf demselben Originalbild korrigierte Erkennung X=182 (eindeutige dichte Costume-Spalten 24–55 relativ zum ROI). [Fix ba149f5](https://github.com/nauen/adventure_studio/commit/ba149f5bfd6704e6a5c629e6125c33a70d654b97) und zwei Regressionstests gepusht; keine Änderung der Gameplay-Schwellen. [Core](https://github.com/nauen/adventure_studio/actions/runs/46003794523), [Native](https://github.com/nauen/adventure_studio/actions/runs/46003808284) ausstehend.
+- **Danach:** #359 native Standanimations-Zuordnung; nach Gameplay-Nachweis von #352 sofort aktivieren, Gesamtgates bleiben Merge-Pflicht.
+- **Arbeitsregel (Nutzerentscheidung):** Nach belegtem Gameplay sofort genau ein natives Folgepaket aufnehmen; laufende Pflichtgates als offene Integration führen. Kein Merge vor Pflichtgates; keine vollständige V-Freigabe aus Einzelbelegen. ZP05+ fail-closed.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
 ## Verbindlicher Stand – 27.11.2026 (nach Zeichenebenen-Gameplay)
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.

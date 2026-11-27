@@ -1,12 +1,13 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
-- **Jetzt:** #353 – native dynamische Actor-Palettenzuordnung (R06/A05).
-- **Abnahme:** Tatsächlicher Farbwechsel und Originalpalette nach Escape in stock ScummVM. Frühere Gameplay-Evidenz: [15195927049](https://github.com/nauen/adventure_studio/actions/runs/45995788559/artifacts/15195927049). Aktuelle vollständige Pflichtgates offen.
-- **Blocker:** [Geometry-Fehler](https://github.com/nauen/adventure_studio/actions/runs/45995788559/job/140494765704) bei Rendezvous, nicht im Paletten-Gameplay. Original-[Artefakt 15198071352](https://github.com/nauen/adventure_studio/actions/runs/45995788559/artifacts/15198071352) zeigt in B-Annäherung X=262→302→358→395 (12,514/12,686/12,919/13,150 s): +56 überschreitet den unveränderten 55-Pixel-Grenzwert; nur zwei gültige Schritte. [Fix bc7ae1a](https://github.com/nauen/adventure_studio/commit/bc7ae1aa3acfa31056ee98d0e95e8285c655d1be) erhöht echte Aufnahmezahl 300→480, Pause 70→25 ms; keine synthetischen Bilder oder Schwellenänderung. [Core](https://github.com/nauen/adventure_studio/actions/runs/46003202312), [Native](https://github.com/nauen/adventure_studio/actions/runs/46003213681) ausstehend; Wirksamkeit noch nicht belegt.
-- **Danach:** #352 nativer Actor-Laufstopp/Wiederaufnahme. #355 und #350: Gameplay belegt, Integration offen. Details in [PROJECT_STATUS](PROJECT_STATUS.md).
+- **Jetzt:** #352 – nativer Actor-Laufstopp und Wiederaufnahme (R06/A05).
+- **Abnahme:** Regulärer Stopp und Escape-Stopp vor Ziel, zehn stabile Positionsmessungen je Stopp, erneuter nativer Lauf bis X≈455 in stock ScummVM.
+- **Blocker:** [Actor-Job 140510533256](https://github.com/nauen/adventure_studio/actions/runs/46000052265/job/140510533256) rot: Native Actor position missing: before. [Originalartefakt 15198302559](https://github.com/nauen/adventure_studio/actions/runs/46000052265/artifacts/15198302559) zeigt Guide und gleichfarbige Ego-Pixel. Alte Erkennung X=268 statt 180; auf demselben Originalbild korrigierte Erkennung X=182 (eindeutige dichte Costume-Spalten 24–55 relativ zum ROI). [Fix ba149f5](https://github.com/nauen/adventure_studio/commit/ba149f5bfd6704e6a5c629e6125c33a70d654b97) und zwei Regressionstests gepusht; keine Änderung der Gameplay-Schwellen. [Core](https://github.com/nauen/adventure_studio/actions/runs/46003794523), [Native](https://github.com/nauen/adventure_studio/actions/runs/46003808284) ausstehend.
+- **Danach:** #359 native Standanimations-Zuordnung. #355/#350/#353 Gameplay belegt, Gesamtgates offen; [PROJECT_STATUS](PROJECT_STATUS.md).
 
-Ältere operative Prioritäten sind historisch. Nach belegtem Gameplay sofort ein Folgepaket aufnehmen; Merge-Gates bleiben verpflichtend.
+Nach Gameplay-Abnahme sofort ein Folgepaket aufnehmen; Merge-Pflichtgates unverändert.
+
 
 ## Historischer Integrationsstand (26.11.2026) – nicht aktive Paketauswahl
 
