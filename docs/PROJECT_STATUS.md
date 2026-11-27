@@ -1,3 +1,16 @@
+## Verbindlicher Stand – 27.11.2026 (nach Standanimations-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
+- **Konsolidierung:** #361 auf main integriert (d78e782); frühere #360-Konsolidierung und Main-Core grün. #355/#350/#353/#352/#357 Gameplay auf aktuellen Heads belegt, Core und Actor-Shards grün; Gesamtgates laufen, Merge offen. Einzelbelege siehe historischen Stand.
+- **Offene Integration:** #359 Standanimation: [Originalartefakt 15201809120](https://github.com/nauen/adventure_studio/actions/runs/46007792927/artifacts/15201809120) auf f20015f. Je fünf stabile Messungen: X282 Original 1536/0/0, X442 Alternativ 0/1536/0, nach Escape X282 Original 1536/0/0, 5,203 s bis Ankunft; native_actor_stand_animation_verified=true. Core und Actor-Shard grün; Gesamtgate offen.
+- **Jetzt – genau eine Fähigkeit:** [#348](https://github.com/nauen/adventure_studio/pull/348) native IM03-Objektbildfolge (R07/R06-Anschluss), PNG/Studio/JSON-v1/Story/ScummC, Zustand 3 nur mit vorhandenem IM03. Bestehende IM01/IM02-Z-Masken unverändert.
+- **Abnahme:** vier echte interaktive Stock-ScummVM-Bildzustände IM01→IM02→IM03→IM01, eindeutige Farbe je Zustand, vollständige Pflichtgates.
+- **Blocker:** [Originalartefakt 15194406258](https://github.com/nauen/adventure_studio/actions/runs/45991905870/artifacts/15194406258) zeigt IM01 mit 2688 Farb-Pixeln, aber noch keine sichtbaren Verben oder Key; Fehler Unexpected sprite bounds: '1x1-1-1'. [Fix a646231](https://github.com/nauen/adventure_studio/commit/a646231b0ee3a21b8a32a4dce4bc05fe26da3977) wartet auf echte Verben und Key bei unveränderten Farbschwellen, zwei Regressionstests; [Core](https://github.com/nauen/adventure_studio/actions/runs/46009384602), [Native](https://github.com/nauen/adventure_studio/actions/runs/46009390308) gestartet.
+- **Danach:** IM03/ZP01 als eigenes Paket nach Gameplay-Nachweis. Korrektur der vorherigen Formulierung: #348 enthält noch keine IM03-eigenen Z-Masken.
+- **Arbeitsregel:** Nach belegtem Gameplay sofort ein natives Folgepaket aufnehmen; Gesamtgates separat führen. Merge nur bei grünen Pflichtgates, kein pauschales V. ZP05+ fail-closed.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
 ## Verbindlicher Stand – 27.11.2026 (nach Laufstopp- und Richtungssperren-Gameplay)
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.

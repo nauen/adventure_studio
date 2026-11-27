@@ -1,10 +1,10 @@
 # Adventure Studio – aktive Produktroadmap
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
-- **Jetzt:** #359 – native Standanimations-Zuordnung (R06/A05).
-- **Abnahme:** Alternative Standpose nach nativer Ankunft und Rückkehr zur Originalpose nach Escape und erneutem Lauf in stock ScummVM.
-- **Blocker:** [Originalartefakt 15201780522](https://github.com/nauen/adventure_studio/actions/runs/46004531320/artifacts/15201780522) auf 2f5075e zeigt nach Ankunft weiterhin Walking (0/0/1536). Binär-COST: rest @24 belegt 96–99; bisher setActorStandFrame(6) adressiert leere 24–27. [Produktfix f20015f](https://github.com/nauen/adventure_studio/commit/f20015fe4f89fd83ca4fdc9123aec95c20b992d1) emittiert Gruppe 24 direkt, Default 3, fail-closed auf explizite ausgerichtete Gruppen 24..52; UI/Tests angepasst. [Core](https://github.com/nauen/adventure_studio/actions/runs/46007784438), [Native](https://github.com/nauen/adventure_studio/actions/runs/46007792927) gestartet, neue Gameplay-Abnahme offen. Alter Inventory-Job scheiterte vor Spielstart an HTTP403 des Microsoft-APT-Repos.
-- **Danach:** #348 native IM03-Objektbildfolge mit Z-Masken. #355/#350/#353/#352/#357 Gameplay belegt, Gesamtgates offen; [PROJECT_STATUS](PROJECT_STATUS.md).
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Jetzt:** #348 – native IM03-Objektbildfolge (R07/R06-Anschluss), noch ohne IM03-eigene Masken.
+- **Abnahme:** IM01→IM02→IM03→IM01 durch echte Klicks in stock ScummVM; Core und Gesamtpflichtgates.
+- **Blocker:** [Originalartefakt 15194406258](https://github.com/nauen/adventure_studio/actions/runs/45991905870/artifacts/15194406258) zeigt IM01 mit 2688 Farb-Pixeln, aber noch keine sichtbaren Verben oder Key; Fehler Unexpected sprite bounds: '1x1-1-1'. [Fix a646231](https://github.com/nauen/adventure_studio/commit/a646231b0ee3a21b8a32a4dce4bc05fe26da3977) wartet auf echte Verben und Key bei unveränderten Farbschwellen, zwei Regressionstests; [Core](https://github.com/nauen/adventure_studio/actions/runs/46009384602), [Native](https://github.com/nauen/adventure_studio/actions/runs/46009390308) gestartet.
+- **Danach:** IM03/ZP01. #355/#350/#353/#352/#357/#359 Gameplay belegt, Integration offen; [PROJECT_STATUS](PROJECT_STATUS.md).
 
 Nach Gameplay-Nachweis sofort ein Folgepaket aufnehmen; Merge-Pflichtgates unverändert.
 
