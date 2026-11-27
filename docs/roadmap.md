@@ -1,13 +1,12 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
-- **Jetzt:** [#355](https://github.com/nauen/adventure_studio/pull/355), native Actor-Walkbox-Führung (R08/A05; R06-Z-Clipping-Vertrag erhalten).
-- **Abnahme:** Stock ScummVM: begrenzter Lauf X≈370 → freier Lauf X≈440 → nach Escape erneut begrenzter Lauf; alle Pflichtgates auf dem aktuellen Head grün, dann integrieren.
-- **Blocker:** [Artefakt 15197657800](https://github.com/nauen/adventure_studio/actions/runs/45999152613/artifacts/15197657800) belegt X=372/442, aber Interpreterabbruch beim Redraw (Testobjekt Y=130 + 16 > 144). [Fix 698b3bf](https://github.com/nauen/adventure_studio/commit/698b3bf9f774c9e8805becc3b160874383ee0187); [Native-CI](https://github.com/nauen/adventure_studio/actions/runs/46000802088) ausstehend. Details und offene PRs in [PROJECT_STATUS.md](PROJECT_STATUS.md), Capability-Status nur in [SCUMM_V6_CAPABILITIES.md](SCUMM_V6_CAPABILITIES.md).
-- **Danach:** [#350](https://github.com/nauen/adventure_studio/pull/350), native Actor-Zeichenebene/Escape vollständig integrieren. Vorher keine weitere native Fähigkeit beginnen.
+- **Jetzt:** #350 native Actor-Zeichenebene/Escape (R06/A05). [#350](https://github.com/nauen/adventure_studio/pull/350), native Actor-Zeichenebene/Escape. Autoren steuern Actor-zu-Actor-Zeichenreihenfolge über Studio/JSON-v1/ScummC `setActorLayer`; Raum-Z-Masken unverändert. Frühere native Probe B→A→B erfolgreich ([Artefakt 15195418170](https://github.com/nauen/adventure_studio/actions/runs/45994511162/artifacts/15195418170)), Core grün.
+- **Abnahme:** B→A→B durch native Zeichenebene und Escape; vollständige stock-ScummVM- und Core-Pflichtgates.
+- **Blocker:** [Geometry-Job](https://github.com/nauen/adventure_studio/actions/runs/45994511162/job/140490671815) rot: `Native Actor B did not subsequently depart from meeting`. [Artefakt 15196924032](https://github.com/nauen/adventure_studio/actions/runs/45994511162/artifacts/15196924032) zeigt B-Bewegung +28/+32/+32 Pixel (X=423/511/543); letzter Schritt ohne sichtbaren A. [Fix 53eddb5](https://github.com/nauen/adventure_studio/commit/53eddb5f5af3f00d93a4d2e0285a59c881aafc48) nutzt B-eigene Zeit-/Pixelspur nach gemeinsam belegtem A-Abgang, unveränderte Mindestanzahl und Zeitgrenze, gezielter Regressionstest. Neue CI ausstehend.
+- **Danach:** #353 native Actor-Palettenzuordnung vollständig integrieren. #355 Gameplay erfolgreich, Gesamtgate und Merge offen; siehe [PROJECT_STATUS](PROJECT_STATUS.md). Nur ein aktives Produktpaket.
 
-Die korrigierte Reihenfolge ersetzt alle älteren operativen Prioritäten. Historische Angaben sind keine aktiven Aufträge.
-
+Ältere operative Prioritäten sind historisch.
 
 ## Historischer Integrationsstand (26.11.2026) – nicht aktive Paketauswahl
 
