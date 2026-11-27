@@ -507,7 +507,10 @@ def make_app():
         try:
             updated = import_object_zplane(raw, room, hotspot, file_path, image_state, zplane_index)
             return (updated, *native_selectors(updated, selected_room=room),
-                    (f"Objekt-Z-Maske für {hotspot}, IM01 ZP03 importiert. "
+                    (f"Objekt-Z-Maske für {hotspot}, IM03 ZP01 importiert. "
+                     "Native IM03-ZP01 beim Export."
+                     if image_state == 3 else
+                     f"Objekt-Z-Maske für {hotspot}, IM01 ZP03 importiert. "
                      "Native IM01-ZP03 beim Export."
                      if (image_state, zplane_index) == (1, 3) else
                      f"Objekt-Z-Maske für {hotspot}, IM01 ZP04 importiert. "
@@ -916,13 +919,13 @@ def make_app():
                 native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-zplane-file")
                 native_zplane_index = gr.Number(label="Z-Ebene (1–9)", value=1, precision=0, elem_id="native-zplane-index")
                 native_zplane_add = gr.Button("Z-Maske ins native Projekt übernehmen", elem_id="native-zplane-add")
-            gr.Markdown("**R07 Objektbild-Z-Masken (IM01/IM02):** Für das ausgewählte Objekt PNG-Masken in exakter Objektbildgröße importieren. Das Grundbild unterstützt ZP01–ZP04 (ZP04 setzt ZP01, ZP02 und ZP03 voraus); das offene Bild unterstützt ZP01–ZP04 (ZP04 setzt ZP01, ZP02 und ZP03 im offenen Bild voraus). Zustand 1 nutzt das Grundbild, Zustand 2 das vorhandene offene Bild; ihre Masken bleiben unabhängig. Weiß verdeckt Actors, Schwarz/Transparenz bleibt frei. Projekt-JSON exportieren, um die Änderung dauerhaft zu sichern.")
+            gr.Markdown("**R07 Objektbild-Z-Masken (IM01/IM02/IM03):** Für das ausgewählte Objekt PNG-Masken in exakter Objektbildgröße importieren. Das Grundbild unterstützt ZP01–ZP04 (ZP04 setzt ZP01, ZP02 und ZP03 voraus); das offene Bild unterstützt ZP01–ZP04 (ZP04 setzt ZP01, ZP02 und ZP03 im offenen Bild voraus). Zustand 1 nutzt das Grundbild, Zustand 2 das offene Bild, Zustand 3 das dritte Bild (nur ZP01); ihre Masken bleiben unabhängig. Weiß verdeckt Actors, Schwarz/Transparenz bleibt frei. Projekt-JSON exportieren, um die Änderung dauerhaft zu sichern.")
             with gr.Row():
-                native_object_zplane_state = gr.Dropdown(label="Objektbildzustand", choices=[("Grundbild (1)", 1), ("Offenes Bild (2)", 2)], value=1, elem_id="native-object-zplane-state")
+                native_object_zplane_state = gr.Dropdown(label="Objektbildzustand", choices=[("Grundbild (1)", 1), ("Offenes Bild (2)", 2), ("Drittes Bild (3)", 3)], value=1, elem_id="native-object-zplane-state")
                 native_object_zplane_layer = gr.Dropdown(label="Objekt-Z-Ebene", choices=[("ZP01 (1)", 1), ("ZP02 (2)", 2), ("ZP03 (3)", 3), ("ZP04 (4)", 4)], value=1, elem_id="native-object-zplane-layer")
                 native_object_zplane_file = gr.File(label="Objekt-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-object-zplane-file")
                 native_object_zplane_add = gr.Button("Objekt-Z-Maske übernehmen", elem_id="native-object-zplane-add")
-            gr.Markdown("**Drittes Objektbild (IM03):** PNG in exakter Objektgröße, deckend und mit Farben der vorhandenen Raumpalette. Grundbild und offenes Bild müssen vorhanden sein. Zustand 3 zeigt IM03; eigene Z-Masken für IM03 sind noch nicht unterstützt.")
+            gr.Markdown("**Drittes Objektbild (IM03):** PNG in exakter Objektgröße, deckend und mit Farben der vorhandenen Raumpalette. Grundbild und offenes Bild müssen vorhanden sein. Zustand 3 zeigt IM03; eine unabhängige IM03-ZP01-Maske ist verfügbar; ZP02–ZP04 sind noch nicht unterstützt.")
             with gr.Row():
                 native_object_third_file = gr.File(label="Drittes Objektbild (PNG)", file_types=[".png"], type="filepath", elem_id="native-object-third-file")
                 native_object_third_add = gr.Button("IM03 übernehmen", elem_id="native-object-third-add")

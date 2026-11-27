@@ -76,6 +76,7 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
                        scene_capture_seconds: float | None = None,
                        scene_walk_target_x: int | None = None,
                        initial_object_state2: str | None = None,
+                       initial_object_state3: str | None = None,
                        scene_walk_clicks: tuple[tuple[str, int, int], ...] = (),
                        native_walkbox_gate_probe: bool = False,
                        native_reversible_walkbox_probe: bool = False,
@@ -93,18 +94,25 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
     root = destination / label
     root.mkdir(parents=True, exist_ok=True)
     write_room_sources(room, root)
-    if initial_object_state2 is not None:
-        # Native visual fixture only: select the second, product-exported
-        # object image state at room entry without automating a puzzle click.
-        # The generated IM02 sprite/Z-plane and the SCUMM VM are unmodified.
-        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", initial_object_state2):
+    if initial_object_state2 is not None and initial_object_state3 is not None:
+        raise ValueError("Choose one initial object state fixture")
+    initial_object = initial_object_state3 if initial_object_state3 is not None else initial_object_state2
+    initial_state = 3 if initial_object_state3 is not None else 2
+    if initial_object is not None:
+        # Fixture selects the product-exported state at entry. Image/mask
+        # resources and the stock SCUMM VM are unmodified.
+        if initial_state == 3 and not any(h.id == initial_object and h.third_sprite_pixels is not None
+                                          for h in room.hotspots):
+            raise ValueError("Third-state fixture requires an exported third image")
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", initial_object):
             raise ValueError("Invalid fixture object id")
         script = root / f"{room.name}.scc"
         source = script.read_text(encoding="utf-8")
-        pattern = (r"(    object " + re.escape(initial_object_state2)
+        pattern = (r"(    object " + re.escape(initial_object)
                    + r" \{\n(?:[^\n]*\n)*?        states = [^\n]+;\n)"
                    + r"        state = 1;")
-        changed, count = re.subn(pattern, r"\g<1>        state = 2;", source, count=1)
+        changed, count = re.subn(pattern, lambda match: match.group(1) +
+                                 f"        state = {initial_state};", source, count=1)
         if count != 1:
             raise ValueError("Second-state fixture requires an exported two-state object")
         script.write_text(changed, encoding="utf-8")
@@ -112,7 +120,7 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
         # Isolated native screenshot control: finish the genuine walking
         # movement inside an authored object mask rather than sampling a
         # later, non-occluded position outside that object.
-        if (initial_object_state2 is None or type(scene_walk_target_x) is not int
+        if (initial_object is None or type(scene_walk_target_x) is not int
                 or not 120 <= scene_walk_target_x < room.geometry.room_width):
             raise ValueError("Native second-state walk target outside the room")
         script = root / f"{room.name}.scc"
