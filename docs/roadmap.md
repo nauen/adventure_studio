@@ -3,7 +3,7 @@
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; erstes Produktziel: ein im Studio authoriertes, mehrraumiges Adventure bis zum Spielende in unverändertem ScummVM.
 - **Jetzt:** Stand konsolidieren; die bereits implementierte dritte native Objektgrafik IM03 ([#348](https://github.com/nauen/adventure_studio/pull/348), R07) konfliktbewusst auf aktuellem main integrieren. Keine neue Fähigkeit parallel beginnen.
 - **Abnahme:** Bestehende Studio-/JSON-v1-/Story-/ScummC-Pfade und native IM01→IM02→IM03→IM01-Klickfolge auf gemeinsamer Basis erhalten; Core und relevante Native-/Studio-Pflichtgates grün. Keine pauschale V-Freigabe.
-- **Blocker:** #348 ist auf aktueller Basis nicht mergebar; die gestapelten Masken-PRs #363–#366 folgen nicht vor seiner Integration. #366 und #378 haben rote Pflichtgates; siehe [Projektstatus](PROJECT_STATUS.md).
+- **Blocker:** #348 ist nach Konfliktauflösung auf [21da68b](https://github.com/nauen/adventure_studio/commit/21da68b785846ed1d5ed2e59b93a6f137cb87699) mergebar; [Core](https://github.com/nauen/adventure_studio/actions/runs/46059721878) und [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/46059728975) auf neuem Stand noch offen. Kein Merge, kein Folgepaket vor Abnahme.
 - **Danach:** Nach Konsolidierung die noch fehlenden nativen Raumgrafik-/Z-Masken-/Walkbox-Fähigkeiten nach tatsächlichem Autorenbedarf priorisieren; genau eine Fähigkeit vollständig Modell → Export → ScummVM-Evidenz abnehmen, erst dann die nächste.
 
 ## Historischer Roadmap-Kopf (ersetzt, keine aktive Paketauswahl)
