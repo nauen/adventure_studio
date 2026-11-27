@@ -520,7 +520,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                 MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
-                                SoundEffectStep, VoiceLineStep)
+                                SoundEffectStep, TextLineStep, VoiceLineStep)
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
     if not active:
@@ -668,6 +668,21 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                     if step.operation == "start" else "            stopMusic();\n")
             elif isinstance(step, SoundEffectStep):
                 instructions.append(f"            {step.operation}Sound({step.sound_id});\n")
+            elif isinstance(step, TextLineStep):
+                if voice_charset is None:
+                    from .scumm_assets import _scumm_string
+                    literal = _scumm_string(step.text)
+                else:
+                    from .localization import encode_scumm_literal
+                    literal = encode_scumm_literal(step.text, voice_charset)
+                if step.actor_id is None:
+                    instructions.extend((f"            egoSay({literal});\n",
+                                         "            waitForMessage();\n"))
+                else:
+                    instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                         f"                actorSay({step.actor_id},{literal});\n",
+                                         "                waitForMessage();\n",
+                                         "            }\n"))
             elif isinstance(step, VoiceLineStep):
                 # The dialogue message owns the subtitle lifetime; the VOC
                 # plays alongside it and is stopped once the message ends.
@@ -765,7 +780,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 final_sounds[step.sound_id] = "stop"
                 for variant in step.variants:
                     final_sounds[variant.sound_id] = "stop"
-        commit = ""
+        commit = ("                stopTalking();\n"
+                  if any(isinstance(step, TextLineStep) for step in sequence.steps) else "")
         for step in inventory_steps:
             commit += inventory_action(step, "                ")
         for hotspot, (x, y) in end_object_positions.items():

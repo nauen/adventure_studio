@@ -182,6 +182,35 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_native_text_line_without_voc_roundtrip_and_escape(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import TextLineStep
+        raw = canonical_json(GameDocument("TextClue", (scrolling_fixture(), destination_fixture())))
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Textzeile ohne Audio", None, None, None, None,
+                                   subtitle="The door needs a key.")
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Objektzustand setzen", None, None, "Door", 2)
+        raw = set_sequence_skippable(raw, "Harbor|Key|Close", True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.sound_assets, ())
+        self.assertEqual(doc.interaction_sequences[0].steps[0], TextLineStep("The door needs a key."))
+        self.assertEqual(sequence_step_fields(raw, "Harbor|Key|Close", 0)[8], "The door needs a key.")
+        room = doc.rooms[0]
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        normal, override = native.split("} override {", 1)
+        self.assertIn('egoSay("The door needs a key.");', normal)
+        self.assertIn("waitForMessage();", normal)
+        self.assertIn("stopTalking();", override)
+        self.assertIn("setObjectState(Door,2);", override)
+        for actor, text in ((None, ""), ("Missing", "Hello"), (None, "a"*161)):
+            with self.assertRaises(ValueError):
+                replace_sequence_step(raw, "Harbor|Key|Close", 0, "Textzeile ohne Audio",
+                                      actor, None, None, None, subtitle=text)
+
     def test_combined_object_variable_conditions_author_and_export(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
