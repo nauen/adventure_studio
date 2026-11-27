@@ -293,6 +293,7 @@ class InteractionSequence:
     condition_second_value: int | None = None
     condition_second_operator: str = "=="
     condition_join: str = "and"
+    condition_inventory_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -409,6 +410,9 @@ def document_dict(document: GameDocument) -> dict:
                                         **({"condition_variable": sequence.condition_variable,
                                             "condition_state": sequence.condition_state}
                                            if sequence.condition_variable is not None else {}),
+                                        **({"condition_inventory_id": sequence.condition_inventory_id,
+                                            "condition_state": sequence.condition_state}
+                                           if sequence.condition_inventory_id is not None else {}),
                                         **({"condition_operator": sequence.condition_operator}
                                            if sequence.condition_operator != "==" else {}),
                                         **({"condition_second_target": sequence.condition_second_target,
@@ -916,6 +920,7 @@ def _validate_document(document: GameDocument) -> None:
         if actor.direction not in {direction.direction for direction in animation.directions}:
             raise ValueError("Animation trigger lacks the Actor's direction")
     sequence_groups = {}
+    inventory_ids = {hotspot.id for room in document.rooms for hotspot in room.hotspots if hotspot.pickup}
     transfer_destinations = {(step.actor_id, step.room)
                              for interaction in document.interaction_sequences
                              for step in interaction.steps
@@ -943,9 +948,16 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError("Only variable conditions support numeric comparisons")
         if sequence.condition_variable is not None:
             game_variable_symbol(sequence.condition_variable)
-            if (sequence.condition_hotspot_id is not None or type(sequence.condition_state) is not int
+            if (sequence.condition_hotspot_id is not None or sequence.condition_inventory_id is not None
+                    or type(sequence.condition_state) is not int
                     or not -32768 <= sequence.condition_state <= 32767):
                 raise ValueError("Variable condition requires one named variable and a signed 16-bit value")
+        elif sequence.condition_inventory_id is not None:
+            if (not isinstance(sequence.condition_inventory_id, str)
+                    or sequence.condition_inventory_id not in inventory_ids
+                    or sequence.condition_hotspot_id is not None
+                    or type(sequence.condition_state) is not int or sequence.condition_state not in (0, 1)):
+                raise ValueError("Inventory condition requires a pickup and ownership state 0 or 1")
         elif (sequence.condition_hotspot_id is None) != (sequence.condition_state is None):
             raise ValueError("Interaction condition requires both an object and a state")
         if sequence.condition_hotspot_id is not None and (
@@ -968,6 +980,10 @@ def _validate_document(document: GameDocument) -> None:
                 game_variable_symbol(second[4:])
                 if not -32768 <= sequence.condition_second_value <= 32767:
                     raise ValueError("Second variable value outside signed 16-bit range")
+            elif second.startswith("inv:"):
+                if (second[4:] not in inventory_ids or sequence.condition_second_operator != "=="
+                        or sequence.condition_second_value not in (0, 1)):
+                    raise ValueError("Second inventory condition requires a pickup and ownership state 0 or 1")
             elif (second not in {hotspot.id for hotspot in room.hotspots}
                     or sequence.condition_second_operator != "=="
                     or not 0 <= sequence.condition_second_value <= 2):
@@ -1161,13 +1177,13 @@ def _validate_document(document: GameDocument) -> None:
     for group in sequence_groups.values():
         if len(group) < 2:
             continue
-        guards = [item for item in group if item.condition_hotspot_id is not None or item.condition_variable is not None]
+        guards = [item for item in group if item.condition_hotspot_id is not None or item.condition_variable is not None or item.condition_inventory_id is not None]
         if any(item.condition_second_target is not None for item in guards):
             if len(guards) != 1 or len(group) != 2:
                 raise ValueError("Combined condition supports one guarded branch and one fallback")
             continue
         if (len(guards) < len(group) - 1
-                or len({(item.condition_hotspot_id, item.condition_variable) for item in guards}) != 1
+                or len({(item.condition_hotspot_id, item.condition_variable, item.condition_inventory_id) for item in guards}) != 1
                 or any(max(a, c) <= min(b, d)
                        for i, first in enumerate(guards) for second in guards[i+1:]
                        for a, b in comparison_ranges(first.condition_operator, first.condition_state)
@@ -1289,7 +1305,7 @@ def parse_document(source: str) -> GameDocument:
     for raw_sequence in raw_sequences:
         item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps",
                                     "condition_hotspot_id", "condition_state", "skippable", "condition_variable", "condition_operator", "condition_second_target",
-                                    "condition_second_value", "condition_second_operator", "condition_join"},
+                                    "condition_second_value", "condition_second_operator", "condition_join", "condition_inventory_id"},
                      {"room", "hotspot_id", "verb", "steps"})
         if not isinstance(item["steps"], list):
             raise ValueError("Interaction steps must be a list")
@@ -1401,7 +1417,8 @@ def parse_document(source: str) -> GameDocument:
                                                          item.get("condition_second_target"),
                                                          item.get("condition_second_value"),
                                                          item.get("condition_second_operator", "=="),
-                                                         item.get("condition_join", "and")))
+                                                         item.get("condition_join", "and"),
+                                                         item.get("condition_inventory_id")))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",

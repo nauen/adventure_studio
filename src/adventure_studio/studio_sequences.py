@@ -2669,6 +2669,8 @@ def sequence_choices(raw: str) -> tuple[tuple[str, str], ...]:
     return tuple((f"{item.room} / {item.hotspot_id} / {item.verb}"
                   + (f" [wenn Variable {item.condition_variable} {item.condition_operator} {item.condition_state}]"
                      if item.condition_variable is not None else
+                     f" [wenn Inventar {item.condition_inventory_id}: {'vorhanden' if item.condition_state else 'fehlt'}]"
+                     if item.condition_inventory_id is not None else
                      f" [wenn {item.condition_hotspot_id}={item.condition_state}]"
                      if item.condition_hotspot_id is not None else " [sonst/immer]")
                   + (f" {item.condition_join.upper()} {item.condition_second_target} {item.condition_second_operator} {item.condition_second_value}"
@@ -2687,6 +2689,8 @@ def sequence_steps(raw: str, identity: str) -> tuple[str, ...]:
 def sequence_condition_fields(raw: str, identity: str | None) -> tuple[str | None, int]:
     sequence = next((item for item in parse_document(raw).interaction_sequences
                      if _identity(item) == identity), None)
+    if sequence and sequence.condition_inventory_id is not None:
+        return ("inv:" + sequence.condition_inventory_id, sequence.condition_state)
     if sequence and sequence.condition_variable is not None:
         return ("var:" + sequence.condition_variable, sequence.condition_state)
     return ((sequence.condition_hotspot_id, sequence.condition_state)
@@ -2752,7 +2756,9 @@ def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
         condition_state = int(state)
     sequences = list(document.interaction_sequences)
     variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
-    sequences[index] = replace(sequences[index], condition_hotspot_id=None if variable is not None else hotspot_id,
+    inventory = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("inv:") else None
+    sequences[index] = replace(sequences[index], condition_hotspot_id=None if variable is not None or inventory is not None else hotspot_id,
+                               condition_inventory_id=inventory,
                                condition_variable=variable, condition_state=condition_state,
                                condition_operator=operator if variable is not None else "==",
                                **_second_condition(second_target, second_value, second_operator, join))
@@ -2772,7 +2778,9 @@ def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
     if hotspot_id is None or state is None or type(state) not in (int, float) or int(state) != state:
         raise ValueError("Alternative benötigt ein Objekt und einen ganzen Zustand")
     variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
-    variant = replace(original, condition_hotspot_id=None if variable is not None else hotspot_id,
+    inventory = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("inv:") else None
+    variant = replace(original, condition_hotspot_id=None if variable is not None or inventory is not None else hotspot_id,
+                               condition_inventory_id=inventory,
                       condition_variable=variable, condition_state=int(state),
                       condition_operator=operator if variable is not None else "==",
                       **_second_condition(second_target, second_value, second_operator, join))
@@ -2782,8 +2790,11 @@ def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
 def _identity(sequence: InteractionSequence) -> str:
     base = f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
     if sequence.condition_second_target is not None:
-        first = "var:" + sequence.condition_variable if sequence.condition_variable is not None else sequence.condition_hotspot_id
+        first = ("inv:" + sequence.condition_inventory_id if sequence.condition_inventory_id is not None
+                 else "var:" + sequence.condition_variable if sequence.condition_variable is not None else sequence.condition_hotspot_id)
         return f"{base}|{first}|{sequence.condition_state}|{sequence.condition_operator}|{sequence.condition_join}|{sequence.condition_second_target}|{sequence.condition_second_operator}|{sequence.condition_second_value}"
+    if sequence.condition_inventory_id is not None:
+        return f"{base}|inv:{sequence.condition_inventory_id}|{sequence.condition_state}"
     if sequence.condition_variable is not None:
         suffix = "" if sequence.condition_operator == "==" else f"|{sequence.condition_operator}"
         return f"{base}|var:{sequence.condition_variable}|{sequence.condition_state}{suffix}"
@@ -2966,7 +2977,8 @@ def append_sequence_step(raw: str, room: str, hotspot_id: str, verb: str,
     sequences = list(document.interaction_sequences)
     index = next((index for index, item in enumerate(sequences)
                   if (item.room, item.hotspot_id, item.verb) == key
-                  and item.condition_hotspot_id is None and item.condition_variable is None), None)
+                  and item.condition_hotspot_id is None and item.condition_variable is None
+                  and item.condition_inventory_id is None), None)
     if index is None:
         sequences.append(InteractionSequence(room, hotspot_id, verb, (step,)))
     else:

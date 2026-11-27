@@ -550,7 +550,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     targets.update(step.result_id for sequence in active for step in sequence.steps
                    if isinstance(step, CombineInventoryStep))
     targets.update(item.condition_hotspot_id for item in active if item.condition_hotspot_id is not None)
-    targets.update(item.condition_second_target for item in active if item.condition_second_target is not None
+    targets.update(item.condition_inventory_id for item in active if item.condition_inventory_id is not None)
+    targets.update(item.condition_second_target[4:] if item.condition_second_target.startswith("inv:")
+                   else item.condition_second_target for item in active if item.condition_second_target is not None
                    and not item.condition_second_target.startswith("var:"))
     declarations = [f"    object {target};\n" for target in sorted(targets)
                     if f"    object {target};\n" not in source]
@@ -872,6 +874,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     def condition_expression(sequence):
         if sequence.condition_variable is not None:
             return game_variable_symbol(sequence.condition_variable)
+        if sequence.condition_inventory_id is not None:
+            return f"getObjectOwner({sequence.condition_inventory_id})"
         if sequence.condition_hotspot_id is not None:
             return f"getObjectState({sequence.condition_hotspot_id})"
         return None
@@ -880,14 +884,20 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         first = condition_expression(sequence)
         if first is None:
             return None
-        expression = f"{first} {sequence.condition_operator} {sequence.condition_state}"
+        expression = (f"{first} {'==' if sequence.condition_state else '!='} VAR_EGO"
+                      if sequence.condition_inventory_id is not None
+                      else f"{first} {sequence.condition_operator} {sequence.condition_state}")
         second = sequence.condition_second_target
         if second is None:
             return expression
-        right = (game_variable_symbol(second[4:]) if second.startswith("var:")
-                 else f"getObjectState({second})")
+        if second.startswith("inv:"):
+            comparison = f"getObjectOwner({second[4:]}) {'==' if sequence.condition_second_value else '!='} VAR_EGO"
+        else:
+            right = (game_variable_symbol(second[4:]) if second.startswith("var:")
+                     else f"getObjectState({second})")
+            comparison = f"{right} {sequence.condition_second_operator} {sequence.condition_second_value}"
         join = "&&" if sequence.condition_join == "and" else "||"
-        return f"({expression}) {join} ({right} {sequence.condition_second_operator} {sequence.condition_second_value})"
+        return f"({expression}) {join} ({comparison})"
 
     for group in grouped.values():
         sequence = group[0]
@@ -909,7 +919,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             inverse = {"==": "!=", "!=": "==", "<": ">=", "<=": ">", ">": "<=", ">=": "<"}
             guard = (f"            if({expression} {inverse[sequence.condition_operator]} {sequence.condition_state}) return;\n"
                      if expression is not None else "")
-            if sequence.condition_second_target is not None:
+            if sequence.condition_second_target is not None or sequence.condition_inventory_id is not None:
                 guard = f"            if(!({full_condition(sequence)})) return;\n"
             native = (f"        case {sequence.verb}:\n" + guard
                       + playable_sequence(sequence) + "            return;\n")
