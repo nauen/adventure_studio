@@ -1,3 +1,17 @@
+## Verbindlicher Stand – 27.11.2026 (nach Laufstopp- und Richtungssperren-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
+- **Offene Integration:** #355 [Walkbox](https://github.com/nauen/adventure_studio/actions/runs/46000802088/artifacts/15198662109), #350 [Zeichenebene](https://github.com/nauen/adventure_studio/actions/runs/46002760362/artifacts/15199387061), #353 [Palette](https://github.com/nauen/adventure_studio/actions/runs/46003213681/artifacts/15199487440) auf aktuellen Heads Gameplay und Core/Actor-Shards grün; Geometry-Gesamtgates laufen. #360 auf main (81a482d), [Main-Core](https://github.com/nauen/adventure_studio/actions/runs/46004585132) grün.
+- **Offene Integration:** #352 Laufstopp: [Artefakt 15200678329](https://github.com/nauen/adventure_studio/actions/runs/46005212823/artifacts/15200678329), Head 18ae36b, zehnmal X429 (Ziel470), vor Escape X229, danach zehnmal X309, Wiederaufnahme X457, Escape-Nachweis 6,700s; native_actor_stop_verified=true. Core und Actor-Shard grün; Gesamtgate offen.
+- **Offene Integration:** #357 Richtungssperre: [Artefakt 15200322612](https://github.com/nauen/adventure_studio/actions/runs/46005101390/artifacts/15200322612), Head 3e6111c, X282 S → X442 S → X442 E nach Escape, je 1536 Costume-Pixel, Escape bis Ankunft 6,577s; native_actor_turn_mode_verified=true. Core und Actor-Shard grün; Gesamtgate offen.
+- **Jetzt – genau eine Fähigkeit:** [#359](https://github.com/nauen/adventure_studio/pull/359) native Actor-Standanimations-Zuordnung (R06/A05), Studio/JSON-v1/ScummC setActorStandFrame, keine eigene Runtime.
+- **Abnahme:** tatsächliche alternative Standpose nach Laufankunft, Escape-Rückbindung und erneute Ankunft in Originalpose; Core und vollständige Pflichtgates grün.
+- **Blocker:** [Originalartefakt 15201780522](https://github.com/nauen/adventure_studio/actions/runs/46004531320/artifacts/15201780522) auf 2f5075e zeigt nach Ankunft weiterhin Walking (0/0/1536). Binär-COST: rest @24 belegt 96–99; bisher setActorStandFrame(6) adressiert leere 24–27. [Produktfix f20015f](https://github.com/nauen/adventure_studio/commit/f20015fe4f89fd83ca4fdc9123aec95c20b992d1) emittiert Gruppe 24 direkt, Default 3, fail-closed auf explizite ausgerichtete Gruppen 24..52; UI/Tests angepasst. [Core](https://github.com/nauen/adventure_studio/actions/runs/46007784438), [Native](https://github.com/nauen/adventure_studio/actions/runs/46007792927) gestartet, neue Gameplay-Abnahme offen. Alter Inventory-Job scheiterte vor Spielstart an HTTP403 des Microsoft-APT-Repos.
+- **Danach:** #348 native IM03-Objektbildfolge (R06/R07) mit Z-Masken; erst nach Gameplay-Nachweis #359. #357 bereits Gameplay belegt, kein neues aktives Paket.
+- **Arbeitsregel:** Nach belegtem Gameplay sofort ein natives Folgepaket aufnehmen; offene Pflichtgates separat führen. Merge erst bei vollständig grünen Gates. ZP05+ fail-closed, kein pauschales V.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
 ## Verbindlicher Stand – 27.11.2026 (nach Paletten-Gameplay)
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
