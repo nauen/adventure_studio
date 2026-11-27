@@ -516,8 +516,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  room_asset=None, sound_assets=(), voice_charset=None,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
-    from .scumm_costume import stand_animation_frame, walk_animation_frame
-    from .scumm_project import (ActorStandAnimationStep, ActorWalkAnimationStep, AnimateActorStep, ObjectStateStep, DelayStep,
+    from .scumm_costume import stand_animation_frame, walk_animation_frame, talk_animation_frame
+    from .scumm_project import (ActorStandAnimationStep, ActorWalkAnimationStep, ActorTalkAnimationStep, AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
@@ -604,6 +604,14 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.extend((f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({actor.id});\n",
                                      f"                setActorWalkFrame({frame});\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
+            elif isinstance(step, ActorTalkAnimationStep):
+                actor = actors_by_id[step.actor_id]
+                frame = talk_animation_frame(costumes_by_name[actor.costume], step.animation)
+                instructions.extend((f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({actor.id});\n",
+                                     f"                setActorTalkFrame({frame},5);\n",
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
             elif isinstance(step, AnimateActorStep):
@@ -710,6 +718,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_directions = {}
         end_stands = {}
         end_walks = {}
+        end_talks = {}
         end_clipping = {}
         final_camera = None
         final_camera_wait = False
@@ -732,6 +741,149 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, ActorWalkAnimationStep):
                 actor = actors_by_id[step.actor_id]
                 end_walks[actor.id] = walk_animation_frame(costumes_by_name[actor.costume], step.animation)
+            elif isinstance(step, ActorTalkAnimationStep):
+                actor = actors_by_id[step.actor_id]
+                frame = talk_animation_frame(costumes_by_name[actor.costume], step.animation)
+                instructions.extend((f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({actor.id});\n",
+                                     f"                setActorTalkFrame({frame},5);\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
+            elif isinstance(step, ActorTalkAnimationStep):
+                actor = actors_by_id[step.actor_id]
+                frame = talk_animation_frame(costumes_by_name[actor.costume], step.animation)
+                instructions.extend((f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({actor.id});\n",
+                                     f"                setActorTalkFrame({frame},5);\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
+            elif isinstance(step, AnimateActorStep):
+                actor = actors_by_id[step.actor_id]
+                animation = next(item for item in costumes_by_name[actor.costume].animations
+                                 if item.name == step.animation)
+                instructions.append(f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n"
+                                    f"                animateActor({actor.id},{animation.index});\n"
+                                    "            }\n")
+            elif isinstance(step, ObjectStateStep):
+                instructions.append(f"            setObjectState({step.hotspot_id},{step.state});\n")
+            elif isinstance(step, (PickupObjectStep, CombineInventoryStep)):
+                instructions.append(inventory_action(step, "            "))
+            elif isinstance(step, DelayStep):
+                instructions.append(f"            delaySeconds({step.seconds});\n")
+            elif isinstance(step, MoveActorStep):
+                instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
+                                    f"                putActorAt({step.actor_id}, {step.x}, {step.y}, {room_name});\n"
+                                    "            }\n")
+            elif isinstance(step, TransferActorZClipStep):
+                instructions.extend((f"            putActorAt({step.actor_id}, {step.x}, {step.y}, {step.room});\n",
+                                     f"            setCurrentActor({step.actor_id});\n",
+                                     f"            setActorZClip({transfer_plane(step)});\n",
+                                     "            setCurrentActor(VAR_EGO);\n"))
+            elif isinstance(step, WalkActorStep):
+                instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
+                                    f"                walkActorTo({step.actor_id}, {step.x}, {step.y});\n"
+                                    "            }\n")
+            elif isinstance(step, WaitActorStep):
+                instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
+                                    f"                waitForActor({step.actor_id});\n"
+                                    "            }\n")
+            elif isinstance(step, FollowActorCameraStep):
+                instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
+                                    f"                cameraFollowActor({step.actor_id});\n"
+                                    "            }\n")
+            elif isinstance(step, PanCameraStep):
+                instructions.append(f"            panCameraTo({step.x});\n")
+            elif isinstance(step, WaitCameraStep):
+                instructions.append("            waitForCamera();\n")
+            elif isinstance(step, ActorZClipStep):
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     f"                setActorZClip({interaction_plane(step)});\n",
+                                     # V6 forceClip does not invalidate the costume.
+                                     f"                setActorElevation(getActorElevation({step.actor_id}) + 1);\n",
+                                     f"                setActorElevation(getActorElevation({step.actor_id}) - 1);\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
+            elif isinstance(step, FaceActorStep):
+                direction = actor_facing_angle(step.direction)
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     f"                setActorDirection({direction});\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
+            elif isinstance(step, MusicCueStep):
+                instructions.append(f"            startMusic({room_asset.music_id});\n"
+                                    if step.operation == "start" else "            stopMusic();\n")
+            elif isinstance(step, SoundEffectStep):
+                instructions.append(f"            {step.operation}Sound({step.sound_id});\n")
+            elif isinstance(step, VoiceLineStep):
+                # The dialogue message owns the subtitle lifetime; the VOC
+                # plays alongside it and is stopped once the message ends.
+                def line(sound_id, value, indent):
+                    if voice_charset is None:
+                        from .scumm_assets import _scumm_string
+                        literal = _scumm_string(value)
+                    else:
+                        from .localization import encode_scumm_literal
+                        literal = encode_scumm_literal(value, voice_charset)
+                    say = (f"actorSay({step.actor_id},{literal})" if step.actor_id
+                           else f"egoSay({literal})")
+                    return (f"{indent}startSound({sound_id});\n"
+                            f"{indent}{say};\n"
+                            f"{indent}waitForMessage();\n"
+                            f"{indent}stopSound({sound_id});\n")
+
+                if step.variants:
+                    for variant in step.variants:
+                        code = int.from_bytes(variant.language.encode("ascii"), "big")
+                        instructions.append(f"            if(GameLanguage == {code}) {{\n"
+                                            + line(variant.sound_id, variant.text, "                ")
+                                            + "            } else ")
+                    instructions.append("{\n" + line(step.sound_id, step.text, "                ")
+                                        + "            }\n")
+                else:
+                    instructions.append(line(step.sound_id, step.text, "            "))
+            else:
+                raise ValueError("Unsupported native interaction step")
+        return "".join(instructions)
+
+    def playable_sequence(sequence):
+        actions = instructions_for(sequence)
+        transition = (f"            startRoom({sequence.steps[-1].room});\n"
+                      if isinstance(sequence.steps[-1], ChangeRoomStep) else "")
+        if not sequence.skippable:
+            return actions + transition
+        # ScummC's native try/override is backed by the SCUMM v6 override
+        # opcodes. Escape jumps to override; every persistent effect must be
+        # committed there even when the ordinary action list did not finish.
+        end_states = {}
+        end_positions = {}
+        end_directions = {}
+        end_stands = {}
+        end_talks = {}
+        end_talks = {}
+        end_clipping = {}
+        final_camera = None
+        final_camera_wait = False
+        inventory_steps = []
+        final_music = None
+        final_sounds = {}
+        for step in sequence.steps:
+            if isinstance(step, ObjectStateStep):
+                end_states[step.hotspot_id] = step.state
+            elif isinstance(step, (MoveActorStep, WalkActorStep)):
+                end_positions[step.actor_id] = (step.x, step.y, room_name, True)
+            elif isinstance(step, TransferActorZClipStep):
+                end_positions[step.actor_id] = (step.x, step.y, step.room, False)
+                end_clipping[step.actor_id] = (transfer_plane(step), False)
+            elif isinstance(step, ActorZClipStep):
+                end_clipping[step.actor_id] = (interaction_plane(step), True)
+            elif isinstance(step, ActorStandAnimationStep):
+                actor = actors_by_id[step.actor_id]
+                end_stands[actor.id] = stand_animation_frame(costumes_by_name[actor.costume], step.animation)
+            elif isinstance(step, ActorTalkAnimationStep):
+                actor = actors_by_id[step.actor_id]
+                end_talks[actor.id] = talk_animation_frame(costumes_by_name[actor.costume], step.animation)
             elif isinstance(step, FaceActorStep):
                 end_directions[step.actor_id] = step.direction
             elif isinstance(step, (FollowActorCameraStep, PanCameraStep)):
@@ -790,6 +942,14 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
                        f"                    setCurrentActor({actor});\n"
                        f"                    setActorWalkFrame({frame});\n"
+                       "                    setCurrentActor(VAR_EGO);\n"
+                       "                }\n")
+        for actor, frame in end_talks.items():
+            destination = end_positions.get(actor)
+            target = destination[2] if destination is not None and destination[2] != room_name else "VAR_ROOM"
+            commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
+                       f"                    setCurrentActor({actor});\n"
+                       f"                    setActorTalkFrame({frame},5);\n"
                        "                    setCurrentActor(VAR_EGO);\n"
                        "                }\n")
         clipping_commit = ""

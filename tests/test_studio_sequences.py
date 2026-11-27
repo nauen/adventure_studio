@@ -467,6 +467,64 @@ class NativeSequenceEditorTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 replace_sequence_step(raw, identity, 0, "Actor Laufanimation", "Guide", invalid, None, None)
 
+    def test_actor_talk_animation_roundtrip_and_native_frame_group(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_costume import CostumeDirection
+        from adventure_studio.scumm_project import ActorTalkAnimationStep
+        room = scrolling_fixture()
+        costume = gesture_fixture()
+        alternative = replace(costume.animations[-1], name="speech", index=24,
+            directions=tuple(CostumeDirection(d, ("Pose2",)) for d in ("N", "E", "S", "W")))
+        costume = replace(costume, animations=(
+            *costume.animations[:-1],
+            replace(costume.animations[1], name="talkStart"),
+            replace(costume.animations[1], name="talkStop"), alternative))
+        raw = canonical_json(GameDocument("TalkAnimation", (room, destination_fixture()),
+            (costume,), (ActorAsset("Guide", costume.name, "Harbor", 280, 85, "S"),)))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Sprechanimation", "Guide", "speech", None, None)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Warten", None, None, None, 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Sprechanimation", "Guide", "talkStart", None, None)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.interaction_sequences[0].steps[0], ActorTalkAnimationStep("Guide", "speech"))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:3],
+                         ("Actor Sprechanimation", "Guide", "speech"))
+        from adventure_studio.studio_sequences import actor_animations
+        self.assertEqual(actor_animations(raw, "Guide", "Actor Sprechanimation"), ("talkStart", "speech"))
+        self.assertEqual(actor_animations(raw, "Guide"), ("speech",))
+        source = inject_interaction_sequences(scummc_room_source(room), "Harbor",
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        normal, override = source.split("} override {", 1)
+        override = override.split("case LookAt:", 1)[0]
+        self.assertIn("setActorTalkFrame(24,5);", normal)
+        self.assertIn("setActorTalkFrame(4,5);", override)
+        self.assertNotIn("setActorTalkFrame(24,5);", override)
+        self.assertNotIn("setActorTalkFrame(6,5);", normal)
+        from adventure_studio.scumm_costume import talk_animation_frame, costume_source
+        self.assertIn("anim speech @ 24", costume_source(costume))
+        self.assertEqual(talk_animation_frame(costume, "speech"), 24)
+        self.assertEqual(talk_animation_frame(costume, "talkStart"), 4)
+        for address in (28, 52):
+            changed = replace(costume, animations=(*costume.animations[:-1],
+                replace(alternative, index=address)))
+            self.assertEqual(talk_animation_frame(changed, "speech"), address)
+        for address in (12, 25, 56, 60, 64, 252):
+            changed = replace(costume, animations=(*costume.animations[:-1],
+                replace(alternative, index=address)))
+            with self.assertRaises(ValueError):
+                talk_animation_frame(changed, "speech")
+        self.assertNotIn("animateActor(Guide", normal)
+        for invalid in ("stand", "missing"):
+            with self.assertRaises(ValueError):
+                replace_sequence_step(raw, identity, 0, "Actor Sprechanimation", "Guide", invalid, None, None)
+
     def test_actor_zclip_roundtrip_native_export_and_escape(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import ZPlane, scummc_room_source
