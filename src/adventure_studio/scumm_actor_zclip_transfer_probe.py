@@ -76,15 +76,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                         continue
                     if ident in ("R06North", "R06South") and not facing:
                         continue
-                    # The restore-profile probe measures the Actor at its
-                    # authored X220/Y85 position after the interaction. Keep its
-                    # trigger under the Actor so SCUMM does not first walk Ego to
-                    # the hotspot (which would move the Actor to X180).
-                    hotspot_x, hotspot_y = ((220, 85)
-                        if ident == "R06Restore" and restore_profile
-                        and not (walk or facing or camera or position)
-                        else (x, 100))
-                    hotspot = RoomHotspot(ident, ident, ident, hotspot_x, hotspot_y, 16, 16,
+                    hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
                                           sprite_pixels=bytes([len(room.palette)]) * 256)
                     room = replace(room, palette=(*room.palette, color),
                                    hotspots=(*room.hotspots, hotspot))
@@ -230,6 +222,11 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             "Auf Actor warten", ACTOR_IDS[0], None, None, None)
         raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
     if restore_profile:
+        # A reusable native object marker proves the delayed script has started.
+        raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
+            "Objektzustand setzen", None, None, "R06Restore", 1)
+        raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
+            "Objektzustand setzen", None, None, "R06Restore", 0)
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Warten", None, None, None, 12)
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
@@ -479,14 +476,17 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         if start_marker is not None:
             # Native object state zero removes the trigger sprite. Its disappearance
             # proves the interaction was accepted before sending Escape.
-            deadline = started + 4
+            deadline = started + 20
             while time.monotonic() < deadline:
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited before native Escape interaction")
                 capture("transfer-before-escape")
                 if colored_item_pixels(output, "transfer-before-escape", start_marker) < 40:
                     break
                 time.sleep(.15)
             else:
                 raise RuntimeError("Native Escape interaction did not start: marker still visible")
+            started = time.monotonic()
         else:
             time.sleep(1)
             capture("transfer-before-escape")
@@ -553,16 +553,34 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     if restore_profile:
         click(234, 563)
         click(*colored_item_center(output, revealed[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
-        # Preserve the accepted native delay plus redraw margin from main.
-        time.sleep(16)
+        await_frame("transfer-restore-start", lambda label:
+                    colored_item_pixels(output, label, RESTORE_RGB) < 40)
+        time.sleep(12)
+        masked = all(row["a_pixels"] < 25 for row in destination)
+        stable = 0
+        index = 0
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline and stable < 3:
+            label = f"transfer-restored-settle-{index:02d}"
+            capture(label)
+            pixels = lane_pixels(label, 220, 160, 312, 343)
+            matches = pixels < 25 if masked else pixels >= 100
+            stable = stable + 1 if matches else 0
+            index += 1
+            time.sleep(.15)
+        if stable < 3:
+            raise RuntimeError("Native restored clipping profile did not stabilize")
         restored = sample("restored", 160, 220)
         click(234, 563)
         click(*colored_item_center(output, restored[-1]["frame"], REVEAL_RGB, fuzz_percent=4))
-        time.sleep(2)
+        await_frame("transfer-restore-rearmed", lambda label:
+                    colored_item_pixels(output, label, RESTORE_RGB) >= 40
+                    and lane_pixels(label, 220, 160, 312, 343) >= 100)
         revealed_again = sample("revealed-again", 160, 220)
         click(234, 563)
         click(*colored_item_center(output, revealed_again[-1]["frame"], RESTORE_RGB, fuzz_percent=4))
         restored_escape, escape_elapsed = bounded_escape("restored-escape",
+            start_marker=RESTORE_RGB,
             masked_target=all(row["a_pixels"] < 25 for row in destination))
     # The prior cutscene can still own native input. Wait for the live
     # hotspot and retry only while still in the destination room.

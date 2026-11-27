@@ -307,15 +307,17 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 self.assertEqual(normal.count(redraw), 2)
                 self.assertEqual(override.count(redraw), 1)
 
-    def test_restore_profile_probe_hotspot_does_not_move_the_actor(self):
+    def test_restore_profile_probe_rearms_native_start_marker(self):
         from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_project import SetObjectStateStep, DelayStep
         with tempfile.TemporaryDirectory() as directory:
             raw = author_transfer_project(Path(directory), "masked", restore_profile=True)
             doc = parse_document(raw)
-            room = next(room for room in doc.rooms if room.name == "Cellar")
-            hotspot = next(hotspot for hotspot in room.hotspots
-                           if hotspot.id == "R06Restore")
-            self.assertEqual((hotspot.x, hotspot.y), (220, 85))
+            sequences = {seq.hotspot_id: seq for seq in doc.interaction_sequences
+                         if seq.room == "Cellar" and seq.verb == "Close"}
+            self.assertEqual(sequences["R06Reveal"].steps[-1], SetObjectStateStep("R06Restore", 1))
+            self.assertEqual(sequences["R06Restore"].steps[0], SetObjectStateStep("R06Restore", 0))
+            self.assertEqual(sequences["R06Restore"].steps[1], DelayStep(12))
 
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source
