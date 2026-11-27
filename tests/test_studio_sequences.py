@@ -389,7 +389,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
         self.assertNotIn("putActorAt(Guide, 470, 85", override)
         resumed = append_sequence_step(raw, "Harbor", "Key", "Close",
                                        "Actor laufen lassen", "Guide", None, None, None, 400, 85)
-        override = source(resumed).split("} override {", 1)[1]
+        override = source(resumed).split("} override {", 1)[1].split("case LookAt:", 1)[0]
         self.assertNotIn("setActorStanding();", override)
         self.assertIn("putActorAt(Guide, 400, 85", override)
         waited = replace_sequence_step(raw, identity, 1, "Auf Actor warten",
