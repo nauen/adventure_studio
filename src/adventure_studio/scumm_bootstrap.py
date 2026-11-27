@@ -516,8 +516,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  room_asset=None, sound_assets=(), voice_charset=None,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
-    from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
-                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
+    from .scumm_project import (AnimateActorStep, ObjectStateStep, SetGameVariableStep, game_variable_symbol, ObjectClassStep, MoveObjectStep, DelayStep,
+                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, VoiceLineStep)
@@ -546,9 +546,12 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     costumes_by_name = {costume.name: costume for costume in costumes}
     recipes = {rule.result_id: rule for rule in room_asset.combine_rules} if room_asset else {}
     targets = {step.hotspot_id for sequence in active for step in sequence.steps
-               if isinstance(step, (ObjectStateStep, PickupObjectStep))}
+               if isinstance(step, (ObjectStateStep, ObjectClassStep, MoveObjectStep, PickupObjectStep))}
     targets.update(step.result_id for sequence in active for step in sequence.steps
                    if isinstance(step, CombineInventoryStep))
+    targets.update(item.condition_hotspot_id for item in active if item.condition_hotspot_id is not None)
+    targets.update(item.condition_second_target for item in active if item.condition_second_target is not None
+                   and not item.condition_second_target.startswith("var:"))
     declarations = [f"    object {target};\n" for target in sorted(targets)
                     if f"    object {target};\n" not in source]
     first = min((source.find(f"    object {sequence.hotspot_id} {{\n")
@@ -596,6 +599,15 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n"
                                     f"                animateActor({actor.id},{animation.index});\n"
                                     "            }\n")
+            elif isinstance(step, SetGameVariableStep):
+                symbol = game_variable_symbol(step.name)
+                expression = f"{symbol} + ({step.value})" if step.relative else str(step.value)
+                instructions.append(f"            {symbol} = {expression};\n")
+            elif isinstance(step, ObjectClassStep):
+                value = step.class_id | (128 if step.enabled else 0)
+                instructions.append(f"            setObjectClass({step.hotspot_id},[{value}]);\n")
+            elif isinstance(step, MoveObjectStep):
+                instructions.append(f"            drawObjectAt({step.hotspot_id},{step.x // 8},{step.y // 8});\n")
             elif isinstance(step, ObjectStateStep):
                 instructions.append(f"            setObjectState({step.hotspot_id},{step.state});\n")
             elif isinstance(step, (PickupObjectStep, CombineInventoryStep)):
@@ -634,6 +646,14 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                      # V6 forceClip does not invalidate the costume.
                                      f"                setActorElevation(getActorElevation({step.actor_id}) + 1);\n",
                                      f"                setActorElevation(getActorElevation({step.actor_id}) - 1);\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
+            elif isinstance(step, (ActorTalkColorStep, ActorTalkPositionStep)):
+                command = (f"setActorTalkColor({step.color});" if isinstance(step, ActorTalkColorStep)
+                           else f"setActorTalkPos({step.x},{step.y});")
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     f"                {command}\n",
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
             elif isinstance(step, FaceActorStep):
@@ -689,8 +709,13 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         # opcodes. Escape jumps to override; every persistent effect must be
         # committed there even when the ordinary action list did not finish.
         end_states = {}
+        end_object_positions = {}
+        end_object_classes = {}
+        end_game_variables = {}
         end_positions = {}
         end_directions = {}
+        end_talk_colors = {}
+        end_talk_positions = {}
         end_clipping = {}
         final_camera = None
         final_camera_wait = False
@@ -698,7 +723,16 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         final_music = None
         final_sounds = {}
         for step in sequence.steps:
-            if isinstance(step, ObjectStateStep):
+            if isinstance(step, SetGameVariableStep):
+                end_game_variables.setdefault(step.name, []).append(step)
+            elif isinstance(step, ObjectClassStep):
+                end_object_classes[(step.hotspot_id, step.class_id)] = step.enabled
+            elif isinstance(step, MoveObjectStep):
+                end_object_positions[step.hotspot_id] = (step.x, step.y)
+                # drawObjectAt always sets native image state 1. A later
+                # authored state change may override it on either path.
+                end_states[step.hotspot_id] = 1
+            elif isinstance(step, ObjectStateStep):
                 end_states[step.hotspot_id] = step.state
             elif isinstance(step, (MoveActorStep, WalkActorStep)):
                 end_positions[step.actor_id] = (step.x, step.y, room_name, True)
@@ -707,6 +741,10 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_clipping[step.actor_id] = (transfer_plane(step), False)
             elif isinstance(step, ActorZClipStep):
                 end_clipping[step.actor_id] = (interaction_plane(step), True)
+            elif isinstance(step, ActorTalkColorStep):
+                end_talk_colors[step.actor_id] = step.color
+            elif isinstance(step, ActorTalkPositionStep):
+                end_talk_positions[step.actor_id] = (step.x, step.y)
             elif isinstance(step, FaceActorStep):
                 end_directions[step.actor_id] = step.direction
             elif isinstance(step, (FollowActorCameraStep, PanCameraStep)):
@@ -730,6 +768,23 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         commit = ""
         for step in inventory_steps:
             commit += inventory_action(step, "                ")
+        for hotspot, (x, y) in end_object_positions.items():
+            commit += f"                drawObjectAt({hotspot},{x // 8},{y // 8});\n"
+        snapshot = ""
+        for name, operations in end_game_variables.items():
+            symbol = game_variable_symbol(name)
+            last_set = max((i for i, step in enumerate(operations) if not step.relative), default=-1)
+            if last_set >= 0:
+                commit += f"                {symbol} = {operations[last_set].value};\n"
+            else:
+                local = "ASBefore_" + name
+                snapshot += f"            {local} = {symbol};\n"
+                commit += f"                {symbol} = {local};\n"
+            for step in operations[last_set+1:]:
+                commit += f"                {symbol} = {symbol} + ({step.value});\n"
+        for (hotspot, class_id), enabled in end_object_classes.items():
+            value = class_id | (128 if enabled else 0)
+            commit += f"                setObjectClass({hotspot},[{value}]);\n"
         for hotspot, state in end_states.items():
             commit += f"                setObjectState({hotspot},{state});\n"
         for actor, (x, y, destination, require_presence) in end_positions.items():
@@ -751,6 +806,16 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                        f"                    setActorDirection({native_direction});\n"
                        "                    setCurrentActor(VAR_EGO);\n"
                        "                }\n")
+        for values, command in ((end_talk_colors, lambda color: f"setActorTalkColor({color});"),
+                                (end_talk_positions, lambda pos: f"setActorTalkPos({pos[0]},{pos[1]});")):
+            for actor, value in values.items():
+                destination = end_positions.get(actor)
+                target = destination[2] if destination is not None and destination[2] != room_name else "VAR_ROOM"
+                commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
+                           f"                    setCurrentActor({actor});\n"
+                           f"                    {command(value)}\n"
+                           "                    setCurrentActor(VAR_EGO);\n"
+                           "                }\n")
         clipping_commit = ""
         for actor, (plane, require_presence) in end_clipping.items():
             if require_presence:
@@ -777,7 +842,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                        if final_music == "start" else "                stopMusic();\n")
         for sound_id, operation in final_sounds.items():
             commit += f"                {operation}Sound({sound_id});\n"
-        return ("            cutscene(0) {\n"
+        return (snapshot + "            cutscene(0) {\n"
                 + "                try {\n"
                 + "".join("        " + line for line in actions.splitlines(True))
                 + "                } override {\n"
@@ -787,6 +852,26 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 + "                }\n"
                 + "            }\n"
                 + transition)
+
+    def condition_expression(sequence):
+        if sequence.condition_variable is not None:
+            return game_variable_symbol(sequence.condition_variable)
+        if sequence.condition_hotspot_id is not None:
+            return f"getObjectState({sequence.condition_hotspot_id})"
+        return None
+
+    def full_condition(sequence):
+        first = condition_expression(sequence)
+        if first is None:
+            return None
+        expression = f"{first} {sequence.condition_operator} {sequence.condition_state}"
+        second = sequence.condition_second_target
+        if second is None:
+            return expression
+        right = (game_variable_symbol(second[4:]) if second.startswith("var:")
+                 else f"getObjectState({second})")
+        join = "&&" if sequence.condition_join == "and" else "||"
+        return f"({expression}) {join} ({right} {sequence.condition_second_operator} {sequence.condition_second_value})"
 
     for group in grouped.values():
         sequence = group[0]
@@ -804,23 +889,39 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         if segment.count(verb_marker) != 1 or f"        case {sequence.verb}:\n" in segment:
             raise ValueError(f"Conflicting native interaction verb on {sequence.hotspot_id}")
         if len(group) == 1:
-            guard = (f"            if(getObjectState({sequence.condition_hotspot_id}) != "
-                     f"{sequence.condition_state}) return;\n"
-                     if sequence.condition_hotspot_id is not None else "")
+            expression = condition_expression(sequence)
+            inverse = {"==": "!=", "!=": "==", "<": ">=", "<=": ">", ">": "<=", ">=": "<"}
+            guard = (f"            if({expression} {inverse[sequence.condition_operator]} {sequence.condition_state}) return;\n"
+                     if expression is not None else "")
+            if sequence.condition_second_target is not None:
+                guard = f"            if(!({full_condition(sequence)})) return;\n"
             native = (f"        case {sequence.verb}:\n" + guard
                       + playable_sequence(sequence) + "            return;\n")
         else:
             native = f"        case {sequence.verb}:\n"
-            for branch in (item for item in group if item.condition_hotspot_id is not None):
-                native += (f"            if(getObjectState({branch.condition_hotspot_id}) == "
-                           f"{branch.condition_state}) {{\n"
+            for branch in (item for item in group if condition_expression(item) is not None):
+                native += (f"            if({full_condition(branch)}) {{\n"
                            + "".join("    " + line for line in playable_sequence(branch).splitlines(True))
                            + "                return;\n            }\n")
-            fallback = next((item for item in group if item.condition_hotspot_id is None), None)
+            fallback = next((item for item in group if condition_expression(item) is None), None)
             if fallback is not None:
                 native += playable_sequence(fallback)
             native += "            return;\n"
-        source = source[:start] + segment.replace(verb_marker, verb_marker + native, 1) + source[end:]
+        # ScummC declares verb-local variables before the case labels.
+        # Insert the snapshots once per object, even with several verbs.
+        local_names = sorted({step.name for item in active if item.hotspot_id == sequence.hotspot_id
+                              and item.skippable for step in item.steps
+                              if isinstance(step, SetGameVariableStep) and step.relative})
+        declarations = "".join(f"            int ASBefore_{name};\n" for name in local_names
+                               if f"int ASBefore_{name};" not in segment)
+        if declarations:
+            segment = segment.replace(verb_marker, verb_marker + declarations, 1)
+        # Keep declarations ahead of every case, including later groups.
+        insertion = segment.index(verb_marker) + len(verb_marker)
+        while segment.startswith("            int ASBefore_", insertion):
+            insertion = segment.index("\n", insertion) + 1
+        segment = segment[:insertion] + native + segment[insertion:]
+        source = source[:start] + segment + source[end:]
     return source
 
 
