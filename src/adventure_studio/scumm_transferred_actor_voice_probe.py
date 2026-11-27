@@ -9,7 +9,7 @@ import time
 
 from PIL import Image
 
-from .scumm_actor_zclip_transfer_probe import author_transfer_project, RETURN_RGB, REVEAL_RGB
+from .scumm_actor_zclip_transfer_probe import author_transfer_project, RETURN_RGB, REVEAL_RGB, ESCAPE_RGB
 from .scumm_launch import colored_item_center, colored_item_pixels
 from .scumm_project import SoundAsset, canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
@@ -31,20 +31,26 @@ def run(upstream, destination):
                   actors=tuple(replace(a, costume=name) if a.costume == costume.name else a
                                for a in doc.actors),
                   sound_assets=(*doc.sound_assets, SoundAsset("CellarVoice", "Cellar",
-                      original_voc_effect(duration_ms=8000))))
+                      original_voc_effect(duration_ms=8000))),
+                  interaction_sequences=tuple(seq for seq in doc.interaction_sequences
+                      if (seq.room, seq.hotspot_id, seq.verb) not in (
+                          ("Cellar", "R06TransferReturn", "Close"),
+                          ("Cellar", "R06Hide", "Close"))))
     raw = canonical_json(doc)
     raw = append_sequence_step(raw, "Cellar", "R06Reveal", "Close",
         "Gesprochene Zeile", ACTOR_IDS[0], None, "CellarVoice", None,
         subtitle="I am speaking from the cellar. Listen to my voice.")
     raw = set_sequence_skippable(raw, "Cellar|R06Reveal|Close", True)
-    # Same room and sound, but transfer the speaker away before the line.
-    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+    # Transfers must terminate a sequence. Use two actual interactions.
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
+        "Objektzustand setzen", None, None, "R06TransferReturn", 0)
+    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Close",
         "Actor-Raumtransfer mit Z-Clipping", ACTOR_IDS[0], None, "Harbor", 0, 240, 85)
-    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+    raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
         "Gesprochene Zeile", ACTOR_IDS[0], None, "CellarVoice", None,
         subtitle="The absent speaker must not speak here.")
-    raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
-        "Objektzustand setzen", None, None, "R06TransferReturn", 0)
+    raw = append_sequence_step(raw, "Cellar", "R06Hide", "Close",
+        "Objektzustand setzen", None, None, "R06Hide", 0)
     (build / "project.json").write_text(raw, encoding="utf-8")
     export_document(parse_document(raw), resources)
     game_dir = compile_story_game(build, upstream, destination / "game")
@@ -148,15 +154,28 @@ def run(upstream, destination):
             # Let the previous native message expire before the negative control.
             time.sleep(8)
             frame("before-absent")
-            absent_start = offset()
-            click(234, 535)
+            click(234, 563)
             click(*colored_item_center(frames, "before-absent", RETURN_RGB, fuzz_percent=4))
+            deadline = time.monotonic() + 25
+            while time.monotonic() < deadline:
+                frame("transferred-away")
+                if (colored_item_pixels(frames, "transferred-away", RETURN_RGB, fuzz_percent=4) < 40
+                        and colored_item_pixels(frames, "transferred-away", ESCAPE_RGB, fuzz_percent=4) >= 40):
+                    break
+                time.sleep(.3)
+            else:
+                raise RuntimeError("Speaker transfer away did not complete in Cellar")
+            time.sleep(1)
+            frame("transferred-away")
+            absent_start = offset()
+            click(234, 563)
+            click(*colored_item_center(frames, "transferred-away", ESCAPE_RGB, fuzz_percent=4))
             deadline = time.monotonic() + 25
             while time.monotonic() < deadline:
                 if game.poll() is not None:
                     raise RuntimeError("ScummVM exited during absent-speaker control")
                 frame("absent")
-                if (colored_item_pixels(frames, "absent", RETURN_RGB, fuzz_percent=4) < 40
+                if (colored_item_pixels(frames, "absent", ESCAPE_RGB, fuzz_percent=4) < 40
                         and colored_item_pixels(frames, "absent", REVEAL_RGB, fuzz_percent=4) >= 40):
                     break
                 time.sleep(.3)
@@ -166,7 +185,7 @@ def run(upstream, destination):
             absent_end = offset()
             frame("absent")
             # The distinct 16px-wide authored actor occupies this lane at x=220.
-            # Ego walks to the return hotspot at x=285, outside the lane.
+            # Ego walks to the control hotspot at x=180, outside the lane.
             with Image.open(frames / "scummvm-absent.png") as image:
                 actor_pixels = sum(max(pixel) <= 24 for pixel in
                     image.convert("RGB").crop((616, 312, 648, 343)).getdata())
