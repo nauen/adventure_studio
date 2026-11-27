@@ -357,6 +357,37 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Actor Z-Clipping", ACTOR_IDS[0], None, None, 5)
 
+    def test_actor_turn_mode_roundtrip_and_escape(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import ActorTurnModeStep
+        room = scrolling_fixture()
+        costume = gesture_fixture()
+        raw = canonical_json(GameDocument("TurnMode", (room, destination_fixture()),
+            (costume,), (ActorAsset("Guide", costume.name, "Harbor", 280, 85, "S"),)))
+        identity = "Harbor|Key|Close"
+        for kind, amount in (("Actor Drehung sperren", None), ("Warten", 2),
+                             ("Actor Drehung freigeben", None)):
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", kind,
+                                       None if kind == "Warten" else "Guide", None, None, amount)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.interaction_sequences[0].steps[0], ActorTurnModeStep("Guide", True))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:2],
+                         ("Actor Drehung sperren", "Guide"))
+        source = inject_interaction_sequences(scummc_room_source(room), "Harbor",
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        normal, override = source.split("} override {", 1)
+        override = override.split("case LookAt:", 1)[0]
+        self.assertIn("setActorIgnoreTurnsOn();", normal)
+        self.assertIn("setActorIgnoreTurnsOff();", override)
+        self.assertNotIn("setActorIgnoreTurnsOn();", override)
+        for branch in (normal, override):
+            self.assertIn("if (getActorRoom(Guide) == VAR_ROOM)", branch)
+        with self.assertRaises(ValueError):
+            replace_sequence_step(raw, identity, 0, "Actor Drehung sperren", "Missing", None, None, None)
+
     def test_actor_zclip_roundtrip_native_export_and_escape(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import ZPlane, scummc_room_source
