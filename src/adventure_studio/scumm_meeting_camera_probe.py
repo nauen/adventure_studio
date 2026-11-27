@@ -157,13 +157,21 @@ def run_native_meeting_camera_tour(upstream: Path, output: Path) -> dict:
         launch_smoke(game, root / "screenshots", seconds=6,
                      scene_only=True, allow_static_scene=True,
                      native_two_actor_walk_probe=True,
-                     native_two_actor_capture_frames=300)
+                     # Keep the planned 36 seconds of capture sleeps within
+                     # play_two_actor_walk's existing 210–480 frame contract.
+                     # Actual framebuffer acquisition adds to this duration.
+                     native_two_actor_capture_frames=480,
+                     native_two_actor_capture_interval=0.075,
+                     native_two_actor_defer_preview=True)
         report["variants"][variant] = {"stock_scummvm_started": True}
         persist()
 
     screenshots = output / "transparent" / "screenshots"
     traces = track_native_actor_lanes(screenshots)
     camera_frames = measure_two_actor_native_camera_trace(screenshots)
+    report["native_actor_tracks"] = traces
+    report["native_camera_frames"] = camera_frames
+    persist()
     report["native_camera_meeting_tour"] = verify_native_meeting_camera_tour(
         traces, camera_frames,
     )

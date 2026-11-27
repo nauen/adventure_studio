@@ -189,23 +189,36 @@ def run_reciprocal_focus(upstream: Path, output: Path) -> dict:
         launch_smoke(game, root / "screenshots", seconds=6,
                      scene_only=True, allow_static_scene=True,
                      native_two_actor_walk_probe=True,
-                     native_two_actor_capture_frames=330,
-                     native_two_actor_capture_interval=0.02)
+                     # Faster raw acquisition shortened the observed wall-clock span:
+                     # 330 frames ended at X=184/232 in native controls.
+                     # Preserve high temporal resolution and cover the final pan.
+                     native_two_actor_capture_frames=480,
+                     native_two_actor_capture_interval=0.02,
+                     native_two_actor_defer_preview=True)
         report["variants"][variant] = {"native_game_started": True}
         persist()
 
     transparent = output / "transparent" / "screenshots"
     traces = track_native_actor_lanes(transparent)
     report["opposing_motion"] = verify_opposing_native_motion(traces)
-    report["camera_roundtrips"] = {
-        variant: verify_two_actor_native_camera_roundtrip(
-            measure_two_actor_native_camera_trace(output / variant / "screenshots"),
-            expected_start=400, prepan_direction="either")
+    camera_tracks = {
+        variant: measure_two_actor_native_camera_trace(output / variant / "screenshots")
         for variant in ("masked", "transparent", "wrong-box")
     }
+    report["native_focus_observations"] = {
+        "actor_tracks": traces, "camera_frames_by_variant": camera_tracks,
+        "camera_frames": camera_tracks["transparent"],
+    }
+    persist()
+    report["camera_roundtrips"] = {
+        variant: verify_two_actor_native_camera_roundtrip(
+            frames, expected_start=400, prepan_direction="either")
+        for variant, frames in camera_tracks.items()
+    }
     report["mask_comparison"] = measure_two_actor_native_mask_comparison(output, traces)
+    camera_frames = camera_tracks["transparent"]
     report["visual_reciprocal_focus"] = verify_native_reciprocal_focus(
-        traces, measure_two_actor_native_camera_trace(transparent))
+        traces, camera_frames)
     report["complete_r06_276_acceptance"] = True
     persist()
     return report

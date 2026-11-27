@@ -67,7 +67,10 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                                         ("R06Hide", ESCAPE_RGB, 180),
                                         ("R06Action", ACTION_RGB, 180),
                                         ("R06North", NORTH_RGB, 70),
-                                        ("R06South", SOUTH_RGB, 110)):
+                                        ("R06South", SOUTH_RGB, 110),
+                                        ("R06CameraFollowEscape", NORTH_RGB, 110)):
+                    if ident == "R06CameraFollowEscape" and not camera:
+                        continue
                     if ident == "R06Restore" and not (restore_profile or walk or facing or camera or position):
                         continue
                     if ident == "R06Hide" and (not dynamic or restore_profile or walk or animation or facing or camera or position):
@@ -194,6 +197,17 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
                 kind, actor, None, None, amount, x)
         raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
+        # Independent Escape case: final camera command is follow, not pan.
+        for kind, actor, x, amount in (
+            ("Kamera schwenken", None, 480, None),
+            ("Auf Kamera warten", None, None, None),
+            ("Warten", None, None, 30),
+            ("Kamera folgt Actor", ACTOR_IDS[0], None, None),
+            ("Auf Kamera warten", None, None, None),
+        ):
+            raw = append_sequence_step(raw, "Cellar", "R06CameraFollowEscape", "Close",
+                kind, actor, None, None, amount, x)
+        raw = set_sequence_skippable(raw, "Cellar|R06CameraFollowEscape|Close", True)
     if facing:
         for hotspot, direction in (("R06Reveal", "W"), ("R06North", "N"),
                                    ("R06South", "S")):
@@ -290,6 +304,8 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
     action_frames, idle_frames = [], []
     facing_frames = {}
     camera_frames, camera_escape_frames = [], []
+    camera_follow_escape_frames = []
+    follow_escape_elapsed = None
     position_normal, position_escape = [], []
     if walk or animation or facing or camera or position:
         dynamic = True
@@ -387,6 +403,41 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             index += 1
             time.sleep(.15)
         escape_elapsed = time.monotonic() - started
+        if len(camera_escape_frames) < 3 or not all(
+                abs(row["camera_x"]-160) <= 5 and row["a_pixels"] >= 100
+                for row in camera_escape_frames[-3:]):
+            raise RuntimeError("Native pan Escape must finish before final-follow test")
+        # Wait for the native cutscene to relinquish input before next click.
+        time.sleep(1)
+        click(234, 563)
+        capture("transfer-camera-follow-escape-click")
+        started = time.monotonic()
+        click(*colored_item_center(output, "transfer-camera-follow-escape-click", NORTH_RGB, fuzz_percent=4))
+        def away(label):
+            with Image.open(output / f"scummvm-{label}.png") as img:
+                x = camera_from_sky(img)
+            return x is not None and abs(x-480) <= 5
+        await_frame("transfer-camera-follow-before-escape", away)
+        if time.monotonic() - started >= 18:
+            raise RuntimeError("Camera pan too late for bounded final-follow Escape")
+        subprocess.run(["xdotool", "key", "Escape"], check=True, timeout=5)
+        deadline = min(started + 26, time.monotonic() + 8)
+        index = 0
+        while time.monotonic() < deadline:
+            label = f"transfer-camera-follow-escape-{index:03d}"
+            capture(label)
+            with Image.open(output / f"scummvm-{label}.png") as img:
+                observed = camera_from_sky(img)
+            if observed is not None:
+                camera_follow_escape_frames.append({"frame": label, "camera_x": observed,
+                    "a_pixels": lane_pixels(label, 220, round(observed), 312, 343)})
+                if len(camera_follow_escape_frames) >= 3 and all(
+                    abs(row["camera_x"]-220) <= 8 and row["a_pixels"] >= 100
+                    for row in camera_follow_escape_frames[-3:]):
+                    break
+            index += 1
+            time.sleep(.15)
+        follow_escape_elapsed = time.monotonic() - started
     if facing:
         def facing_measurement(label):
             capture(label)
@@ -614,7 +665,7 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
         "before": before, "destination": destination, "returned": returned, "revealed": revealed, "restored": restored, "revealed_again": revealed_again,
         "restored_escape": restored_escape, "escaped": escaped,
         "escape_elapsed": escape_elapsed, "motion": motion, "walk_escape": walk_escape,
-        "idle_frames": idle_frames, "action_frames": action_frames, "facing_frames": facing_frames, "camera_frames": camera_frames, "camera_escape_frames": camera_escape_frames, "position_normal": position_normal, "position_escape": position_escape}, indent=2))
+        "idle_frames": idle_frames, "action_frames": action_frames, "facing_frames": facing_frames, "camera_frames": camera_frames, "camera_escape_frames": camera_escape_frames, "camera_follow_escape_frames": camera_follow_escape_frames, "follow_escape_elapsed": follow_escape_elapsed, "position_normal": position_normal, "position_escape": position_escape}, indent=2))
 
 
 def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False):
@@ -664,6 +715,10 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=
         if not (0 < report["escape_elapsed"] < 28) or len(escaped) < 3 or not all(
                 abs(row["camera_x"]-160) <= 5 and row["a_pixels"] >= 100 for row in escaped[-3:]):
             raise RuntimeError(f"Native camera Escape return not observed: {escaped}")
+        followed = report["camera_follow_escape_frames"]
+        if not (0 < report["follow_escape_elapsed"] < 28) or len(followed) < 3 or not all(
+                abs(row["camera_x"]-220) <= 8 and row["a_pixels"] >= 100 for row in followed[-3:]):
+            raise RuntimeError(f"Native camera final-follow Escape not observed: {followed}")
     if position:
         dynamic = True
         for phase, target, previous in (("position_normal", "x140", "x220"),

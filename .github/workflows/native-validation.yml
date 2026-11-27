@@ -36,6 +36,7 @@ on:
       - 'src/adventure_studio/dialogue_demo.py'
       - 'src/adventure_studio/localization.py'
       - 'src/adventure_studio/scumm_actor_sequence_probe.py'
+      - 'src/adventure_studio/scumm_actor_zclip_transfer_probe.py'
       - 'src/adventure_studio/scumm_assets.py'
       - 'src/adventure_studio/scumm_authored_scal_probe.py'
       - 'src/adventure_studio/scumm_bootstrap.py'
@@ -236,6 +237,7 @@ jobs:
               - 'src/adventure_studio/scumm_language_runtime_probe.py'
               - 'src/adventure_studio/scumm_save_load_probe.py'
             native:
+              - 'src/adventure_studio/scumm_actor_zclip_transfer_probe.py'
               - '.github/workflows/scummc-experiment.yml'
               - 'src/adventure_studio/scumm_sound_effect_probe.py'
               - 'src/adventure_studio/scumm_studio_png_probe.py'

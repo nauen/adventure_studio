@@ -299,6 +299,17 @@ def compare_frames(output_directory: Path, minimum_changed_pixels: int = 500,
     return count
 
 
+def convert_framebuffer_preview(image_path: Path, preview_path: Path) -> Path:
+    """Convert an already acquired native X framebuffer without resampling it."""
+    preview = subprocess.run(
+        ["convert", str(image_path), str(preview_path)],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if preview.returncode != 0 or not preview_path.is_file() or preview_path.stat().st_size < 64:
+        raise RuntimeError(f"Screenshot PNG conversion failed: {preview.stderr}")
+    return preview_path
+
+
 def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 6.0,
                  scene_only: bool = False, verify_return: bool = True,
                  verify_chain: bool = False, verify_recipe: bool = False,
@@ -324,7 +335,10 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_actor_zclip_return_probe: bool = False,
                  native_two_actor_walk_probe: bool = False,
                  native_two_actor_capture_frames: int = 210,
-                 native_two_actor_capture_interval: float = 0.07) -> None:
+                 native_two_actor_capture_interval: float = 0.07,
+                 native_two_actor_defer_preview: bool = False) -> None:
+    if native_two_actor_defer_preview and not native_two_actor_walk_probe:
+        raise ValueError("Deferred native previews require a two-Actor capture")
     if (native_actor_zclip_dynamic_probe or native_actor_zclip_profile_restore_probe or native_transferred_actor_walk_probe or native_transferred_actor_animation_probe or native_transferred_actor_facing_probe or native_transferred_actor_camera_probe or native_transferred_actor_position_probe) and not native_actor_zclip_transfer_probe:
         raise ValueError("Dynamic Actor clipping requires transfer probe")
     if native_actor_zclip_transfer_probe and (not scene_only or scene_walk_clicks or native_two_actor_walk_probe or native_actor_zclip_return_probe):
@@ -446,6 +460,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         save_path.mkdir(exist_ok=True)
     environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
 
+    deferred_previews: list[tuple[Path, Path]] = []
+
     def capture_frame(label: str, *, on_framebuffer_capture=None) -> Path:
         image_path = output_directory / f"scummvm-{label}.xwd"
         preview_path = output_directory / f"scummvm-{label}.png"
@@ -459,13 +475,12 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             raise RuntimeError(f"X framebuffer capture failed: {capture.stderr}")
         if on_framebuffer_capture is not None:
             on_framebuffer_capture(capture_started, capture_finished)
-        preview = subprocess.run(
-            ["convert", str(image_path), str(preview_path)],
-            capture_output=True, text=True, timeout=10, check=False,
-        )
-        if preview.returncode != 0 or not preview_path.is_file() or preview_path.stat().st_size < 64:
-            raise RuntimeError(f"Screenshot PNG conversion failed: {preview.stderr}")
-        return preview_path
+        if native_two_actor_defer_preview and on_framebuffer_capture is not None:
+            # The raw XWD is the evidence. PNG encoding must not occupy the
+            # time-critical acquisition loop while both actors are moving.
+            deferred_previews.append((image_path, preview_path))
+            return image_path
+        return convert_framebuffer_preview(image_path, preview_path)
 
     independent_gate_routes = {}
 
@@ -574,9 +589,15 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                     play_room_return(output_directory, capture_frame, process)
                 if native_two_actor_walk_probe:
                     from .scumm_two_actor_four_mask_probe import play_two_actor_walk
-                    play_two_actor_walk(output_directory, capture_frame, process,
-                                        frame_count=native_two_actor_capture_frames,
-                                        capture_interval=native_two_actor_capture_interval)
+                    try:
+                        play_two_actor_walk(output_directory, capture_frame, process,
+                                            frame_count=native_two_actor_capture_frames,
+                                            capture_interval=native_two_actor_capture_interval)
+                    finally:
+                        for raw_path, preview_path in deferred_previews:
+                            convert_framebuffer_preview(raw_path, preview_path)
+                            raw_path.unlink()
+                        deferred_previews.clear()
                 for label, screen_x, screen_y in scene_walk_clicks:
                     click = subprocess.run(
                         ["xdotool", "mousemove", str(screen_x), str(screen_y), "click", "1"],
