@@ -75,7 +75,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                         continue
                     if ident == "R06Action" and not (animation or walk_speed or animation_speed):
                         continue
-                    if ident in ("R06North", "R06South") and not facing:
+                    if ident in ("R06North", "R06South") and not (facing or (animation_speed and ident == "R06North")):
                         continue
                     # Keep the restore-profile trigger beneath the authored Actor.
                     # Otherwise SCUMM walks Ego to the hotspot before the probe
@@ -285,6 +285,11 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Actor Animationsgeschwindigkeit", ACTOR_IDS[0], None, None, 2)
         raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
+        # Start the same gesture again without setting its interval. This
+        # observes the persistent speed committed by Escape independently
+        # of whether the interpreter stops an in-flight gesture on skip.
+        raw = append_sequence_step(raw, "Cellar", "R06North", "Close",
+            "Actor animieren", ACTOR_IDS[0], "gesture", None, None)
     if animation:
         raw = append_sequence_step(raw, "Cellar", "R06Action", "Close",
             "Actor animieren", ACTOR_IDS[0], "gesture", None, None)
@@ -682,6 +687,9 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
             finally:
                 subprocess.run(["xdotool", "keyup", "Escape"], check=True, timeout=5)
             escape_elapsed = time.monotonic()-started
+            capture("transfer-animation-fast-ready")
+            click(234, 563)
+            click(*colored_item_center(output, "transfer-animation-fast-ready", NORTH_RGB, fuzz_percent=4))
             time.sleep(.5)
             animation_fast = pose_samples("animation-fast", 120)
         else:
