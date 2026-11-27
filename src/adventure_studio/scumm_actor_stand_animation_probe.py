@@ -19,11 +19,39 @@ COLORS = ((242, 38, 117), (44, 240, 149), (215, 140, 27))
 MARKERS = ((191, 61, 220), (42, 195, 243), (45, 130, 210))
 
 
+def measure_pose(lane):
+    """Find one dense native Costume block; ignore sparse same-palette Ego pixels.
+
+    Only pixels in the uniquely identified Costume columns count toward the
+    pose verdict. Multiple dense blocks are ambiguous and fail closed.
+    """
+    columns = [[0] * lane.width for _ in COLORS]
+    for i, pixel in enumerate(lane.getdata()):
+        for pose, rgb in enumerate(COLORS):
+            if all(abs(a-b) <= 7 for a,b in zip(pixel,rgb)):
+                columns[pose][i % lane.width] += 1
+    density = [sum(values) for values in zip(*columns)]
+    blocks = []
+    start = None
+    for x, count in enumerate((*density, 0)):
+        if count >= 24:
+            if start is None:
+                start = x
+        elif start is not None:
+            if x-start >= 8 and sum(density[start:x]) >= 100:
+                blocks.append((start, x))
+            start = None
+    if len(blocks) != 1:
+        return None, [sum(values) for values in columns]
+    left, right = blocks[0]
+    return (left+right-1)/2, [sum(values[left:right]) for values in columns]
+
+
 def run(upstream, destination):
     build = destination / "build"
     room = scrolling_fixture()
     index = len(room.palette)
-    controls = tuple(RoomHotspot(name, name, name, x, 130, 16, 16,
+    controls = tuple(RoomHotspot(name, name, name, x, 120, 16, 16,
                                 sprite_pixels=bytes([index+i])*256)
                      for i, (name, x) in enumerate((("Alternative", 210), ("Restore", 250),
                                                     ("CheckStand", 290))))
@@ -99,18 +127,18 @@ def run(upstream, destination):
     def await_pose(label,target_x,pose,timeout=25):
         deadline=time.monotonic()+timeout
         samples=[]
+        counts=[]
         while time.monotonic()<deadline:
             if game.poll() is not None:
                 raise RuntimeError("ScummVM exited during stand binding")
             image=capture(label)
             anchor=center(points(image,MARKERS[0]))
             lane=image.crop((0,96,image.width,181))
-            colored=[points(lane,c) for c in COLORS]
-            actor=center(colored[pose])
-            counts=[len(p) for p in colored]
-            if anchor is not None and actor is not None:
-                x=218+(actor[0]-anchor[0])/2
-                if abs(x-target_x)<10 and all(n<40 for i,n in enumerate(counts) if i!=pose):
+            actor_x, counts=measure_pose(lane)
+            if anchor is not None and actor_x is not None:
+                x=218+(actor_x-anchor[0])/2
+                if (abs(x-target_x)<10 and counts[pose]>=100
+                        and all(n<40 for i,n in enumerate(counts) if i!=pose)):
                     samples.append({"x":x,"pose":pose,"pixels":counts})
                     if len(samples)==5:
                         return samples
@@ -131,6 +159,8 @@ def run(upstream, destination):
             click("restore-click",MARKERS[1])
             deadline=time.monotonic()+20
             while time.monotonic()<deadline:
+                if game.poll() is not None:
+                    raise RuntimeError("ScummVM exited before stand binding restore")
                 if center(points(capture("restore-start"),MARKERS[1])) is None:
                     break
                 time.sleep(.2)
@@ -145,6 +175,8 @@ def run(upstream, destination):
             time.sleep(.5)
             # Rebinding is not an animation command. Only the next arrival
             # should use the restored native stand frame.
+            if game.poll() is not None:
+                raise RuntimeError("ScummVM exited after stand binding Escape")
             click("check-click",MARKERS[2])
             restored=await_pose("restored-arrival",280,0)
             report={"initial":initial,"alternative":alternative,"restored":restored,
