@@ -40,6 +40,7 @@ class RoomHotspot:
     open_object_zplane3_pixels: bytes | None = None  # IM02 ZP03; ZP01+ZP02 required
     object_zplane4_pixels: bytes | None = None  # IM01 ZP04; ZP01+ZP02+ZP03 required
     open_object_zplane4_pixels: bytes | None = None  # IM02 ZP04; ZP01+ZP02+ZP03 required
+    third_sprite_pixels: bytes | None = None  # IM03; IM01 and IM02 required
 
 
 @dataclass(frozen=True)
@@ -340,6 +341,12 @@ def _validate(room: RoomAsset) -> None:
                 raise ValueError("Open sprite dimensions do not match closed sprite")
             if max(hotspot.open_sprite_pixels) >= len(room.palette):
                 raise ValueError("Open sprite references missing palette entries")
+        if hotspot.third_sprite_pixels is not None:
+            if (hotspot.sprite_pixels is None or hotspot.open_sprite_pixels is None
+                    or len(hotspot.third_sprite_pixels) != hotspot.width * hotspot.height):
+                raise ValueError("IM03 requires matching IM01 and IM02 sprite dimensions")
+            if max(hotspot.third_sprite_pixels) >= len(room.palette):
+                raise ValueError("IM03 references missing palette entries")
         if hotspot.exit_destination is not None:
             if not _IDENTIFIER.fullmatch(hotspot.exit_destination) or hotspot.exit_destination == room.name:
                 raise ValueError("Invalid exit destination room")
@@ -404,7 +411,7 @@ def _validate(room: RoomAsset) -> None:
     # their canonical asset error instead of a misleading cycle error.
     protected = {0}
     for hotspot in room.hotspots:
-        for sprite in (hotspot.sprite_pixels, hotspot.open_sprite_pixels):
+        for sprite in (hotspot.sprite_pixels, hotspot.open_sprite_pixels, hotspot.third_sprite_pixels):
             if sprite is not None:
                 protected.update(sprite)
     validate_cycles(room.palette, room.palette_cycles, frozenset(protected))
@@ -741,7 +748,9 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                 second = (f'{{ 0, 0, "{hotspot.id}Open.bmp", {{ {second_masks} }} }}'
                           if hotspot.open_object_zplane_pixels is not None
                           else f'{{ 0, 0, "{hotspot.id}Open.bmp" }}')
-                parts.append(f'        states = {{ {first}, {second} }};\n')
+                third = (f', {{ 0, 0, "{hotspot.id}Third.bmp" }}'
+                         if hotspot.third_sprite_pixels is not None else "")
+                parts.append(f'        states = {{ {first}, {second}{third} }};\n')
             parts.append("        state = 0;\n" if hotspot.id in hidden else "        state = 1;\n")
         if hotspot.pickup:
             parts.append("        class = { Pickable };\n")
@@ -983,6 +992,10 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
             if hotspot.open_sprite_pixels is not None:
                 (directory / f"{hotspot.id}Open.bmp").write_bytes(
                     _indexed_bmp(hotspot.width, hotspot.height, hotspot.open_sprite_pixels, room.palette)
+                )
+            if hotspot.third_sprite_pixels is not None:
+                (directory / f"{hotspot.id}Third.bmp").write_bytes(
+                    _indexed_bmp(hotspot.width, hotspot.height, hotspot.third_sprite_pixels, room.palette)
                 )
             if hotspot.pickup:
                 # The inherited SCUMM verb UI allocates 40x16 pixels per item.

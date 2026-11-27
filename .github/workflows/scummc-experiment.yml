@@ -546,6 +546,20 @@ jobs:
             /tmp/native-r08-concave-walkbox/*-screenshots/scummvm-*.json
             /tmp/native-r08-concave-walkbox/*-screenshots/scummvm-launch.log
           if-no-files-found: ignore
+      - name: Verify native IM03 object image cycle in stock ScummVM
+        if: ${{ matrix.shard == 'mask' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_object_third_image_probe /tmp/scummc-upstream /tmp/native-object-im03
+      - name: Retain native IM03 object image evidence
+        if: ${{ always() && matrix.shard == 'mask' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-object-im03
+          path: /tmp/native-object-im03
+          if-no-files-found: ignore
       - name: Verify Studio-authored object IM01 ZP01/ZP02 and second-state IM02 in stock ScummVM
         if: ${{ matrix.shard == 'mask' }}
         env:

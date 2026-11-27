@@ -330,6 +330,39 @@ def import_room_zplane(raw: str, room_name: str, index: int, png_path: str) -> s
 
 
 
+def import_object_third_image(raw: str, room_name: str, hotspot_id: str, png_path: str) -> str:
+    """Author IM03 from an opaque PNG using the existing room palette."""
+    from PIL import Image
+
+    document = parse_document(raw)
+    room = next((r for r in document.rooms if r.name == room_name), None)
+    hotspot = next((h for h in room.hotspots if h.id == hotspot_id), None) if room else None
+    if hotspot is None or hotspot.sprite_pixels is None or hotspot.open_sprite_pixels is None:
+        raise ValueError("IM03 benötigt ein Objekt mit Grundbild und offenem Bild")
+    palette = {rgb: index for index, rgb in reversed(tuple(enumerate(room.palette)))}
+    path = Path(png_path)
+    if path.suffix.lower() != ".png":
+        raise ValueError("Bitte ein PNG-Objektbild wählen")
+    try:
+        with Image.open(path) as source:
+            if source.format != "PNG" or source.size != (hotspot.width, hotspot.height):
+                raise ValueError("IM03 benötigt eine echte PNG-Datei in exakter Objektgröße")
+            rgba = source.convert("RGBA")
+            pixels = bytearray()
+            for red, green, blue, alpha in rgba.getdata():
+                rgb = (red, green, blue)
+                if alpha != 255 or rgb not in palette:
+                    raise ValueError("IM03 benötigt deckende Pixel aus der vorhandenen Raumpalette")
+                pixels.append(palette[rgb])
+    except (OSError, Image.DecompressionBombError) as error:
+        raise ValueError(f"PNG-Objektbild nicht lesbar: {error}") from error
+    updated = replace(hotspot, third_sprite_pixels=bytes(pixels))
+    rooms = tuple(replace(r, hotspots=tuple(updated if h.id == hotspot_id else h
+                                            for h in r.hotspots)) if r.name == room_name else r
+                  for r in document.rooms)
+    return _checked(replace(document, rooms=rooms))
+
+
 def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: str,
                          image_state: int = 1, zplane_index: int = 1) -> str:
     """Assign a PNG mask to IM01 or IM02 ZP01–04 independently."""
@@ -2612,8 +2645,22 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                     raise ValueError(
                         f"Native object Z-mask dimensions invalid: {room.name}/{hotspot.id}")
                 hotspot = replace(hotspot, **masks)
+            if old_hotspot.third_sprite_pixels is not None:
+                if ((hotspot.width, hotspot.height) != (old_hotspot.width, old_hotspot.height)
+                        or hotspot.sprite_pixels is None or hotspot.open_sprite_pixels is None):
+                    raise ValueError(f"Story changed native IM03 target: {room.name}/{hotspot.id}")
+                # Preserve the authored image's exact colors across palette reordering.
+                palette = {rgb: index for index, rgb in reversed(tuple(enumerate(room.palette)))}
+                try:
+                    third = bytes(palette[previous.palette[index]]
+                                  for index in old_hotspot.third_sprite_pixels)
+                except KeyError as error:
+                    raise ValueError(f"Story removed native IM03 palette color: {room.name}/{hotspot.id}") from error
+                hotspot = replace(hotspot, third_sprite_pixels=third)
             authored_hotspots.append(hotspot)
         for removed in native_hotspots.values():
+            if removed.third_sprite_pixels is not None:
+                raise ValueError(f"Story removed native IM03 target: {room.name}/{removed.id}")
             if any(getattr(removed, field) is not None for field in mask_fields):
                 raise ValueError(f"Story removed native object Z-mask target: {room.name}/{removed.id}")
         # Story regenerates its inventory rules. Preserve the Studio-native gate
