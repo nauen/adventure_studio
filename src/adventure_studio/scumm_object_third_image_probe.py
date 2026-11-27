@@ -9,13 +9,24 @@ import time
 from PIL import Image
 
 from .scumm_assets import CameraCue, RoomHotspot, scrolling_fixture, destination_fixture
-from .scumm_launch import colored_item_center, colored_item_pixels
+from .scumm_launch import authored_item_center, colored_item_pixels
 from .scumm_project import GameDocument, canonical_json, parse_document, export_document
 from .scumm_toolchain import compile_story_game
 from .studio_sequences import append_sequence_step, import_object_third_image, set_sequence_condition
 
 COLORS = ((241, 35, 120), (45, 240, 149), (192, 65, 237))
 TRIGGER = (255, 220, 75)
+
+
+def native_verbs_visible(image):
+    """An image drawn during room entry alone is not an interactive scene."""
+    if image.size != (1024, 768):
+        return False
+    rgb = image.convert("RGB")
+    # Same stock verb-area readiness check as the native two-Actor probe.
+    return sum(1 for y in range(535, 635, 4)
+               for x in range(200, 820, 4)
+               if max(rgb.getpixel((x, y))) > 35) >= 15
 
 
 def run(upstream, destination):
@@ -50,15 +61,27 @@ def run(upstream, destination):
 
     def await_state(label, state):
         deadline = time.monotonic() + 30
+        counts = []
+        ready = False
         while time.monotonic() < deadline:
             if game.poll() is not None:
                 raise RuntimeError("ScummVM exited before object state was visible")
             capture(label)
             counts = [colored_item_pixels(frames, label, color) for color in COLORS]
-            if counts[state-1] >= 1000 and all(n < 40 for i,n in enumerate(counts) if i != state-1):
-                return {"state": state, "color_pixels": counts, "frame": label}
+            with Image.open(frames / f"scummvm-{label}.png") as image:
+                ready = native_verbs_visible(image)
+            if (ready and counts[state-1] >= 1000
+                    and all(n < 40 for i,n in enumerate(counts) if i != state-1)):
+                try:
+                    x, y = authored_item_center(frames, label, TRIGGER)
+                except ValueError:
+                    # Entry can render the background and panel before the Key.
+                    time.sleep(.25)
+                    continue
+                return {"state": state, "color_pixels": counts, "frame": label,
+                        "native_trigger": [x, y]}
             time.sleep(.25)
-        raise RuntimeError(f"Expected native IM0{state} not visible: {counts}")
+        raise RuntimeError(f"Expected interactive native IM0{state}: {counts}, verbs={ready}")
 
     with (frames / "scummvm.log").open("w", encoding="utf-8") as log:
         game = subprocess.Popen(["scummvm", f"--path={game_dir.resolve()}", "tentacle"],
@@ -66,7 +89,7 @@ def run(upstream, destination):
         try:
             results = [await_state("initial", 1)]
             for label, state in (("second", 2), ("third", 3), ("restored", 1)):
-                x, y = colored_item_center(frames, results[-1]["frame"], TRIGGER, fuzz_percent=4)
+                x, y = results[-1]["native_trigger"]
                 for px, py in ((234, 563), (x, y)):
                     subprocess.run(["xdotool", "mousemove", str(px), str(py), "click", "1"],
                                    check=True, timeout=10)
