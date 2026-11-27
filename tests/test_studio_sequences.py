@@ -182,6 +182,46 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_native_inventory_condition_across_rooms_and_combined_guard(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.studio_sequences import sequence_condition_fields, sequence_second_condition_fields
+        raw = canonical_json(GameDocument("InventoryGate", (scrolling_fixture(), destination_fixture())))
+        identity = "Cellar|Stairs|Close"
+        raw = append_sequence_step(raw, "Cellar", "Stairs", "Close",
+                                   "Textzeile ohne Audio", None, None, None, None,
+                                   subtitle="Bring the key.")
+        raw = duplicate_sequence_variant(raw, identity, "inv:Key", 1)
+        guarded = identity + "|inv:Key|1"
+        raw = replace_sequence_step(raw, guarded, 0, "Textzeile ohne Audio",
+                                    None, None, None, None, subtitle="You have the key.")
+        self.assertEqual(sequence_condition_fields(raw, guarded), ("inv:Key", 1))
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        room = doc.rooms[1]
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        self.assertIn("object Key;", native)
+        self.assertIn("if(getObjectOwner(Key) == VAR_EGO)", native)
+        self.assertIn('egoSay("Bring the key.");', native)
+        self.assertIn('egoSay("You have the key.");', native)
+        raw = set_sequence_condition(raw, guarded, "inv:Key", 0, "==",
+                                     "var:Quest", 2, ">=", "or")
+        doc = parse_document(raw)
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        self.assertIn("(getObjectOwner(Key) != VAR_EGO) || (ASGameVar_Quest >= 2)", native)
+        combined = identity + "|inv:Key|0|==|or|var:Quest|>=|2"
+        raw = set_sequence_condition(raw, combined, "var:Quest", 2, ">=",
+                                     "inv:Key", 1, "==", "and")
+        doc = parse_document(raw)
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        self.assertIn("(ASGameVar_Quest >= 2) && (getObjectOwner(Key) == VAR_EGO)", native)
+        for target, value in (("inv:Door", 1), ("inv:Missing", 1), ("inv:Key", 2)):
+            with self.assertRaises(ValueError):
+                duplicate_sequence_variant(raw, identity, target, value)
+
     def test_native_text_line_without_voc_roundtrip_and_escape(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences

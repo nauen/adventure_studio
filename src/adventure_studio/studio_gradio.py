@@ -1016,10 +1016,10 @@ def make_app():
             native_add_selected = gr.Button("Schritt an ausgewählte Variante anhängen")
             with gr.Row():
                 native_condition_object = gr.Dropdown(
-                    label="Interaktion nur bei Objektzustand oder Spielvariable", choices=[("Immer ausführen", None)])
+                    label="Interaktion nur bei Objektzustand, Inventarbesitz oder Spielvariable", choices=[("Immer ausführen", None)])
                 native_condition_operator = gr.Dropdown(label="Vergleich (Spielvariable)",
                     choices=["==", "!=", "<", "<=", ">", ">="], value="==")
-                native_condition_state = gr.Number(label="Erforderlicher Zustand / Variablenwert",
+                native_condition_state = gr.Number(label="Zustand / Variablenwert / Inventarbesitz (0 fehlt, 1 vorhanden)",
                                                    value=0, precision=0)
                 native_condition_save = gr.Button("Bedingung speichern")
                 native_variant_add = gr.Button("Alternative Zustandsvariante duplizieren")
@@ -2217,8 +2217,11 @@ def make_app():
             room = identity.split("|", 1)[0] if identity else None
             _, objects, _ = project_choices(raw, room)
             target, state = sequence_condition_fields(raw, identity)
+            document = parse_document(raw)
+            inventory = sorted({h.id for r in document.rooms for h in r.hotspots if h.pickup})
             choices = [*[(item, item) for item in objects],
-                       *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]]
+                       *[(f"Inventar: {name}", "inv:" + name) for name in inventory],
+                       *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(document)]]
             second, value, operator, join = sequence_second_condition_fields(raw, identity)
             return (gr.update(choices=[("Immer ausführen", None), *choices], value=target),
                     state, sequence_condition_operator(raw, identity),
