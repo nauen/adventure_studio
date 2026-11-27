@@ -523,6 +523,27 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                 SoundEffectStep, TextLineStep, VoiceLineStep)
 
     active = [sequence for sequence in sequences if sequence.room == room_name]
+    used_items = {item.condition_used_item_id for item in sequences if item.condition_used_item_id is not None}
+    # The upstream sentence handler needs the inventory item Preposition entry
+    # before it selects the second object, even when the item originates elsewhere.
+    if room_asset is not None:
+        for hotspot in room_asset.hotspots:
+            if hotspot.id not in used_items or not hotspot.pickup:
+                continue
+            marker = f"    object {hotspot.id} {{\n"
+            start = source.index(marker) + len(marker)
+            end = source.find("    object ", start)
+            if end == -1:
+                end = source.index("    local script entry()", start)
+            segment = source[start:end]
+            if "        case Preposition:\n" not in segment:
+                verb = "        verb(int vrb, int objA, int objB) {\n"
+                if segment.count(verb) != 1:
+                    raise ValueError("Missing native pickup verb for used-item sequence")
+                segment = segment.replace(verb, verb + "        case Preposition:\n"
+                                          '            sntcPrepo[0] = "with";\n'
+                                          "            return;\n", 1)
+                source = source[:start] + segment + source[end:]
     if not active:
         return source
     def transfer_plane(step):
@@ -551,6 +572,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                    if isinstance(step, CombineInventoryStep))
     targets.update(item.condition_hotspot_id for item in active if item.condition_hotspot_id is not None)
     targets.update(item.condition_inventory_id for item in active if item.condition_inventory_id is not None)
+    targets.update(item.condition_used_item_id for item in active if item.condition_used_item_id is not None)
     targets.update(item.condition_second_target[4:] if item.condition_second_target.startswith("inv:")
                    else item.condition_second_target for item in active if item.condition_second_target is not None
                    and not item.condition_second_target.startswith("var:"))
@@ -878,6 +900,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 + transition)
 
     def condition_expression(sequence):
+        if sequence.condition_used_item_id is not None:
+            return "objB"
         if sequence.condition_variable is not None:
             return game_variable_symbol(sequence.condition_variable)
         if sequence.condition_inventory_id is not None:
@@ -890,7 +914,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         first = condition_expression(sequence)
         if first is None:
             return None
-        expression = (f"{first} {'==' if sequence.condition_state else '!='} VAR_EGO"
+        expression = (f"objB == {sequence.condition_used_item_id} && getObjectOwner({sequence.condition_used_item_id}) == VAR_EGO"
+                      if sequence.condition_used_item_id is not None else
+                      f"{first} {'==' if sequence.condition_state else '!='} VAR_EGO"
                       if sequence.condition_inventory_id is not None
                       else f"{first} {sequence.condition_operator} {sequence.condition_state}")
         second = sequence.condition_second_target
@@ -945,7 +971,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             inverse = {"==": "!=", "!=": "==", "<": ">=", "<=": ">", ">": "<=", ">=": "<"}
             guard = (f"            if({expression} {inverse[sequence.condition_operator]} {sequence.condition_state}) return;\n"
                      if expression is not None else "")
-            if sequence.condition_second_target is not None or sequence.condition_inventory_id is not None:
+            if (sequence.condition_second_target is not None or sequence.condition_inventory_id is not None
+                    or sequence.condition_used_item_id is not None):
                 guard = f"            if(!({full_condition(sequence)})) return;\n"
             native = (f"        case {sequence.verb}:\n" + guard
                       + playable_sequence(sequence) + "            return;\n")

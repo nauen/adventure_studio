@@ -182,6 +182,42 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_use_sequence_selected_inventory_item_and_cross_room_preposition(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        harbor, cellar = scrolling_fixture(), destination_fixture()
+        harbor = replace(harbor, use_rules=())
+        raw = canonical_json(GameDocument("UseKey", (harbor, cellar)))
+        raw = append_sequence_step(raw, "Cellar", "Stairs", "Use",
+                                   "Textzeile ohne Audio", None, None, None, None,
+                                   subtitle="The key fits.")
+        raw = set_sequence_condition(raw, "Cellar|Stairs|Use", "used:Key", 1)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(sequence_condition_fields(raw, "Cellar|Stairs|Use|used:Key|1"), ("used:Key", 1))
+        source = inject_interaction_sequences(scummc_room_source(harbor), harbor.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, harbor)
+        self.assertIn("case Preposition:", source)
+        self.assertIn('sntcPrepo[0] = "with";', source)
+        native = inject_interaction_sequences(scummc_room_source(cellar), cellar.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, cellar)
+        self.assertIn("case Use:", native)
+        self.assertIn("objB == Key && getObjectOwner(Key) == VAR_EGO", native)
+        self.assertIn('egoSay("The key fits.");', native)
+        with self.assertRaises(ValueError):
+            set_sequence_condition(raw, "Cellar|Stairs|Use|used:Key|1", "used:Door", 1)
+        with self.assertRaises(ValueError):
+            set_sequence_condition(raw, "Cellar|Stairs|Use|used:Key|1",
+                                   "used:Key", 1, "==", "var:Bypass", 1, "==", "or")
+        valid = set_sequence_condition(raw, "Cellar|Stairs|Use|used:Key|1",
+                                       "used:Key", 1, "==", "var:Ready", 1, "==", "and")
+        self.assertEqual(parse_document(valid).interaction_sequences[0].condition_join, "and")
+        old = canonical_json(GameDocument("UseConflict", (scrolling_fixture(), cellar)))
+        with self.assertRaises(ValueError):
+            append_sequence_step(old, "Harbor", "Door", "Use",
+                                 "Textzeile ohne Audio", None, None, None, None, subtitle="Conflict.")
+
     def test_contextual_look_at_preserves_original_description_as_fallback(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
