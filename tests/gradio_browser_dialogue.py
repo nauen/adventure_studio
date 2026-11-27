@@ -1267,16 +1267,26 @@ def main() -> None:
             sequence_input.press("Tab")
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen", timeout=20000)
+            # South is already selected. Wait for the new line's persisted
+            # animation and sequence, not the previous line's South label.
             select_option(page, "native-dialogue-line", second[0])
-            select_option(page, "native-dialogue-direction", "Süd")
-            second_bulk = dialogue_speaking_sequence_selection(
-                sprite_raw, second[1], "S") + ", Speak"
+            second_saved = dialogue_speaking_sequence_selection(
+                sprite_raw, second[1], "S")
+            second_bulk = second_saved + ", Speak"
+            second_cue = next(cue for cue in parse_document(sprite_raw).dialogue_animation_cues
+                              if cue.line_id == second[1])
+            await_selection(page, "native-dialogue-animation", second_cue.animation)
             expect(page.locator(
                 "#native-dialogue-direction-status input, "
                 "#native-dialogue-direction-status textarea"
-            )).to_have_value(re.compile(r"· Süd(?::| ·)"), timeout=20000)
+            )).to_have_value(re.compile(
+                re.escape(second_cue.animation) + r" · Süd(?::| ·)"), timeout=20000)
+            expect(sequence_input).to_have_value(second_saved, timeout=20000)
+            expect(draft_save_status).to_contain_text(
+                "Sprechfolge entspricht dem gespeicherten Stand", timeout=20000)
             sequence_input.fill(second_bulk)
             sequence_input.press("Tab")
+            expect(sequence_input).to_have_value(second_bulk, timeout=20000)
             expect(draft_save_status).to_contain_text(
                 "Ungespeicherte Änderungen", timeout=20000)
             page.locator("#native-drafts-save-confirm input[type=checkbox]").check()
