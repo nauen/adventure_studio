@@ -145,6 +145,13 @@ class WaitActorStep:
 
 
 @dataclass(frozen=True)
+class ActorPaletteStep:
+    actor_id: str
+    slot: int  # authoring-local nontransparent COST color index
+    color: int  # room palette index, 255 restores the COST default
+
+
+@dataclass(frozen=True)
 class ActorZClipStep:
     actor_id: str
     plane: int  # -1 restores the authored room profile; 0 restores native walkbox clipping
@@ -237,7 +244,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorPaletteStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -363,6 +370,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, WaitCameraStep)
                                                    else {"type": "wait_actor", **vars(step)}
                                                    if isinstance(step, WaitActorStep)
+                                                   else {"type": "actor_palette", **vars(step)}
+                                                   if isinstance(step, ActorPaletteStep)
                                                    else {"type": "actor_zclip", **vars(step)}
                                                    if isinstance(step, ActorZClipStep)
                                                    else {"type": "face_actor", **vars(step)}
@@ -975,6 +984,19 @@ def _validate_document(document: GameDocument) -> None:
                 if actor is None or (actor.room != room.name and
                                      (actor.id, room.name) not in transfer_destinations):
                     raise ValueError("Interaction wait requires an Actor in the sequence room")
+            elif isinstance(step, ActorPaletteStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if (actor is None or (actor.room != room.name and
+                        (actor.id, room.name) not in transfer_destinations)
+                        or type(step.slot) is not int or not 1 <= step.slot <= 31
+                        or type(step.color) is not int
+                        or not (step.color == 255 or
+                                0 <= step.color < min(len(room.palette), 255)
+                                and not 16 <= step.color <= 47)):
+                    raise ValueError("Actor palette needs a room Actor, COST slot 1–31 and stable room color (or 255)")
+                costume = costumes_by_name[actor.costume]
+                if not any(step.slot in frame.pixels for frame in costume.frames):
+                    raise ValueError("Actor palette source slot is unused")
             elif isinstance(step, ActorZClipStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or (actor.room != room.name and
@@ -1153,6 +1175,10 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "wait_actor":
                 step = _only(raw_step, {"type", "actor_id"}, {"type", "actor_id"})
                 steps.append(WaitActorStep(step["actor_id"]))
+            elif kind == "actor_palette":
+                step = _only(raw_step, {"type", "actor_id", "slot", "color"},
+                             {"type", "actor_id", "slot", "color"})
+                steps.append(ActorPaletteStep(step["actor_id"], step["slot"], step["color"]))
             elif kind == "actor_zclip":
                 step = _only(raw_step, {"type", "actor_id", "plane"}, {"type", "actor_id", "plane"})
                 steps.append(ActorZClipStep(step["actor_id"], step["plane"]))
@@ -1534,6 +1560,29 @@ def _align_costume_room_palettes(document: GameDocument) -> tuple[tuple[RoomAsse
             palette[slot] = rgb
         rooms.append(replace(room, palette=tuple(palette)))
     return tuple(rooms), tuple(revised)
+
+
+def resolve_actor_palette_steps(document: GameDocument):
+    """Resolve authoring-local indices through the same COST mapping as export."""
+    if not any(isinstance(step, ActorPaletteStep)
+               for sequence in document.interaction_sequences for step in sequence.steps):
+        return document.interaction_sequences
+    _, aligned = _align_costume_room_palettes(document)
+    originals = {c.name: c for c in document.costumes}
+    aligned_by_name = {c.name: c for c in aligned}
+    actors = {a.id: a for a in document.actors}
+    maps = {}
+    for actor in actors.values():
+        if actor.costume not in maps:
+            old, new = originals[actor.costume], aligned_by_name[actor.costume]
+            maps[actor.costume] = {
+                source: target for before, after in zip(old.frames, new.frames)
+                for source, target in zip(before.pixels, after.pixels)
+            }
+    return tuple(replace(sequence, steps=tuple(
+        replace(step, slot=maps[actors[step.actor_id].costume][step.slot])
+        if isinstance(step, ActorPaletteStep) else step for step in sequence.steps))
+        for sequence in document.interaction_sequences)
 
 
 def main() -> int:

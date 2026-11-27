@@ -357,6 +357,42 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Actor Z-Clipping", ACTOR_IDS[0], None, None, 5)
 
+    def test_actor_palette_resolves_costume_slot_and_escape(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import ActorPaletteStep, resolve_actor_palette_steps
+        costume = gesture_fixture()
+        # Original local slot 2 shares RGB with slot 1 and is remapped to 1.
+        room = scrolling_fixture()
+        raw = canonical_json(GameDocument("Palette", (room, destination_fixture()),
+            (costume,), (ActorAsset("Guide", costume.name, "Harbor", 400, 85, "S"),)))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Palette", "Guide", None, None, 2, 4)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Warten", None, None, None, 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Palette", "Guide", None, None, 1, 255)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.interaction_sequences[0].steps[0], ActorPaletteStep("Guide", 2, 4))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:6],
+                         ("Actor Palette", "Guide", None, None, 2, 4))
+        native = resolve_actor_palette_steps(doc)
+        self.assertEqual(native[0].steps[0], ActorPaletteStep("Guide", 1, 4))
+        source = inject_interaction_sequences(scummc_room_source(room), "Harbor",
+            native, doc.actors, doc.costumes, room)
+        normal, override = source.split("} override {", 1)
+        self.assertIn("setActorPalette(1, 4);", normal)
+        self.assertIn("setActorPalette(1, 255);", override)
+        self.assertNotIn("setActorPalette(1, 4);", override)
+        for slot, color in ((0,4),(32,4),(3,4),(1,16),(1,254)):
+            with self.assertRaises(ValueError):
+                replace_sequence_step(raw, identity, 0, "Actor Palette",
+                                      "Guide", None, None, slot, color)
+
     def test_actor_zclip_roundtrip_native_export_and_escape(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import ZPlane, scummc_room_source
