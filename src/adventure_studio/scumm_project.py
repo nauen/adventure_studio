@@ -451,6 +451,8 @@ def document_dict(document: GameDocument) -> dict:
                              if h.third_sprite_pixels is not None else {}),
                           **({"third_object_zplane_pixels": _encode_pixels(h.third_object_zplane_pixels)}
                              if h.third_object_zplane_pixels is not None else {}),
+                          **({"third_object_zplane2_pixels": _encode_pixels(h.third_object_zplane2_pixels)}
+                             if h.third_object_zplane2_pixels is not None else {}),
                           "exit_destination": h.exit_destination,
                           **({"object_zplane_pixels": _encode_pixels(h.object_zplane_pixels)}
                              if h.object_zplane_pixels is not None else {}),
@@ -1355,7 +1357,7 @@ def parse_document(source: str) -> GameDocument:
                              "open_object_zplane2_pixels", "object_zplane3_pixels",
                              "open_object_zplane3_pixels", "object_zplane4_pixels",
                              "open_object_zplane4_pixels", "third_sprite_pixels",
-                             "third_object_zplane_pixels"},
+                             "third_object_zplane_pixels", "third_object_zplane2_pixels"},
                       {"id", "label", "description", "x", "y", "width", "height", "pickup",
                        "sprite_pixels", "open_sprite_pixels", "exit_destination"})
             if type(h["pickup"]) is not bool:
@@ -1388,6 +1390,7 @@ def parse_document(source: str) -> GameDocument:
                 _decode_pixels(h["open_object_zplane4_pixels"]) if h.get("open_object_zplane4_pixels") is not None else None,
                 _decode_pixels(h["third_sprite_pixels"]) if h.get("third_sprite_pixels") is not None else None,
                 _decode_pixels(h["third_object_zplane_pixels"]) if h.get("third_object_zplane_pixels") is not None else None,
+                _decode_pixels(h["third_object_zplane2_pixels"]) if h.get("third_object_zplane2_pixels") is not None else None,
             ))
         rules = []
         for item in room["use_rules"]:
