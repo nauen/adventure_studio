@@ -182,6 +182,35 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_native_talk_to_sequence_respects_inventory_and_existing_dialogue(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import scummc_room_source, TalkRule, TalkChoice
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        harbor = scrolling_fixture()
+        raw = canonical_json(GameDocument("TalkToPuzzle", (harbor, destination_fixture())))
+        raw = append_sequence_step(raw, "Harbor", "Door", "TalkTo",
+                                   "Textzeile ohne Audio", None, None, None, None,
+                                   subtitle="Bring the key.")
+        raw = duplicate_sequence_variant(raw, "Harbor|Door|TalkTo", "inv:Key", 1)
+        raw = replace_sequence_step(raw, "Harbor|Door|TalkTo|inv:Key|1", 0,
+                                    "Textzeile ohne Audio", None, None, None, None,
+                                    subtitle="You have the key.")
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        native = inject_interaction_sequences(scummc_room_source(harbor), harbor.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, harbor)
+        self.assertEqual(native.count("case TalkTo:"), 1)
+        self.assertIn("if(getObjectOwner(Key) == VAR_EGO)", native)
+        self.assertIn('egoSay("Bring the key.");', native)
+        self.assertIn('egoSay("You have the key.");', native)
+        self.assertIn("case LookAt:", native)
+        with_dialogue = replace(harbor, hotspots=tuple(replace(h, talk_lines=("Hello.",))
+                                                       if h.id == "Door" else h for h in harbor.hotspots))
+        conflict = canonical_json(GameDocument("TalkConflict", (with_dialogue, destination_fixture())))
+        with self.assertRaises(ValueError):
+            append_sequence_step(conflict, "Harbor", "Door", "TalkTo",
+                                 "Textzeile ohne Audio", None, None, None, None, subtitle="New line.")
+
     def test_native_inventory_condition_across_rooms_and_combined_guard(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences

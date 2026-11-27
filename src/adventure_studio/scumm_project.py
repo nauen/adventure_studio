@@ -932,8 +932,15 @@ def _validate_document(document: GameDocument) -> None:
         if room is None or not isinstance(sequence.hotspot_id, str) or sequence.hotspot_id not in {
                 hotspot.id for hotspot in room.hotspots}:
             raise ValueError("Interaction sequence requires an existing room hotspot")
-        if sequence.verb not in ("Push", "Pull", "Open", "Close"):
+        if sequence.verb not in ("Push", "Pull", "Open", "Close", "TalkTo"):
             raise ValueError("Unsupported interaction sequence verb")
+        if sequence.verb == "TalkTo":
+            hotspot = next(h for h in room.hotspots if h.id == sequence.hotspot_id)
+            dialogue_targets = {rule.speaker_id for rule in room.talk_rules}
+            dialogue_targets.update(choice.object_id for rule in room.talk_rules
+                                    for stage in (rule, *rule.stages) for choice in stage.choices)
+            if hotspot.talk_lines or hotspot.id in dialogue_targets:
+                raise ValueError("TalkTo sequence conflicts with an existing dialogue; use a separate hotspot or remove that dialogue explicitly")
         identity = (sequence.room, sequence.hotspot_id, sequence.verb)
         if identity in seen_inputs and identity not in sequence_groups:
             raise ValueError("Duplicate animation verb binding")
