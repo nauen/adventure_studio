@@ -31,10 +31,12 @@ def authored_project():
                      hotspots=(marker("Key", 210, 0, pickup=True), marker("Crossing", 290, 1)),
                      use_rules=(), demo_walk_to_x=None, camera_cues=(CameraCue("set", x=320),),
                      ego_start_x=320)
+    vault = replace(destination_fixture(), name="Vault", hotspots=(),
+                    pixels=bytes([0]) * (320 * 200))
     cellar = replace(cellar, palette=(*cellar.palette, *COLORS), goal_text=None,
                      hotspots=(marker("Return", 80, 2), marker("Gate", 150, 3),
                                marker("Progress", 230, 4, alternative=5)))
-    raw = canonical_json(GameDocument("InventoryOwnershipPuzzle", (harbor, cellar)))
+    raw = canonical_json(GameDocument("InventoryOwnershipPuzzle", (harbor, cellar, vault)))
     raw = append_sequence_step(raw, "Harbor", "Crossing", "Close",
                                "Raum wechseln", None, None, "Cellar", None)
     raw = append_sequence_step(raw, "Cellar", "Return", "Close",
@@ -44,6 +46,10 @@ def authored_project():
     raw = duplicate_sequence_variant(raw, "Cellar|Gate|Close", "inv:Key", 1)
     raw = replace_sequence_step(raw, "Cellar|Gate|Close|inv:Key|1", 0,
                                 "Objektzustand setzen", None, None, "Progress", 2)
+    raw = append_sequence_step(raw, "Cellar", "Progress", "Close",
+                               "Raum wechseln", None, None, "Vault", None)
+    from .studio_sequences import set_sequence_condition
+    raw = set_sequence_condition(raw, "Cellar|Progress|Close", "Progress", 2)
     return raw
 
 
@@ -119,6 +125,8 @@ def run(upstream, destination):
             wait("cellar-with-key",visible=(GATE,),absent=(ACCEPTED,),owned=True)
             click("gate-with-key",GATE)
             wait("accepted-with-key",visible=(GATE,ACCEPTED),absent=(READY,),owned=True)
+            click("enter-goal",ACCEPTED)
+            wait("goal-room",visible=((70,130,190),),absent=(GATE,ACCEPTED),owned=True)
             report={"native_inventory_condition_verified":True,"evidence":evidence}
             (destination/"report.json").write_text(json.dumps(report,indent=2),encoding="utf-8")
             return report
