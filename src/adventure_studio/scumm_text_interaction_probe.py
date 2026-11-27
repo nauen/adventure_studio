@@ -41,7 +41,7 @@ def authored_project():
     costume = gesture_fixture()
     frame = costume.frames[0]
     directions = tuple(CostumeDirection(d, (frame.id,)) for d in ("N","E","S","W"))
-    costume = replace(costume, animations=tuple(CostumeAnimation(name, directions)
+    costume = replace(costume, name="NativeTextClueCostume", animations=tuple(CostumeAnimation(name, directions)
                       for name in ("init", "stand", "walk", "talkStart", "talkStop")))
     raw = canonical_json(GameDocument("NativeTextClue", (room, destination_fixture()),
                          (costume,), (ActorAsset("Guide", costume.name, "Harbor", 280, 85, "S"),)))
