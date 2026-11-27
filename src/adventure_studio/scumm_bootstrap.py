@@ -517,7 +517,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
-                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
+                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, VoiceLineStep)
@@ -634,6 +634,14 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                      f"                setActorElevation(getActorElevation({step.actor_id}) - 1);\n",
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
+            elif isinstance(step, (ActorTalkColorStep, ActorTalkPositionStep)):
+                command = (f"setActorTalkColor({step.color});" if isinstance(step, ActorTalkColorStep)
+                           else f"setActorTalkPos({step.x},{step.y});")
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     f"                {command}\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
             elif isinstance(step, FaceActorStep):
                 direction = actor_facing_angle(step.direction)
                 instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
@@ -689,6 +697,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_states = {}
         end_positions = {}
         end_directions = {}
+        end_talk_colors = {}
+        end_talk_positions = {}
         end_clipping = {}
         final_camera = None
         final_camera_wait = False
@@ -705,6 +715,10 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_clipping[step.actor_id] = (transfer_plane(step), False)
             elif isinstance(step, ActorZClipStep):
                 end_clipping[step.actor_id] = (interaction_plane(step), True)
+            elif isinstance(step, ActorTalkColorStep):
+                end_talk_colors[step.actor_id] = step.color
+            elif isinstance(step, ActorTalkPositionStep):
+                end_talk_positions[step.actor_id] = (step.x, step.y)
             elif isinstance(step, FaceActorStep):
                 end_directions[step.actor_id] = step.direction
             elif isinstance(step, (FollowActorCameraStep, PanCameraStep)):
@@ -749,6 +763,16 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                        f"                    setActorDirection({native_direction});\n"
                        "                    setCurrentActor(VAR_EGO);\n"
                        "                }\n")
+        for values, command in ((end_talk_colors, lambda color: f"setActorTalkColor({color});"),
+                                (end_talk_positions, lambda pos: f"setActorTalkPos({pos[0]},{pos[1]});")):
+            for actor, value in values.items():
+                destination = end_positions.get(actor)
+                target = destination[2] if destination is not None and destination[2] != room_name else "VAR_ROOM"
+                commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
+                           f"                    setCurrentActor({actor});\n"
+                           f"                    {command(value)}\n"
+                           "                    setCurrentActor(VAR_EGO);\n"
+                           "                }\n")
         clipping_commit = ""
         for actor, (plane, require_presence) in end_clipping.items():
             if require_presence:

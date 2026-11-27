@@ -151,6 +151,19 @@ class ActorZClipStep:
 
 
 @dataclass(frozen=True)
+class ActorTalkColorStep:
+    actor_id: str
+    color: int
+
+
+@dataclass(frozen=True)
+class ActorTalkPositionStep:
+    actor_id: str
+    x: int
+    y: int
+
+
+@dataclass(frozen=True)
 class FaceActorStep:
     actor_id: str
     direction: str
@@ -237,7 +250,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -365,6 +378,10 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, WaitActorStep)
                                                    else {"type": "actor_zclip", **vars(step)}
                                                    if isinstance(step, ActorZClipStep)
+                                                   else {"type": "actor_talk_color", **vars(step)}
+                                                   if isinstance(step, ActorTalkColorStep)
+                                                   else {"type": "actor_talk_position", **vars(step)}
+                                                   if isinstance(step, ActorTalkPositionStep)
                                                    else {"type": "face_actor", **vars(step)}
                                                    if isinstance(step, FaceActorStep)
                                                    else {"type": "pickup_object", **vars(step)}
@@ -984,6 +1001,17 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Actor Z-clip requires a room Actor and -1, 0 or an existing native room Z-plane (1–4)")
                 if step.plane == -1 and actor.room != room.name and room.name not in dict(actor.room_zclips):
                     raise ValueError("Actor Z-clip profile restoration requires an authored destination profile")
+            elif isinstance(step, (ActorTalkColorStep, ActorTalkPositionStep)):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if actor is None or (actor.room != room.name and
+                        (actor.id, room.name) not in transfer_destinations):
+                    raise ValueError("Actor talk presentation requires an Actor in the sequence room")
+                if isinstance(step, ActorTalkColorStep):
+                    if type(step.color) is not int or not 0 <= step.color <= 255:
+                        raise ValueError("Actor talk color requires a palette index (0 to 255)")
+                elif any(type(value) is not int or not -32768 <= value <= 32767
+                         for value in (step.x, step.y)):
+                    raise ValueError("Actor talk position requires signed 16-bit X/Y offsets")
             elif isinstance(step, FaceActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or (actor.room != room.name and
@@ -1156,6 +1184,12 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "actor_zclip":
                 step = _only(raw_step, {"type", "actor_id", "plane"}, {"type", "actor_id", "plane"})
                 steps.append(ActorZClipStep(step["actor_id"], step["plane"]))
+            elif kind == "actor_talk_color":
+                step = _only(raw_step, {"type", "actor_id", "color"}, {"type", "actor_id", "color"})
+                steps.append(ActorTalkColorStep(step["actor_id"], step["color"]))
+            elif kind == "actor_talk_position":
+                step = _only(raw_step, {"type", "actor_id", "x", "y"}, {"type", "actor_id", "x", "y"})
+                steps.append(ActorTalkPositionStep(step["actor_id"], step["x"], step["y"]))
             elif kind == "face_actor":
                 step = _only(raw_step, {"type", "actor_id", "direction"},
                              {"type", "actor_id", "direction"})
