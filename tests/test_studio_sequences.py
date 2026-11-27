@@ -91,7 +91,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
         from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
         from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
         modes = ({}, {"profiles": True}, {"profiles": True, "entry_restore": True},
-                 {"dynamic": True}, {"restore_profile": True}, {"walk": True}, {"animation": True}, {"facing": True}, {"camera": True})
+                 {"dynamic": True}, {"restore_profile": True}, {"walk": True}, {"animation": True}, {"facing": True}, {"camera": True}, {"position": True})
         names = set()
         with tempfile.TemporaryDirectory() as directory:
             for variant in ("masked", "transparent"):
@@ -101,11 +101,36 @@ class NativeSequenceEditorTests(unittest.TestCase):
                     actor = next(a for a in doc.actors if a.id == ACTOR_IDS[0])
                     self.assertNotIn(actor.costume, names)
                     names.add(actor.costume)
-        self.assertEqual(len(names), 18)
+        self.assertEqual(len(names), 20)
 
 
 
 
+
+    def test_transferred_actor_position_uses_native_room_presence(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        with tempfile.TemporaryDirectory() as directory:
+            raw = author_transfer_project(Path(directory), "masked")
+            actor = ACTOR_IDS[0]
+            raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                       "Actor versetzen", actor, None, None, None, 140, 85)
+            raw = set_sequence_skippable(raw, "Cellar|R06TransferReturn|Open", True)
+            doc = parse_document(raw)
+            self.assertEqual(canonical_json(doc), raw)
+            room = next(r for r in doc.rooms if r.name == "Cellar")
+            seq = next(s for s in doc.interaction_sequences
+                       if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
+            native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
+                                                   (seq,), doc.actors, doc.costumes, room)
+            for code in native.split("} override {", 1):
+                self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM)", code)
+                self.assertIn(f"putActorAt({actor}, 140, 85, Cellar);", code)
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                     "Actor versetzen", ACTOR_IDS[1], None, None, None, 140, 85)
 
     def test_transferred_actor_camera_authoring_roundtrip(self):
         from adventure_studio.scumm_assets import scummc_room_source
@@ -322,6 +347,18 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 redraw = f"setActorElevation(getActorElevation({ACTOR_IDS[0]}) {operator} 1);"
                 self.assertEqual(normal.count(redraw), 2)
                 self.assertEqual(override.count(redraw), 1)
+
+    def test_restore_profile_probe_rearms_native_start_marker(self):
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_project import ObjectStateStep, DelayStep
+        with tempfile.TemporaryDirectory() as directory:
+            raw = author_transfer_project(Path(directory), "masked", restore_profile=True)
+            doc = parse_document(raw)
+            sequences = {seq.hotspot_id: seq for seq in doc.interaction_sequences
+                         if seq.room == "Cellar" and seq.verb == "Close"}
+            self.assertEqual(sequences["R06Reveal"].steps[-1], ObjectStateStep("R06Restore", 1))
+            self.assertEqual(sequences["R06Restore"].steps[0], ObjectStateStep("R06Restore", 0))
+            self.assertEqual(sequences["R06Restore"].steps[1], DelayStep(12))
 
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
         from adventure_studio.scumm_assets import scummc_room_source
