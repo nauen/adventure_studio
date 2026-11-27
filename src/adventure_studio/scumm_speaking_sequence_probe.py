@@ -62,7 +62,13 @@ def _measure_current_frame(output: Path, *, ending: bool) -> tuple[tuple[int, ..
     preview = output / "scummvm-current.png"
     subprocess.run(["xwd", "-root", "-silent", "-out", str(raw)],
                    check=True, timeout=10, capture_output=True)
-    with Image.open(raw) as source:
+    # Pillow cannot decode XWD directly. Convert to an uncompressed PPM
+    # stream with the same ImageMagick decoder used by _capture.
+    from io import BytesIO
+    decoded = subprocess.run(
+        ["convert", str(raw), "-depth", "8", "ppm:-"],
+        check=True, timeout=10, capture_output=True).stdout
+    with Image.open(BytesIO(decoded)) as source:
         rgb = source.convert("RGB")
         left, right, top, bottom = ACTOR_REGION
         region = rgb.crop((left, top, right, bottom))
