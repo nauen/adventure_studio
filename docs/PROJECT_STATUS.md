@@ -1,3 +1,17 @@
+## Verbindlicher Stand – 27.11.2026 (nach IM03/ZP04-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Konsolidierung:** #367 gemergt (8404f94). Frühere R06-Gameplay-Nachweise #355/#350/#353/#352/#357/#359 und #336 separat integrieren, Gesamtgates offen. Einzelbelege im vorherigen Stand.
+- **Offene Integration R07:** #366 IM03/ZP04: [Originalartefakt 15205255511](https://github.com/nauen/adventure_studio/actions/runs/46012244891/artifacts/15205255511) auf 8d0885e: 108 maskierte Actor-Pixel, 1388 transparent, 1388 falscher BOXD-Index, native_im03_zp04_verified=true. [Core](https://github.com/nauen/adventure_studio/actions/runs/46012233061) grün. Alle zwölf Kombinationen IM01–03/ZP01–04 durch natives Gameplay belegt; Gesamtgates und Integration der gestapelten #348/#363/#364/#365/#366 offen. ZP05+ fail-closed.
+- **Offene Integration R06:** #359 Standanimations-Gameplay auf f20015f belegt, getrennte Geometry-Regression [Originalartefakt 15205080791](https://github.com/nauen/adventure_studio/actions/runs/46007792927/artifacts/15205080791): B-Anlauf X270→326→382→395, zwei 56-Pixel-Sprünge bei rund 0,229s Messabstand überschreiten 55-Pixel-Grenze. [3ada837](https://github.com/nauen/adventure_studio/commit/3ada83720991a80274c4df568021b4375e750303) erhöht echte Bildaufnahme im Camera-Resume-Probe auf 480 Frames/0,025s; Grenzen unverändert, neue Pflichtgates offen.
+- **Jetzt – genau eine Fähigkeit:** [#368](https://github.com/nauen/adventure_studio/pull/368) native dynamische Actor-Laufanimations-Zuordnung (R06/A04), ActorWalkAnimationStep Studio/JSON-v1/ScummC setActorWalkFrame (Standard-Gruppe 2, ausgerichtete explizite Gruppen 24–52), Anwesenheitsguard, letzter Wert bei Escape. Auf gameplay-verifiziertem #359-Head f20015f aufgebaut. [Produktcommit 29fa428](https://github.com/nauen/adventure_studio/commit/29fa4280fb5b6efde3868de9153e7563bccd7240), Syntaxkorrektur [a39c1a2](https://github.com/nauen/adventure_studio/commit/a39c1a2a1f0825f66c32149464585fbf617cb31b).
+- **Abnahme:** echte native Laufpose während tatsächlicher Bewegung und Rückkehr zur Standardlaufpose nach Escape; unveränderte Standpose, Core und Gesamtgates.
+- **Blocker:** Neue [Core](https://github.com/nauen/adventure_studio/actions/runs/46014083545) und [Native](https://github.com/nauen/adventure_studio/actions/runs/46014093542) nach Importkorrektur; Gameplay offen. #359 Integration vorausgesetzt. Alternative Laufpose und wiederhergestellte Standardlaufpose an mindestens drei tatsächlich unterschiedlichen bewegten Positionen, unveränderte Standpose an beiden Ankünften.
+- **Danach:** R06 dynamische native Actor-Sprechanimations-Zuordnung nach bewiesenem Laufchore; erst nach Prüfung vorhandener Fähigkeiten und Grenzen.
+- **Arbeitsregel:** Nach Gameplay sofort ein natives Folgepaket, offene Gesamtgates separat. Merge nur bei vollständig grünen Pflichtgates; kein pauschales V.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
 ## Verbindlicher Stand – 27.11.2026 (nach IM03/ZP03-Gameplay)
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
