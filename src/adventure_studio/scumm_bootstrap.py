@@ -918,9 +918,29 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             raise ValueError(f"Cannot isolate native interaction hotspot: {sequence.hotspot_id}")
         segment = source[start:end]
         verb_marker = "        verb(int vrb, int objA, int objB) {\n"
-        if segment.count(verb_marker) != 1 or f"        case {sequence.verb}:\n" in segment:
+        existing_case = f"        case {sequence.verb}:\n"
+        if segment.count(verb_marker) != 1 or (existing_case in segment and sequence.verb != "LookAt"):
             raise ValueError(f"Conflicting native interaction verb on {sequence.hotspot_id}")
-        if len(group) == 1:
+        if sequence.verb == "LookAt":
+            if segment.count(existing_case) != 1:
+                raise ValueError(f"Missing native LookAt description on {sequence.hotspot_id}")
+            case_start = segment.index(existing_case)
+            body_start = case_start + len(existing_case)
+            boundary = re.search(r"(?m)^        (?:case |default:|\})", segment[body_start:])
+            if boundary is None:
+                raise ValueError(f"Cannot isolate native LookAt on {sequence.hotspot_id}")
+            case_end = body_start + boundary.start()
+            default_body = segment[body_start:case_end]
+            native = existing_case
+            for branch in (item for item in group if condition_expression(item) is not None):
+                native += (f"            if({full_condition(branch)}) {{\n"
+                           + "".join("    " + line for line in playable_sequence(branch).splitlines(True))
+                           + "                return;\n            }\n")
+            fallback = next((item for item in group if condition_expression(item) is None), None)
+            native += (playable_sequence(fallback) + "            return;\n"
+                       if fallback is not None else default_body)
+            segment = segment[:case_start] + segment[case_end:]
+        elif len(group) == 1:
             expression = condition_expression(sequence)
             inverse = {"==": "!=", "!=": "==", "<": ">=", "<=": ">", ">": "<=", ">=": "<"}
             guard = (f"            if({expression} {inverse[sequence.condition_operator]} {sequence.condition_state}) return;\n"

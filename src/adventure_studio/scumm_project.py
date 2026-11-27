@@ -939,7 +939,7 @@ def _validate_document(document: GameDocument) -> None:
         if room is None or not isinstance(sequence.hotspot_id, str) or sequence.hotspot_id not in {
                 hotspot.id for hotspot in room.hotspots}:
             raise ValueError("Interaction sequence requires an existing room hotspot")
-        if sequence.verb not in ("Push", "Pull", "Open", "Close", "TalkTo"):
+        if sequence.verb not in ("Push", "Pull", "Open", "Close", "TalkTo", "LookAt"):
             raise ValueError("Unsupported interaction sequence verb")
         if sequence.verb == "TalkTo":
             hotspot = next(h for h in room.hotspots if h.id == sequence.hotspot_id)

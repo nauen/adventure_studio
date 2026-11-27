@@ -16,6 +16,7 @@ on:
       - feature/r06-native-inventory-conditions
       - feature/r06-native-talk-interaction
       - feature/r06-native-inventory-consume
+      - feature/r06-native-contextual-look
   pull_request:
     types: [ready_for_review, synchronize, opened, reopened]
     paths:
@@ -324,21 +325,21 @@ jobs:
 
   studio:
     needs: changes
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/feature/r06-present-actor-entry-profile' || github.ref == 'refs/heads/feature/product-native-puzzle-workflow' || github.ref == 'refs/heads/feature/r06-native-text-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-conditions' || github.ref == 'refs/heads/feature/r06-native-talk-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-consume')) || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.studio == 'true') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/feature/r06-present-actor-entry-profile' || github.ref == 'refs/heads/feature/product-native-puzzle-workflow' || github.ref == 'refs/heads/feature/r06-native-text-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-conditions' || github.ref == 'refs/heads/feature/r06-native-talk-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-consume' || github.ref == 'refs/heads/feature/r06-native-contextual-look')) || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.studio == 'true') }}
     uses: ./.github/workflows/studio.yml
     permissions:
       contents: read
 
   dialogue:
     needs: changes
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/feature/r06-present-actor-entry-profile' || github.ref == 'refs/heads/feature/product-native-puzzle-workflow' || github.ref == 'refs/heads/feature/r06-native-text-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-conditions' || github.ref == 'refs/heads/feature/r06-native-talk-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-consume')) || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.dialogue == 'true') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/feature/r06-present-actor-entry-profile' || github.ref == 'refs/heads/feature/product-native-puzzle-workflow' || github.ref == 'refs/heads/feature/r06-native-text-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-conditions' || github.ref == 'refs/heads/feature/r06-native-talk-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-consume' || github.ref == 'refs/heads/feature/r06-native-contextual-look')) || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.dialogue == 'true') }}
     uses: ./.github/workflows/dialogue-smoke.yml
     permissions:
       contents: read
 
   inventory:
     needs: changes
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/feature/r06-present-actor-entry-profile' || github.ref == 'refs/heads/feature/product-native-puzzle-workflow' || github.ref == 'refs/heads/feature/r06-native-text-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-conditions' || github.ref == 'refs/heads/feature/r06-native-talk-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-consume')) || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.inventory == 'true') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/feature/r06-present-actor-entry-profile' || github.ref == 'refs/heads/feature/product-native-puzzle-workflow' || github.ref == 'refs/heads/feature/r06-native-text-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-conditions' || github.ref == 'refs/heads/feature/r06-native-talk-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-consume' || github.ref == 'refs/heads/feature/r06-native-contextual-look')) || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.inventory == 'true') }}
     uses: ./.github/workflows/scumm-inventory-paging.yml
     permissions:
       contents: read
@@ -352,7 +353,7 @@ jobs:
 
   language:
     needs: changes
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/feature/r06-present-actor-entry-profile' || github.ref == 'refs/heads/feature/product-native-puzzle-workflow' || github.ref == 'refs/heads/feature/r06-native-text-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-conditions' || github.ref == 'refs/heads/feature/r06-native-talk-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-consume')) || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.language == 'true') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (github.ref == 'refs/heads/feature/r06-present-actor-entry-profile' || github.ref == 'refs/heads/feature/product-native-puzzle-workflow' || github.ref == 'refs/heads/feature/r06-native-text-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-conditions' || github.ref == 'refs/heads/feature/r06-native-talk-interaction' || github.ref == 'refs/heads/feature/r06-native-inventory-consume' || github.ref == 'refs/heads/feature/r06-native-contextual-look')) || ((github.event.action == 'ready_for_review' || github.event.pull_request.draft == false) && needs.changes.outputs.language == 'true') }}
     uses: ./.github/workflows/language-runtime.yml
     permissions:
       contents: read
