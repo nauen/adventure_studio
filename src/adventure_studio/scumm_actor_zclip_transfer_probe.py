@@ -268,8 +268,10 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
             "Actor drehen", ACTOR_IDS[0], None, None, None, direction="E")
         raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
     if animation_speed:
+        # Screenshot sampling is about 9 Hz on CI. Use two intervals whose
+        # native pose transitions remain below its Nyquist limit (16 vs 8).
         raw = append_sequence_step(raw, "Cellar", "R06Action", "Close",
-            "Actor Animationsgeschwindigkeit", ACTOR_IDS[0], None, None, 8)
+            "Actor Animationsgeschwindigkeit", ACTOR_IDS[0], None, None, 16)
         raw = append_sequence_step(raw, "Cellar", "R06Action", "Close",
             "Actor animieren", ACTOR_IDS[0], "gesture", None, None)
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
@@ -277,7 +279,7 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
             "Warten", None, None, None, 12)
         raw = append_sequence_step(raw, "Cellar", "R06Restore", "Close",
-            "Actor Animationsgeschwindigkeit", ACTOR_IDS[0], None, None, 2)
+            "Actor Animationsgeschwindigkeit", ACTOR_IDS[0], None, None, 8)
         raw = set_sequence_skippable(raw, "Cellar|R06Restore|Close", True)
         # Start the same gesture again without setting its interval. This
         # observes the persistent speed committed by Escape independently
