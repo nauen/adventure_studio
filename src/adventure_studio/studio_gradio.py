@@ -988,7 +988,7 @@ def make_app():
                 native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
                 native_sound_add = gr.Button("VOC dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
@@ -1000,6 +1000,8 @@ def make_app():
                                                     choices=["N", "E", "S", "W"], value="S")
             native_subtitle = gr.Textbox(label="Untertitel für gesprochene Zeile (Unicode, maximal 160 Zeichen)",
                                          placeholder="Text, den die Spielfigur spricht")
+            gr.Markdown("**Actor Standanimation:** Wählt eine vollständig richtungsbelegte COST-Animation als native Standanimation aus. Die Pose wird beim nächsten nativen Laufende oder Standwechsel wirksam; die Zuordnung allein startet keine Animation. Standard-Stand oder explizite COST-Gruppe 24–52 (durch 4 teilbar).")
+            gr.Markdown("**Actor Laufanimation:** Bindet eine vollständig richtungsbelegte COST-Animation an die native Laufbewegung. Standard-Lauf oder explizite COST-Gruppe 24–52 (durch 4 teilbar); die Zuordnung allein startet keine Animation und verändert weder Laufziel noch Standpose.")
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten. Beide Aktionen wirken nur auf anwesende Actors, auch nach authoriertem Raumtransfer.")
             gr.Markdown("**Actor-Raumtransfer mit Z-Clipping:** Actor, Zielraum, X/Y und Ziel-Z-Ebene wählen. Transfer am Ende der Sequenz, optional gefolgt von einem Raumwechsel.")
             gr.Markdown("**Actor Z-Clipping:** 1–4 erzwingt eine vorhandene Raum-Z-Maske; 0 stellt die automatische Walkbox-Verdeckung wieder her. -1 stellt das authorierte Z-Clipping-Profil des aktuellen Raums wieder her. Die Aktion wirkt nur auf einen im aktuellen Raum anwesenden Actor, auch nach authoriertem Raumtransfer.")
@@ -2129,7 +2131,7 @@ def make_app():
             document = parse_document(raw)
             if kind == "Actor-Raumtransfer mit Z-Clipping":
                 actors = tuple(a.id for a in document.actors)
-            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor drehen", "Kamera folgt Actor", "Actor versetzen"):
+            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor drehen", "Kamera folgt Actor", "Actor versetzen"):
                 from .scumm_project import TransferActorZClipStep
                 transferred = {step.actor_id for sequence in document.interaction_sequences
                                for step in sequence.steps
@@ -2170,16 +2172,19 @@ def make_app():
         native_state.change(native_camera_fields, [native_state, native_room],
                             [native_camera_ego_x, native_camera_ego_y,
                              native_camera_cues, native_camera_stationary])
-        def native_actor_update(raw, actor):
-            animations = actor_animations(raw, actor) if raw is not None else ()
+        def native_actor_update(raw, actor, kind, selected):
+            animations = actor_animations(raw, actor, kind) if raw is not None else ()
+            initial_choices = actor_animations(raw, actor) if raw is not None else ()
             initial = next((item.initial_animation for item in parse_document(raw).actors
                             if item.id == actor), None) if raw is not None else None
-            return (gr.update(choices=animations, value=animations[0] if animations else None),
-                    gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in animations]],
+            return (gr.update(choices=animations, value=selected if selected in animations else
+                              (animations[0] if animations else None)),
+                    gr.update(choices=[("Keine Startanimation", None), *[(name, name) for name in initial_choices]],
                               value=initial))
 
-        native_actor.change(native_actor_update, [native_state, native_actor],
-                            [native_animation, native_actor_initial])
+        for event in (native_actor.change, native_kind.change):
+            event(native_actor_update, [native_state, native_actor, native_kind, native_animation],
+                  [native_animation, native_actor_initial])
         def native_actor_zclip_update(raw, actor_id):
             actor = next((actor for actor in parse_document(raw).actors if actor.id == actor_id), None) if raw is not None else None
             return (actor.initial_zclip, actor.reset_zclip_on_room_entry) if actor else (0, False)
@@ -2225,7 +2230,7 @@ def make_app():
             sequence_room = identity.split("|", 1)[0] if identity else None
             rooms, objects, actors = project_choices(raw, sequence_room)
             actors = native_action_actor_ids(raw, sequence_room, fields[0])
-            animations = actor_animations(raw, fields[1]) if fields[1] else ()
+            animations = actor_animations(raw, fields[1], fields[0]) if fields[1] else ()
             return (fields[0], gr.update(choices=[("Ego (für gesprochene Zeile)", None),
                                                  *[(item, item) for item in actors]], value=fields[1]),
                     gr.update(choices=animations, value=fields[2]),

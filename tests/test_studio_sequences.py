@@ -357,6 +357,116 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Actor Z-Clipping", ACTOR_IDS[0], None, None, 5)
 
+    def test_actor_stand_animation_roundtrip_and_native_frame_group(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_costume import CostumeDirection
+        from adventure_studio.scumm_project import ActorStandAnimationStep
+        room = scrolling_fixture()
+        costume = gesture_fixture()
+        alternative = replace(costume.animations[-1], name="rest", index=24,
+            directions=tuple(CostumeDirection(d, ("Pose2",)) for d in ("N", "E", "S", "W")))
+        costume = replace(costume, animations=(*costume.animations[:-1], alternative))
+        raw = canonical_json(GameDocument("StandAnimation", (room, destination_fixture()),
+            (costume,), (ActorAsset("Guide", costume.name, "Harbor", 280, 85, "S"),)))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Standanimation", "Guide", "rest", None, None)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Warten", None, None, None, 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Standanimation", "Guide", "stand", None, None)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.interaction_sequences[0].steps[0], ActorStandAnimationStep("Guide", "rest"))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:3],
+                         ("Actor Standanimation", "Guide", "rest"))
+        from adventure_studio.studio_sequences import actor_animations
+        self.assertEqual(actor_animations(raw, "Guide", "Actor Standanimation"), ("stand", "rest"))
+        self.assertEqual(actor_animations(raw, "Guide"), ("rest",))
+        source = inject_interaction_sequences(scummc_room_source(room), "Harbor",
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        normal, override = source.split("} override {", 1)
+        override = override.split("case LookAt:", 1)[0]
+        self.assertIn("setActorStandFrame(24);", normal)
+        self.assertIn("setActorStandFrame(3);", override)
+        self.assertNotIn("setActorStandFrame(24);", override)
+        self.assertNotIn("setActorStandFrame(6);", normal)
+        from adventure_studio.scumm_costume import stand_animation_frame, costume_source
+        self.assertIn("anim rest @ 24", costume_source(costume))
+        self.assertEqual(stand_animation_frame(costume, "rest"), 24)
+        self.assertEqual(stand_animation_frame(costume, "stand"), 3)
+        for address in (28, 52):
+            changed = replace(costume, animations=(*costume.animations[:-1],
+                replace(alternative, index=address)))
+            self.assertEqual(stand_animation_frame(changed, "rest"), address)
+        for address in (12, 25, 56, 60, 64, 252):
+            changed = replace(costume, animations=(*costume.animations[:-1],
+                replace(alternative, index=address)))
+            with self.assertRaises(ValueError):
+                stand_animation_frame(changed, "rest")
+        self.assertNotIn("animateActor(Guide", normal)
+        for invalid in ("walk", "missing"):
+            with self.assertRaises(ValueError):
+                replace_sequence_step(raw, identity, 0, "Actor Standanimation", "Guide", invalid, None, None)
+
+    def test_actor_walk_animation_roundtrip_and_native_frame_group(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_costume import CostumeDirection
+        from adventure_studio.scumm_project import ActorWalkAnimationStep
+        room = scrolling_fixture()
+        costume = gesture_fixture()
+        alternative = replace(costume.animations[-1], name="stride", index=24,
+            directions=tuple(CostumeDirection(d, ("Pose2",)) for d in ("N", "E", "S", "W")))
+        costume = replace(costume, animations=(*costume.animations[:-1], alternative))
+        raw = canonical_json(GameDocument("WalkAnimation", (room, destination_fixture()),
+            (costume,), (ActorAsset("Guide", costume.name, "Harbor", 280, 85, "S"),)))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Laufanimation", "Guide", "stride", None, None)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Warten", None, None, None, 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor Laufanimation", "Guide", "walk", None, None)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.interaction_sequences[0].steps[0], ActorWalkAnimationStep("Guide", "stride"))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:3],
+                         ("Actor Laufanimation", "Guide", "stride"))
+        from adventure_studio.studio_sequences import actor_animations
+        self.assertEqual(actor_animations(raw, "Guide", "Actor Laufanimation"), ("walk", "stride"))
+        self.assertEqual(actor_animations(raw, "Guide"), ("stride",))
+        source = inject_interaction_sequences(scummc_room_source(room), "Harbor",
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        normal, override = source.split("} override {", 1)
+        override = override.split("case LookAt:", 1)[0]
+        self.assertIn("setActorWalkFrame(24);", normal)
+        self.assertIn("setActorWalkFrame(2);", override)
+        self.assertNotIn("setActorWalkFrame(24);", override)
+        self.assertNotIn("setActorWalkFrame(6);", normal)
+        from adventure_studio.scumm_costume import walk_animation_frame, costume_source
+        self.assertIn("anim stride @ 24", costume_source(costume))
+        self.assertEqual(walk_animation_frame(costume, "stride"), 24)
+        self.assertEqual(walk_animation_frame(costume, "walk"), 2)
+        for address in (28, 52):
+            changed = replace(costume, animations=(*costume.animations[:-1],
+                replace(alternative, index=address)))
+            self.assertEqual(walk_animation_frame(changed, "stride"), address)
+        for address in (12, 25, 56, 60, 64, 252):
+            changed = replace(costume, animations=(*costume.animations[:-1],
+                replace(alternative, index=address)))
+            with self.assertRaises(ValueError):
+                walk_animation_frame(changed, "stride")
+        self.assertNotIn("animateActor(Guide", normal)
+        for invalid in ("stand", "missing"):
+            with self.assertRaises(ValueError):
+                replace_sequence_step(raw, identity, 0, "Actor Laufanimation", "Guide", invalid, None, None)
+
     def test_actor_zclip_roundtrip_native_export_and_escape(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import ZPlane, scummc_room_source

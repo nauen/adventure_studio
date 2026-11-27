@@ -1014,6 +1014,34 @@ jobs:
             /tmp/native-voc-effects/screenshots/scummvm-after.png
             /tmp/native-voc-effects/screenshots/scummvm.log
           if-no-files-found: ignore
+      - name: Verify native Actor stand animation binding and Escape
+        if: ${{ matrix.shard == 'actors' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_stand_animation_probe /tmp/scummc-upstream /tmp/native-actor-stand-animation
+      - name: Retain native Actor stand animation evidence
+        if: ${{ always() && matrix.shard == 'actors' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-actor-stand-animation
+          path: /tmp/native-actor-stand-animation
+          if-no-files-found: ignore
+      - name: Verify native Actor walk animation binding and Escape
+        if: ${{ matrix.shard == 'actors' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_actor_walk_animation_probe /tmp/scummc-upstream /tmp/native-actor-walk-animation
+      - name: Retain native Actor walk animation evidence
+        if: ${{ always() && matrix.shard == 'actors' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-actor-walk-animation
+          path: /tmp/native-actor-walk-animation
+          if-no-files-found: ignore
       - name: Play Studio VOC voice line with native subtitle and Escape
         if: ${{ matrix.shard == 'actors' }}
         env:
