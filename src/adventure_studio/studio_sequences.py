@@ -10,7 +10,7 @@ import re
 import tempfile
 import unicodedata
 
-from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
+from .scumm_project import (ActorStandAnimationStep, AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
@@ -23,7 +23,7 @@ from .story_to_scumm import compile_story_to_scumm
 from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render_costume_frame,
                             costume_timeline_images, render_costume_preview,
                             render_costume_frame_sequence_preview)
-from .scumm_costume import CostumeAnimation, CostumeDirection
+from .scumm_costume import CostumeAnimation, CostumeDirection, stand_animation_frame
 from .scumm_assets import CameraCue, ScaleCurve, Walkbox, ZPlane
 
 
@@ -2745,7 +2745,9 @@ def _identity(sequence: InteractionSequence) -> str:
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
+def _describe(step: ActorStandAnimationStep | AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
+    if isinstance(step, ActorStandAnimationStep):
+        return f"Actor {step.actor_id}: Standanimation {step.animation}"
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2794,12 +2796,21 @@ def project_choices(raw: str, room_name: str | None = None) -> tuple[tuple[str, 
     return rooms, objects, actors
 
 
-def actor_animations(raw: str, actor_id: str | None) -> tuple[str, ...]:
+def actor_animations(raw: str, actor_id: str | None, kind: str = "Actor animieren") -> tuple[str, ...]:
     document = parse_document(raw)
     actor = next((actor for actor in document.actors if actor.id == actor_id), None)
     if actor is None:
         return ()
     costume = next(costume for costume in document.costumes if costume.name == actor.costume)
+    if kind == "Actor Standanimation":
+        choices = []
+        for animation in costume.animations:
+            try:
+                stand_animation_frame(costume, animation.name)
+            except ValueError:
+                continue
+            choices.append(animation.name)
+        return tuple(choices)
     return tuple(animation.name for animation in costume.animations
                  if animation.index is not None
                  and actor.direction in {direction.direction for direction in animation.directions})
@@ -2811,6 +2822,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
                 direction: str | None, subtitle: str | None = None):
     if kind == "Actor animieren":
         step = AnimateActorStep(actor_id, animation)
+    elif kind == "Actor Standanimation":
+        step = ActorStandAnimationStep(actor_id, animation)
     elif kind == "Objektzustand setzen":
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Objektzustand muss eine ganze Zahl sein")
@@ -2940,6 +2953,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
     if sequence is None or int(step_number) not in range(len(sequence.steps)):
         return empty
     step = sequence.steps[int(step_number)]
+    if isinstance(step, ActorStandAnimationStep):
+        return ("Actor Standanimation", step.actor_id, step.animation, None, 1, 320, 100, "S")
     if isinstance(step, AnimateActorStep):
         return ("Actor animieren", step.actor_id, step.animation, None, 1, 320, 100, "S")
     if isinstance(step, MoveActorStep):

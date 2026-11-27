@@ -50,6 +50,23 @@ class CostumeAsset:
     palette_last: int = 47
 
 
+def stand_animation_frame(costume: CostumeAsset, name: str) -> int:
+    animation = next((item for item in costume.animations if item.name == name), None)
+    if animation is None or {d.direction for d in animation.directions} != _DIRECTIONS:
+        raise ValueError("Stand animation requires all four COST directions")
+    if name == "stand" and animation.index is None:
+        return 3
+    # ScummC's explicit @ address is the chore group, not a raw directional
+    # slot. The linked COST for @24 contains entries 96..99; ScummVM's
+    # ClassicCostumeLoader selects frame * 4 + direction itself.
+    # Keep the established aligned authoring IDs, reject groups >=56
+    # (native chore redirects, reserved values, or out-of-range COST slots).
+    if (type(animation.index) is not int or animation.index % 4
+            or not 24 <= animation.index <= 52):
+        raise ValueError("Stand animation requires default stand or explicit COST group 24..52 aligned to four")
+    return animation.index
+
+
 def validate_costume(costume: CostumeAsset) -> None:
     if not _IDENTIFIER.fullmatch(costume.name):
         raise ValueError("Invalid native costume name")
