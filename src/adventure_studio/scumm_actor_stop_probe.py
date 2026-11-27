@@ -8,10 +8,10 @@ import time
 
 from .scumm_assets import CameraCue, RoomHotspot, scrolling_fixture, destination_fixture
 from .scumm_costume_probe import gesture_fixture
-from .scumm_launch import colored_item_center, colored_item_pixels
+from PIL import Image
 from .scumm_project import ActorAsset, GameDocument, canonical_json, export_document, parse_document
 from .scumm_toolchain import compile_story_game
-from .studio_sequences import append_sequence_step, set_sequence_skippable
+from .studio_sequences import append_sequence_step, author_room_walkbox, set_sequence_skippable
 
 ACTOR = (242, 38, 117)
 CONTROLS = ((191, 61, 220), (42, 195, 243), (45, 240, 149))
@@ -26,13 +26,14 @@ def run(upstream, destination):
                      for i, (name, x) in enumerate((("StopNormal", 250), ("StopEscape", 290), ("Resume", 330))))
     room = replace(room, palette=(*room.palette, *CONTROLS),
                    hotspots=(*room.hotspots, *controls), demo_walk_to_x=None,
-                   camera_cues=(CameraCue("set", x=320),), ego_start_x=280)
+                   camera_cues=(CameraCue("set", x=320),), ego_start_x=350)
     costume = gesture_fixture()
     palette = list(costume.palette)
     palette[17] = palette[18] = ACTOR
     costume = replace(costume, name="NativeStopCostume", palette=tuple(palette))
     raw = canonical_json(GameDocument("NativeActorStop", (room, destination_fixture()),
                                       (costume,), (ActorAsset("Guide", costume.name, "Harbor", 180, 85, "S"),)))
+    raw = author_room_walkbox(raw, "Harbor", 1, "0,70; 639,70; 639,150; 0,150")
     for trigger, delay in (("StopNormal", 1), ("StopEscape", 12)):
         for kind, amount, x, y in (("Actor versetzen", None, 180, 85),
                                    ("Actor laufen lassen", None, 470, 85),
@@ -57,19 +58,34 @@ def run(upstream, destination):
         subprocess.run(["convert", str(xwd), str(frames / f"scummvm-{label}.png")], check=True, timeout=10)
         xwd.unlink()
 
+    def center(label, color):
+        with Image.open(frames / f"scummvm-{label}.png") as image:
+            scene = image.convert("RGB").crop((192, 184, 832, 472))
+        # Stock ScummVM's displayed RGB is quantized. The failed CI frame
+        # contained (246,36,115), not the authored (242,38,117).
+        points = [(i % scene.width, i // scene.width)
+                  for i, pixel in enumerate(scene.getdata())
+                  if all(abs(a-b) <= 7 for a,b in zip(pixel, color))]
+        if len(points) < 100:
+            return None
+        xs, ys = zip(*points)
+        return (min(xs)+max(xs))/2+192, (min(ys)+max(ys))/2+184
+
     def position(label):
         capture(label)
-        if colored_item_pixels(frames, label, ACTOR) < 100:
-            return None
-        x, _ = colored_item_center(frames, label, ACTOR, fuzz_percent=4)
-        anchor, _ = colored_item_center(frames, label, CONTROLS[0], fuzz_percent=4)
-        return 258 + (x-anchor)/2
+        actor = center(label, ACTOR)
+        anchor = center(label, CONTROLS[0])
+        return None if actor is None or anchor is None else 258+(actor[0]-anchor[0])/2
 
     def click(label, color):
         capture(label)
-        x, y = colored_item_center(frames, label, color, fuzz_percent=4)
-        for px, py in ((234,563),(x,y)):
+        point = center(label, color)
+        if point is None:
+            raise RuntimeError(f"Native interaction target missing: {label}")
+        x, y = point
+        for px, py in ((234,563),(round(x),round(y))):
             subprocess.run(["xdotool","mousemove",str(px),str(py),"click","1"], check=True, timeout=10)
+            time.sleep(.2)
 
     def await_position(label, predicate, timeout=20):
         deadline = time.monotonic()+timeout
