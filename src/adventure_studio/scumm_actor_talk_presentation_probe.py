@@ -38,7 +38,7 @@ def run(upstream, destination):
                   interaction_sequences=tuple(seq for seq in doc.interaction_sequences
                       if (seq.room, seq.hotspot_id, seq.verb) != ("Harbor", "Key", "Close")),
                   sound_assets=(*doc.sound_assets, SoundAsset("TalkVoice", "Harbor",
-                      original_voc_effect(duration_ms=8000))))
+                      original_voc_effect(duration_ms=5000))))
     actor = ACTOR_IDS[0]
     raw = canonical_json(doc)
     for kind, who, target, amount, x, y, subtitle in (
