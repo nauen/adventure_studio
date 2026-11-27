@@ -516,8 +516,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  room_asset=None, sound_assets=(), voice_charset=None,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
-    from .scumm_costume import stand_animation_frame, walk_animation_frame, talk_animation_frame, talk_stop_animation_frame
-    from .scumm_project import (ActorStandAnimationStep, ActorWalkAnimationStep, ActorTalkAnimationStep, AnimateActorStep, ObjectStateStep, DelayStep,
+    from .scumm_costume import stand_animation_frame, walk_animation_frame, talk_animation_frame, talk_stop_animation_frame, init_animation_frame
+    from .scumm_project import (ActorStandAnimationStep, ActorWalkAnimationStep, ActorInitAnimationStep, ActorTalkAnimationStep, AnimateActorStep, ObjectStateStep, DelayStep,
                                 MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
@@ -604,6 +604,15 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.extend((f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({actor.id});\n",
                                      f"                setActorWalkFrame({frame});\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
+            elif isinstance(step, ActorInitAnimationStep):
+                actor = actors_by_id[step.actor_id]
+                frame = init_animation_frame(costumes_by_name[actor.costume], step.animation)
+                instructions.extend((f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({actor.id});\n",
+                                     f"                setActorInitFrame({frame});\n",
+                                     f"                animateActor({actor.id},56);\n",
                                      "                setCurrentActor(VAR_EGO);\n",
                                      "            }\n"))
             elif isinstance(step, ActorTalkAnimationStep):
@@ -720,6 +729,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_directions = {}
         end_stands = {}
         end_walks = {}
+        end_inits = {}
         end_talks = {}
         end_clipping = {}
         final_camera = None
@@ -743,6 +753,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, ActorWalkAnimationStep):
                 actor = actors_by_id[step.actor_id]
                 end_walks[actor.id] = walk_animation_frame(costumes_by_name[actor.costume], step.animation)
+            elif isinstance(step, ActorInitAnimationStep):
+                actor = actors_by_id[step.actor_id]
+                end_inits[actor.id] = init_animation_frame(costumes_by_name[actor.costume], step.animation)
             elif isinstance(step, ActorTalkAnimationStep):
                 actor = actors_by_id[step.actor_id]
                 costume = costumes_by_name[actor.costume]
@@ -806,6 +819,15 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
                        f"                    setCurrentActor({actor});\n"
                        f"                    setActorWalkFrame({frame});\n"
+                       "                    setCurrentActor(VAR_EGO);\n"
+                       "                }\n")
+        for actor, frame in end_inits.items():
+            destination = end_positions.get(actor)
+            target = destination[2] if destination is not None and destination[2] != room_name else "VAR_ROOM"
+            commit += (f"                if (getActorRoom({actor}) == {target}) {{\n"
+                       f"                    setCurrentActor({actor});\n"
+                       f"                    setActorInitFrame({frame});\n"
+                       f"                    animateActor({actor},56);\n"
                        "                    setCurrentActor(VAR_EGO);\n"
                        "                }\n")
         for actor, (frame, stop) in end_talks.items():

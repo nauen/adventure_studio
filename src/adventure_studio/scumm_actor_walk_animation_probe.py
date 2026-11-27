@@ -6,7 +6,7 @@ import subprocess
 import sys
 import time
 
-from PIL import Image
+from PIL import Image, ImageChops
 
 from .scumm_assets import CameraCue, RoomHotspot, scrolling_fixture, destination_fixture
 from .scumm_costume import CostumeAnimation, CostumeDirection
@@ -19,6 +19,12 @@ COLORS = ((242, 38, 117), (44, 240, 149), (215, 140, 27))
 MARKERS = ((191, 61, 220), (42, 195, 243), (45, 130, 210))
 
 
+def color_mask(image, rgb):
+    bands = [band.point([255 if abs(value-target) <= 7 else 0 for value in range(256)])
+             for band, target in zip(image.split(), rgb)]
+    return ImageChops.multiply(ImageChops.multiply(bands[0], bands[1]), bands[2])
+
+
 def measure_pose(lane):
     """Find one dense native Costume block; ignore sparse same-palette Ego pixels.
 
@@ -26,9 +32,10 @@ def measure_pose(lane):
     pose verdict. Multiple dense blocks are ambiguous and fail closed.
     """
     columns = [[0] * lane.width for _ in COLORS]
-    for i, pixel in enumerate(lane.getdata()):
-        for pose, rgb in enumerate(COLORS):
-            if all(abs(a-b) <= 7 for a,b in zip(pixel,rgb)):
+    for pose, rgb in enumerate(COLORS):
+        mask = color_mask(lane, rgb)
+        for i, value in enumerate(mask.getdata()):
+            if value:
                 columns[pose][i % lane.width] += 1
     density = [sum(values) for values in zip(*columns)]
     blocks = []
@@ -107,8 +114,8 @@ def run(upstream, destination):
             return im.convert("RGB").crop((192, 184, 832, 472))
 
     def points(image, rgb):
-        return [(i % image.width, i // image.width) for i,pixel in enumerate(image.getdata())
-                if all(abs(a-b) <= 7 for a,b in zip(pixel,rgb))]
+        mask = color_mask(image, rgb)
+        return [(i % image.width, i // image.width) for i,value in enumerate(mask.getdata()) if value]
 
     def center(pixels):
         if len(pixels)<100:
