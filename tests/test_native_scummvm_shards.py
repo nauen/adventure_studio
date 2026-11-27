@@ -23,8 +23,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
         matches = list(STEP.finditer(contents))
         # Counts include real gameplay and evidence-retention steps. New native
         # capabilities change the matrix length; preserve the per-shard gates.
-        self.assertEqual(len(matches), 172)
-        expected_counts = {"actors": 26, "mask": 2, "geometry": 86, "story": 48}
+        self.assertEqual(len(matches), 174)
+        expected_counts = {"actors": 26, "mask": 2, "geometry": 88, "story": 48}
         observed_counts = {shard: 0 for shard in SHARDS}
         shared = {
             "Restore previously downloaded Ubuntu packages",
@@ -49,6 +49,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
             "Retain native transferred Actor position evidence": "geometry",
             "Verify native transferred Actor camera follow and return": "geometry",
             "Retain native transferred Actor camera evidence": "geometry",
+            "Verify native 256-color room bitmap palette in stock ScummVM": "geometry",
+            "Retain native 256-color room palette evidence": "geometry",
             "Verify native transferred Actor facing in destination room": "geometry",
             "Retain native transferred Actor facing evidence": "geometry",
             "Verify native transferred Actor action animation in destination room": "geometry",
@@ -116,9 +118,33 @@ class NativeScummVMShardingTests(unittest.TestCase):
         self.assertEqual(observed_counts, expected_counts)
         self.assertTrue(set(required).issubset(seen))
 
-    def test_active_facing_gate_runs_before_legacy_geometry(self):
+    def test_active_palette_gate_runs_before_legacy_geometry(self):
         contents = WORKFLOW.read_text(encoding="utf-8")
         names = [match.group(1) for match in STEP.finditer(contents)]
+        self.assertEqual(names.index("Verify native 256-color room bitmap palette in stock ScummVM"),
+                         names.index("Link generated room with upstream game bootstrap") + 1)
+        self.assertEqual(names.index("Retain native 256-color room palette evidence"),
+                         names.index("Verify native 256-color room bitmap palette in stock ScummVM") + 1)
+        self.assertEqual(names.index("Verify native transferred Actor scale and Escape"),
+                         names.index("Retain native 256-color room palette evidence") + 1)
+        self.assertEqual(names.index("Retain native transferred Actor scale evidence"),
+                         names.index("Verify native transferred Actor scale and Escape") + 1)
+        self.assertEqual(names.index("Verify native transferred Actor elevation and Escape"),
+                         names.index("Retain native transferred Actor scale evidence") + 1)
+        self.assertEqual(names.index("Retain native transferred Actor elevation evidence"),
+                         names.index("Verify native transferred Actor elevation and Escape") + 1)
+        self.assertEqual(names.index("Verify native transferred Actor VOC playback and Escape"),
+                         names.index("Retain native transferred Actor elevation evidence") + 1)
+        self.assertEqual(names.index("Retain native transferred Actor voice evidence"),
+                         names.index("Verify native transferred Actor VOC playback and Escape") + 1)
+        self.assertEqual(names.index("Verify native transferred Actor positioning in destination room"),
+                         names.index("Retain native transferred Actor voice evidence") + 1)
+        self.assertEqual(names.index("Retain native transferred Actor position evidence"),
+                         names.index("Verify native transferred Actor positioning in destination room") + 1)
+        self.assertEqual(names.index("Verify native transferred Actor camera follow and return"),
+                         names.index("Retain native transferred Actor position evidence") + 1)
+        self.assertEqual(names.index("Retain native transferred Actor camera evidence"),
+                         names.index("Verify native transferred Actor camera follow and return") + 1)
         self.assertEqual(names.index("Verify native transferred Actor facing in destination room"),
                          names.index("Retain native transferred Actor camera evidence") + 1)
         self.assertEqual(names.index("Retain native transferred Actor facing evidence"),
