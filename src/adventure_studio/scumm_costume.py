@@ -50,6 +50,17 @@ class CostumeAsset:
     palette_last: int = 47
 
 
+def stand_animation_frame(costume: CostumeAsset, name: str) -> int:
+    animation = next((item for item in costume.animations if item.name == name), None)
+    if animation is None or {d.direction for d in animation.directions} != _DIRECTIONS:
+        raise ValueError("Stand animation requires all four COST directions")
+    if name == "stand" and animation.index in (None, 12):
+        return 3
+    if animation.index is None or animation.index < 24:
+        raise ValueError("Stand animation requires default stand or explicit COST index >=24")
+    return animation.index // 4
+
+
 def validate_costume(costume: CostumeAsset) -> None:
     if not _IDENTIFIER.fullmatch(costume.name):
         raise ValueError("Invalid native costume name")

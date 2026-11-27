@@ -10,7 +10,7 @@ import re
 import tempfile
 import unicodedata
 
-from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
+from .scumm_project import (ActorStandAnimationStep, AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
@@ -2745,7 +2745,9 @@ def _identity(sequence: InteractionSequence) -> str:
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
+def _describe(step: ActorStandAnimationStep | AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
+    if isinstance(step, ActorStandAnimationStep):
+        return f"Actor {step.actor_id}: Standanimation {step.animation}"
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2811,6 +2813,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
                 direction: str | None, subtitle: str | None = None):
     if kind == "Actor animieren":
         step = AnimateActorStep(actor_id, animation)
+    elif kind == "Actor Standanimation":
+        step = ActorStandAnimationStep(actor_id, animation)
     elif kind == "Objektzustand setzen":
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Objektzustand muss eine ganze Zahl sein")
@@ -2940,6 +2944,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
     if sequence is None or int(step_number) not in range(len(sequence.steps)):
         return empty
     step = sequence.steps[int(step_number)]
+    if isinstance(step, ActorStandAnimationStep):
+        return ("Actor Standanimation", step.actor_id, step.animation, None, 1, 320, 100, "S")
     if isinstance(step, AnimateActorStep):
         return ("Actor animieren", step.actor_id, step.animation, None, 1, 320, 100, "S")
     if isinstance(step, MoveActorStep):
