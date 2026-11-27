@@ -26,6 +26,7 @@ ESCAPE_RGB = (190, 85, 155)
 ACTION_RGB = (95, 225, 135)
 NORTH_RGB = (95, 155, 225)
 SOUTH_RGB = (225, 95, 135)
+SPEED_ACTOR_RGB = (245, 35, 145)
 
 
 def author_transfer_project(root, variant, profiles=False, entry_restore=False, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False, elevation=False, scale=False, costume_change=False, walk_speed=False, animation_speed=False):
@@ -93,6 +94,12 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
         rooms.append(room)
     rooms = tuple(rooms)
     costume = replace(doc.costumes[-1], name=name)
+    if walk_speed:
+        # Distinguish authored Costume pixels from the upstream black Ego.
+        # Keep the other nontransparent index black for transfer controls.
+        palette = list(costume.palette)
+        palette[costume.palette_first + 2] = SPEED_ACTOR_RGB
+        costume = replace(costume, palette=tuple(palette))
     if animation or animation_speed:
         # Native gesture frames have distinct silhouettes; standing/walking
         # resources stay unchanged. A persistent final pose is observable.
@@ -383,8 +390,8 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
                     capture(label)
                     with Image.open(output / f"scummvm-{label}.png") as img:
                         rgb = img.convert("RGB")
-                        columns = [(x, sum(max(rgb.getpixel((x,y))) <= 24
-                                           for y in range(312,343))) for x in range(432,673)]
+                        columns = [(x, sum(all(abs(a-b) <= 4 for a,b in zip(rgb.getpixel((x,y)), SPEED_ACTOR_RGB))
+                                           for y in range(296,363))) for x in range(432,673)]
                     pixels = sum(n for _,n in columns)
                     pos = (sum(x*n for x,n in columns)/pixels - 192)/2 if pixels >= 100 else None
                     rows.append({"frame": label, "seconds": time.monotonic()-started, "world_x": pos})
@@ -955,7 +962,11 @@ def verify_transfer(report, variant, dynamic=False, restore_profile=False, walk=
             middle = [r for r in observed if 150 < r["world_x"] < 210]
             if not middle:
                 raise RuntimeError(f"Native walk speed intermediate motion missing: {phase}")
-            durations.append(next(r["seconds"] for r in observed if abs(r["world_x"]-target) <= 9))
+            departure = next((i for i,r in enumerate(observed) if abs(r["world_x"]-start) > 9), None)
+            if departure is None or not any(abs(r["world_x"]-start) <= 9 for r in observed[:departure]):
+                raise RuntimeError(f"Native walk speed start not observed: {phase}")
+            arrival = next(r["seconds"] for r in observed[departure:] if abs(r["world_x"]-target) <= 9)
+            durations.append(arrival - observed[departure-1]["seconds"])
         if durations[0] <= durations[1]*1.5 or report["escape_elapsed"] >= 10:
             raise RuntimeError(f"Native walk speed or bounded Escape not demonstrated: {durations}")
     if costume_change:
