@@ -988,7 +988,7 @@ def make_app():
                 native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
                 native_sound_add = gr.Button("VOC dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor Sprechanimation", "Actor Sprechende", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor Initialanimation", "Actor Sprechanimation", "Actor Sprechende", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
@@ -1002,6 +1002,7 @@ def make_app():
                                          placeholder="Text, den die Spielfigur spricht")
             gr.Markdown("**Actor Standanimation:** Wählt eine vollständig richtungsbelegte COST-Animation als native Standanimation aus. Die Pose wird beim nächsten nativen Laufende oder Standwechsel wirksam; die Zuordnung allein startet keine Animation. Standard-Stand oder explizite COST-Gruppe 24–52 (durch 4 teilbar).")
             gr.Markdown("**Actor Laufanimation:** Bindet eine vollständig richtungsbelegte COST-Animation an die native Laufbewegung. Standard-Lauf oder explizite COST-Gruppe 24–52 (durch 4 teilbar); die Zuordnung allein startet keine Animation und verändert weder Laufziel noch Standpose.")
+            gr.Markdown("**Actor Initialanimation:** Wählt eine vierfach richtungsbelegte COST-Initialanimation und initialisiert die native Costume-Pose sofort erneut (Standard init oder explizite Gruppe 24–52).")
             gr.Markdown("**Actor Sprechanimation:** Bindet eine vierfach richtungsbelegte COST-Animation an den nächsten nativen Sprechbeginn. Standard talkStart oder explizite Gruppe 24–52; ein vierfach richtungsbelegtes natives talkStop ohne expliziten Index ist erforderlich und bleibt die Rückkehrpose. Die Zuordnung startet keine Sprachzeile.")
             gr.Markdown("**Actor Sprechende:** Wähle die Sprechbeginn-Animation und im Zielfeld die unabhängige Sprechendanimation. Beide nativen Gruppen werden gemeinsam gesetzt; die Aktion startet keine Sprachzeile.")
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten. Beide Aktionen wirken nur auf anwesende Actors, auch nach authoriertem Raumtransfer.")
@@ -2133,7 +2134,7 @@ def make_app():
             document = parse_document(raw)
             if kind == "Actor-Raumtransfer mit Z-Clipping":
                 actors = tuple(a.id for a in document.actors)
-            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor Sprechanimation", "Actor Sprechende", "Actor drehen", "Kamera folgt Actor", "Actor versetzen"):
+            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor Standanimation", "Actor Laufanimation", "Actor Initialanimation", "Actor Sprechanimation", "Actor Sprechende", "Actor drehen", "Kamera folgt Actor", "Actor versetzen"):
                 from .scumm_project import TransferActorZClipStep
                 transferred = {step.actor_id for sequence in document.interaction_sequences
                                for step in sequence.steps

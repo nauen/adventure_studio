@@ -10,7 +10,7 @@ import re
 import tempfile
 import unicodedata
 
-from .scumm_project import (ActorStandAnimationStep, ActorWalkAnimationStep, ActorTalkAnimationStep, AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
+from .scumm_project import (ActorStandAnimationStep, ActorWalkAnimationStep, ActorInitAnimationStep, ActorTalkAnimationStep, AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
@@ -23,7 +23,7 @@ from .story_to_scumm import compile_story_to_scumm
 from .studio_actors import (add_costume_frame, set_costume_speaking_pose, render_costume_frame,
                             costume_timeline_images, render_costume_preview,
                             render_costume_frame_sequence_preview)
-from .scumm_costume import CostumeAnimation, CostumeDirection, stand_animation_frame, walk_animation_frame, talk_animation_frame, talk_stop_animation_frame
+from .scumm_costume import CostumeAnimation, CostumeDirection, stand_animation_frame, walk_animation_frame, talk_animation_frame, talk_stop_animation_frame, init_animation_frame
 from .scumm_assets import CameraCue, ScaleCurve, Walkbox, ZPlane
 
 
@@ -2745,11 +2745,13 @@ def _identity(sequence: InteractionSequence) -> str:
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: ActorStandAnimationStep | ActorWalkAnimationStep | ActorTalkAnimationStep | AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
+def _describe(step: ActorStandAnimationStep | ActorWalkAnimationStep | ActorInitAnimationStep | ActorTalkAnimationStep | AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
     if isinstance(step, ActorStandAnimationStep):
         return f"Actor {step.actor_id}: Standanimation {step.animation}"
     if isinstance(step, ActorWalkAnimationStep):
         return f"Actor {step.actor_id}: Laufanimation {step.animation}"
+    if isinstance(step, ActorInitAnimationStep):
+        return f"Actor {step.actor_id}: Initialanimation {step.animation}"
     if isinstance(step, ActorTalkAnimationStep):
         return (f"Actor {step.actor_id}: Sprechanimation {step.animation}"
                 + (f" → {step.stop_animation}" if step.stop_animation is not None else ""))
@@ -2825,6 +2827,15 @@ def actor_animations(raw: str, actor_id: str | None, kind: str = "Actor animiere
                 continue
             choices.append(animation.name)
         return tuple(choices)
+    if kind == "Actor Initialanimation":
+        choices = []
+        for animation in costume.animations:
+            try:
+                init_animation_frame(costume, animation.name)
+            except ValueError:
+                continue
+            choices.append(animation.name)
+        return tuple(choices)
     if kind in ("Actor Sprechanimation", "Actor Sprechende"):
         choices = []
         for animation in costume.animations:
@@ -2858,6 +2869,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         step = ActorStandAnimationStep(actor_id, animation)
     elif kind == "Actor Laufanimation":
         step = ActorWalkAnimationStep(actor_id, animation)
+    elif kind == "Actor Initialanimation":
+        step = ActorInitAnimationStep(actor_id, animation)
     elif kind == "Actor Sprechanimation":
         step = ActorTalkAnimationStep(actor_id, animation)
     elif kind == "Actor Sprechende":
@@ -2997,6 +3010,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Actor Standanimation", step.actor_id, step.animation, None, 1, 320, 100, "S")
     if isinstance(step, ActorWalkAnimationStep):
         return ("Actor Laufanimation", step.actor_id, step.animation, None, 1, 320, 100, "S")
+    if isinstance(step, ActorInitAnimationStep):
+        return ("Actor Initialanimation", step.actor_id, step.animation, None, 1, 320, 100, "S")
     if isinstance(step, ActorTalkAnimationStep):
         return ("Actor Sprechende" if step.stop_animation is not None else "Actor Sprechanimation",
                 step.actor_id, step.animation, step.stop_animation, 1, 320, 100, "S")
