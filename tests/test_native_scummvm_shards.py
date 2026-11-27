@@ -119,8 +119,12 @@ class NativeScummVMShardingTests(unittest.TestCase):
                          names.index("Link generated room with upstream game bootstrap") + 1)
         self.assertEqual(names.index("Retain native 256-color room palette evidence"),
                          names.index("Verify native 256-color room bitmap palette in stock ScummVM") + 1)
-        self.assertEqual(names.index("Verify native transferred Actor camera follow and return"),
+        self.assertEqual(names.index("Verify native transferred Actor positioning in destination room"),
                          names.index("Retain native 256-color room palette evidence") + 1)
+        self.assertEqual(names.index("Retain native transferred Actor position evidence"),
+                         names.index("Verify native transferred Actor positioning in destination room") + 1)
+        self.assertEqual(names.index("Verify native transferred Actor camera follow and return"),
+                         names.index("Retain native transferred Actor position evidence") + 1)
         self.assertEqual(names.index("Retain native transferred Actor camera evidence"),
                          names.index("Verify native transferred Actor camera follow and return") + 1)
         self.assertEqual(names.index("Verify native transferred Actor facing in destination room"),
