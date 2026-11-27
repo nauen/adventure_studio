@@ -17,6 +17,33 @@ ACTOR = (242, 38, 117)
 CONTROLS = ((191, 61, 220), (42, 195, 243), (45, 240, 149))
 
 
+def costume_block_center(scene, color):
+    """Locate the dense rectangular probe costume, excluding sparse Ego pixels.
+
+    The linked game may reuse a COST palette slot for Ego. A bounding box
+    around every matching pixel would then measure both actors as one.
+    Ambiguous dense blocks are rejected rather than guessing a position.
+    """
+    counts = [0] * scene.width
+    for i, pixel in enumerate(scene.getdata()):
+        if all(abs(a-b) <= 7 for a, b in zip(pixel, color)):
+            counts[i % scene.width] += 1
+    blocks = []
+    start = None
+    for x, count in enumerate((*counts, 0)):
+        if count >= 24:
+            if start is None:
+                start = x
+        elif start is not None:
+            if x-start >= 8 and sum(counts[start:x]) >= 100:
+                blocks.append((start, x-1))
+            start = None
+    if len(blocks) != 1:
+        return None
+    left, right = blocks[0]
+    return (left+right)/2
+
+
 def run(upstream, destination):
     build = destination / "build"
     room = scrolling_fixture()
@@ -62,6 +89,9 @@ def run(upstream, destination):
         with Image.open(frames / f"scummvm-{label}.png") as image:
             top, bottom = (280, 365) if actor_lane else (184, 472)
             scene = image.convert("RGB").crop((192, top, 832, bottom))
+        if actor_lane:
+            x = costume_block_center(scene, color)
+            return None if x is None else (x+192, (top+bottom)/2)
         # Stock ScummVM's displayed RGB is quantized. The failed CI frame
         # contained (246,36,115), not the authored (242,38,117).
         points = [(i % scene.width, i // scene.width)
