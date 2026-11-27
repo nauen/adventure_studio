@@ -145,6 +145,12 @@ class WaitActorStep:
 
 
 @dataclass(frozen=True)
+class ActorWalkboxModeStep:
+    actor_id: str
+    follow: bool
+
+
+@dataclass(frozen=True)
 class ActorZClipStep:
     actor_id: str
     plane: int  # -1 restores the authored room profile; 0 restores native walkbox clipping
@@ -237,7 +243,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorWalkboxModeStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -363,6 +369,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, WaitCameraStep)
                                                    else {"type": "wait_actor", **vars(step)}
                                                    if isinstance(step, WaitActorStep)
+                                                   else {"type": "actor_walkbox_mode", **vars(step)}
+                                                   if isinstance(step, ActorWalkboxModeStep)
                                                    else {"type": "actor_zclip", **vars(step)}
                                                    if isinstance(step, ActorZClipStep)
                                                    else {"type": "face_actor", **vars(step)}
@@ -975,6 +983,12 @@ def _validate_document(document: GameDocument) -> None:
                 if actor is None or (actor.room != room.name and
                                      (actor.id, room.name) not in transfer_destinations):
                     raise ValueError("Interaction wait requires an Actor in the sequence room")
+            elif isinstance(step, ActorWalkboxModeStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if (actor is None or (actor.room != room.name and
+                        (actor.id, room.name) not in transfer_destinations)
+                        or type(step.follow) is not bool):
+                    raise ValueError("Actor walkbox mode needs a room Actor and boolean follow flag")
             elif isinstance(step, ActorZClipStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or (actor.room != room.name and
@@ -1153,6 +1167,10 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "wait_actor":
                 step = _only(raw_step, {"type", "actor_id"}, {"type", "actor_id"})
                 steps.append(WaitActorStep(step["actor_id"]))
+            elif kind == "actor_walkbox_mode":
+                step = _only(raw_step, {"type", "actor_id", "follow"},
+                             {"type", "actor_id", "follow"})
+                steps.append(ActorWalkboxModeStep(step["actor_id"], step["follow"]))
             elif kind == "actor_zclip":
                 step = _only(raw_step, {"type", "actor_id", "plane"}, {"type", "actor_id", "plane"})
                 steps.append(ActorZClipStep(step["actor_id"], step["plane"]))

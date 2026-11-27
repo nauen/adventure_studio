@@ -357,6 +357,43 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Actor Z-Clipping", ACTOR_IDS[0], None, None, 5)
 
+    def test_actor_walkbox_mode_roundtrip_and_escape_clipping_order(self):
+        from dataclasses import replace
+        from adventure_studio.scumm_assets import ZPlane, scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import ActorWalkboxModeStep
+        room = scrolling_fixture()
+        room = replace(room, zplanes=(ZPlane(1, bytes(room.geometry.room_width * room.geometry.room_height)),))
+        costume = gesture_fixture()
+        raw = canonical_json(GameDocument("WalkboxMode", (room, destination_fixture()),
+            (costume,), (ActorAsset("Guide", costume.name, "Harbor", 280, 85, "S"),)))
+        identity = "Harbor|Key|Close"
+        for kind, amount in (("Actor ignoriert Walkboxen", None), ("Actor Z-Clipping", 1),
+                             ("Warten", 2), ("Actor folgt Walkboxen", None)):
+            raw = append_sequence_step(raw, "Harbor", "Key", "Close", kind,
+                                       None if kind == "Warten" else "Guide", None, None, amount)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.interaction_sequences[0].steps[-1], ActorWalkboxModeStep("Guide", True))
+        self.assertEqual(sequence_step_fields(raw, identity, 0)[:2],
+                         ("Actor ignoriert Walkboxen", "Guide"))
+        def export(data):
+            parsed = parse_document(data)
+            return inject_interaction_sequences(scummc_room_source(room), "Harbor",
+                parsed.interaction_sequences, parsed.actors, parsed.costumes, room)
+        normal, override = export(raw).split("} override {", 1)
+        override = override.split("case LookAt:", 1)[0]
+        self.assertIn("setActorIgnoreBoxes();", normal)
+        self.assertIn("setActorFollowBoxes();", override)
+        self.assertNotIn("setActorZClip(1);", override)
+        restored = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                       "Actor Z-Clipping", "Guide", None, None, 1)
+        override = export(restored).split("} override {", 1)[1].split("case LookAt:", 1)[0]
+        self.assertLess(override.index("setActorFollowBoxes();"), override.index("setActorZClip(1);"))
+        with self.assertRaises(ValueError):
+            replace_sequence_step(raw, identity, 0, "Actor ignoriert Walkboxen", "Missing", None, None, None)
+
     def test_actor_zclip_roundtrip_native_export_and_escape(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import ZPlane, scummc_room_source
