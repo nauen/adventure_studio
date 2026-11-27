@@ -1,10 +1,10 @@
 # Adventure Studio – aktive Produktroadmap
 
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
-- **Jetzt:** #359 – native Standanimations-Zuordnung (R06/A05).
-- **Abnahme:** Alternative Standpose nach nativer Ankunft und Rückkehr zur Originalpose nach Escape und erneutem Lauf in stock ScummVM.
-- **Blocker:** [Originalartefakt 15201780522](https://github.com/nauen/adventure_studio/actions/runs/46004531320/artifacts/15201780522) auf 2f5075e zeigt nach Ankunft weiterhin Walking (0/0/1536). Binär-COST: rest @24 belegt 96–99; bisher setActorStandFrame(6) adressiert leere 24–27. [Produktfix f20015f](https://github.com/nauen/adventure_studio/commit/f20015fe4f89fd83ca4fdc9123aec95c20b992d1) emittiert Gruppe 24 direkt, Default 3, fail-closed auf explizite ausgerichtete Gruppen 24..52; UI/Tests angepasst. [Core](https://github.com/nauen/adventure_studio/actions/runs/46007784438), [Native](https://github.com/nauen/adventure_studio/actions/runs/46007792927) gestartet, neue Gameplay-Abnahme offen. Alter Inventory-Job scheiterte vor Spielstart an HTTP403 des Microsoft-APT-Repos.
-- **Danach:** #348 native IM03-Objektbildfolge mit Z-Masken. #355/#350/#353/#352/#357 Gameplay belegt, Gesamtgates offen; [PROJECT_STATUS](PROJECT_STATUS.md).
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Jetzt:** #365 – native IM03/ZP03-Verdeckung (R07/R06-Anschluss).
+- **Abnahme:** Native Pixelmessung maskiert/transparent/falscher BOXD bei unabhängigen ZP01/ZP02.
+- **Blocker:** Drei unabhängig verlinkte stock-ScummVM-Spiele mit transparenten IM03/ZP01–02: ZP03 maskiert/transparent/falscher BOXD-Index (3/3/2). [Core](https://github.com/nauen/adventure_studio/actions/runs/46010994504), [Native](https://github.com/nauen/adventure_studio/actions/runs/46011006493) gestartet; Gameplay offen. #348/#363/#364 sind Integrationsvoraussetzungen.
+- **Danach:** IM03/ZP04. #352 Geometry-Fix 3850258 offen; #363/#364 Gameplay belegt, Integration offen; [PROJECT_STATUS](PROJECT_STATUS.md).
 
 Nach Gameplay-Nachweis sofort ein Folgepaket aufnehmen; Merge-Pflichtgates unverändert.
 

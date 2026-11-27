@@ -1,3 +1,56 @@
+## Verbindlicher Stand – 27.11.2026 (nach IM03/ZP02-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Offene Integration:** #355/#350/#353/#357/#359/#348 Gameplay belegt; Gesamtgates noch offen. Details im vorherigen Stand.
+- **Offene Integration R06:** #352 Laufstopp-Gameplay weiter belegt auf 18ae36b, aber [Geometry-Regression](https://github.com/nauen/adventure_studio/actions/runs/46005212823/job/140528252435) rot. [Originalartefakt 15204131608](https://github.com/nauen/adventure_studio/actions/runs/46005212823/artifacts/15204131608) pixelweise gemessen: A zuerst fünf Schritte bei stehendem B; B danach +36/+48/+10 Pixel, letzter Schritt ohne sichtbaren A. [Fix 3850258](https://github.com/nauen/adventure_studio/commit/385025825e664208c2c9915ab3ae43ec8a48ff80) übernimmt unabhängige B-Spur nach belegtem A-Abgang und Regressionstest; Grenzwerte unverändert. Neue Pflichtgates offen.
+- **Offene Integration R07:** #364 IM03/ZP02: [Originalartefakt 15202748097](https://github.com/nauen/adventure_studio/actions/runs/46010424538/artifacts/15202748097) auf 3a35826: 108 maskierte Actor-Pixel, 1388 transparent, 1388 falscher BOXD-Index; native_im03_zp02_verified=true. #363 ZP01 gleiche Messwerte im [Originalartefakt 15203511690](https://github.com/nauen/adventure_studio/actions/runs/46009898994/artifacts/15203511690). Produktpfade unverändert; auf d325713 bzw. 5564a25 wurde der alte Core-Test auf Ablehnung fehlender IM03-Daten und nicht unterstützter IM04 korrigiert. Neue Pflichtgates offen.
+- **Jetzt – genau eine Fähigkeit:** [#365](https://github.com/nauen/adventure_studio/pull/365) native IM03/ZP03 auf #364 (5564a25), [Commit 5f31e84](https://github.com/nauen/adventure_studio/commit/5f31e843758408003365b497a399a1a47e60ca8e). PNG/Studio/JSON-v1/Story/ScummC/BMP; ZP01 und ZP02 erforderlich, ZP04+ fail-closed.
+- **Abnahme:** drei echte native Kontrollspiele; beide Gegenproben mindestens 100 Actor-Pixel, verdeckt höchstens ein Drittel der kleineren Gegenprobe. ZP01/ZP02-Gates unverändert.
+- **Blocker:** Drei unabhängig verlinkte stock-ScummVM-Spiele mit transparenten IM03/ZP01–02: ZP03 maskiert/transparent/falscher BOXD-Index (3/3/2). [Core](https://github.com/nauen/adventure_studio/actions/runs/46010994504), [Native](https://github.com/nauen/adventure_studio/actions/runs/46011006493) gestartet; Gameplay offen. #348/#363/#364 sind Integrationsvoraussetzungen.
+- **Danach:** IM03/ZP04 nach bewiesenem ZP03.
+- **Arbeitsregel:** Nach Gameplay unmittelbar ein nächstes natives Paket; offene Gesamtgates separat. Merge nur bei vollständig grünen Pflichtgates; kein pauschales V.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
+## Verbindlicher Stand – 27.11.2026 (nach IM03/ZP01-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Offene Integration:** #355/#350/#353/#352/#357/#359/#348 Gameplay belegt; Gesamtgates noch offen. Details im vorherigen Stand.
+- **Offene Integration:** #363 IM03/ZP01: [Originalartefakt 15203511690](https://github.com/nauen/adventure_studio/actions/runs/46009898994/artifacts/15203511690) auf 3029936: 108 maskierte Actor-Pixel, 1388 transparent, 1388 falscher BOXD-Index; native_im03_zp01_verified=true. Core/Gesamtgate noch offen.
+- **Jetzt – genau eine Fähigkeit:** [#364](https://github.com/nauen/adventure_studio/pull/364) native IM03/ZP02 auf gameplay-verifiziertem #363-Head, [Commit 3a35826](https://github.com/nauen/adventure_studio/commit/3a35826d107e09db14f607a641c187e82d089a8d). PNG/Studio/JSON-v1/Story/ScummC/BMP, unabhängige zweite Maske nur nach ZP01, ZP03+ fail-closed.
+- **Abnahme:** tatsächliche Actor-Pixel in drei unabhängigen ScummVM-Kontrollspielen; beide Gegenproben mindestens 100 Pixel, verdeckt höchstens ein Drittel der kleineren Gegenprobe. Vorhandene ZP01-Prüfung unverändert.
+- **Blocker:** Drei unabhängig verlinkte stock-ScummVM-Spiele mit transparenter IM03/ZP01 und sonst unveränderten Masken: ZP02 maskiert/transparent/falscher BOXD-Index. [Core](https://github.com/nauen/adventure_studio/actions/runs/46010415448) und [Native](https://github.com/nauen/adventure_studio/actions/runs/46010424538); Gameplay noch offen. #348/#363 sind Integrationsvoraussetzungen.
+- **Danach:** IM03/ZP03 nach bewiesenem ZP02.
+- **Arbeitsregel:** Nach nachgewiesenem Gameplay unmittelbar ein natives Folgepaket; Gesamtgates separat führen. Merge nur bei vollständigen Pflichtgates; kein pauschales V.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
+## Verbindlicher Stand – 27.11.2026 (nach IM03-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
+- **Offene Integration:** #355/#350/#353/#352/#357/#359 Gameplay belegt, Gesamtgates offen. Einzelbelege siehe vorherigen Stand.
+- **Offene Integration:** #348 [Originalreport 15203400969](https://github.com/nauen/adventure_studio/actions/runs/46009390308/artifacts/15203400969), Head a646231: IM01/IM02/IM03/IM01 mit 4096/0/0, 0/4096/0, 0/0/4096, 4096/0/0 echten Farb-Pixeln und realen Hotspot-Klicks; native_im03_verified=true. [Core](https://github.com/nauen/adventure_studio/actions/runs/46009384602) grün, [Gesamtgate](https://github.com/nauen/adventure_studio/actions/runs/46009390308) offen.
+- **Jetzt – genau eine Fähigkeit:** [#363](https://github.com/nauen/adventure_studio/pull/363) IM03/ZP01 auf dem gameplay-verifizierten #348-Head aufgebaut (Commit [3029936](https://github.com/nauen/adventure_studio/commit/3029936efa4b30a82d99f9ef5791374544045f00)), eigenständiger PNG-Import/JSON-v1/Story-Erhalt/Studio-Auswahl/ScummC-BMP-Writer. IM03/ZP02+ fail-closed.
+- **Abnahme:** Drei unabhängige native Spiele, sichtbare Actor-Pixel transparent und falsche BOXD-Zuweisung jeweils mindestens 100; verdeckt höchstens ein Drittel der kleineren Gegenprobe. Vollständige Pflichtgates.
+- **Blocker:** Neue native Abnahme noch offen: drei getrennt verlinkte stock-ScummVM-Spiele (weiße IM03-Maske, transparente IM03-Maske, falscher BOXD-Index). IM01/IM02 und Raum-Masken unverändert bzw. im Probe transparent. [Core](https://github.com/nauen/adventure_studio/actions/runs/46009888778) und [Native](https://github.com/nauen/adventure_studio/actions/runs/46009898994) laufen. #348 bleibt Integrationsvoraussetzung; keine ungeprüfte Vereinigung der Branches.
+- **Danach:** IM03/ZP02 nach bewiesenem ZP01, mit unabhängiger ZP01 und falscher BOXD-Gegenprobe.
+- **Arbeitsregel:** Nach nachgewiesenem Gameplay unmittelbar ein natives Folgepaket; offene Gesamtgates separat führen. Merge nur bei vollständigen Pflichtgates. Keine pauschale V-Freigabe.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
+## Verbindlicher Stand – 27.11.2026 (nach Standanimations-Gameplay)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
+- **Konsolidierung:** #361 auf main integriert (d78e782); frühere #360-Konsolidierung und Main-Core grün. #355/#350/#353/#352/#357 Gameplay auf aktuellen Heads belegt, Core und Actor-Shards grün; Gesamtgates laufen, Merge offen. Einzelbelege siehe historischen Stand.
+- **Offene Integration:** #359 Standanimation: [Originalartefakt 15201809120](https://github.com/nauen/adventure_studio/actions/runs/46007792927/artifacts/15201809120) auf f20015f. Je fünf stabile Messungen: X282 Original 1536/0/0, X442 Alternativ 0/1536/0, nach Escape X282 Original 1536/0/0, 5,203 s bis Ankunft; native_actor_stand_animation_verified=true. Core und Actor-Shard grün; Gesamtgate offen.
+- **Jetzt – genau eine Fähigkeit:** [#348](https://github.com/nauen/adventure_studio/pull/348) native IM03-Objektbildfolge (R07/R06-Anschluss), PNG/Studio/JSON-v1/Story/ScummC, Zustand 3 nur mit vorhandenem IM03. Bestehende IM01/IM02-Z-Masken unverändert.
+- **Abnahme:** vier echte interaktive Stock-ScummVM-Bildzustände IM01→IM02→IM03→IM01, eindeutige Farbe je Zustand, vollständige Pflichtgates.
+- **Blocker:** [Originalartefakt 15194406258](https://github.com/nauen/adventure_studio/actions/runs/45991905870/artifacts/15194406258) zeigt IM01 mit 2688 Farb-Pixeln, aber noch keine sichtbaren Verben oder Key; Fehler Unexpected sprite bounds: '1x1-1-1'. [Fix a646231](https://github.com/nauen/adventure_studio/commit/a646231b0ee3a21b8a32a4dce4bc05fe26da3977) wartet auf echte Verben und Key bei unveränderten Farbschwellen, zwei Regressionstests; [Core](https://github.com/nauen/adventure_studio/actions/runs/46009384602), [Native](https://github.com/nauen/adventure_studio/actions/runs/46009390308) gestartet.
+- **Danach:** IM03/ZP01 als eigenes Paket nach Gameplay-Nachweis. Korrektur der vorherigen Formulierung: #348 enthält noch keine IM03-eigenen Z-Masken.
+- **Arbeitsregel:** Nach belegtem Gameplay sofort ein natives Folgepaket aufnehmen; Gesamtgates separat führen. Merge nur bei grünen Pflichtgates, kein pauschales V. ZP05+ fail-closed.
+
+## Vorheriger Stand (historisch; ersetzt durch oben)
+
 ## Verbindlicher Stand – 27.11.2026 (nach Laufstopp- und Richtungssperren-Gameplay)
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
