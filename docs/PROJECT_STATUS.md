@@ -1,3 +1,15 @@
+## Verbindlicher Stand – 27.11.2026 (Nutzerentscheidung: Produktworkflow zuerst)
+
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; erstes nutzbares Produktziel ist das vollständige Referenzadventure gemäß [PRODUCT_VISION](PRODUCT_VISION.md).
+- **Jetzt – genau ein Produktpaket:** Durchgängigen vorhandenen Autorenworkflow für ein mehrraumiges Adventure anhand main und offener PRs prüfen, die erste konkrete fehlende oder nicht integrierte Produktfunktion identifizieren und unmittelbar vertikal umsetzen bzw. integrieren. Kein neues isoliertes Animationsdetail. Die genaue erste Lücke ist noch nicht ermittelt; keine bereits vorhandene Funktion neu implementieren.
+- **Abnahme:** Ein über Studio authoriertes Projekt mit eigener Raumgrafik, Walkboxes/Perspektive/Masken, Raumübergängen, NPCs, Inventar, Rätselbedingungen, Dialogen und erreichbarem Ende. Projekt speichern/erneut laden, nativen Export erzeugen und mit tatsächlichen Spieleraktionen in unverändertem ScummVM bis zum Ende durchspielen. Teilabnahmen getrennt führen; nicht als komplettes Spiel ausgeben.
+- **Konsolidierung:** Offene PRs nach Produktnutzen und Abhängigkeiten ordnen; größere Spielfunktionen (z. B. #341–#343 globale Variablen/Zähler/Bedingungen, #339–#340 Objektoperationen, #348/#363–#366 Raumgrafik) zuerst auf Integrationsreife prüfen. Kein Merge ohne Pflichtgates. Diese Reihenfolge ist eine Prüfpriorität, keine Behauptung fehlender oder fertiger Funktionen.
+- **Zurückgestellt:** Weitere isolierte Pose-/Chore-Erweiterungen. Bestehende #359/#368/#370/#371 erhalten; Gameplay-Nachweise vorhanden, Gesamtintegration offen. #372 Initialanimation implementiert und Gameplay-Probe gepusht, Abnahme nicht bestätigt; Branch erhalten, nicht als aktives Produktpaket weiterführen. Belege: [#370 Gameplay](https://github.com/nauen/adventure_studio/actions/runs/46027321649/artifacts/15211524838), [#371 Gameplay](https://github.com/nauen/adventure_studio/actions/runs/46028171470/artifacts/15212739610). Kein pauschales V.
+- **Blocker:** Konkrete erste Workflow-Lücke und Integrationsstatus müssen anhand des aktuellen Repository- und CI-Stands geprüft werden; bekannte Gesamtgates bleiben offen.
+- **Danach:** Sofort den nächsten tatsächlich benötigten Produktblocker des Referenzadventures bearbeiten, sobald der aktive Produktpfad im Gameplay belegt ist. CI-Konsolidierung separat; keine neuen Opcode- oder Testvarianten ohne konkreten Spielnutzen.
+
+## Historische Stände – nicht aktive Arbeitsanweisungen
+
 ## Verbindlicher Stand – 27.11.2026 (nach IM03/ZP04-Gameplay)
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
