@@ -99,8 +99,8 @@ def render_native_room(room: RoomAsset, upstream: Path, generated: Path,
     initial_object = initial_object_state3 if initial_object_state3 is not None else initial_object_state2
     initial_state = 3 if initial_object_state3 is not None else 2
     if initial_object is not None:
-        # Fixture selects the product-exported state at entry. Image/mask
-        # resources and the stock SCUMM VM are unmodified.
+        # shortcut: selects the exported state at entry, replace with real clicks
+        # if state-transition occlusion is the acceptance criterion. Resources and VM are unmodified.
         if initial_state == 3 and not any(h.id == initial_object and h.third_sprite_pixels is not None
                                           for h in room.hotspots):
             raise ValueError("Third-state fixture requires an exported third image")
