@@ -34,6 +34,8 @@ def authored_project():
                      hotspots=(marker("Key", 210, 0, pickup=True), marker("Crossing", 290, 1)),
                      use_rules=(), demo_walk_to_x=None, camera_cues=(CameraCue("set", x=320),),
                      ego_start_x=320)
+    vault = replace(destination_fixture(), name="Vault", hotspots=(),
+                    pixels=bytes([0]) * (320 * 200))
     cellar = replace(cellar, palette=(*cellar.palette, *COLORS), goal_text=None,
                      hotspots=(marker("Return", 80, 2), marker("Gate", 150, 3),
                                marker("Progress", 230, 4, alternative=5)))
@@ -43,7 +45,7 @@ def authored_project():
     costume = replace(costume, name="NativeTalkPuzzleCostume",
                       animations=tuple(CostumeAnimation(name, directions)
                                        for name in ("init", "stand", "walk", "talkStart", "talkStop")))
-    raw = canonical_json(GameDocument("NativeTalkPuzzle", (harbor, cellar),
+    raw = canonical_json(GameDocument("NativeTalkPuzzle", (harbor, cellar, vault),
                          (costume,), (ActorAsset("Guide", costume.name, "Cellar", 150, 85, "S"),)))
     raw = append_sequence_step(raw, "Harbor", "Crossing", "Close",
                                "Raum wechseln", None, None, "Cellar", None)
@@ -62,6 +64,10 @@ def authored_project():
                                 subtitle="You found the key. Now I can open the gate and you can continue the adventure.")
     raw = replace_sequence_step(raw, "Cellar|Gate|TalkTo|inv:Key|1", 2,
                                 "Objektzustand setzen", None, None, "Progress", 2)
+    raw = append_sequence_step(raw, "Cellar", "Progress", "Close",
+                               "Raum wechseln", None, None, "Vault", None)
+    from .studio_sequences import set_sequence_condition
+    raw = set_sequence_condition(raw, "Cellar|Progress|Close", "Progress", 2)
     return raw
 
 
@@ -139,6 +145,8 @@ def run(upstream, destination):
             click("talk-with-key",GATE,talk=True)
             wait("npc-acceptance-visible",visible=(TEXT,GATE),absent=(ACCEPTED,),owned=True)
             wait("accepted-with-key",visible=(GATE,ACCEPTED),absent=(READY,TEXT),owned=True)
+            click("enter-goal",ACCEPTED)
+            wait("goal-room",visible=((70,130,190),),absent=(GATE,ACCEPTED),owned=True)
             report={"native_talk_interaction_verified":True,"evidence":evidence}
             (destination/"report.json").write_text(json.dumps(report,indent=2),encoding="utf-8")
             return report
