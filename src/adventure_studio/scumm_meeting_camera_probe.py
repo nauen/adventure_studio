@@ -157,11 +157,11 @@ def run_native_meeting_camera_tour(upstream: Path, output: Path) -> dict:
         launch_smoke(game, root / "screenshots", seconds=6,
                      scene_only=True, allow_static_scene=True,
                      native_two_actor_walk_probe=True,
-                     # The inspection adds several seconds to the rendezvous.
-                     # Preserve the proven dense capture mode while covering
-                     # both departure legs and the final camera return.
-                     native_two_actor_capture_frames=720,
-                     native_two_actor_capture_interval=0.05,
+                     # Keep the planned 36 seconds of capture sleeps within
+                     # play_two_actor_walk's existing 210–480 frame contract.
+                     # Actual framebuffer acquisition adds to this duration.
+                     native_two_actor_capture_frames=480,
+                     native_two_actor_capture_interval=0.075,
                      native_two_actor_defer_preview=True)
         report["variants"][variant] = {"stock_scummvm_started": True}
         persist()

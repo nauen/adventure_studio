@@ -6,6 +6,7 @@ from importlib.util import find_spec
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import patch
 
 from adventure_studio.scumm_opposing_actor_probe import ACTOR_IDS
 from adventure_studio.scumm_project import parse_document
@@ -48,6 +49,25 @@ class NativeMeetingCameraTourTests(unittest.TestCase):
             ))
             with self.assertRaisesRegex(RuntimeError, "inspection pan"):
                 assert_native_meeting_camera_tour(changed)
+
+    @unittest.skipUnless(find_spec("PIL"), "Native Studio mask PNGs require Pillow")
+    def test_meeting_capture_respects_native_frame_budget(self):
+        from adventure_studio.scumm_meeting_camera_probe import run_native_meeting_camera_tour
+        with TemporaryDirectory() as root:
+            output = Path(root) / "output"
+            with patch("adventure_studio.scumm_toolchain.compile_story_game",
+                       return_value=Path(root) / "game"), patch(
+                           "adventure_studio.scumm_launch.launch_smoke",
+                           side_effect=RuntimeError("capture boundary")) as launch:
+                with self.assertRaisesRegex(RuntimeError, "capture boundary"):
+                    run_native_meeting_camera_tour(Path(root), output)
+            options = launch.call_args.kwargs
+            frames = options["native_two_actor_capture_frames"]
+            interval = options["native_two_actor_capture_interval"]
+            self.assertTrue(210 <= frames <= 480)
+            self.assertTrue(0.01 <= interval <= 0.1)
+            self.assertGreaterEqual(frames * interval, 36)
+            self.assertTrue(options["native_two_actor_defer_preview"])
 
     def test_native_camera_must_travel_out_and_back_with_both_actors_still(self):
         frames = [str(i) for i in range(14)]
