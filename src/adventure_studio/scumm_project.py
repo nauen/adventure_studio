@@ -140,6 +140,11 @@ class WaitCameraStep:
 
 
 @dataclass(frozen=True)
+class StopActorStep:
+    actor_id: str
+
+
+@dataclass(frozen=True)
 class WaitActorStep:
     actor_id: str
 
@@ -237,7 +242,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | StopActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -361,6 +366,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, PanCameraStep)
                                                    else {"type": "wait_camera"}
                                                    if isinstance(step, WaitCameraStep)
+                                                   else {"type": "stop_actor", **vars(step)}
+                                                   if isinstance(step, StopActorStep)
                                                    else {"type": "wait_actor", **vars(step)}
                                                    if isinstance(step, WaitActorStep)
                                                    else {"type": "actor_zclip", **vars(step)}
@@ -970,6 +977,11 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Native interaction camera pan requires a world X in this room")
             elif isinstance(step, WaitCameraStep):
                 pass
+            elif isinstance(step, StopActorStep):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if actor is None or (actor.room != room.name and
+                                     (actor.id, room.name) not in transfer_destinations):
+                    raise ValueError("Native stop requires an Actor in the sequence room")
             elif isinstance(step, WaitActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if actor is None or (actor.room != room.name and
@@ -1150,6 +1162,9 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "wait_camera":
                 _only(raw_step, {"type"}, {"type"})
                 steps.append(WaitCameraStep())
+            elif kind == "stop_actor":
+                step = _only(raw_step, {"type", "actor_id"}, {"type", "actor_id"})
+                steps.append(StopActorStep(step["actor_id"]))
             elif kind == "wait_actor":
                 step = _only(raw_step, {"type", "actor_id"}, {"type", "actor_id"})
                 steps.append(WaitActorStep(step["actor_id"]))

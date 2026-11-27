@@ -357,6 +357,47 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Actor Z-Clipping", ACTOR_IDS[0], None, None, 5)
 
+    def test_actor_stop_roundtrip_and_escape_cancels_unfinished_walk(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_project import StopActorStep
+        room = scrolling_fixture()
+        costume = gesture_fixture()
+        raw = canonical_json(GameDocument("StopWalk", (room, destination_fixture()),
+            (costume,), (ActorAsset("Guide", costume.name, "Harbor", 180, 85, "S"),)))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor laufen lassen", "Guide", None, None, None, 470, 85)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Warten", None, None, None, 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                   "Actor stoppen", "Guide", None, None, None)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(doc.interaction_sequences[0].steps[-1], StopActorStep("Guide"))
+        self.assertEqual(sequence_step_fields(raw, identity, 2)[:2], ("Actor stoppen", "Guide"))
+        def source(project):
+            parsed = parse_document(project)
+            return inject_interaction_sequences(scummc_room_source(room), "Harbor",
+                parsed.interaction_sequences, parsed.actors, parsed.costumes, room)
+        normal, override = source(raw).split("} override {", 1)
+        self.assertIn("walkActorTo(Guide, 470, 85);", normal)
+        for branch in (normal, override):
+            self.assertIn("setActorStanding();", branch)
+            self.assertIn("if (getActorRoom(Guide) == VAR_ROOM)", branch)
+        self.assertNotIn("putActorAt(Guide, 470, 85", override)
+        resumed = append_sequence_step(raw, "Harbor", "Key", "Close",
+                                       "Actor laufen lassen", "Guide", None, None, None, 400, 85)
+        override = source(resumed).split("} override {", 1)[1]
+        self.assertNotIn("setActorStanding();", override)
+        self.assertIn("putActorAt(Guide, 400, 85", override)
+        waited = replace_sequence_step(raw, identity, 1, "Auf Actor warten",
+                                      "Guide", None, None, None)
+        self.assertIn("putActorAt(Guide, 470, 85", source(waited).split("} override {", 1)[1])
+        with self.assertRaises(ValueError):
+            replace_sequence_step(raw, identity, 2, "Actor stoppen", "Missing", None, None, None)
+
     def test_actor_zclip_roundtrip_native_export_and_escape(self):
         from dataclasses import replace
         from adventure_studio.scumm_assets import ZPlane, scummc_room_source
