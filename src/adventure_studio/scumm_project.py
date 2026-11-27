@@ -89,6 +89,33 @@ class AnimateActorStep:
 
 
 @dataclass(frozen=True)
+class SetGameVariableStep:
+    name: str
+    value: int
+    relative: bool = False
+
+
+def game_variable_symbol(name: str) -> str:
+    if not isinstance(name, str) or re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,31}", name) is None:
+        raise ValueError("Game variable needs an ASCII identifier of 1 to 32 characters")
+    return "ASGameVar_" + name
+
+
+@dataclass(frozen=True)
+class ObjectClassStep:
+    hotspot_id: str
+    class_id: int
+    enabled: bool
+
+
+@dataclass(frozen=True)
+class MoveObjectStep:
+    hotspot_id: str
+    x: int
+    y: int
+
+
+@dataclass(frozen=True)
 class ObjectStateStep:
     hotspot_id: str
     state: int
@@ -151,6 +178,19 @@ class ActorZClipStep:
 
 
 @dataclass(frozen=True)
+class ActorTalkColorStep:
+    actor_id: str
+    color: int
+
+
+@dataclass(frozen=True)
+class ActorTalkPositionStep:
+    actor_id: str
+    x: int
+    y: int
+
+
+@dataclass(frozen=True)
 class FaceActorStep:
     actor_id: str
     direction: str
@@ -158,6 +198,11 @@ class FaceActorStep:
 
 @dataclass(frozen=True)
 class PickupObjectStep:
+    hotspot_id: str
+
+
+@dataclass(frozen=True)
+class ConsumeInventoryStep:
     hotspot_id: str
 
 
@@ -210,6 +255,12 @@ class DialogueAnimationCue:
 
 
 @dataclass(frozen=True)
+class TextLineStep:
+    text: str
+    actor_id: str | None = None
+
+
+@dataclass(frozen=True)
 class VoiceLineStep:
     sound_id: str
     text: str
@@ -237,10 +288,17 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | SetGameVariableStep | ObjectClassStep | MoveObjectStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | ConsumeInventoryStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | TextLineStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
+    condition_variable: str | None = None
+    condition_operator: str = "=="
+    condition_second_target: str | None = None
+    condition_second_value: int | None = None
+    condition_second_operator: str = "=="
+    condition_join: str = "and"
+    condition_inventory_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -285,6 +343,16 @@ def _decode_pixels(encoded: object) -> bytes:
 
 def _encode_pixels(pixels: bytes | None) -> str | None:
     return base64.b64encode(pixels).decode("ascii") if pixels is not None else None
+
+
+def game_variable_names(document: GameDocument) -> tuple[str, ...]:
+    names = {step.name for sequence in document.interaction_sequences
+             for step in sequence.steps if isinstance(step, SetGameVariableStep)}
+    names.update(sequence.condition_variable for sequence in document.interaction_sequences
+                 if sequence.condition_variable is not None)
+    names.update(sequence.condition_second_target[4:] for sequence in document.interaction_sequences
+                 if sequence.condition_second_target is not None and sequence.condition_second_target.startswith("var:"))
+    return tuple(sorted(names))
 
 
 def document_dict(document: GameDocument) -> dict:
@@ -344,9 +412,29 @@ def document_dict(document: GameDocument) -> dict:
                                         **({"condition_hotspot_id": sequence.condition_hotspot_id,
                                             "condition_state": sequence.condition_state}
                                            if sequence.condition_hotspot_id is not None else {}),
+                                        **({"condition_variable": sequence.condition_variable,
+                                            "condition_state": sequence.condition_state}
+                                           if sequence.condition_variable is not None else {}),
+                                        **({"condition_inventory_id": sequence.condition_inventory_id,
+                                            "condition_state": sequence.condition_state}
+                                           if sequence.condition_inventory_id is not None else {}),
+                                        **({"condition_operator": sequence.condition_operator}
+                                           if sequence.condition_operator != "==" else {}),
+                                        **({"condition_second_target": sequence.condition_second_target,
+                                            "condition_second_value": sequence.condition_second_value,
+                                            "condition_second_operator": sequence.condition_second_operator,
+                                            "condition_join": sequence.condition_join}
+                                           if sequence.condition_second_target is not None else {}),
                                         **({"skippable": True} if sequence.skippable else {}),
                                         "steps": [({"type": "animate_actor", **vars(step)}
                                                    if isinstance(step, AnimateActorStep)
+                                                   else {"type": "set_game_variable", "name": step.name, "value": step.value,
+                                                         **({"relative": True} if step.relative else {})}
+                                                   if isinstance(step, SetGameVariableStep)
+                                                   else {"type": "object_class", **vars(step)}
+                                                   if isinstance(step, ObjectClassStep)
+                                                   else {"type": "move_object", **vars(step)}
+                                                   if isinstance(step, MoveObjectStep)
                                                    else {"type": "set_object_state", **vars(step)}
                                                    if isinstance(step, ObjectStateStep)
                                                    else {"type": "move_actor", **vars(step)}
@@ -365,10 +453,16 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, WaitActorStep)
                                                    else {"type": "actor_zclip", **vars(step)}
                                                    if isinstance(step, ActorZClipStep)
+                                                   else {"type": "actor_talk_color", **vars(step)}
+                                                   if isinstance(step, ActorTalkColorStep)
+                                                   else {"type": "actor_talk_position", **vars(step)}
+                                                   if isinstance(step, ActorTalkPositionStep)
                                                    else {"type": "face_actor", **vars(step)}
                                                    if isinstance(step, FaceActorStep)
                                                    else {"type": "pickup_object", **vars(step)}
                                                    if isinstance(step, PickupObjectStep)
+                                                   else {"type": "consume_inventory", **vars(step)}
+                                                   if isinstance(step, ConsumeInventoryStep)
                                                    else {"type": "combine_inventory", **vars(step)}
                                                    if isinstance(step, CombineInventoryStep)
                                                    else {"type": "change_room", **vars(step)}
@@ -377,6 +471,8 @@ def document_dict(document: GameDocument) -> dict:
                                                    if isinstance(step, MusicCueStep)
                                                    else {"type": "sound_effect", **vars(step)}
                                                    if isinstance(step, SoundEffectStep)
+                                                   else {"type": "text_line", **vars(step)}
+                                                   if isinstance(step, TextLineStep)
                                                    else {"type": "voice_line", "sound_id": step.sound_id,
                                                          "text": step.text, "actor_id": step.actor_id,
                                                          **({"variants": [vars(item) for item in step.variants]}
@@ -831,6 +927,7 @@ def _validate_document(document: GameDocument) -> None:
         if actor.direction not in {direction.direction for direction in animation.directions}:
             raise ValueError("Animation trigger lacks the Actor's direction")
     sequence_groups = {}
+    inventory_ids = {hotspot.id for room in document.rooms for hotspot in room.hotspots if hotspot.pickup}
     transfer_destinations = {(step.actor_id, step.room)
                              for interaction in document.interaction_sequences
                              for step in interaction.steps
@@ -842,8 +939,15 @@ def _validate_document(document: GameDocument) -> None:
         if room is None or not isinstance(sequence.hotspot_id, str) or sequence.hotspot_id not in {
                 hotspot.id for hotspot in room.hotspots}:
             raise ValueError("Interaction sequence requires an existing room hotspot")
-        if sequence.verb not in ("Push", "Pull", "Open", "Close"):
+        if sequence.verb not in ("Push", "Pull", "Open", "Close", "TalkTo"):
             raise ValueError("Unsupported interaction sequence verb")
+        if sequence.verb == "TalkTo":
+            hotspot = next(h for h in room.hotspots if h.id == sequence.hotspot_id)
+            dialogue_targets = {rule.speaker_id for rule in room.talk_rules}
+            dialogue_targets.update(choice.object_id for rule in room.talk_rules
+                                    for stage in (rule, *rule.stages) for choice in stage.choices)
+            if hotspot.talk_lines or hotspot.id in dialogue_targets:
+                raise ValueError("TalkTo sequence conflicts with an existing dialogue; use a separate hotspot or remove that dialogue explicitly")
         identity = (sequence.room, sequence.hotspot_id, sequence.verb)
         if identity in seen_inputs and identity not in sequence_groups:
             raise ValueError("Duplicate animation verb binding")
@@ -853,13 +957,51 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError("Interaction sequence requires ordered steps")
         if type(sequence.skippable) is not bool:
             raise ValueError("Interaction skip setting must be boolean")
-        if (sequence.condition_hotspot_id is None) != (sequence.condition_state is None):
+        if sequence.condition_operator not in ("==", "!=", "<", "<=", ">", ">=") or (
+                sequence.condition_variable is None and sequence.condition_operator != "=="):
+            raise ValueError("Only variable conditions support numeric comparisons")
+        if sequence.condition_variable is not None:
+            game_variable_symbol(sequence.condition_variable)
+            if (sequence.condition_hotspot_id is not None or sequence.condition_inventory_id is not None
+                    or type(sequence.condition_state) is not int
+                    or not -32768 <= sequence.condition_state <= 32767):
+                raise ValueError("Variable condition requires one named variable and a signed 16-bit value")
+        elif sequence.condition_inventory_id is not None:
+            if (not isinstance(sequence.condition_inventory_id, str)
+                    or sequence.condition_inventory_id not in inventory_ids
+                    or sequence.condition_hotspot_id is not None
+                    or type(sequence.condition_state) is not int or sequence.condition_state not in (0, 1)):
+                raise ValueError("Inventory condition requires a pickup and ownership state 0 or 1")
+        elif (sequence.condition_hotspot_id is None) != (sequence.condition_state is None):
             raise ValueError("Interaction condition requires both an object and a state")
         if sequence.condition_hotspot_id is not None and (
                 sequence.condition_hotspot_id not in {hotspot.id for hotspot in room.hotspots}
                 or type(sequence.condition_state) is not int
                 or not 0 <= sequence.condition_state <= 2):
             raise ValueError("Interaction condition requires a valid room object and native state")
+        second = sequence.condition_second_target
+        if second is None:
+            if (sequence.condition_second_value is not None or sequence.condition_second_operator != "=="
+                    or sequence.condition_join != "and"):
+                raise ValueError("Second condition requires a target")
+        else:
+            if (not isinstance(second, str) or sequence.condition_state is None
+                    or sequence.condition_join not in ("and", "or")
+                    or sequence.condition_second_operator not in ("==", "!=", "<", "<=", ">", ">=")
+                    or type(sequence.condition_second_value) is not int):
+                raise ValueError("Combined condition requires two valid comparisons")
+            if second.startswith("var:"):
+                game_variable_symbol(second[4:])
+                if not -32768 <= sequence.condition_second_value <= 32767:
+                    raise ValueError("Second variable value outside signed 16-bit range")
+            elif second.startswith("inv:"):
+                if (second[4:] not in inventory_ids or sequence.condition_second_operator != "=="
+                        or sequence.condition_second_value not in (0, 1)):
+                    raise ValueError("Second inventory condition requires a pickup and ownership state 0 or 1")
+            elif (second not in {hotspot.id for hotspot in room.hotspots}
+                    or sequence.condition_second_operator != "=="
+                    or not 0 <= sequence.condition_second_value <= 2):
+                raise ValueError("Second object condition requires a room object and native state")
         for step_index, step in enumerate(sequence.steps):
             if isinstance(step, AnimateActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
@@ -872,6 +1014,26 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction animation requires named, indexed Costume animation")
                 if actor.direction not in {direction.direction for direction in animation.directions}:
                     raise ValueError("Interaction animation lacks Actor direction")
+            elif isinstance(step, SetGameVariableStep):
+                game_variable_symbol(step.name)
+                if (type(step.relative) is not bool or type(step.value) is not int
+                        or not -32768 <= step.value <= 32767):
+                    raise ValueError("Game variable requires a signed 16-bit integer")
+            elif isinstance(step, ObjectClassStep):
+                if (not isinstance(step.hotspot_id, str)
+                        or step.hotspot_id not in {hotspot.id for hotspot in room.hotspots}
+                        or type(step.class_id) is not int or not 1 <= step.class_id <= 32
+                        or type(step.enabled) is not bool):
+                    raise ValueError("Object class requires a room object, class 1 to 32 and a boolean operation")
+            elif isinstance(step, MoveObjectStep):
+                hotspot = next((item for item in room.hotspots if item.id == step.hotspot_id), None)
+                if hotspot is None or hotspot.pickup or hotspot.sprite_pixels is None:
+                    raise ValueError("Object movement requires a visible non-inventory object in the sequence room")
+                if (type(step.x) is not int or type(step.y) is not int
+                        or step.x < 0 or step.y < 0 or step.x % 8 or step.y % 8
+                        or step.x + hotspot.width > room.geometry.room_width
+                        or step.y + hotspot.height > room.geometry.room_height):
+                    raise ValueError("Object movement requires an in-room destination on the native 8-pixel grid")
             elif isinstance(step, ObjectStateStep):
                 if (not isinstance(step.hotspot_id, str)
                         or step.hotspot_id not in {hotspot.id for hotspot in room.hotspots}
@@ -881,6 +1043,9 @@ def _validate_document(document: GameDocument) -> None:
                 if not isinstance(step.hotspot_id, str) or step.hotspot_id not in {
                         hotspot.id for hotspot in room.hotspots if hotspot.pickup}:
                     raise ValueError("Interaction pickup requires a pickable room object")
+            elif isinstance(step, ConsumeInventoryStep):
+                if not isinstance(step.hotspot_id, str) or step.hotspot_id not in inventory_ids:
+                    raise ValueError("Inventory consumption requires a project pickup object")
             elif isinstance(step, CombineInventoryStep):
                 if not isinstance(step.result_id, str) or step.result_id not in {
                         rule.result_id for rule in room.combine_rules}:
@@ -900,6 +1065,15 @@ def _validate_document(document: GameDocument) -> None:
                         or step.sound_id not in {asset.id for asset in document.sound_assets
                                                  if asset.room == room.name}):
                     raise ValueError("Interaction sound effect requires a room VOC resource and start/stop operation")
+            elif isinstance(step, TextLineStep):
+                if (not isinstance(step.text, str) or not 1 <= len(step.text) <= 160
+                        or any(ord(char) < 32 or 0x7F <= ord(char) <= 0x9F or char in '\\"'
+                               for char in step.text)
+                        or (step.actor_id is not None and
+                            (not isinstance(step.actor_id, str)
+                             or (step.actor_id not in {actor.id for actor in document.actors if actor.room == room.name}
+                                 and (step.actor_id, room.name) not in transfer_destinations)))):
+                    raise ValueError("Text line requires safe text and an optional room Actor")
             elif isinstance(step, VoiceLineStep):
                 if (not isinstance(step.sound_id, str)
                         or step.sound_id not in {asset.id for asset in document.sound_assets
@@ -984,6 +1158,17 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Actor Z-clip requires a room Actor and -1, 0 or an existing native room Z-plane (1–4)")
                 if step.plane == -1 and actor.room != room.name and room.name not in dict(actor.room_zclips):
                     raise ValueError("Actor Z-clip profile restoration requires an authored destination profile")
+            elif isinstance(step, (ActorTalkColorStep, ActorTalkPositionStep)):
+                actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
+                if actor is None or (actor.room != room.name and
+                        (actor.id, room.name) not in transfer_destinations):
+                    raise ValueError("Actor talk presentation requires an Actor in the sequence room")
+                if isinstance(step, ActorTalkColorStep):
+                    if type(step.color) is not int or not 0 <= step.color <= 255:
+                        raise ValueError("Actor talk color requires a palette index (0 to 255)")
+                elif any(type(value) is not int or not -32768 <= value <= 32767
+                         for value in (step.x, step.y)):
+                    raise ValueError("Actor talk position requires signed 16-bit X/Y offsets")
             elif isinstance(step, FaceActorStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
                 if (actor is None or (actor.room != room.name and
@@ -992,14 +1177,42 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction facing requires an Actor in the room and a cardinal direction")
             else:
                 raise ValueError("Unsupported interaction sequence step")
+    def comparison_ranges(operator, value):
+        low, high = -32768, 32767
+        return {"==": ((value, value),), "!=": ((low, value-1), (value+1, high)),
+                "<": ((low, value-1),), "<=": ((low, value),),
+                ">": ((value+1, high),), ">=": ((value, high),)}[operator]
+
+    snapshots = {}
+    for sequence in document.interaction_sequences:
+        if sequence.skippable:
+            names = snapshots.setdefault((sequence.room, sequence.hotspot_id), set())
+            names.update(step.name for step in sequence.steps
+                         if isinstance(step, SetGameVariableStep) and step.relative)
+    if any(len(names) > 8 for names in snapshots.values()):
+        raise ValueError("At most eight variable snapshots per native object verb block")
     for group in sequence_groups.values():
         if len(group) < 2:
             continue
-        guards = [item for item in group if item.condition_hotspot_id is not None]
+        guards = [item for item in group if item.condition_hotspot_id is not None or item.condition_variable is not None or item.condition_inventory_id is not None]
+        if any(item.condition_second_target is not None for item in guards):
+            if len(guards) != 1 or len(group) != 2:
+                raise ValueError("Combined condition supports one guarded branch and one fallback")
+            continue
         if (len(guards) < len(group) - 1
-                or len({item.condition_hotspot_id for item in guards}) != 1
-                or len({item.condition_state for item in guards}) != len(guards)):
-            raise ValueError("Interaction alternatives need distinct states of one object and at most one fallback")
+                or len({(item.condition_hotspot_id, item.condition_variable, item.condition_inventory_id) for item in guards}) != 1
+                or any(max(a, c) <= min(b, d)
+                       for i, first in enumerate(guards) for second in guards[i+1:]
+                       for a, b in comparison_ranges(first.condition_operator, first.condition_state)
+                       for c, d in comparison_ranges(second.condition_operator, second.condition_state))):
+            raise ValueError("Interaction alternatives need distinct states of one object or variable and at most one fallback")
+    variable_names = game_variable_names(document)
+    reserved = {game_variable_symbol(name) for name in variable_names}
+    symbols = ({room.name for room in document.rooms}
+               | {hotspot.id for room in document.rooms for hotspot in room.hotspots}
+               | {actor.id for actor in document.actors})
+    if len(variable_names) > 128 or reserved & symbols:
+        raise ValueError("Too many game variables or native variable symbol conflict")
 
 
 def parse_document(source: str) -> GameDocument:
@@ -1108,7 +1321,8 @@ def parse_document(source: str) -> GameDocument:
     interaction_sequences = []
     for raw_sequence in raw_sequences:
         item = _only(raw_sequence, {"room", "hotspot_id", "verb", "steps",
-                                    "condition_hotspot_id", "condition_state", "skippable"},
+                                    "condition_hotspot_id", "condition_state", "skippable", "condition_variable", "condition_operator", "condition_second_target",
+                                    "condition_second_value", "condition_second_operator", "condition_join", "condition_inventory_id"},
                      {"room", "hotspot_id", "verb", "steps"})
         if not isinstance(item["steps"], list):
             raise ValueError("Interaction steps must be a list")
@@ -1121,6 +1335,16 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "animation"},
                              {"type", "actor_id", "animation"})
                 steps.append(AnimateActorStep(step["actor_id"], step["animation"]))
+            elif kind == "set_game_variable":
+                step = _only(raw_step, {"type", "name", "value", "relative"}, {"type", "name", "value"})
+                steps.append(SetGameVariableStep(step["name"], step["value"], step.get("relative", False)))
+            elif kind == "object_class":
+                step = _only(raw_step, {"type", "hotspot_id", "class_id", "enabled"},
+                             {"type", "hotspot_id", "class_id", "enabled"})
+                steps.append(ObjectClassStep(step["hotspot_id"], step["class_id"], step["enabled"]))
+            elif kind == "move_object":
+                step = _only(raw_step, {"type", "hotspot_id", "x", "y"}, {"type", "hotspot_id", "x", "y"})
+                steps.append(MoveObjectStep(step["hotspot_id"], step["x"], step["y"]))
             elif kind == "set_object_state":
                 step = _only(raw_step, {"type", "hotspot_id", "state"},
                              {"type", "hotspot_id", "state"})
@@ -1156,6 +1380,12 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "actor_zclip":
                 step = _only(raw_step, {"type", "actor_id", "plane"}, {"type", "actor_id", "plane"})
                 steps.append(ActorZClipStep(step["actor_id"], step["plane"]))
+            elif kind == "actor_talk_color":
+                step = _only(raw_step, {"type", "actor_id", "color"}, {"type", "actor_id", "color"})
+                steps.append(ActorTalkColorStep(step["actor_id"], step["color"]))
+            elif kind == "actor_talk_position":
+                step = _only(raw_step, {"type", "actor_id", "x", "y"}, {"type", "actor_id", "x", "y"})
+                steps.append(ActorTalkPositionStep(step["actor_id"], step["x"], step["y"]))
             elif kind == "face_actor":
                 step = _only(raw_step, {"type", "actor_id", "direction"},
                              {"type", "actor_id", "direction"})
@@ -1163,6 +1393,9 @@ def parse_document(source: str) -> GameDocument:
             elif kind == "pickup_object":
                 step = _only(raw_step, {"type", "hotspot_id"}, {"type", "hotspot_id"})
                 steps.append(PickupObjectStep(step["hotspot_id"]))
+            elif kind == "consume_inventory":
+                step = _only(raw_step, {"type", "hotspot_id"}, {"type", "hotspot_id"})
+                steps.append(ConsumeInventoryStep(step["hotspot_id"]))
             elif kind == "combine_inventory":
                 step = _only(raw_step, {"type", "result_id"}, {"type", "result_id"})
                 steps.append(CombineInventoryStep(step["result_id"]))
@@ -1176,6 +1409,9 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "sound_id", "operation"},
                              {"type", "sound_id", "operation"})
                 steps.append(SoundEffectStep(step["sound_id"], step["operation"]))
+            elif kind == "text_line":
+                step = _only(raw_step, {"type", "text", "actor_id"}, {"type", "text"})
+                steps.append(TextLineStep(step["text"], step.get("actor_id")))
             elif kind == "voice_line":
                 step = _only(raw_step, {"type", "sound_id", "text", "actor_id", "variants"},
                              {"type", "sound_id", "text"})
@@ -1195,7 +1431,14 @@ def parse_document(source: str) -> GameDocument:
                                                          item["verb"], tuple(steps),
                                                          item.get("condition_hotspot_id"),
                                                          item.get("condition_state"),
-                                                         item.get("skippable", False)))
+                                                         item.get("skippable", False),
+                                                         item.get("condition_variable"),
+                                                         item.get("condition_operator", "=="),
+                                                         item.get("condition_second_target"),
+                                                         item.get("condition_second_value"),
+                                                         item.get("condition_second_operator", "=="),
+                                                         item.get("condition_join", "and"),
+                                                         item.get("condition_inventory_id")))
     rooms = []
     for raw in data["rooms"]:
         room = _only(raw, {"name", "geometry", "pixels", "palette", "hotspots", "use_rules", "combine_rules", "palette_cycles", "music_id", "talk_rules", "zplanes", "walkboxes", "box_routes", "scale_slots", "scale_curves", "camera_cues",

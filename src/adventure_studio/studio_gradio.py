@@ -26,7 +26,7 @@ from .studio_export import export_playable, export_native_project
 from .studio_sequences import (actor_animations, append_sequence_step, append_selected_sequence_step,
                                modify_sequence_step,
                                replace_sequence_step, sequence_step_fields,
-                               sequence_condition_fields, set_sequence_condition,
+                               sequence_condition_fields, sequence_condition_operator, sequence_second_condition_fields, set_sequence_condition,
                                duplicate_sequence_variant, sequence_skip_enabled,
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
@@ -98,6 +98,7 @@ from .studio_sequences import (dialogue_ending_animation_selection,
                                dialogue_costume_isolation_preview,
                                isolate_dialogue_speaker_costume)
 from .scumm_project import canonical_json as canonical_project_json, parse_document
+from .scumm_project import game_variable_names
 from .studio_project import canonical_studio_project, parse_studio_project
 from .studio_actors import (add_actor, actor_summary, costume_names, costume_summary,
                             create_costume, add_costume_frame, set_costume_animation,
@@ -391,7 +392,9 @@ def make_app():
                 gr.update(choices=animations, value=animations[0] if animations else None),
                 gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
                                    *[(f"Raum: {name}", name) for name in rooms],
-                                   *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)]],
+                                   *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)],
+                                       *[(f"Inventar: {name}", "inv:" + name) for name in sorted({h.id for r in parse_document(raw).rooms for h in r.hotspots if h.pickup})],
+                                       *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]],
                           value=objects[0] if objects else room),
                 gr.update(choices=sequences, value=identity),
                 gr.update(choices=[(f"{i+1}. {text}", i) for i, text in enumerate(steps)],
@@ -900,7 +903,8 @@ def make_app():
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum", elem_id="native-room")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt", elem_id="native-hotspot")
-                native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
+                native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close", "TalkTo"], value="Open")
+            gr.Markdown("**TalkTo (Rede mit):** Startet eine freie, bedingte Interaktion über das native Sprechverb. Vorhandene lineare Dialoge oder Dialogbäume desselben Hotspots bleiben geschützt; ein konkurrierender TalkTo-Schritt wird abgelehnt.")
             gr.Markdown("**Native Raumverdeckung (ZPxx):** Eine PNG-Maske in exakter Raumgröße importieren. Weiß verdeckt Actors, Schwarz lässt sie sichtbar; transparente Pixel sind frei. Ebene 1 zuerst anlegen, bestehende Ebenen können ersetzt werden. Die Änderung wird erst durch den Projekt-JSON-Export dauerhaft gesichert.")
             with gr.Row():
                 native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-zplane-file")
@@ -988,35 +992,49 @@ def make_app():
                 native_sound_id = gr.Textbox(label="Sound-ID", value="EffectSound")
                 native_sound_add = gr.Button("VOC dem Raum zuweisen")
             with gr.Row():
-                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objektzustand setzen", "Gegenstand aufnehmen", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Gesprochene Zeile"], value="Actor animieren")
+                native_kind = gr.Dropdown(label="Aktion hinzufügen / bearbeiten", choices=["Actor animieren", "Actor versetzen", "Actor laufen lassen", "Auf Actor warten", "Kamera folgt Actor", "Kamera schwenken", "Auf Kamera warten", "Actor drehen", "Actor Sprechfarbe", "Actor Sprechtext-Position", "Actor Z-Clipping", "Actor-Raumtransfer mit Z-Clipping", "Warten", "Objekt versetzen", "Objektzustand setzen", "Objekt anklickbar", "Objekt unanklickbar", "Objektklasse setzen", "Objektklasse entfernen", "Spielvariable setzen", "Spielvariable ändern", "Gegenstand aufnehmen", "Gegenstand verbrauchen / übergeben", "Inventar kombinieren", "Raum wechseln", "Musik starten", "Musik stoppen", "Sound starten", "Sound stoppen", "Textzeile ohne Audio", "Gesprochene Zeile"], value="Actor animieren")
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
-                native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
-                native_amount = gr.Number(label="Sekunden / Objektzustand (0–2) / Z-Clipping (0–4) / Raumprofil (-1)", value=1, precision=0)
+                native_target = gr.Dropdown(label="Zielobjekt / Zielraum / Inventar / Spielvariable (var:Name)", allow_custom_value=True)
+                native_amount = gr.Number(label="Sekunden / Objektzustand (0–2) / Z-Clipping (0–4) / Raumprofil (-1) / Sprechfarbe (0–255) / Objektklasse (1–32) / Variablenwert (-32768–32767)", value=1, precision=0)
             with gr.Row():
-                native_move_x = gr.Number(label="Actor-/Kamera-Ziel X", value=320, precision=0)
-                native_move_y = gr.Number(label="Actor-Ziel Y (Versetzen/Laufen)", value=100, precision=0)
+                native_move_x = gr.Number(label="Actor-/Objekt-/Kamera-Ziel X / Sprechtext-Offset X", value=320, precision=0)
+                native_move_y = gr.Number(label="Actor-/Objekt-Ziel Y / Sprechtext-Offset Y", value=100, precision=0)
                 native_face_direction = gr.Dropdown(label="Blickrichtung (Actor drehen)",
                                                     choices=["N", "E", "S", "W"], value="S")
-            native_subtitle = gr.Textbox(label="Untertitel für gesprochene Zeile (Unicode, maximal 160 Zeichen)",
+            native_subtitle = gr.Textbox(label="Text / Untertitel (Unicode, maximal 160 Zeichen)",
                                          placeholder="Text, den die Spielfigur spricht")
+            gr.Markdown("**Textzeile ohne Audio:** Ego oder Actor spricht einen nativen Rätselhinweis oder Dialogtext ohne VOC-Datei. Die Sequenz wartet auf das Ende des Textes; bei Escape wird der Text beendet und der Endzustand übernommen.")
             gr.Markdown("**Actor laufen lassen** startet den nativen Weg zum Ziel. Mit **Auf Actor warten** kannst du die nachfolgenden Schritte bis zum Ende seiner Laufbewegung anhalten. Beide Aktionen wirken nur auf anwesende Actors, auch nach authoriertem Raumtransfer.")
             gr.Markdown("**Actor-Raumtransfer mit Z-Clipping:** Actor, Zielraum, X/Y und Ziel-Z-Ebene wählen. Transfer am Ende der Sequenz, optional gefolgt von einem Raumwechsel.")
             gr.Markdown("**Actor Z-Clipping:** 1–4 erzwingt eine vorhandene Raum-Z-Maske; 0 stellt die automatische Walkbox-Verdeckung wieder her. -1 stellt das authorierte Z-Clipping-Profil des aktuellen Raums wieder her. Die Aktion wirkt nur auf einen im aktuellen Raum anwesenden Actor, auch nach authoriertem Raumtransfer.")
+            gr.Markdown("**Actor Sprechfarbe / Sprechtext-Position:** Nativen Palettenindex (0–255) beziehungsweise X/Y-Offset relativ zur Figur einstellen. Die Werte wirken auf folgende Actor-Sprechtexte und bleiben bis zur nächsten Änderung erhalten.")
+            gr.Markdown("**Objekt versetzen:** Ein Raumobjekt mit Bild auswählen und X/Y in Raumpixeln (Vielfache von 8) angeben. Die native Aktion verschiebt Bild und Hotspot und setzt Bildzustand 1. Danach kann ein weiterer Objektzustand gesetzt werden. Inventargegenstände sind ausgeschlossen.")
+            gr.Markdown("**Objekt anklickbar / unanklickbar:** Ändert die native Untouchable-Klasse (32), ohne den Bildzustand zu ändern. **Objektklasse setzen / entfernen:** Andere native oder spielinterne Klassen 1–32 einzeln ändern; bestehende Klassen bleiben erhalten.")
+            gr.Markdown("**Spielvariable setzen:** Im Zielfeld `var:Quest` eingeben oder auswählen und einen ganzzahligen Wert setzen. Variablen beginnen bei 0, gelten raumübergreifend und sind in den Interaktionsbedingungen auswählbar.")
+            gr.Markdown("**Spielvariable ändern:** Positive oder negative Differenz zum aktuellen Wert. Vergleichsoperatoren gelten für Spielvariablen; alternative Bedingungen dürfen sich nicht überschneiden.")
             native_add = gr.Button("Schritt an Interaktion anhängen", variant="primary")
             native_sequence = gr.Dropdown(label="Vorhandene Interaktion")
             native_add_selected = gr.Button("Schritt an ausgewählte Variante anhängen")
             with gr.Row():
                 native_condition_object = gr.Dropdown(
-                    label="Interaktion nur bei Objektzustand", choices=[("Immer ausführen", None)])
-                native_condition_state = gr.Number(label="Erforderlicher Zustand (0–2)",
+                    label="Interaktion nur bei Objektzustand, Inventarbesitz oder Spielvariable", choices=[("Immer ausführen", None)])
+                native_condition_operator = gr.Dropdown(label="Vergleich (Spielvariable)",
+                    choices=["==", "!=", "<", "<=", ">", ">="], value="==")
+                native_condition_state = gr.Number(label="Zustand / Variablenwert / Inventarbesitz (0 fehlt, 1 vorhanden)",
                                                    value=0, precision=0)
                 native_condition_save = gr.Button("Bedingung speichern")
                 native_variant_add = gr.Button("Alternative Zustandsvariante duplizieren")
-            gr.Markdown("Mehrere Varianten desselben Verbs dürfen unterschiedliche Zustände **desselben Raumobjekts** abdecken. Eine Variante ohne Bedingung dient als Fallback. Nach dem Duplizieren die Schritte der neuen Variante bearbeiten.")
+            with gr.Row():
+                native_second_target = gr.Dropdown(label="Zweite Bedingung (optional)", choices=[("Keine", None)])
+                native_second_value = gr.Number(label="Zweiter Wert", value=0, precision=0)
+                native_second_operator = gr.Dropdown(label="Zweiter Vergleich", choices=["==", "!=", "<", "<=", ">", ">="], value="==")
+                native_condition_join = gr.Dropdown(label="Verknüpfung", choices=[("UND", "and"), ("ODER", "or")], value="and")
+            gr.Markdown("Einzelbedingungen können mehrere überschneidungsfreie Varianten haben. Zwei Bedingungen per UND/ODER lassen sich mit einer optionalen unbedingten Fallback-Variante kombinieren.")
             with gr.Row():
                 native_skippable = gr.Checkbox(label="Mit Escape überspringbar", value=False)
                 native_skip_save = gr.Button("Skip-Einstellung speichern")
+            gr.Markdown("**Gegenstand verbrauchen / übergeben:** Ein Inventarobjekt aus einem beliebigen Raum auswählen. Nur wenn Ego es besitzt, wird es nativ entfernt. Für eine daran gebundene Belohnung eine Inventarbesitz-Bedingung verwenden.")
             gr.Markdown("Beim Überspringen übernimmt SCUMM die **letzten Objektzustände, Actor-Zielpositionen und Blickrichtungen sowie Inventaraufnahmen und -kombinationen** der Sequenz. Für *Inventar kombinieren* ein Ergebnisobjekt mit vorhandener Raum-Kombinationsregel wählen. *Raum wechseln* muss der letzte Schritt sein; der Wechsel erfolgt nach dem normalen Ablauf oder nach Escape und dem Setzen aller Endzustände.")
             gr.Markdown("*Musik starten/stoppen* nutzt die MIDI-Ressource des Sequenzraums. Beim Escape wird der letzte Musikzustand der Folge ausgeführt. Die Raumzuweisung startet Musik auch beim normalen Betreten des Raums.")
             gr.Markdown("*Sound starten/stoppen* verwendet einen zuvor für den Raum importierten VOC-Effekt. Mehrere Effekte bleiben unabhängig; beim Escape wird der jeweils letzte Zustand pro Sound gesetzt.")
@@ -2117,7 +2135,9 @@ def make_app():
             return (gr.update(choices=objects, value=objects[0] if objects else None),
                     gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
                                        *[(f"Raum: {name}", name) for name in rooms],
-                                       *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)]],
+                                       *[(f"Sound: {name}", name) for name in room_sound_ids(raw, room)],
+                                       *[(f"Inventar: {name}", "inv:" + name) for name in sorted({h.id for r in parse_document(raw).rooms for h in r.hotspots if h.pickup})],
+                                       *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]],
                               value=objects[0] if objects else room),
                     gr.update(choices=[("Ego (für gesprochene Zeile)", None), *[(item, item) for item in actors]],
                               value=actors[0] if actors else None),
@@ -2129,7 +2149,7 @@ def make_app():
             document = parse_document(raw)
             if kind == "Actor-Raumtransfer mit Z-Clipping":
                 actors = tuple(a.id for a in document.actors)
-            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor drehen", "Kamera folgt Actor", "Actor versetzen"):
+            elif kind in ("Actor Z-Clipping", "Actor laufen lassen", "Auf Actor warten", "Actor animieren", "Actor drehen", "Actor Sprechfarbe", "Actor Sprechtext-Position", "Textzeile ohne Audio", "Kamera folgt Actor", "Actor versetzen"):
                 from .scumm_project import TransferActorZClipStep
                 transferred = {step.actor_id for sequence in document.interaction_sequences
                                for step in sequence.steps
@@ -2196,16 +2216,24 @@ def make_app():
                                [native_step, native_steps])
         def native_condition_update(raw, identity):
             if raw is None:
-                return gr.update(choices=[("Immer ausführen", None)], value=None), 0
+                return (gr.update(choices=[("Immer ausführen", None)], value=None), 0, "==",
+                        gr.update(choices=[("Keine", None)], value=None), 0, "==", "and")
             room = identity.split("|", 1)[0] if identity else None
             _, objects, _ = project_choices(raw, room)
             target, state = sequence_condition_fields(raw, identity)
-            return (gr.update(choices=[("Immer ausführen", None),
-                                       *[(item, item) for item in objects]], value=target),
-                    state)
+            document = parse_document(raw)
+            inventory = sorted({h.id for r in document.rooms for h in r.hotspots if h.pickup})
+            choices = [*[(item, item) for item in objects],
+                       *[(f"Inventar: {name}", "inv:" + name) for name in inventory],
+                       *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(document)]]
+            second, value, operator, join = sequence_second_condition_fields(raw, identity)
+            return (gr.update(choices=[("Immer ausführen", None), *choices], value=target),
+                    state, sequence_condition_operator(raw, identity),
+                    gr.update(choices=[("Keine", None), *choices], value=second), value, operator, join)
 
         native_sequence.change(native_condition_update, [native_state, native_sequence],
-                               [native_condition_object, native_condition_state])
+                               [native_condition_object, native_condition_state, native_condition_operator,
+                                native_second_target, native_second_value, native_second_operator, native_condition_join])
         native_sequence.change(lambda raw, identity: sequence_skip_enabled(raw, identity)
                                if raw is not None else False,
                                [native_state, native_sequence], [native_skippable])
@@ -2214,11 +2242,13 @@ def make_app():
                                [native_state, *native_outputs, native_report])
         native_condition_save.click(lambda *args: native_edit(set_sequence_condition, *args),
                                     [native_state, native_sequence, native_condition_object,
-                                     native_condition_state],
+                                     native_condition_state, native_condition_operator,
+                                     native_second_target, native_second_value, native_second_operator, native_condition_join],
                                     [native_state, *native_outputs, native_report])
         native_variant_add.click(lambda *args: native_edit(duplicate_sequence_variant, *args),
                                  [native_state, native_sequence, native_condition_object,
-                                  native_condition_state],
+                                  native_condition_state, native_condition_operator,
+                                  native_second_target, native_second_value, native_second_operator, native_condition_join],
                                  [native_state, *native_outputs, native_report])
         def native_step_update(raw, identity, number):
             fields = sequence_step_fields(raw, identity, number)
@@ -2231,7 +2261,9 @@ def make_app():
                     gr.update(choices=animations, value=fields[2]),
                     gr.update(choices=[*[(f"Objekt: {name}", name) for name in objects],
                                        *[(f"Raum: {name}", name) for name in rooms],
-                                       *[(f"Sound: {name}", name) for name in room_sound_ids(raw, sequence_room)]],
+                                       *[(f"Sound: {name}", name) for name in room_sound_ids(raw, sequence_room)],
+                                       *[(f"Inventar: {name}", "inv:" + name) for name in sorted({h.id for r in parse_document(raw).rooms for h in r.hotspots if h.pickup})],
+                                       *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]],
                               value=fields[3]),
                     fields[4], fields[5], fields[6], fields[7], fields[8] if len(fields) > 8 else "")
 
