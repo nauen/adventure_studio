@@ -1,19 +1,10 @@
 # Adventure Studio – aktive Produktroadmap
 
-**Nutzerentscheidung 27.11.2026: Produktworkflow vor technischen Spezialdetails.**
-
-- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime.
-- **Erster Meilenstein:** Ein vollständiges, in Adventure Studio erstelltes mehrraumiges Adventure, in stock ScummVM bis zum Spielende spielbar.
-- **Jetzt:** Bestehenden Autorenworkflow und offene Produkt-PRs prüfen; erste konkrete Workflow-Lücke unmittelbar implementieren oder integrieren. Keine weitere isolierte Actor-Pose als Folgepaket.
-- **Abnahme:** Regulärer Studio-Projektworkflow mit Speicherung/erneutem Laden, nativer Export und tatsächliches Gameplay bis zum erreichbaren Ende. Teilnachweise bleiben als solche gekennzeichnet.
-- **Blocker:** Konkrete erste fehlende Produktfunktion noch nicht ermittelt; offene Integrationsgates separat konsolidieren.
-- **Danach:** Nächsten konkreten Produktblocker ohne Warten auf unabhängige Gesamtgates bearbeiten; Merge erst mit grünen Pflichtgates.
-
-Die verbindliche Prioritätenfolge steht in [PRODUCT_VISION](PRODUCT_VISION.md#verbindlicher-erster-produktmeilenstein-vollständiges-referenzadventure),
-der aktuelle Paketstand in [PROJECT_STATUS](PROJECT_STATUS.md). Die
-Funktionsmatrix bleibt der einzige technische Katalog, nicht die Reihenfolge
-der Implementierung. Bereits vorhandene Fähigkeiten wiederverwenden.
-Keine neue Spezialfähigkeit ohne konkreten Nutzen für das Referenzadventure.
+- **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; erstes Produktziel: ein im Studio authoriertes, mehrraumiges Adventure bis zum Spielende in unverändertem ScummVM.
+- **Jetzt:** Stand konsolidieren; die bereits implementierte dritte native Objektgrafik IM03 ([#348](https://github.com/nauen/adventure_studio/pull/348), R07) konfliktbewusst auf aktuellem main integrieren. Keine neue Fähigkeit parallel beginnen.
+- **Abnahme:** Bestehende Studio-/JSON-v1-/Story-/ScummC-Pfade und native IM01→IM02→IM03→IM01-Klickfolge auf gemeinsamer Basis erhalten; Core und relevante Native-/Studio-Pflichtgates grün. Keine pauschale V-Freigabe.
+- **Blocker:** #348 ist auf aktueller Basis nicht mergebar; die gestapelten Masken-PRs #363–#366 folgen nicht vor seiner Integration. #366 und #378 haben rote Pflichtgates; siehe [Projektstatus](PROJECT_STATUS.md).
+- **Danach:** Nach Konsolidierung die noch fehlenden nativen Raumgrafik-/Z-Masken-/Walkbox-Fähigkeiten nach tatsächlichem Autorenbedarf priorisieren; genau eine Fähigkeit vollständig Modell → Export → ScummVM-Evidenz abnehmen, erst dann die nächste.
 
 ## Historischer Roadmap-Kopf (ersetzt, keine aktive Paketauswahl)
 

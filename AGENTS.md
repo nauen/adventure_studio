@@ -86,14 +86,15 @@ bestehen, bestimmen aber nicht allein die Reihenfolge der Produktarbeit.
 - Keine neuen isolierten Actor-Posen, Chore-Bindungen, Opcode-Varianten oder
   zusätzlichen Kombinationsproben als Selbstzweck. Nur dann aufnehmen, wenn
   eine konkrete benötigte Spielmechanik ohne sie nicht funktioniert.
-- Ein vertikales Produktpaket zur Zeit. Bei bewiesenem Gameplay sofort den
-  nächsten produktrelevanten Blocker bearbeiten; ausstehende Gesamtgates
-  separat konsolidieren. Keine Merge-Freigabe ohne Pflichtgates.
-- Tests und Dokumentation unterstützen die Produktarbeit; reine
-  Statusabfragen oder neue Probes ohne konkrete offene Produktlücke sind
-  kein Produktfortschritt. Bei laufender CI den nächsten konkreten
-  Implementierungsschritt vorbereiten oder belegte Integrationsfehler
-  beheben, ohne laufende Nachweise unnötig abzubrechen.
+- Verbindliche Reihenfolge: vorhandenen Stand konsolidieren, dann native
+  Lücken priorisieren, genau eine Fähigkeit vollständig Modell → Export →
+  stock ScummVM bis zur Evidenz abnehmen, erst dann das nächste Paket öffnen.
+  Keine neuen parallelen Feature-PRs bei offenen Pflichtgates des aktiven
+  Pakets; bestehende Branches und Nachweise erhalten. Kein Merge vor Pflichtgates.
+- NPC-Komfort nach #190 beendet. Nach der Konsolidierung haben Raumgrafik,
+  Z-Masken und Walkboxen Vorrang vor weiteren isolierten Actor-Details.
+  Tests und Dokumentation dienen der konkreten Produktabnahme. Bei roter CI
+  Ursache des aktiven Pakets beheben, keine neue Fähigkeit beginnen.
 
 ## Wahl des Arbeitspakets
 

@@ -670,12 +670,12 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 | --- | --- | --- | --- | --- | --- | --- |
 | O01 | Room-Hotspots und Verbs | A | I (Teil) | T | V (Teil) | Weitere Verben/Profiles |
 | O02 | Objekt-Sichtbarkeit/Zustandswechsel | A | I (Teil) | T | V (Teil) | Parent-State-Hierarchie |
-| O03 | `drawObjectAt` und bewegte Hitbox | A | – | – | – | Position+Klick gemeinsam |
-| O04 | Objekt-Parent/Child/Untouchable | A | – | – | – | OBCD-Attribute, Klicktest |
+| O03 | `drawObjectAt` und bewegte Hitbox | A | I (Teil: #374, nativer Objektpositionsschritt auf main) | T (Teil: Core/Export #374) | offen | Position+Klick gemeinsam nativ belegen |
+| O04 | Objekt-Parent/Child/Untouchable | A | I (Teil: #374, native Objektklassen setzen/entfernen auf main) | T (Teil: Core/Export #374) | offen | OBCD-Attribute, nativer Klicktest |
 | O05 | Aufnehmen/Inventory-Owner | A | I (Teil) | T | V (Teil) | Varianten/Grenzen |
 | O06 | Use Objekt mit Objekt | A | I (Teil) | T | V (Teil) | Bedingungs-/Script-Regeln |
 | O07 | Inventar-Kombinationsrezepte | A (Teil) | I (Teil) | T (Teil) | offen | Prüfen: aktuell grünes Gameplay |
-| O08 | Mehrstufige Zustands-/Rätselketten | A | I (Teil) | T | V (Teil) | Generische Zustandsgraphen |
+| O08 | Mehrstufige Zustands-/Rätselketten | A | I (Teil: #374, native Variablen, Zähler, Objektzustände und kombinierte Bedingungen auf main) | T (Teil: [Core #374](https://github.com/nauen/adventure_studio/actions/runs/46034460101)) | V (Teil: [Zähler + Hebel → Zielraum](https://github.com/nauen/adventure_studio/actions/runs/46034467788/artifacts/15218128698), Merge d0ddbc6) | Generische Zustandsgraphen; Inventarübergabe #378 noch nicht abgenommen |
 | O09 | Dynamisches Inventar-Layout/Scrollen | A (Teil) | I (Demo) | T (Teil) | offen | Allgemeines Item-Layout |
 | O10 | Sam-&-Max-Klickmodell versus Verb-UI | A | – | – | – | Spielprofilspezifische Input-Scripts |
 
