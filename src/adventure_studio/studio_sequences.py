@@ -12,7 +12,7 @@ import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
                             FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
-                            InteractionSequence, ObjectStateStep, PickupObjectStep,
+                            InteractionSequence, ObjectStateStep, MoveObjectStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
                             DialogueVoiceCue, DialogueAnimationCue,
@@ -2745,7 +2745,7 @@ def _identity(sequence: InteractionSequence) -> str:
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveObjectStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2786,6 +2786,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return (f"Sprachzeile {step.sound_id} ({step.actor_id or 'Ego'}): {step.text}"
                 + (" [" + ", ".join(item.language for item in step.variants) + "]"
                    if step.variants else ""))
+    if isinstance(step, MoveObjectStep):
+        return f"Objekt {step.hotspot_id}: zu ({step.x}, {step.y}) setzen (Bildzustand 1)"
     return f"Objekt {step.hotspot_id}: Zustand {step.state}"
 
 
@@ -2815,6 +2817,10 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
                 direction: str | None, subtitle: str | None = None):
     if kind == "Actor animieren":
         step = AnimateActorStep(actor_id, animation)
+    elif kind == "Objekt versetzen":
+        if any(type(value) not in (int, float) or int(value) != value for value in (x, y)):
+            raise ValueError("Objektposition benötigt ganzzahlige X/Y-Pixelwerte")
+        step = MoveObjectStep(target_id, int(x), int(y))
     elif kind == "Objektzustand setzen":
         if amount is None or type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Objektzustand muss eine ganze Zahl sein")
@@ -2993,6 +2999,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
     if isinstance(step, VoiceLineStep):
         return ("Gesprochene Zeile", step.actor_id, None, step.sound_id,
                 1, 320, 100, "S", step.text)
+    if isinstance(step, MoveObjectStep):
+        return ("Objekt versetzen", None, None, step.hotspot_id, 1, step.x, step.y, "S")
     return ("Objektzustand setzen", None, None, step.hotspot_id, step.state, 320, 100, "S")
 
 
