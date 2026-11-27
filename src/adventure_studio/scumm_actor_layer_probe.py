@@ -27,7 +27,7 @@ def run(upstream, destination):
     index = len(room.palette)
     triggers = tuple(RoomHotspot(name, name, name, x, 100, 16, 16,
                                 sprite_pixels=bytes([index+i])*256)
-                     for i, (name, x) in enumerate((("Front", 350), ("Reset", 450))))
+                     for i, (name, x) in enumerate((("Front", 260), ("Reset", 300))))
     room = replace(room, palette=(*room.palette, *MARKERS),
                    hotspots=(*room.hotspots, *triggers), demo_walk_to_x=None,
                    camera_cues=(CameraCue("set", x=320),), ego_start_x=320)
