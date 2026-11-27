@@ -1511,6 +1511,20 @@ jobs:
           PYTHONPATH: src
         run: |
           xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_launch /tmp/chain-fixture /tmp/chain-smoke --chain-only
+      - name: Play contextual LookAt clues before and after puzzle state change
+        if: ${{ matrix.shard == 'story' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_contextual_look_probe /tmp/scummc-upstream /tmp/native-contextual-look
+      - name: Retain native contextual LookAt evidence
+        if: ${{ always() && matrix.shard == 'story' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-contextual-look
+          path: /tmp/native-contextual-look
+          if-no-files-found: ignore
       - name: Play native inventory handover and reach final room
         if: ${{ matrix.shard == 'story' }}
         env:
