@@ -11,7 +11,7 @@ import tempfile
 import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
-                            FaceActorStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
+                            FaceActorStep, ActorWalkboxModeStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
@@ -2745,7 +2745,7 @@ def _identity(sequence: InteractionSequence) -> str:
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorWalkboxModeStep | ActorZClipStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2764,6 +2764,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Kamera zu X={step.x}"
     if isinstance(step, WaitCameraStep):
         return "Auf Kamera warten"
+    if isinstance(step, ActorWalkboxModeStep):
+        return f"Actor {step.actor_id}: Walkboxen {'folgen' if step.follow else 'ignorieren'}"
     if isinstance(step, ActorZClipStep):
         return f"Actor {step.actor_id}: Z-Clipping {'Raumprofil' if step.plane == -1 else step.plane or 'automatisch'}"
     if isinstance(step, FaceActorStep):
@@ -2855,6 +2857,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         step = PanCameraStep(int(x))
     elif kind == "Auf Kamera warten":
         step = WaitCameraStep()
+    elif kind in ("Actor folgt Walkboxen", "Actor ignoriert Walkboxen"):
+        step = ActorWalkboxModeStep(actor_id, kind == "Actor folgt Walkboxen")
     elif kind == "Actor Z-Clipping":
         if type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Z-Ebene muss eine ganze Zahl sein")
@@ -2956,6 +2960,9 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Kamera schwenken", None, None, None, 1, step.x, 100, "S")
     if isinstance(step, WaitCameraStep):
         return ("Auf Kamera warten", None, None, None, 1, 320, 100, "S")
+    if isinstance(step, ActorWalkboxModeStep):
+        return ("Actor folgt Walkboxen" if step.follow else "Actor ignoriert Walkboxen",
+                step.actor_id, None, None, 1, 320, 100, "S")
     if isinstance(step, ActorZClipStep):
         return ("Actor Z-Clipping", step.actor_id, None, None, step.plane, 320, 100, "S")
     if isinstance(step, FaceActorStep):

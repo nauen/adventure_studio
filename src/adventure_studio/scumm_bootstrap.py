@@ -517,7 +517,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
-                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
+                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorWalkboxModeStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, VoiceLineStep)
@@ -627,6 +627,13 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            panCameraTo({step.x});\n")
             elif isinstance(step, WaitCameraStep):
                 instructions.append("            waitForCamera();\n")
+            elif isinstance(step, ActorWalkboxModeStep):
+                operation = "setActorFollowBoxes" if step.follow else "setActorIgnoreBoxes"
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     f"                {operation}();\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
             elif isinstance(step, ActorZClipStep):
                 instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
                                      f"                setCurrentActor({step.actor_id});\n",
@@ -692,6 +699,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         end_positions = {}
         end_directions = {}
         end_clipping = {}
+        end_walkbox_modes = {}
         final_camera = None
         final_camera_wait = False
         inventory_steps = []
@@ -705,6 +713,11 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, TransferActorZClipStep):
                 end_positions[step.actor_id] = (step.x, step.y, step.room, False)
                 end_clipping[step.actor_id] = (transfer_plane(step), False)
+            elif isinstance(step, ActorWalkboxModeStep):
+                end_walkbox_modes[step.actor_id] = step.follow
+                # Both native operations reset forceClip. A later explicit
+                # clipping action or transfer may establish a new value.
+                end_clipping.pop(step.actor_id, None)
             elif isinstance(step, ActorZClipStep):
                 end_clipping[step.actor_id] = (interaction_plane(step), True)
             elif isinstance(step, FaceActorStep):
@@ -732,6 +745,13 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += inventory_action(step, "                ")
         for hotspot, state in end_states.items():
             commit += f"                setObjectState({hotspot},{state});\n"
+        for actor, follow in end_walkbox_modes.items():
+            operation = "setActorFollowBoxes" if follow else "setActorIgnoreBoxes"
+            commit += (f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
+                       f"                    setCurrentActor({actor});\n"
+                       f"                    {operation}();\n"
+                       "                    setCurrentActor(VAR_EGO);\n"
+                       "                }\n")
         for actor, (x, y, destination, require_presence) in end_positions.items():
             if require_presence:
                 commit += f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
