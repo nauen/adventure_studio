@@ -162,13 +162,16 @@ def compile_story_game(build_directory: Path, upstream: Path, output: Path,
     header = (road / "common.sch").read_text(encoding="utf-8")
     start = document.rooms[0].name
     bootstrap = retarget_upstream_bootstrap(original, start)
+    from .scumm_project import ActorCostumeStep
+    additional_costumes = {step.costume for sequence in document.interaction_sequences
+                           for step in sequence.steps if isinstance(step, ActorCostumeStep)}
     bootstrap, header = inject_actor_bindings(
         bootstrap, header, document.actors, document.costumes,
-        tuple(room.name for room in document.rooms))
+        tuple(room.name for room in document.rooms), additional_costumes=additional_costumes)
     header = inject_actor_initial_flags(header, document.actors)
     if document.actors:
         cost_compiler = _tool(upstream, "cost")
-        for costume_name in sorted({actor.costume for actor in document.actors}):
+        for costume_name in sorted({actor.costume for actor in document.actors} | additional_costumes):
             source = resources / f"{costume_name}.scost"
             target = resources / f"{costume_name}.cost"
             if not source.is_file():
