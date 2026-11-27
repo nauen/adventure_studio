@@ -2670,7 +2670,9 @@ def sequence_choices(raw: str) -> tuple[tuple[str, str], ...]:
                   + (f" [wenn Variable {item.condition_variable} {item.condition_operator} {item.condition_state}]"
                      if item.condition_variable is not None else
                      f" [wenn {item.condition_hotspot_id}={item.condition_state}]"
-                     if item.condition_hotspot_id is not None else " [sonst/immer]"),
+                     if item.condition_hotspot_id is not None else " [sonst/immer]")
+                  + (f" {item.condition_join.upper()} {item.condition_second_target} {item.condition_second_operator} {item.condition_second_value}"
+                     if item.condition_second_target is not None else ""),
                   _identity(item))
                  for item in document.interaction_sequences)
 
@@ -2715,8 +2717,27 @@ def sequence_condition_operator(raw: str, identity: str | None) -> str:
     return sequence.condition_operator if sequence else "=="
 
 
+def sequence_second_condition_fields(raw: str, identity: str | None) -> tuple:
+    sequence = next((item for item in parse_document(raw).interaction_sequences
+                     if _identity(item) == identity), None)
+    return (sequence.condition_second_target, sequence.condition_second_value or 0,
+            sequence.condition_second_operator, sequence.condition_join) if sequence else (None, 0, "==", "and")
+
+
+def _second_condition(target, value, operator, join):
+    if target is None:
+        return dict(condition_second_target=None, condition_second_value=None,
+                    condition_second_operator="==", condition_join="and")
+    if type(value) not in (int, float) or int(value) != value:
+        raise ValueError("Zweite Bedingung benötigt einen ganzzahligen Wert")
+    return dict(condition_second_target=target, condition_second_value=int(value),
+                condition_second_operator=operator, condition_join=join)
+
+
 def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
-                           state: int | float | None, operator: str = "==") -> str:
+                           state: int | float | None, operator: str = "==",
+                           second_target: str | None = None, second_value: int = 0,
+                           second_operator: str = "==", join: str = "and") -> str:
     """Set or clear a native object-state guard on an existing verb sequence."""
     document = parse_document(raw)
     index = next((i for i, item in enumerate(document.interaction_sequences)
@@ -2733,12 +2754,15 @@ def set_sequence_condition(raw: str, identity: str, hotspot_id: str | None,
     variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
     sequences[index] = replace(sequences[index], condition_hotspot_id=None if variable is not None else hotspot_id,
                                condition_variable=variable, condition_state=condition_state,
-                               condition_operator=operator if variable is not None else "==")
+                               condition_operator=operator if variable is not None else "==",
+                               **_second_condition(second_target, second_value, second_operator, join))
     return _checked(replace(document, interaction_sequences=tuple(sequences)))
 
 
 def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
-                               state: int | float | None, operator: str = "==") -> str:
+                               state: int | float | None, operator: str = "==",
+                               second_target: str | None = None, second_value: int = 0,
+                               second_operator: str = "==", join: str = "and") -> str:
     """Copy the selected action sequence as an independently editable state branch."""
     document = parse_document(raw)
     original = next((item for item in document.interaction_sequences
@@ -2750,12 +2774,16 @@ def duplicate_sequence_variant(raw: str, identity: str, hotspot_id: str | None,
     variable = hotspot_id[4:] if isinstance(hotspot_id, str) and hotspot_id.startswith("var:") else None
     variant = replace(original, condition_hotspot_id=None if variable is not None else hotspot_id,
                       condition_variable=variable, condition_state=int(state),
-                      condition_operator=operator if variable is not None else "==")
+                      condition_operator=operator if variable is not None else "==",
+                      **_second_condition(second_target, second_value, second_operator, join))
     return _checked(replace(document, interaction_sequences=(*document.interaction_sequences, variant)))
 
 
 def _identity(sequence: InteractionSequence) -> str:
     base = f"{sequence.room}|{sequence.hotspot_id}|{sequence.verb}"
+    if sequence.condition_second_target is not None:
+        first = "var:" + sequence.condition_variable if sequence.condition_variable is not None else sequence.condition_hotspot_id
+        return f"{base}|{first}|{sequence.condition_state}|{sequence.condition_operator}|{sequence.condition_join}|{sequence.condition_second_target}|{sequence.condition_second_operator}|{sequence.condition_second_value}"
     if sequence.condition_variable is not None:
         suffix = "" if sequence.condition_operator == "==" else f"|{sequence.condition_operator}"
         return f"{base}|var:{sequence.condition_variable}|{sequence.condition_state}{suffix}"

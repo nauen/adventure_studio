@@ -182,6 +182,39 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_combined_object_variable_conditions_author_and_export(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.studio_sequences import sequence_second_condition_fields
+        from adventure_studio.scumm_project import game_variable_names
+        raw = canonical_json(GameDocument("Compound", (scrolling_fixture(), destination_fixture())))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Spielvariable setzen", None, None, "var:Quest", 1)
+        raw = duplicate_sequence_variant(raw, identity, "Door", 2, "==",
+            "var:Count", 5, ">=", "and")
+        selected = identity + "|Door|2|==|and|var:Count|>=|5"
+        self.assertEqual(sequence_second_condition_fields(raw, selected),
+            ("var:Count", 5, ">=", "and"))
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(game_variable_names(doc), ("Count", "Quest"))
+        room = doc.rooms[0]
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        self.assertIn("if((getObjectState(Door) == 2) && (ASGameVar_Count >= 5))", native)
+        raw = set_sequence_condition(raw, selected, "Door", 2, "==",
+            "var:Count", 5, ">=", "or")
+        doc = parse_document(raw)
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        self.assertIn("if((getObjectState(Door) == 2) || (ASGameVar_Count >= 5))", native)
+        with self.assertRaises(ValueError):
+            duplicate_sequence_variant(raw, identity, "Door", 1)
+        with self.assertRaises(ValueError):
+            set_sequence_condition(raw, identity, "Door", 2, "==",
+                "Stairs", 1, "==", "and")
+
     def test_relative_variable_changes_and_disjoint_numeric_guards(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences

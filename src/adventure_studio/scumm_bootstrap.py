@@ -549,6 +549,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                if isinstance(step, (ObjectStateStep, ObjectClassStep, MoveObjectStep, PickupObjectStep))}
     targets.update(step.result_id for sequence in active for step in sequence.steps
                    if isinstance(step, CombineInventoryStep))
+    targets.update(item.condition_hotspot_id for item in active if item.condition_hotspot_id is not None)
+    targets.update(item.condition_second_target for item in active if item.condition_second_target is not None
+                   and not item.condition_second_target.startswith("var:"))
     declarations = [f"    object {target};\n" for target in sorted(targets)
                     if f"    object {target};\n" not in source]
     first = min((source.find(f"    object {sequence.hotspot_id} {{\n")
@@ -857,6 +860,19 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             return f"getObjectState({sequence.condition_hotspot_id})"
         return None
 
+    def full_condition(sequence):
+        first = condition_expression(sequence)
+        if first is None:
+            return None
+        expression = f"{first} {sequence.condition_operator} {sequence.condition_state}"
+        second = sequence.condition_second_target
+        if second is None:
+            return expression
+        right = (game_variable_symbol(second[4:]) if second.startswith("var:")
+                 else f"getObjectState({second})")
+        join = "&&" if sequence.condition_join == "and" else "||"
+        return f"({expression}) {join} ({right} {sequence.condition_second_operator} {sequence.condition_second_value})"
+
     for group in grouped.values():
         sequence = group[0]
         marker = f"    object {sequence.hotspot_id} {{\n"
@@ -877,13 +893,14 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             inverse = {"==": "!=", "!=": "==", "<": ">=", "<=": ">", ">": "<=", ">=": "<"}
             guard = (f"            if({expression} {inverse[sequence.condition_operator]} {sequence.condition_state}) return;\n"
                      if expression is not None else "")
+            if sequence.condition_second_target is not None:
+                guard = f"            if(!({full_condition(sequence)})) return;\n"
             native = (f"        case {sequence.verb}:\n" + guard
                       + playable_sequence(sequence) + "            return;\n")
         else:
             native = f"        case {sequence.verb}:\n"
             for branch in (item for item in group if condition_expression(item) is not None):
-                native += (f"            if({condition_expression(branch)} {branch.condition_operator} "
-                           f"{branch.condition_state}) {{\n"
+                native += (f"            if({full_condition(branch)}) {{\n"
                            + "".join("    " + line for line in playable_sequence(branch).splitlines(True))
                            + "                return;\n            }\n")
             fallback = next((item for item in group if condition_expression(item) is None), None)

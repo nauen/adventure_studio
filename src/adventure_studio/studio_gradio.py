@@ -26,7 +26,7 @@ from .studio_export import export_playable, export_native_project
 from .studio_sequences import (actor_animations, append_sequence_step, append_selected_sequence_step,
                                modify_sequence_step,
                                replace_sequence_step, sequence_step_fields,
-                               sequence_condition_fields, sequence_condition_operator, set_sequence_condition,
+                               sequence_condition_fields, sequence_condition_operator, sequence_second_condition_fields, set_sequence_condition,
                                duplicate_sequence_variant, sequence_skip_enabled,
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
@@ -1022,7 +1022,12 @@ def make_app():
                                                    value=0, precision=0)
                 native_condition_save = gr.Button("Bedingung speichern")
                 native_variant_add = gr.Button("Alternative Zustandsvariante duplizieren")
-            gr.Markdown("Mehrere Varianten desselben Verbs dürfen unterschiedliche Werte **desselben Raumobjekts oder derselben globalen Spielvariable** abdecken. Eine Variante ohne Bedingung dient als Fallback. Nach dem Duplizieren die Schritte der neuen Variante bearbeiten.")
+            with gr.Row():
+                native_second_target = gr.Dropdown(label="Zweite Bedingung (optional)", choices=[("Keine", None)])
+                native_second_value = gr.Number(label="Zweiter Wert", value=0, precision=0)
+                native_second_operator = gr.Dropdown(label="Zweiter Vergleich", choices=["==", "!=", "<", "<=", ">", ">="], value="==")
+                native_condition_join = gr.Dropdown(label="Verknüpfung", choices=[("UND", "and"), ("ODER", "or")], value="and")
+            gr.Markdown("Einzelbedingungen können mehrere überschneidungsfreie Varianten haben. Zwei Bedingungen per UND/ODER lassen sich mit einer optionalen unbedingten Fallback-Variante kombinieren.")
             with gr.Row():
                 native_skippable = gr.Checkbox(label="Mit Escape überspringbar", value=False)
                 native_skip_save = gr.Button("Skip-Einstellung speichern")
@@ -2206,17 +2211,21 @@ def make_app():
                                [native_step, native_steps])
         def native_condition_update(raw, identity):
             if raw is None:
-                return gr.update(choices=[("Immer ausführen", None)], value=None), 0, "=="
+                return (gr.update(choices=[("Immer ausführen", None)], value=None), 0, "==",
+                        gr.update(choices=[("Keine", None)], value=None), 0, "==", "and")
             room = identity.split("|", 1)[0] if identity else None
             _, objects, _ = project_choices(raw, room)
             target, state = sequence_condition_fields(raw, identity)
-            return (gr.update(choices=[("Immer ausführen", None),
-                                       *[(item, item) for item in objects],
-                                       *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]], value=target),
-                    state, sequence_condition_operator(raw, identity))
+            choices = [*[(item, item) for item in objects],
+                       *[(f"Variable: {name}", "var:" + name) for name in game_variable_names(parse_document(raw))]]
+            second, value, operator, join = sequence_second_condition_fields(raw, identity)
+            return (gr.update(choices=[("Immer ausführen", None), *choices], value=target),
+                    state, sequence_condition_operator(raw, identity),
+                    gr.update(choices=[("Keine", None), *choices], value=second), value, operator, join)
 
         native_sequence.change(native_condition_update, [native_state, native_sequence],
-                               [native_condition_object, native_condition_state, native_condition_operator])
+                               [native_condition_object, native_condition_state, native_condition_operator,
+                                native_second_target, native_second_value, native_second_operator, native_condition_join])
         native_sequence.change(lambda raw, identity: sequence_skip_enabled(raw, identity)
                                if raw is not None else False,
                                [native_state, native_sequence], [native_skippable])
@@ -2225,11 +2234,13 @@ def make_app():
                                [native_state, *native_outputs, native_report])
         native_condition_save.click(lambda *args: native_edit(set_sequence_condition, *args),
                                     [native_state, native_sequence, native_condition_object,
-                                     native_condition_state, native_condition_operator],
+                                     native_condition_state, native_condition_operator,
+                                     native_second_target, native_second_value, native_second_operator, native_condition_join],
                                     [native_state, *native_outputs, native_report])
         native_variant_add.click(lambda *args: native_edit(duplicate_sequence_variant, *args),
                                  [native_state, native_sequence, native_condition_object,
-                                  native_condition_state, native_condition_operator],
+                                  native_condition_state, native_condition_operator,
+                                  native_second_target, native_second_value, native_second_operator, native_condition_join],
                                  [native_state, *native_outputs, native_report])
         def native_step_update(raw, identity, number):
             fields = sequence_step_fields(raw, identity, number)
