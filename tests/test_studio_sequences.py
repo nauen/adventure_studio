@@ -157,6 +157,54 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_relative_variable_changes_and_disjoint_numeric_guards(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.studio_sequences import sequence_condition_operator
+        raw = canonical_json(GameDocument("Counter", (scrolling_fixture(), destination_fixture())))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Spielvariable ändern", None, None, "var:Count", 3)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Spielvariable ändern", None, None, "var:Count", -1)
+        raw = set_sequence_skippable(raw, identity, True)
+        raw = duplicate_sequence_variant(raw, identity, "var:Count", 4, "<")
+        raw = duplicate_sequence_variant(raw, identity, "var:Count", 4, ">=")
+        low = identity + "|var:Count|4|<"
+        high = identity + "|var:Count|4|>="
+        self.assertEqual(sequence_condition_operator(raw, low), "<")
+        self.assertEqual(sequence_condition_operator(raw, high), ">=")
+        self.assertEqual(sequence_step_fields(raw, low, 1)[:5],
+            ("Spielvariable ändern", None, None, "var:Count", -1))
+        with self.assertRaises(ValueError):
+            duplicate_sequence_variant(raw, identity, "var:Count", 5, ">")
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        room = doc.rooms[0]
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        self.assertEqual(native.count("int ASBefore_Count;"), 1)
+        self.assertLess(native.index("int ASBefore_Count;"), native.index("case Close:"))
+        self.assertIn("if(ASGameVar_Count < 4)", native)
+        self.assertIn("if(ASGameVar_Count >= 4)", native)
+        self.assertEqual(native.count("ASBefore_Count = ASGameVar_Count;"), 3)
+        self.assertEqual(native.count("ASGameVar_Count = ASBefore_Count;"), 3)
+        self.assertEqual(native.count("ASGameVar_Count = ASGameVar_Count + (3);"), 6)
+        self.assertEqual(native.count("ASGameVar_Count = ASGameVar_Count + (-1);"), 6)
+        absolute = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Spielvariable setzen", None, None, "var:Count", 10)
+        absolute = append_sequence_step(absolute, "Harbor", "Key", "Close",
+            "Spielvariable ändern", None, None, "var:Count", -2)
+        doc = parse_document(absolute)
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            tuple(s for s in doc.interaction_sequences if s.condition_variable is None),
+            doc.actors, doc.costumes, room)
+        normal, override = native.split("} override {", 1)
+        self.assertNotIn("ASBefore_Count = ASGameVar_Count;", normal)
+        self.assertIn("ASGameVar_Count = 10;", override)
+        self.assertIn("ASGameVar_Count = ASGameVar_Count + (-2);", override)
+        self.assertNotIn("ASGameVar_Count = ASGameVar_Count + (3);", override)
+
     def test_game_variable_authoring_conditions_and_native_export(self):
         from adventure_studio.scumm_project import game_variable_names
         from adventure_studio.scumm_assets import scummc_room_source
