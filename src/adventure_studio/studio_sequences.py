@@ -14,7 +14,7 @@ from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, Transfer
                             FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
                             InteractionSequence, ObjectStateStep, SetGameVariableStep, ObjectClassStep, MoveObjectStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
-                            SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
+                            SoundAsset, SoundEffectStep, TextLineStep, VoiceLineStep, VoiceVariant,
                             DialogueVoiceCue, DialogueAnimationCue,
                             SpeakingSequenceTemplate,
                             canonical_json, parse_document)
@@ -2828,6 +2828,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | SetGameVari
         return "Musik starten" if step.operation == "start" else "Musik stoppen"
     if isinstance(step, SoundEffectStep):
         return f"Sound {step.sound_id}: {'starten' if step.operation == 'start' else 'stoppen'}"
+    if isinstance(step, TextLineStep):
+        return f"Textzeile ({step.actor_id or 'Ego'}): {step.text}"
     if isinstance(step, VoiceLineStep):
         return (f"Sprachzeile {step.sound_id} ({step.actor_id or 'Ego'}): {step.text}"
                 + (" [" + ", ".join(item.language for item in step.variants) + "]"
@@ -2903,6 +2905,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
         step = SoundEffectStep(target_id, "start")
     elif kind == "Sound stoppen":
         step = SoundEffectStep(target_id, "stop")
+    elif kind == "Textzeile ohne Audio":
+        step = TextLineStep(subtitle, actor_id)
     elif kind == "Gesprochene Zeile":
         step = VoiceLineStep(target_id, subtitle, actor_id)
     elif kind == "Warten":
@@ -3060,6 +3064,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
     if isinstance(step, SoundEffectStep):
         return ("Sound starten" if step.operation == "start" else "Sound stoppen",
                 None, None, step.sound_id, 1, 320, 100, "S")
+    if isinstance(step, TextLineStep):
+        return ("Textzeile ohne Audio", step.actor_id, None, None, 1, 320, 100, "S", step.text)
     if isinstance(step, VoiceLineStep):
         return ("Gesprochene Zeile", step.actor_id, None, step.sound_id,
                 1, 320, 100, "S", step.text)
