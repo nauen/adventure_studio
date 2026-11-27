@@ -1,12 +1,12 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; NPC-Komfort nach #190 beendet.
-- **Jetzt:** [#355](https://github.com/nauen/adventure_studio/pull/355), native Actor-Walkbox-Führung (R08/A05; R06-Z-Clipping-Vertrag erhalten).
-- **Abnahme:** Stock ScummVM: begrenzter Lauf X≈370 → freier Lauf X≈440 → nach Escape erneut begrenzter Lauf; alle Pflichtgates auf dem aktuellen Head grün, dann integrieren.
-- **Blocker:** [Artefakt 15197657800](https://github.com/nauen/adventure_studio/actions/runs/45999152613/artifacts/15197657800) belegt X=372/442, aber Interpreterabbruch beim Redraw (Testobjekt Y=130 + 16 > 144). [Fix 698b3bf](https://github.com/nauen/adventure_studio/commit/698b3bf9f774c9e8805becc3b160874383ee0187); [Native-CI](https://github.com/nauen/adventure_studio/actions/runs/46000802088) ausstehend. Details und offene PRs in [PROJECT_STATUS.md](PROJECT_STATUS.md), Capability-Status nur in [SCUMM_V6_CAPABILITIES.md](SCUMM_V6_CAPABILITIES.md).
-- **Danach:** [#350](https://github.com/nauen/adventure_studio/pull/350), native Actor-Zeichenebene/Escape vollständig integrieren. Vorher keine weitere native Fähigkeit beginnen.
+- **Jetzt:** #352 – nativer Actor-Laufstopp und Wiederaufnahme (R06/A05).
+- **Abnahme:** Regulärer Stopp und Escape-Stopp vor Ziel, zehn stabile Positionsmessungen je Stopp, erneuter nativer Lauf bis X≈455 in stock ScummVM.
+- **Blocker:** [Actor-Job 140510533256](https://github.com/nauen/adventure_studio/actions/runs/46000052265/job/140510533256) rot: Native Actor position missing: before. [Originalartefakt 15198302559](https://github.com/nauen/adventure_studio/actions/runs/46000052265/artifacts/15198302559) zeigt Guide und gleichfarbige Ego-Pixel. Alte Erkennung X=268 statt 180; auf demselben Originalbild korrigierte Erkennung X=182 (eindeutige dichte Costume-Spalten 24–55 relativ zum ROI). [Fix ba149f5](https://github.com/nauen/adventure_studio/commit/ba149f5bfd6704e6a5c629e6125c33a70d654b97) und zwei Regressionstests gepusht; keine Änderung der Gameplay-Schwellen. [Core](https://github.com/nauen/adventure_studio/actions/runs/46003794523), [Native](https://github.com/nauen/adventure_studio/actions/runs/46003808284) ausstehend.
+- **Danach:** #359 native Standanimations-Zuordnung. #355/#350/#353 Gameplay belegt, Gesamtgates offen; [PROJECT_STATUS](PROJECT_STATUS.md).
 
-Die korrigierte Reihenfolge ersetzt alle älteren operativen Prioritäten. Historische Angaben sind keine aktiven Aufträge.
+Nach Gameplay-Abnahme sofort ein Folgepaket aufnehmen; Merge-Pflichtgates unverändert.
 
 
 ## Historischer Integrationsstand (26.11.2026) – nicht aktive Paketauswahl
