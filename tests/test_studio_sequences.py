@@ -390,9 +390,23 @@ class NativeSequenceEditorTests(unittest.TestCase):
             doc.interaction_sequences, doc.actors, doc.costumes, room)
         normal, override = source.split("} override {", 1)
         override = override.split("case LookAt:", 1)[0]
-        self.assertIn("setActorStandFrame(6);", normal)
+        self.assertIn("setActorStandFrame(24);", normal)
         self.assertIn("setActorStandFrame(3);", override)
-        self.assertNotIn("setActorStandFrame(6);", override)
+        self.assertNotIn("setActorStandFrame(24);", override)
+        self.assertNotIn("setActorStandFrame(6);", normal)
+        from adventure_studio.scumm_costume import stand_animation_frame, costume_source
+        self.assertIn("anim rest @ 24", costume_source(costume))
+        self.assertEqual(stand_animation_frame(costume, "rest"), 24)
+        self.assertEqual(stand_animation_frame(costume, "stand"), 3)
+        for address in (28, 52):
+            changed = replace(costume, animations=(*costume.animations[:-1],
+                replace(alternative, index=address)))
+            self.assertEqual(stand_animation_frame(changed, "rest"), address)
+        for address in (12, 25, 56, 60, 64, 252):
+            changed = replace(costume, animations=(*costume.animations[:-1],
+                replace(alternative, index=address)))
+            with self.assertRaises(ValueError):
+                stand_animation_frame(changed, "rest")
         self.assertNotIn("animateActor(Guide", normal)
         for invalid in ("walk", "missing"):
             with self.assertRaises(ValueError):
