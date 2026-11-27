@@ -1,11 +1,12 @@
 Die unten stehende Matrix bleibt der einzige Katalog. Der aktuelle Integrationskopf hat Vorrang vor historischen Statusangaben; keine pauschale V-Freigabe.
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; Studio/JSON-v1/Story → ScummC-v6 → unverändertes stock ScummVM. NPC-Komfort nach #190 beendet.
-- **Konsolidierung:** #190, #314, #320, #321 und #322 sind integriert; Main-Core auf Merge-Head #322 grün ([45874655587](https://github.com/nauen/adventure_studio/actions/runs/45874655587)). R06 bleibt V (Teil).
-- **Pausiert:** #323 sowie gestapelte #325/#326/#328–#332; ältere #293/#295/#297/#299/#301/#303 bleiben offen. Keine Actor-/NPC-Folgepakete. #323 Native/Studio Run [45867120183](https://github.com/nauen/adventure_studio/actions/runs/45867120183) ist im Geometry-Shard fehlgeschlagen; Kamera-Probe war erfolgreich, ein nachfolgender Restore-Profile-Check scheiterte. Keine V- oder Merge-Freigabe.
-- **Jetzt – genau eine Fähigkeit:** R01 [#333](https://github.com/nauen/adventure_studio/issues/333), native Raum-Bitmap-Palettenfidelität mit 256 tatsächlich verwendeten Farben im unveränderten stock ScummVM.
-- **Abnahme:** Studio/RoomAsset → JSON-v1/Story → produktiver ScummC-v6-Export → Pixelprüfung des echten ScummVM-Screenshots für alle 256 Paletteneinträge; Roundtrip, negative Palettenkontrollen, Artefakte und betroffene Pflicht-CI grün.
-- **Danach:** Erst nach #333 genau eine Lücke in R06/R07/R08/R09 auswählen. ZP05+ bleibt fail-closed.
+- **Konsolidierung (27.11.2026):** #314/#320/#321/#322 sowie #335 und #323 integriert. Main `e9ee4e3aab19003d5933b296c35a467327bbe7e4`, [Main-Core 45931262067](https://github.com/nauen/adventure_studio/actions/runs/45931262067) erfolgreich. R01 #335: 256 tatsächlich genutzte Farben, negative Palettenkontrollen, Story/ImageProvider → JSON-v1 → ScummC → stock ScummVM; [Native 45908457318](https://github.com/nauen/adventure_studio/actions/runs/45908457318) erfolgreich, [Artefakt](https://github.com/nauen/adventure_studio/actions/runs/45908457318/artifacts/15159216615), Merge 2be4702. Kein vollständiger UI-Import nachgewiesen; R01 bleibt V (Teil). R06 #323: Follow/Pan/Wait nach Actor-Transfer, [Native/Studio 45920606549](https://github.com/nauen/adventure_studio/actions/runs/45920606549) erfolgreich, [Kamera-Artefakt](https://github.com/nauen/adventure_studio/actions/runs/45920606549/artifacts/15164428086); früherer roter Run 45867120183 ist nicht mehr aktueller Blocker. R06 bleibt V (Teil).
+- **Jetzt – genau eine Entwicklungsfähigkeit:** R06 [#325](https://github.com/nauen/adventure_studio/pull/325), native Positionierung transferierter Actors im Zielraum (MoveActorStep), einschließlich Anwesenheitsguard und Escape-Endposition. Bestehenden Featurebranch weiterentwickeln.
+- **Abnahme:** Studio → JSON-v1 → ScummC-v6 → maskiertes und transparentes stock ScummVM: Actor X220→X140 regulär, X140→X220 per Escape, kein ungewollter Raumtransfer oder fremder Referenzactor. Vollständige Pflicht-CI vor Merge/V.
+- **Blocker/Nachweis:** #336 Kamera-Teilprüfung samt [Artefakt](https://github.com/nauen/adventure_studio/actions/runs/45931514204/artifacts/15168908109) erfolgreich; [Gesamtworkflow 45931514204](https://github.com/nauen/adventure_studio/actions/runs/45931514204) rot in bestehender Meeting-Camera-Prüfung: ValueError Native two-Actor capture requires 210–480 real frames. #336 bleibt offen. #325 alter [Native-Run 45872472177](https://github.com/nauen/adventure_studio/actions/runs/45872472177) rot bei Restore-Profile; aktuelle Basis und Gates erneut prüfen. Kein Merge bei roten Pflichtgates.
+- **Reihenfolge (Nutzervorgabe 27.11.2026):** Nach erfolgreichem nativem Teilnachweis sofort genau eine nächste Fähigkeit entwickeln; ausstehende Gesamt-CI blockiert Merge/V, nicht den Entwicklungsbeginn. #326/#328–#332 und #293/#295/#297/#299/#301/#303 pausiert; keine weiteren parallelen Featurepakete. ZP05+ bleibt fail-closed.
+- **Danach:** genau ein R06-Folgepaket #326 (native Sprachzeilen transferierter Actors), erst nach nativem Teilnachweis von #325. R07 weitere Objektbildzustände bleibt priorisierte spätere Lücke.
 
 ## Konsolidierter Integrationsstand (26.11.2026)
 
@@ -631,7 +632,7 @@ konkrete Tests/Commits ergänzen, nicht nur Statusbuchstaben setzen.
 
 | ID | Fähigkeit | Analyse | Studio | Test | ScummVM | Nächstes Gate |
 | --- | --- | --- | --- | --- | --- | --- |
-| R01 | Indizierte Room-Bitmaps/Paletten | A | I | T | V (Teil) | Mehrere Größen/Paletten |
+| R01 | Indizierte Room-Bitmaps/Paletten | A | I | T | V (Teil: #335, 256 tatsächlich genutzte Farben, [Native 45908457318](https://github.com/nauen/adventure_studio/actions/runs/45908457318)) | Weitere Größen/Paletten und vollständiger UI-Import offen |
 | R02 | SMAP-Strip-Encoding und Ressourcenblöcke | A | I via ScummC | T (Teil) | V (Teil) | Unabhängiger Binär-Roundtrip P0.1 |
 | R03 | 8-Pixel-Breitenvalidierung | A | I | T | – | Zu Opcode/Masken-Gates erweitern |
 | R04 | Mehrere Räume und Entry-/Exit-Scripts | A | I (Teil) | T | V (Teil) | Script-Lifetime bei Wechsel |
