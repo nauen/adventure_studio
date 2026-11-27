@@ -76,7 +76,14 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
                         continue
                     if ident in ("R06North", "R06South") and not facing:
                         continue
-                    hotspot = RoomHotspot(ident, ident, ident, x, 100, 16, 16,
+                    # Keep the restore-profile trigger beneath the authored Actor.
+                    # Otherwise the interaction probe walks Ego to the trigger
+                    # before measuring the restored clipping profile.
+                    hotspot_x, hotspot_y = ((220, 85)
+                        if ident == "R06Restore" and restore_profile
+                        and not (walk or facing or camera or position)
+                        else (x, 100))
+                    hotspot = RoomHotspot(ident, ident, ident, hotspot_x, hotspot_y, 16, 16,
                                           sprite_pixels=bytes([len(room.palette)]) * 256)
                     room = replace(room, palette=(*room.palette, color),
                                    hotspots=(*room.hotspots, hotspot))
