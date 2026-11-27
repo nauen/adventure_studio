@@ -10,7 +10,7 @@ import re
 import tempfile
 import unicodedata
 
-from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
+from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, StopActorStep, WaitActorStep,
                             FaceActorStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
@@ -2745,7 +2745,7 @@ def _identity(sequence: InteractionSequence) -> str:
             f"{base}|{sequence.condition_hotspot_id}|{sequence.condition_state}")
 
 
-def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
+def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorStep | WalkActorStep | StopActorStep | WaitActorStep | FaceActorStep | ActorZClipStep) -> str:
     if isinstance(step, AnimateActorStep):
         return f"Actor {step.actor_id}: {step.animation}"
     if isinstance(step, DelayStep):
@@ -2756,6 +2756,8 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Actor {step.actor_id}: nach {step.room} ({step.x}, {step.y}), Z-Clipping {step.plane}"
     if isinstance(step, WalkActorStep):
         return f"Actor {step.actor_id}: zu ({step.x}, {step.y}) laufen lassen"
+    if isinstance(step, StopActorStep):
+        return f"Actor {step.actor_id}: Laufbewegung stoppen"
     if isinstance(step, WaitActorStep):
         return f"Auf Actor {step.actor_id} warten"
     if isinstance(step, FollowActorCameraStep):
@@ -2845,6 +2847,8 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
             raise ValueError("Actor-Ziel benötigt ganze Pixelkoordinaten")
         step = (MoveActorStep(actor_id, int(x), int(y)) if kind == "Actor versetzen"
                 else WalkActorStep(actor_id, int(x), int(y)))
+    elif kind == "Actor stoppen":
+        step = StopActorStep(actor_id)
     elif kind == "Auf Actor warten":
         step = WaitActorStep(actor_id)
     elif kind == "Kamera folgt Actor":
@@ -2948,6 +2952,8 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Actor-Raumtransfer mit Z-Clipping", step.actor_id, None, step.room, step.plane, step.x, step.y, "S")
     if isinstance(step, WalkActorStep):
         return ("Actor laufen lassen", step.actor_id, None, None, 1, step.x, step.y, "S")
+    if isinstance(step, StopActorStep):
+        return ("Actor stoppen", step.actor_id, None, None, 1, 320, 100, "S")
     if isinstance(step, WaitActorStep):
         return ("Auf Actor warten", step.actor_id, None, None, 1, 320, 100, "S")
     if isinstance(step, FollowActorCameraStep):

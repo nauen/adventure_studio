@@ -517,7 +517,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
     from .scumm_project import (AnimateActorStep, ObjectStateStep, DelayStep,
-                                MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
+                                MoveActorStep, TransferActorZClipStep, WalkActorStep, StopActorStep, WaitActorStep, FaceActorStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
                                 SoundEffectStep, VoiceLineStep)
@@ -615,6 +615,12 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
                                     f"                walkActorTo({step.actor_id}, {step.x}, {step.y});\n"
                                     "            }\n")
+            elif isinstance(step, StopActorStep):
+                instructions.extend((f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n",
+                                     f"                setCurrentActor({step.actor_id});\n",
+                                     "                setActorStanding();\n",
+                                     "                setCurrentActor(VAR_EGO);\n",
+                                     "            }\n"))
             elif isinstance(step, WaitActorStep):
                 instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
                                     f"                waitForActor({step.actor_id});\n"
@@ -690,6 +696,8 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         # committed there even when the ordinary action list did not finish.
         end_states = {}
         end_positions = {}
+        pending_walks = set()
+        end_stops = set()
         end_directions = {}
         end_clipping = {}
         final_camera = None
@@ -702,7 +710,23 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 end_states[step.hotspot_id] = step.state
             elif isinstance(step, (MoveActorStep, WalkActorStep)):
                 end_positions[step.actor_id] = (step.x, step.y, room_name, True)
+                end_stops.discard(step.actor_id)
+                if isinstance(step, WalkActorStep):
+                    pending_walks.add(step.actor_id)
+                else:
+                    pending_walks.discard(step.actor_id)
+            elif isinstance(step, WaitActorStep):
+                pending_walks.discard(step.actor_id)
+            elif isinstance(step, StopActorStep):
+                # A stop cancels an unfinished walk's destination. Escape must
+                # leave the Actor at its actual position, not teleport it there.
+                if step.actor_id in pending_walks:
+                    end_positions.pop(step.actor_id, None)
+                    pending_walks.discard(step.actor_id)
+                end_stops.add(step.actor_id)
             elif isinstance(step, TransferActorZClipStep):
+                pending_walks.discard(step.actor_id)
+                end_stops.discard(step.actor_id)
                 end_positions[step.actor_id] = (step.x, step.y, step.room, False)
                 end_clipping[step.actor_id] = (transfer_plane(step), False)
             elif isinstance(step, ActorZClipStep):
@@ -738,6 +762,12 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += f"                putActorAt({actor}, {x}, {y}, {destination});\n"
             if require_presence:
                 commit += "                }\n"
+        for actor in sorted(end_stops):
+            commit += (f"                if (getActorRoom({actor}) == VAR_ROOM) {{\n"
+                       f"                    setCurrentActor({actor});\n"
+                       "                    setActorStanding();\n"
+                       "                    setCurrentActor(VAR_EGO);\n"
+                       "                }\n")
         for actor, direction in end_directions.items():
             native_direction = actor_facing_angle(direction)
             # A later explicit transfer is committed before the facing state.
