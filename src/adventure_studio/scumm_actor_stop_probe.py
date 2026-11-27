@@ -58,9 +58,10 @@ def run(upstream, destination):
         subprocess.run(["convert", str(xwd), str(frames / f"scummvm-{label}.png")], check=True, timeout=10)
         xwd.unlink()
 
-    def center(label, color):
+    def center(label, color, actor_lane=False):
         with Image.open(frames / f"scummvm-{label}.png") as image:
-            scene = image.convert("RGB").crop((192, 184, 832, 472))
+            top, bottom = (280, 365) if actor_lane else (184, 472)
+            scene = image.convert("RGB").crop((192, top, 832, bottom))
         # Stock ScummVM's displayed RGB is quantized. The failed CI frame
         # contained (246,36,115), not the authored (242,38,117).
         points = [(i % scene.width, i // scene.width)
@@ -69,11 +70,11 @@ def run(upstream, destination):
         if len(points) < 100:
             return None
         xs, ys = zip(*points)
-        return (min(xs)+max(xs))/2+192, (min(ys)+max(ys))/2+184
+        return (min(xs)+max(xs))/2+192, (min(ys)+max(ys))/2+top
 
     def position(label):
         capture(label)
-        actor = center(label, ACTOR)
+        actor = center(label, ACTOR, actor_lane=True)
         anchor = center(label, CONTROLS[0])
         return None if actor is None or anchor is None else 258+(actor[0]-anchor[0])/2
 
