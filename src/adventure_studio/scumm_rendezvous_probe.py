@@ -210,12 +210,18 @@ def run_native_rendezvous(upstream: Path, output: Path) -> dict:
         launch_smoke(game, root / "screenshots", seconds=6,
                      scene_only=True, allow_static_scene=True,
                      native_two_actor_walk_probe=True,
-                     native_two_actor_capture_frames=300)
+                     # Keep the full multi-leg route in view while avoiding
+                     # synchronous PNG conversion gaps during short walks.
+                     native_two_actor_capture_frames=480,
+                     native_two_actor_capture_interval=0.05,
+                     native_two_actor_defer_preview=True)
         report["variants"][variant] = {"stock_scummvm_started": True}
         persist()
 
     transparent = output / "transparent" / "screenshots"
     traces = track_native_actor_lanes(transparent)
+    report["native_actor_tracks"] = traces
+    persist()
     report["native_rendezvous"] = verify_native_rendezvous(traces)
     report["native_camera_roundtrip"] = {
         variant: verify_two_actor_native_camera_roundtrip(
