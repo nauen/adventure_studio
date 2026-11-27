@@ -516,7 +516,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                                  room_asset=None, sound_assets=(), voice_charset=None,
                                  default_voice_language="en") -> str:
     """Compile ordered, authored object-verb actions into native ScummC."""
-    from .scumm_project import (AnimateActorStep, ObjectStateStep, MoveObjectStep, DelayStep,
+    from .scumm_project import (AnimateActorStep, ObjectStateStep, ObjectClassStep, MoveObjectStep, DelayStep,
                                 MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep, FaceActorStep, ActorTalkColorStep, ActorTalkPositionStep, ActorZClipStep,
                                 FollowActorCameraStep, PanCameraStep, WaitCameraStep,
                                 PickupObjectStep, CombineInventoryStep, ChangeRoomStep, MusicCueStep,
@@ -546,7 +546,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
     costumes_by_name = {costume.name: costume for costume in costumes}
     recipes = {rule.result_id: rule for rule in room_asset.combine_rules} if room_asset else {}
     targets = {step.hotspot_id for sequence in active for step in sequence.steps
-               if isinstance(step, (ObjectStateStep, MoveObjectStep, PickupObjectStep))}
+               if isinstance(step, (ObjectStateStep, ObjectClassStep, MoveObjectStep, PickupObjectStep))}
     targets.update(step.result_id for sequence in active for step in sequence.steps
                    if isinstance(step, CombineInventoryStep))
     declarations = [f"    object {target};\n" for target in sorted(targets)
@@ -596,6 +596,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 instructions.append(f"            if (getActorRoom({actor.id}) == VAR_ROOM) {{\n"
                                     f"                animateActor({actor.id},{animation.index});\n"
                                     "            }\n")
+            elif isinstance(step, ObjectClassStep):
+                value = step.class_id | (128 if step.enabled else 0)
+                instructions.append(f"            setObjectClass({step.hotspot_id},[{value}]);\n")
             elif isinstance(step, MoveObjectStep):
                 instructions.append(f"            drawObjectAt({step.hotspot_id},{step.x // 8},{step.y // 8});\n")
             elif isinstance(step, ObjectStateStep):
@@ -698,6 +701,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         # committed there even when the ordinary action list did not finish.
         end_states = {}
         end_object_positions = {}
+        end_object_classes = {}
         end_positions = {}
         end_directions = {}
         end_talk_colors = {}
@@ -709,7 +713,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
         final_music = None
         final_sounds = {}
         for step in sequence.steps:
-            if isinstance(step, MoveObjectStep):
+            if isinstance(step, ObjectClassStep):
+                end_object_classes[(step.hotspot_id, step.class_id)] = step.enabled
+            elif isinstance(step, MoveObjectStep):
                 end_object_positions[step.hotspot_id] = (step.x, step.y)
                 # drawObjectAt always sets native image state 1. A later
                 # authored state change may override it on either path.
@@ -752,6 +758,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             commit += inventory_action(step, "                ")
         for hotspot, (x, y) in end_object_positions.items():
             commit += f"                drawObjectAt({hotspot},{x // 8},{y // 8});\n"
+        for (hotspot, class_id), enabled in end_object_classes.items():
+            value = class_id | (128 if enabled else 0)
+            commit += f"                setObjectClass({hotspot},[{value}]);\n"
         for hotspot, state in end_states.items():
             commit += f"                setObjectState({hotspot},{state});\n"
         for actor, (x, y, destination, require_presence) in end_positions.items():

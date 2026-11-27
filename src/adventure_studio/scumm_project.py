@@ -89,6 +89,13 @@ class AnimateActorStep:
 
 
 @dataclass(frozen=True)
+class ObjectClassStep:
+    hotspot_id: str
+    class_id: int
+    enabled: bool
+
+
+@dataclass(frozen=True)
 class MoveObjectStep:
     hotspot_id: str
     x: int
@@ -257,7 +264,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | MoveObjectStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | ObjectClassStep | MoveObjectStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -367,6 +374,8 @@ def document_dict(document: GameDocument) -> dict:
                                         **({"skippable": True} if sequence.skippable else {}),
                                         "steps": [({"type": "animate_actor", **vars(step)}
                                                    if isinstance(step, AnimateActorStep)
+                                                   else {"type": "object_class", **vars(step)}
+                                                   if isinstance(step, ObjectClassStep)
                                                    else {"type": "move_object", **vars(step)}
                                                    if isinstance(step, MoveObjectStep)
                                                    else {"type": "set_object_state", **vars(step)}
@@ -898,6 +907,12 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction animation requires named, indexed Costume animation")
                 if actor.direction not in {direction.direction for direction in animation.directions}:
                     raise ValueError("Interaction animation lacks Actor direction")
+            elif isinstance(step, ObjectClassStep):
+                if (not isinstance(step.hotspot_id, str)
+                        or step.hotspot_id not in {hotspot.id for hotspot in room.hotspots}
+                        or type(step.class_id) is not int or not 1 <= step.class_id <= 32
+                        or type(step.enabled) is not bool):
+                    raise ValueError("Object class requires a room object, class 1 to 32 and a boolean operation")
             elif isinstance(step, MoveObjectStep):
                 hotspot = next((item for item in room.hotspots if item.id == step.hotspot_id), None)
                 if hotspot is None or hotspot.pickup or hotspot.sprite_pixels is None:
@@ -1167,6 +1182,10 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "animation"},
                              {"type", "actor_id", "animation"})
                 steps.append(AnimateActorStep(step["actor_id"], step["animation"]))
+            elif kind == "object_class":
+                step = _only(raw_step, {"type", "hotspot_id", "class_id", "enabled"},
+                             {"type", "hotspot_id", "class_id", "enabled"})
+                steps.append(ObjectClassStep(step["hotspot_id"], step["class_id"], step["enabled"]))
             elif kind == "move_object":
                 step = _only(raw_step, {"type", "hotspot_id", "x", "y"}, {"type", "hotspot_id", "x", "y"})
                 steps.append(MoveObjectStep(step["hotspot_id"], step["x"], step["y"]))
