@@ -76,7 +76,9 @@ def run(upstream, destination):
 
     def sample(label):
         image = capture(label)
-        actor = center(image, ACTOR)
+        # Ego walks at y=130 and can share this RGB. Only the authored
+        # Actor's y=85 costume lane is measured (screen y=280..365).
+        actor = center(image.crop((0, 96, image.width, 181)), ACTOR)
         anchor = center(image, MARKERS[0])
         return None if actor is None or anchor is None else 218+(actor[0]-anchor[0])/2
 
