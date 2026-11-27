@@ -902,7 +902,8 @@ def make_app():
             with gr.Row():
                 native_room = gr.Dropdown(label="Raum", elem_id="native-room")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt", elem_id="native-hotspot")
-                native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
+                native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close", "TalkTo"], value="Open")
+            gr.Markdown("**TalkTo (Rede mit):** Startet eine freie, bedingte Interaktion über das native Sprechverb. Vorhandene lineare Dialoge oder Dialogbäume desselben Hotspots bleiben geschützt; ein konkurrierender TalkTo-Schritt wird abgelehnt.")
             gr.Markdown("**Native Raumverdeckung (ZPxx):** Eine PNG-Maske in exakter Raumgröße importieren. Weiß verdeckt Actors, Schwarz lässt sie sichtbar; transparente Pixel sind frei. Ebene 1 zuerst anlegen, bestehende Ebenen können ersetzt werden. Die Änderung wird erst durch den Projekt-JSON-Export dauerhaft gesichert.")
             with gr.Row():
                 native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-zplane-file")
