@@ -79,8 +79,10 @@ class RoomNativePrimitiveTests(unittest.TestCase):
             self.assertEqual(persisted.open_object_zplane_pixels, saved.open_object_zplane_pixels)
             with self.assertRaisesRegex(ValueError, "Bildzustand 2"):
                 import_object_zplane(first, "Harbor", "Key", str(png), 2)
-            with self.assertRaisesRegex(ValueError, "Bildzustand 1 oder 2"):
+            with self.assertRaisesRegex(ValueError, "Bildzustand 3 benötigt ein vorhandenes drittes Objektbild"):
                 import_object_zplane(first, "Harbor", "Door", str(png), 3)
+            with self.assertRaisesRegex(ValueError, "Bildzustand 1, 2 oder 3"):
+                import_object_zplane(first, "Harbor", "Door", str(png), 4)
             Image.new("L", (8, 8), color=255).save(png)
             with self.assertRaisesRegex(ValueError, "exakt"):
                 import_object_zplane(first, "Harbor", "Door", str(png), 2)
