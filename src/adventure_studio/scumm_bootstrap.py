@@ -884,9 +884,6 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
                 + "                    }\n"
                 + "                }\n"
                 + "            }\n"
-                # Reconcile the persistent clipping state on the common exit,
-                # independently of VAR_OVERRIDE and the cutscene input reset.
-                + clipping_commit
                 + transition)
 
     for group in grouped.values():
