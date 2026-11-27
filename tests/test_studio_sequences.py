@@ -309,14 +309,14 @@ class NativeSequenceEditorTests(unittest.TestCase):
 
     def test_restore_profile_probe_rearms_native_start_marker(self):
         from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
-        from adventure_studio.scumm_project import SetObjectStateStep, DelayStep
+        from adventure_studio.scumm_project import ObjectStateStep, DelayStep
         with tempfile.TemporaryDirectory() as directory:
             raw = author_transfer_project(Path(directory), "masked", restore_profile=True)
             doc = parse_document(raw)
             sequences = {seq.hotspot_id: seq for seq in doc.interaction_sequences
                          if seq.room == "Cellar" and seq.verb == "Close"}
-            self.assertEqual(sequences["R06Reveal"].steps[-1], SetObjectStateStep("R06Restore", 1))
-            self.assertEqual(sequences["R06Restore"].steps[0], SetObjectStateStep("R06Restore", 0))
+            self.assertEqual(sequences["R06Reveal"].steps[-1], ObjectStateStep("R06Restore", 1))
+            self.assertEqual(sequences["R06Restore"].steps[0], ObjectStateStep("R06Restore", 0))
             self.assertEqual(sequences["R06Restore"].steps[1], DelayStep(12))
 
     def test_transferred_actor_zclip_requires_native_presence_in_both_paths(self):
