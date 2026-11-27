@@ -610,7 +610,9 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, DelayStep):
                 instructions.append(f"            delaySeconds({step.seconds});\n")
             elif isinstance(step, MoveActorStep):
-                instructions.append(f"            putActorAt({step.actor_id}, {step.x}, {step.y}, {room_name});\n")
+                instructions.append(f"            if (getActorRoom({step.actor_id}) == VAR_ROOM) {{\n"
+                                    f"                putActorAt({step.actor_id}, {step.x}, {step.y}, {room_name});\n"
+                                    "            }\n")
             elif isinstance(step, TransferActorZClipStep):
                 instructions.extend((f"            putActorAt({step.actor_id}, {step.x}, {step.y}, {step.room});\n",
                                      f"            setCurrentActor({step.actor_id});\n",
@@ -728,7 +730,7 @@ def inject_interaction_sequences(source: str, room_name: str, sequences, actors,
             elif isinstance(step, ObjectStateStep):
                 end_states[step.hotspot_id] = step.state
             elif isinstance(step, (MoveActorStep, WalkActorStep)):
-                end_positions[step.actor_id] = (step.x, step.y, room_name, isinstance(step, WalkActorStep))
+                end_positions[step.actor_id] = (step.x, step.y, room_name, True)
             elif isinstance(step, TransferActorZClipStep):
                 end_positions[step.actor_id] = (step.x, step.y, step.room, False)
                 end_clipping[step.actor_id] = (transfer_plane(step), False)
