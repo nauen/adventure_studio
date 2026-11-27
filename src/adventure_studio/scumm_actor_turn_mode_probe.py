@@ -100,7 +100,9 @@ def run(upstream, destination):
                 raise RuntimeError("ScummVM exited during direction lock")
             image=capture(label)
             anchor=center(points(image,MARKERS[0]))
-            colored=[points(image,c) for c in COLORS]
+            # Exclude Ego at y=130, whose costume can share a direction color.
+            lane=image.crop((0,96,image.width,181))
+            colored=[points(lane,c) for c in COLORS]
             actor=center(colored[DIRECTIONS.index(direction)])
             counts=[len(p) for p in colored]
             if anchor is not None and actor is not None:
