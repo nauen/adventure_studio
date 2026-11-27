@@ -157,6 +157,67 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_game_variable_authoring_conditions_and_native_export(self):
+        from adventure_studio.scumm_project import game_variable_names
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        raw = canonical_json(GameDocument("QuestVariables", (scrolling_fixture(), destination_fixture())))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Spielvariable setzen", None, None, "var:Quest", 1)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Spielvariable setzen", None, None, "var:Quest", 2)
+        raw = replace_sequence_step(raw, identity, 1, "Spielvariable setzen",
+            None, None, "var:Quest", 7)
+        raw = set_sequence_skippable(raw, identity, True)
+        raw = append_sequence_step(raw, "Cellar", "Stairs", "Close",
+            "Spielvariable setzen", None, None, "var:Quest", 0)
+        raw = duplicate_sequence_variant(raw, "Cellar|Stairs|Close", "var:Quest", 7)
+        guarded = "Cellar|Stairs|Close|var:Quest|7"
+        raw = replace_sequence_step(raw, guarded, 0, "Spielvariable setzen",
+            None, None, "var:Quest", -3)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(game_variable_names(doc), ("Quest",))
+        self.assertEqual(sequence_condition_fields(raw, guarded), ("var:Quest", 7))
+        self.assertEqual(sequence_step_fields(raw, identity, 1)[:5],
+            ("Spielvariable setzen", None, None, "var:Quest", 7))
+        harbor, cellar = doc.rooms
+        native = inject_interaction_sequences(scummc_room_source(harbor), harbor.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, harbor)
+        normal, override = native.split("} override {", 1)
+        self.assertIn("ASGameVar_Quest = 1;", normal)
+        self.assertNotIn("ASGameVar_Quest = 1;", override)
+        self.assertIn("ASGameVar_Quest = 7;", override)
+        branch = inject_interaction_sequences(scummc_room_source(cellar), cellar.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, cellar)
+        self.assertIn("if(ASGameVar_Quest == 7)", branch)
+        self.assertIn("ASGameVar_Quest = -3;", branch)
+        self.assertIn("ASGameVar_Quest = 0;", branch)
+        removed = modify_sequence_step(raw, identity, 1, "Entfernen")
+        self.assertEqual(len(sequence_steps(removed, identity)), 1)
+        for target, value in (("Quest", 1), ("var:Bad;Name", 1), ("var:Quest", 32768),
+                              ("var:Quest", -32769), ("var:Quest", 1.5)):
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Harbor", "Key", "Close",
+                    "Spielvariable setzen", None, None, target, value)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fake_upstream(root / "scummc")
+            headers = []
+            def fake_runner(args, **kwargs):
+                target = Path(args[args.index("-o") + 1])
+                if args[0].endswith("/sld"):
+                    target.with_suffix(".000").write_bytes(b"index")
+                    target.with_suffix(".001").write_bytes(b"data")
+                else:
+                    for i, arg in enumerate(args):
+                        if arg == "-I" and (Path(args[i+1]) / "common.sch").is_file():
+                            headers.append((Path(args[i+1]) / "common.sch").read_text())
+                    target.write_bytes(b"compiled")
+            export_native_project(raw, root / "scummc", root / "variables.zip", fake_runner)
+            self.assertTrue(any("int ASGameVar_Quest;" in header for header in headers))
+
     def test_object_class_author_edit_remove_and_native_escape(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
