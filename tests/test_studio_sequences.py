@@ -182,6 +182,33 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_contextual_look_at_preserves_original_description_as_fallback(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        room = scrolling_fixture()
+        raw = canonical_json(GameDocument("ContextualLook", (room, destination_fixture())))
+        identity = "Harbor|Door|LookAt"
+        raw = append_sequence_step(raw, "Harbor", "Door", "LookAt",
+                                   "Textzeile ohne Audio", None, None, None, None,
+                                   subtitle="The key can open this door.")
+        raw = set_sequence_condition(raw, identity, "inv:Key", 1)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        self.assertEqual(native.count("case LookAt:"), len(room.hotspots))
+        self.assertIn("if(getObjectOwner(Key) == VAR_EGO)", native)
+        self.assertIn('egoSay("The key can open this door.");', native)
+        self.assertIn("A locked door.", native)
+        raw = append_sequence_step(raw, "Harbor", "Door", "LookAt",
+                                   "Textzeile ohne Audio", None, None, None, None,
+                                   subtitle="Find the key first.")
+        doc = parse_document(raw)
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        self.assertIn('egoSay("Find the key first.");', native)
+        self.assertNotIn("A locked door.", native)
+
     def test_consume_inventory_across_rooms_native_guard_and_escape(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences
