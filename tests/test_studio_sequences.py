@@ -36,6 +36,38 @@ from test_scumm_toolchain import fake_upstream
 
 
 class NativeSequenceEditorTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "Pillow required for PNG import")
+    def test_third_object_image_roundtrip_and_native_state(self):
+        from PIL import Image
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.studio_sequences import import_object_third_image
+        raw = canonical_json(GameDocument("ThirdImage", (scrolling_fixture(), destination_fixture())))
+        with tempfile.TemporaryDirectory() as directory:
+            png = Path(directory) / "third.png"
+            Image.new("RGB", (16, 16), (70, 130, 190)).save(png)
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Harbor", "Door", "Close",
+                                     "Objektzustand setzen", None, None, "Door", 3)
+            updated = import_object_third_image(raw, "Harbor", "Door", str(png))
+            updated = append_sequence_step(updated, "Harbor", "Door", "Close",
+                                           "Objektzustand setzen", None, None, "Door", 3)
+            updated = set_sequence_skippable(updated, "Harbor|Door|Close", True)
+            doc = parse_document(updated)
+            self.assertEqual(canonical_json(doc), updated)
+            room = doc.rooms[0]
+            door = next(h for h in room.hotspots if h.id == "Door")
+            self.assertEqual(door.third_sprite_pixels, bytes(256))
+            self.assertEqual(door.open_sprite_pixels, scrolling_fixture().hotspots[1].open_sprite_pixels)
+            source = inject_interaction_sequences(scummc_room_source(room), "Harbor",
+                doc.interaction_sequences, doc.actors, doc.costumes, room)
+            self.assertIn("DoorThird.bmp", source)
+            for branch in source.split("} override {", 1):
+                self.assertRegex(branch, r"setObjectState\(Door,\s*3\)")
+            Image.new("RGB", (16, 16), (1, 2, 3)).save(png)
+            with self.assertRaises(ValueError):
+                import_object_third_image(updated, "Harbor", "Door", str(png))
+
     def test_directional_png_speaking_pose_preserves_other_directions_and_native_slots(self):
         if importlib.util.find_spec("PIL") is None:
             self.skipTest("PNG import requires the optional Studio Pillow dependency")

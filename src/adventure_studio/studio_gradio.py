@@ -31,7 +31,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
-                               import_room_sound, import_room_zplane, import_object_zplane, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_walkbox_gate, author_room_scale_curve, author_room_camera_plan, room_camera_form_values,
+                               import_room_sound, import_room_zplane, import_object_zplane, import_object_third_image, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_walkbox_gate, author_room_scale_curve, author_room_camera_plan, room_camera_form_values,
                                room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
@@ -491,6 +491,16 @@ def make_app():
         except (ValueError, OSError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
+    def native_object_third_import(raw, room, hotspot, file_path):
+        if raw is None or not file_path:
+            raise gr.Error("Bitte natives Projekt, Objekt und PNG-Bild wählen")
+        try:
+            updated = import_object_third_image(raw, room, hotspot, file_path)
+            return (updated, *native_selectors(updated, selected_room=room),
+                    f"IM03 für {hotspot} gespeichert. Projekt-JSON exportieren.")
+        except (ValueError, OSError, TypeError) as error:
+            raise gr.Error(str(error)) from error
+
     def native_object_zplane_import(raw, room, hotspot, image_state, zplane_index, file_path):
         if raw is None or not file_path:
             raise gr.Error("Bitte natives Projekt, Objekt und PNG-Maske wählen")
@@ -912,6 +922,10 @@ def make_app():
                 native_object_zplane_layer = gr.Dropdown(label="Objekt-Z-Ebene", choices=[("ZP01 (1)", 1), ("ZP02 (2)", 2), ("ZP03 (3)", 3), ("ZP04 (4)", 4)], value=1, elem_id="native-object-zplane-layer")
                 native_object_zplane_file = gr.File(label="Objekt-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-object-zplane-file")
                 native_object_zplane_add = gr.Button("Objekt-Z-Maske übernehmen", elem_id="native-object-zplane-add")
+            gr.Markdown("**Drittes Objektbild (IM03):** PNG in exakter Objektgröße, deckend und mit Farben der vorhandenen Raumpalette. Grundbild und offenes Bild müssen vorhanden sein. Zustand 3 zeigt IM03; eigene Z-Masken für IM03 sind noch nicht unterstützt.")
+            with gr.Row():
+                native_object_third_file = gr.File(label="Drittes Objektbild (PNG)", file_types=[".png"], type="filepath", elem_id="native-object-third-file")
+                native_object_third_add = gr.Button("IM03 übernehmen", elem_id="native-object-third-add")
             gr.Markdown("**Native Laufbereiche (BOXD):** Drei (Dreieck) oder vier (Viereck) Eckpunkte im Uhrzeigersinn eingeben, z. B. `0,70; 120,70; 120,150; 0,150`. Vorhandene Walkboxen bleiben inklusive ihrer Wege/Skalierung erhalten; neue Boxen benötigen später eine gesonderte BOXM-Verbindung, wenn bereits Routen existieren.")
             with gr.Row():
                 native_walkbox_index = gr.Number(label="Walkbox-Nummer (1–254)", value=1, precision=0, elem_id="native-walkbox-index")
@@ -992,7 +1006,7 @@ def make_app():
                 native_actor = gr.Dropdown(label="Actor")
                 native_animation = gr.Dropdown(label="Costume-Animation")
                 native_target = gr.Dropdown(label="Zielobjekt / Zielraum")
-                native_amount = gr.Number(label="Sekunden / Objektzustand (0–2) / Z-Clipping (0–4) / Raumprofil (-1)", value=1, precision=0)
+                native_amount = gr.Number(label="Sekunden / Objektzustand (0–3, 3 mit IM03) / Z-Clipping (0–4) / Raumprofil (-1)", value=1, precision=0)
             with gr.Row():
                 native_move_x = gr.Number(label="Actor-/Kamera-Ziel X", value=320, precision=0)
                 native_move_y = gr.Number(label="Actor-Ziel Y (Versetzen/Laufen)", value=100, precision=0)
@@ -1009,7 +1023,7 @@ def make_app():
             with gr.Row():
                 native_condition_object = gr.Dropdown(
                     label="Interaktion nur bei Objektzustand", choices=[("Immer ausführen", None)])
-                native_condition_state = gr.Number(label="Erforderlicher Zustand (0–2)",
+                native_condition_state = gr.Number(label="Erforderlicher Zustand (0–3, 3 mit IM03)",
                                                    value=0, precision=0)
                 native_condition_save = gr.Button("Bedingung speichern")
                 native_variant_add = gr.Button("Alternative Zustandsvariante duplizieren")
@@ -1915,6 +1929,9 @@ def make_app():
         native_object_zplane_add.click(native_object_zplane_import,
                                        [native_state, native_room, native_hotspot, native_object_zplane_state, native_object_zplane_layer, native_object_zplane_file],
                                        [native_state, *native_outputs, native_report])
+        native_object_third_add.click(native_object_third_import,
+                                      [native_state, native_room, native_hotspot, native_object_third_file],
+                                      [native_state, *native_outputs, native_report])
         native_walkbox_add.click(native_walkbox_author,
                                  [native_state, native_room, native_walkbox_index, native_walkbox_corners],
                                  [native_state, *native_outputs, native_report])

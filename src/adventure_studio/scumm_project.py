@@ -447,6 +447,8 @@ def document_dict(document: GameDocument) -> dict:
                           "x": h.x, "y": h.y, "width": h.width, "height": h.height,
                           "pickup": h.pickup, "sprite_pixels": _encode_pixels(h.sprite_pixels),
                           "open_sprite_pixels": _encode_pixels(h.open_sprite_pixels),
+                          **({"third_sprite_pixels": _encode_pixels(h.third_sprite_pixels)}
+                             if h.third_sprite_pixels is not None else {}),
                           "exit_destination": h.exit_destination,
                           **({"object_zplane_pixels": _encode_pixels(h.object_zplane_pixels)}
                              if h.object_zplane_pixels is not None else {}),
@@ -512,6 +514,13 @@ def document_dict(document: GameDocument) -> dict:
                                 for rule in room.talk_rules]} if room.talk_rules else {}),
         } for room in document.rooms],
     }
+
+
+def _supported_object_state(room, hotspot_id, state):
+    # Preserve the historical 0–2 contract; IM03 is valid only if authored.
+    return (type(state) is int and (0 <= state <= 2 or
+            (state == 3 and any(h.id == hotspot_id and h.third_sprite_pixels is not None
+                                for h in room.hotspots))))
 
 
 def _validate_document(document: GameDocument) -> None:
@@ -774,8 +783,8 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError(f"COUNT rule requires the Actor in its effect room: {rule.effect.room}")
         if rule.effect.hotspot_id not in {hotspot.id for hotspot in room.hotspots}:
             raise ValueError(f"COUNT effect references unknown room hotspot: {rule.effect.hotspot_id}")
-        if type(rule.effect.state) is not int or not 0 <= rule.effect.state <= 2:
-            raise ValueError("COUNT effect requires a supported SCUMM object state 0, 1 or 2")
+        if not _supported_object_state(room, rule.effect.hotspot_id, rule.effect.state):
+            raise ValueError("COUNT effect requires a supported SCUMM object state")
     seen_inputs = set()
     for rule in document.animation_input_rules:
         if not isinstance(rule, AnimationInputRule):
@@ -806,8 +815,8 @@ def _validate_document(document: GameDocument) -> None:
                 raise ValueError("Animation input effect must target its room")
             if not isinstance(effect.hotspot_id, str) or effect.hotspot_id not in {h.id for h in room.hotspots}:
                 raise ValueError("Animation input effect references unknown hotspot")
-            if type(effect.state) is not int or not 0 <= effect.state <= 2:
-                raise ValueError("Animation input effect requires object state 0, 1 or 2")
+            if not _supported_object_state(room, effect.hotspot_id, effect.state):
+                raise ValueError("Animation input effect requires a supported object state")
     for trigger in document.animation_triggers:
         if not isinstance(trigger, AnimationTrigger):
             raise ValueError("Invalid typed animation trigger")
@@ -857,8 +866,7 @@ def _validate_document(document: GameDocument) -> None:
             raise ValueError("Interaction condition requires both an object and a state")
         if sequence.condition_hotspot_id is not None and (
                 sequence.condition_hotspot_id not in {hotspot.id for hotspot in room.hotspots}
-                or type(sequence.condition_state) is not int
-                or not 0 <= sequence.condition_state <= 2):
+                or not _supported_object_state(room, sequence.condition_hotspot_id, sequence.condition_state)):
             raise ValueError("Interaction condition requires a valid room object and native state")
         for step_index, step in enumerate(sequence.steps):
             if isinstance(step, AnimateActorStep):
@@ -875,7 +883,7 @@ def _validate_document(document: GameDocument) -> None:
             elif isinstance(step, ObjectStateStep):
                 if (not isinstance(step.hotspot_id, str)
                         or step.hotspot_id not in {hotspot.id for hotspot in room.hotspots}
-                        or type(step.state) is not int or not 0 <= step.state <= 2):
+                        or not _supported_object_state(room, step.hotspot_id, step.state)):
                     raise ValueError("Interaction state step requires a valid room object and native state")
             elif isinstance(step, PickupObjectStep):
                 if not isinstance(step.hotspot_id, str) or step.hotspot_id not in {
@@ -1344,7 +1352,7 @@ def parse_document(source: str) -> GameDocument:
                              "open_object_zplane_pixels", "object_zplane2_pixels",
                              "open_object_zplane2_pixels", "object_zplane3_pixels",
                              "open_object_zplane3_pixels", "object_zplane4_pixels",
-                             "open_object_zplane4_pixels"},
+                             "open_object_zplane4_pixels", "third_sprite_pixels"},
                       {"id", "label", "description", "x", "y", "width", "height", "pickup",
                        "sprite_pixels", "open_sprite_pixels", "exit_destination"})
             if type(h["pickup"]) is not bool:
@@ -1375,6 +1383,7 @@ def parse_document(source: str) -> GameDocument:
                 _decode_pixels(h["open_object_zplane3_pixels"]) if h.get("open_object_zplane3_pixels") is not None else None,
                 _decode_pixels(h["object_zplane4_pixels"]) if h.get("object_zplane4_pixels") is not None else None,
                 _decode_pixels(h["open_object_zplane4_pixels"]) if h.get("open_object_zplane4_pixels") is not None else None,
+                _decode_pixels(h["third_sprite_pixels"]) if h.get("third_sprite_pixels") is not None else None,
             ))
         rules = []
         for item in room["use_rules"]:
@@ -1498,7 +1507,7 @@ def _align_costume_room_palettes(document: GameDocument) -> tuple[tuple[RoomAsse
     for room in document.rooms:
         reserved.update(value for value in room.pixels if 16 <= value <= 47)
         for hotspot in room.hotspots:
-            for pixels in (hotspot.sprite_pixels, hotspot.open_sprite_pixels):
+            for pixels in (hotspot.sprite_pixels, hotspot.open_sprite_pixels, hotspot.third_sprite_pixels):
                 if pixels is not None:
                     reserved.update(value for value in pixels if 16 <= value <= 47)
     free = (slot for slot in range(17, 48) if slot not in reserved)
