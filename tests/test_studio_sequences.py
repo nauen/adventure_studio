@@ -157,6 +157,47 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
                                      "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
+    def test_object_move_author_edit_remove_and_native_escape(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        raw = canonical_json(GameDocument("MoveObject", (scrolling_fixture(), destination_fixture())))
+        identity = "Harbor|Key|Close"
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Objektzustand setzen", None, None, "Door", 2)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Objekt versetzen", None, None, "Door", None, 400, 104)
+        raw = replace_sequence_step(raw, identity, 1, "Objekt versetzen",
+            None, None, "Door", None, 416, 112)
+        raw = append_sequence_step(raw, "Harbor", "Key", "Close",
+            "Objektzustand setzen", None, None, "Door", 2)
+        raw = set_sequence_skippable(raw, identity, True)
+        doc = parse_document(raw)
+        self.assertEqual(canonical_json(doc), raw)
+        self.assertEqual(sequence_step_fields(raw, identity, 1),
+            ("Objekt versetzen", None, None, "Door", 1, 416, 112, "S"))
+        room = doc.rooms[0]
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            doc.interaction_sequences, doc.actors, doc.costumes, room)
+        for code in native.split("} override {", 1):
+            self.assertIn("drawObjectAt(Door,52,14);", code)
+            self.assertLess(code.index("drawObjectAt(Door,52,14);"),
+                            code.rindex("setObjectState(Door,2);"))
+            self.assertNotIn("drawObjectAt(Door,50,13);", code)
+        earlier_state_only = modify_sequence_step(raw, identity, 2, "Entfernen")
+        parsed = parse_document(earlier_state_only)
+        native = inject_interaction_sequences(scummc_room_source(room), room.name,
+            parsed.interaction_sequences, parsed.actors, parsed.costumes, room)
+        self.assertIn("setObjectState(Door,1);", native.split("} override {", 1)[1])
+        removed = modify_sequence_step(earlier_state_only, identity, 1, "Entfernen")
+        self.assertEqual(len(sequence_steps(removed, identity)), 1)
+        for target, x, y in (("Door", 417, 112), ("Door", 416, 113),
+                             ("Door", -8, 112), ("Door", 632, 112),
+                             ("Door", 416, 192), ("Key", 400, 104),
+                             ("Stairs", 400, 104), ("Missing", 400, 104)):
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Harbor", "Key", "Close",
+                    "Objekt versetzen", None, None, target, None, x, y)
+
     def test_actor_talk_presentation_author_edit_remove_and_export(self):
         from adventure_studio.scumm_assets import scummc_room_source
         from adventure_studio.scumm_bootstrap import inject_interaction_sequences

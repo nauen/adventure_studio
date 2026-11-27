@@ -89,6 +89,13 @@ class AnimateActorStep:
 
 
 @dataclass(frozen=True)
+class MoveObjectStep:
+    hotspot_id: str
+    x: int
+    y: int
+
+
+@dataclass(frozen=True)
 class ObjectStateStep:
     hotspot_id: str
     state: int
@@ -250,7 +257,7 @@ class InteractionSequence:
     room: str
     hotspot_id: str
     verb: str
-    steps: tuple[AnimateActorStep | ObjectStateStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
+    steps: tuple[AnimateActorStep | ObjectStateStep | MoveObjectStep | DelayStep | MoveActorStep | TransferActorZClipStep | WalkActorStep | WaitActorStep | FollowActorCameraStep | PanCameraStep | WaitCameraStep | FaceActorStep | ActorTalkColorStep | ActorTalkPositionStep | ActorZClipStep | PickupObjectStep | CombineInventoryStep | ChangeRoomStep | MusicCueStep | SoundEffectStep | VoiceLineStep, ...]
     condition_hotspot_id: str | None = None
     condition_state: int | None = None
     skippable: bool = False
@@ -360,6 +367,8 @@ def document_dict(document: GameDocument) -> dict:
                                         **({"skippable": True} if sequence.skippable else {}),
                                         "steps": [({"type": "animate_actor", **vars(step)}
                                                    if isinstance(step, AnimateActorStep)
+                                                   else {"type": "move_object", **vars(step)}
+                                                   if isinstance(step, MoveObjectStep)
                                                    else {"type": "set_object_state", **vars(step)}
                                                    if isinstance(step, ObjectStateStep)
                                                    else {"type": "move_actor", **vars(step)}
@@ -889,6 +898,15 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction animation requires named, indexed Costume animation")
                 if actor.direction not in {direction.direction for direction in animation.directions}:
                     raise ValueError("Interaction animation lacks Actor direction")
+            elif isinstance(step, MoveObjectStep):
+                hotspot = next((item for item in room.hotspots if item.id == step.hotspot_id), None)
+                if hotspot is None or hotspot.pickup or hotspot.sprite_pixels is None:
+                    raise ValueError("Object movement requires a visible non-inventory object in the sequence room")
+                if (type(step.x) is not int or type(step.y) is not int
+                        or step.x < 0 or step.y < 0 or step.x % 8 or step.y % 8
+                        or step.x + hotspot.width > room.geometry.room_width
+                        or step.y + hotspot.height > room.geometry.room_height):
+                    raise ValueError("Object movement requires an in-room destination on the native 8-pixel grid")
             elif isinstance(step, ObjectStateStep):
                 if (not isinstance(step.hotspot_id, str)
                         or step.hotspot_id not in {hotspot.id for hotspot in room.hotspots}
@@ -1149,6 +1167,9 @@ def parse_document(source: str) -> GameDocument:
                 step = _only(raw_step, {"type", "actor_id", "animation"},
                              {"type", "actor_id", "animation"})
                 steps.append(AnimateActorStep(step["actor_id"], step["animation"]))
+            elif kind == "move_object":
+                step = _only(raw_step, {"type", "hotspot_id", "x", "y"}, {"type", "hotspot_id", "x", "y"})
+                steps.append(MoveObjectStep(step["hotspot_id"], step["x"], step["y"]))
             elif kind == "set_object_state":
                 step = _only(raw_step, {"type", "hotspot_id", "state"},
                              {"type", "hotspot_id", "state"})
