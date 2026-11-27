@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .palette_animation import PaletteCycle
 from .scumm_costume import (CostumeAnimation, CostumeAsset, CostumeDirection,
-                           CostumeFrame, validate_costume, write_costume_sources, stand_animation_frame, walk_animation_frame
+                           CostumeFrame, validate_costume, write_costume_sources, stand_animation_frame, walk_animation_frame)
 from .scumm_assets import (CameraCue, CombineRule, RoomAsset, RoomHotspot, ScaleCurve, TalkChoice,
                            TalkRule, UseRule, Walkbox, ZPlane, _validate, write_game_sources)
 from .targets import RoomGeometry
