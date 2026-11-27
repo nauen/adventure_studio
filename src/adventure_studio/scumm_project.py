@@ -962,7 +962,8 @@ def _validate_document(document: GameDocument) -> None:
                     raise ValueError("Interaction movement requires an Actor and position in the sequence room")
             elif isinstance(step, FollowActorCameraStep):
                 actor = actors_by_id.get(step.actor_id) if isinstance(step.actor_id, str) else None
-                if actor is None or actor.room != room.name:
+                if actor is None or (actor.room != room.name and
+                                     (actor.id, room.name) not in transfer_destinations):
                     raise ValueError("Native camera follow requires an Actor in the sequence room")
             elif isinstance(step, PanCameraStep):
                 if type(step.x) is not int or not 0 <= step.x < room.geometry.room_width:

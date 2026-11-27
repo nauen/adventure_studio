@@ -91,7 +91,7 @@ class NativeSequenceEditorTests(unittest.TestCase):
         from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
         from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
         modes = ({}, {"profiles": True}, {"profiles": True, "entry_restore": True},
-                 {"dynamic": True}, {"restore_profile": True}, {"walk": True}, {"animation": True}, {"facing": True})
+                 {"dynamic": True}, {"restore_profile": True}, {"walk": True}, {"animation": True}, {"facing": True}, {"camera": True})
         names = set()
         with tempfile.TemporaryDirectory() as directory:
             for variant in ("masked", "transparent"):
@@ -101,10 +101,61 @@ class NativeSequenceEditorTests(unittest.TestCase):
                     actor = next(a for a in doc.actors if a.id == ACTOR_IDS[0])
                     self.assertNotIn(actor.costume, names)
                     names.add(actor.costume)
-        self.assertEqual(len(names), 16)
+        self.assertEqual(len(names), 18)
 
 
 
+
+
+    def test_transferred_actor_camera_authoring_roundtrip(self):
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.scumm_bootstrap import inject_interaction_sequences
+        from adventure_studio.scumm_actor_zclip_transfer_probe import author_transfer_project
+        from adventure_studio.scumm_two_actor_four_mask_probe import ACTOR_IDS
+        from adventure_studio.studio_sequences import sequence_step_fields, sequence_steps
+        with tempfile.TemporaryDirectory() as directory:
+            raw = author_transfer_project(Path(directory), "masked")
+            actor = ACTOR_IDS[0]
+            for kind, actor_id, x in (("Kamera folgt Actor", actor, None),
+                                       ("Auf Kamera warten", None, None),
+                                       ("Kamera schwenken", None, 160),
+                                       ("Auf Kamera warten", None, None)):
+                raw = append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                           kind, actor_id, None, None, None, x)
+            raw = set_sequence_skippable(raw, "Cellar|R06TransferReturn|Open", True)
+            doc = parse_document(raw)
+            self.assertEqual(canonical_json(doc), raw)
+            identity = "Cellar|R06TransferReturn|Open"
+            self.assertEqual(sequence_step_fields(raw, identity, 0)[:2], ("Kamera folgt Actor", actor))
+            self.assertEqual(sequence_step_fields(raw, identity, 2)[5], 160)
+            self.assertEqual(len(sequence_steps(raw, identity)), 4)
+            room = next(r for r in doc.rooms if r.name == "Cellar")
+            seq = next(s for s in doc.interaction_sequences
+                       if (s.room, s.hotspot_id, s.verb) == ("Cellar", "R06TransferReturn", "Open"))
+            native = inject_interaction_sequences(scummc_room_source(room), "Cellar",
+                                                   (seq,), doc.actors, doc.costumes, room)
+            normal, override = native.split("} override {", 1)
+            self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM)", normal)
+            self.assertIn(f"cameraFollowActor({actor});", normal)
+            self.assertIn("panCameraTo(160);", normal)
+            self.assertEqual(normal.count("waitForCamera();"), 2)
+            self.assertIn("panCameraTo(160);", override)
+            self.assertIn("waitForCamera();", override)
+            self.assertNotIn("cameraFollowActor(", override)
+            from dataclasses import replace
+            # A final follow plus an authored camera wait must also settle
+            # on Escape, while a follow without a wait remains asynchronous.
+            for steps, expect_wait in ((seq.steps[:2], True), (seq.steps[:1], False)):
+                follow_native = inject_interaction_sequences(
+                    scummc_room_source(room), "Cellar",
+                    (replace(seq, steps=steps),), doc.actors, doc.costumes, room)
+                _, follow_override = follow_native.split("} override {", 1)
+                self.assertIn(f"if (getActorRoom({actor}) == VAR_ROOM)", follow_override)
+                self.assertIn(f"cameraFollowActor({actor});", follow_override)
+                self.assertEqual("waitForCamera();" in follow_override, expect_wait)
+            with self.assertRaises(ValueError):
+                append_sequence_step(raw, "Cellar", "R06TransferReturn", "Open",
+                                     "Kamera folgt Actor", ACTOR_IDS[1], None, None, None)
 
     def test_transferred_actor_facing_uses_native_room_presence(self):
         from adventure_studio.scumm_assets import scummc_room_source

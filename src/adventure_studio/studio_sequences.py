@@ -11,7 +11,7 @@ import tempfile
 import unicodedata
 
 from .scumm_project import (AnimateActorStep, DelayStep, MoveActorStep, TransferActorZClipStep, WalkActorStep, WaitActorStep,
-                            FaceActorStep, ActorZClipStep, GameDocument,
+                            FaceActorStep, ActorZClipStep, FollowActorCameraStep, PanCameraStep, WaitCameraStep, GameDocument,
                             InteractionSequence, ObjectStateStep, PickupObjectStep,
                             CombineInventoryStep, ChangeRoomStep, MusicCueStep, MusicAsset,
                             SoundAsset, SoundEffectStep, VoiceLineStep, VoiceVariant,
@@ -2758,6 +2758,12 @@ def _describe(step: AnimateActorStep | DelayStep | ObjectStateStep | MoveActorSt
         return f"Actor {step.actor_id}: zu ({step.x}, {step.y}) laufen lassen"
     if isinstance(step, WaitActorStep):
         return f"Auf Actor {step.actor_id} warten"
+    if isinstance(step, FollowActorCameraStep):
+        return f"Kamera folgt Actor {step.actor_id}"
+    if isinstance(step, PanCameraStep):
+        return f"Kamera zu X={step.x}"
+    if isinstance(step, WaitCameraStep):
+        return "Auf Kamera warten"
     if isinstance(step, ActorZClipStep):
         return f"Actor {step.actor_id}: Z-Clipping {'Raumprofil' if step.plane == -1 else step.plane or 'automatisch'}"
     if isinstance(step, FaceActorStep):
@@ -2841,6 +2847,14 @@ def _build_step(kind: str, actor_id: str | None, animation: str | None,
                 else WalkActorStep(actor_id, int(x), int(y)))
     elif kind == "Auf Actor warten":
         step = WaitActorStep(actor_id)
+    elif kind == "Kamera folgt Actor":
+        step = FollowActorCameraStep(actor_id)
+    elif kind == "Kamera schwenken":
+        if type(x) not in (int, float) or int(x) != x:
+            raise ValueError("Kamera-X benötigt eine ganze Pixelkoordinate")
+        step = PanCameraStep(int(x))
+    elif kind == "Auf Kamera warten":
+        step = WaitCameraStep()
     elif kind == "Actor Z-Clipping":
         if type(amount) not in (int, float) or int(amount) != amount:
             raise ValueError("Z-Ebene muss eine ganze Zahl sein")
@@ -2936,6 +2950,12 @@ def sequence_step_fields(raw: str, identity: str | None, step_number: int | floa
         return ("Actor laufen lassen", step.actor_id, None, None, 1, step.x, step.y, "S")
     if isinstance(step, WaitActorStep):
         return ("Auf Actor warten", step.actor_id, None, None, 1, 320, 100, "S")
+    if isinstance(step, FollowActorCameraStep):
+        return ("Kamera folgt Actor", step.actor_id, None, None, 1, 320, 100, "S")
+    if isinstance(step, PanCameraStep):
+        return ("Kamera schwenken", None, None, None, 1, step.x, 100, "S")
+    if isinstance(step, WaitCameraStep):
+        return ("Auf Kamera warten", None, None, None, 1, 320, 100, "S")
     if isinstance(step, ActorZClipStep):
         return ("Actor Z-Clipping", step.actor_id, None, None, step.plane, 320, 100, "S")
     if isinstance(step, FaceActorStep):
