@@ -365,7 +365,7 @@ def import_object_third_image(raw: str, room_name: str, hotspot_id: str, png_pat
 
 def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: str,
                          image_state: int = 1, zplane_index: int = 1) -> str:
-    """Assign independent PNG masks: IM01/IM02 ZP01–04 or IM03 ZP01–02."""
+    """Assign independent PNG masks: IM01/IM02 ZP01–04 or IM03 ZP01–03."""
     from PIL import Image
 
     document = parse_document(raw)
@@ -383,8 +383,11 @@ def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: st
         raise ValueError("Bildzustand 2 benötigt ein vorhandenes offenes Objektbild")
     if type(zplane_index) is not int or zplane_index not in (1, 2, 3, 4):
         raise ValueError("Objekt-Z-Ebene muss für IM01 oder IM02 1 bis 4 sein")
-    if image_state == 3 and zplane_index not in (1, 2):
-        raise ValueError("IM03 unterstützt derzeit ZP01 und ZP02")
+    if image_state == 3 and zplane_index not in (1, 2, 3):
+        raise ValueError("IM03 unterstützt derzeit ZP01 bis ZP03")
+    if image_state == 3 and zplane_index == 3 and (
+            hotspot.third_object_zplane_pixels is None or hotspot.third_object_zplane2_pixels is None):
+        raise ValueError("IM03 ZP03 benötigt zunächst IM03 ZP01 und ZP02")
     if image_state == 3 and zplane_index == 2 and hotspot.third_object_zplane_pixels is None:
         raise ValueError("IM03 ZP02 benötigt zunächst IM03 ZP01")
     if zplane_index == 2 and image_state == 1 and hotspot.object_zplane_pixels is None:
@@ -421,7 +424,9 @@ def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: st
             )
     except (OSError, Image.DecompressionBombError) as error:
         raise ValueError(f"PNG-Objekt-Z-Maske nicht lesbar: {error}") from error
-    updated = (replace(hotspot, third_object_zplane2_pixels=pixels)
+    updated = (replace(hotspot, third_object_zplane3_pixels=pixels)
+               if (image_state, zplane_index) == (3, 3)
+               else replace(hotspot, third_object_zplane2_pixels=pixels)
                if (image_state, zplane_index) == (3, 2)
                else replace(hotspot, third_object_zplane_pixels=pixels)
                if image_state == 3
@@ -2635,7 +2640,7 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
             "object_zplane3_pixels", "object_zplane4_pixels",
             "open_object_zplane_pixels", "open_object_zplane2_pixels",
             "open_object_zplane3_pixels", "open_object_zplane4_pixels",
-            "third_object_zplane_pixels", "third_object_zplane2_pixels",
+            "third_object_zplane_pixels", "third_object_zplane2_pixels", "third_object_zplane3_pixels",
         )
         native_hotspots = {h.id: h for h in previous.hotspots} if previous is not None else {}
         authored_hotspots = []

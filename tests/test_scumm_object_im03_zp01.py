@@ -68,11 +68,14 @@ class IM03ZP01Tests(unittest.TestCase):
             raw = import_object_zplane(raw, "Harbor", "Door", str(mask), 3, 1)
             Image.new("L", (16, 16), 0).save(mask)
             raw = import_object_zplane(raw, "Harbor", "Door", str(mask), 3, 2)
+            Image.new("L", (16, 16), 255).save(mask)
+            raw = import_object_zplane(raw, "Harbor", "Door", str(mask), 3, 3)
             composed = parse_document(compose_story_project(story, raw))
             harbor = next(r for r in composed.rooms if r.name == "Harbor")
             door = next(h for h in harbor.hotspots if h.id == "Door")
             self.assertEqual(door.third_object_zplane_pixels, bytes([1]) * 256)
             self.assertEqual(door.third_object_zplane2_pixels, bytes(256))
+            self.assertEqual(door.third_object_zplane3_pixels, bytes([1]) * 256)
             self.assertIsNotNone(door.third_sprite_pixels)
-            self.assertIn('"DoorThird.bmp", { "DoorThirdZ01.bmp", "DoorThirdZ02.bmp" }',
+            self.assertIn('"DoorThird.bmp", { "DoorThirdZ01.bmp", "DoorThirdZ02.bmp", "DoorThirdZ03.bmp" }',
                           scummc_room_source(harbor))

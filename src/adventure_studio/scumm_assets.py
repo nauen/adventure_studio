@@ -43,6 +43,7 @@ class RoomHotspot:
     third_sprite_pixels: bytes | None = None  # IM03; IM01 and IM02 required
     third_object_zplane_pixels: bytes | None = None  # IM03 ZP01
     third_object_zplane2_pixels: bytes | None = None  # IM03 ZP02 requires ZP01
+    third_object_zplane3_pixels: bytes | None = None  # IM03 ZP03 requires ZP01 and ZP02
 
 
 @dataclass(frozen=True)
@@ -361,6 +362,13 @@ def _validate(room: RoomAsset) -> None:
                 raise ValueError("IM03 ZP02 requires existing IM03 ZP01 and exact dimensions")
             if any(pixel not in (0, 1) for pixel in hotspot.third_object_zplane2_pixels):
                 raise ValueError("IM03 ZP02 mask pixels must be binary")
+        if hotspot.third_object_zplane3_pixels is not None:
+            if (hotspot.third_sprite_pixels is None or hotspot.third_object_zplane_pixels is None
+                    or hotspot.third_object_zplane2_pixels is None
+                    or len(hotspot.third_object_zplane3_pixels) != hotspot.width * hotspot.height):
+                raise ValueError("IM03 ZP03 requires existing IM03 ZP01 and ZP02 and exact dimensions")
+            if any(pixel not in (0, 1) for pixel in hotspot.third_object_zplane3_pixels):
+                raise ValueError("IM03 ZP03 mask pixels must be binary")
         if hotspot.exit_destination is not None:
             if not _IDENTIFIER.fullmatch(hotspot.exit_destination) or hotspot.exit_destination == room.name:
                 raise ValueError("Invalid exit destination room")
@@ -765,7 +773,8 @@ def scummc_room_source(room: RoomAsset, catalog=None,
                 third = ""
                 if hotspot.third_sprite_pixels is not None:
                     third_masks = ', '.join(f'"{hotspot.id}ThirdZ{i:02}.bmp"' for i in range(
-                        1, 3 if hotspot.third_object_zplane2_pixels is not None else 2))
+                        1, 4 if hotspot.third_object_zplane3_pixels is not None else
+                        3 if hotspot.third_object_zplane2_pixels is not None else 2))
                     third = (f', {{ 0, 0, "{hotspot.id}Third.bmp", {{ {third_masks} }} }}'
                              if hotspot.third_object_zplane_pixels is not None
                              else f', {{ 0, 0, "{hotspot.id}Third.bmp" }}')
@@ -1019,6 +1028,10 @@ def write_room_sources(room: RoomAsset, directory: Path) -> tuple[Path, Path]:
             if hotspot.third_object_zplane2_pixels is not None:
                 (directory / f"{hotspot.id}ThirdZ02.bmp").write_bytes(
                     _indexed_bmp(hotspot.width, hotspot.height, hotspot.third_object_zplane2_pixels,
+                                 ((0, 0, 0), (255, 255, 255))))
+            if hotspot.third_object_zplane3_pixels is not None:
+                (directory / f"{hotspot.id}ThirdZ03.bmp").write_bytes(
+                    _indexed_bmp(hotspot.width, hotspot.height, hotspot.third_object_zplane3_pixels,
                                  ((0, 0, 0), (255, 255, 255))))
             if hotspot.third_sprite_pixels is not None:
                 (directory / f"{hotspot.id}Third.bmp").write_bytes(
