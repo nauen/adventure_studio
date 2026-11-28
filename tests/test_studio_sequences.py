@@ -36,6 +36,44 @@ from test_scumm_toolchain import fake_upstream
 
 
 class NativeSequenceEditorTests(unittest.TestCase):
+    def test_authored_exit_position_roundtrip(self):
+        from dataclasses import replace
+        import json
+        from adventure_studio.scumm_assets import scummc_room_source
+        from adventure_studio.studio_sequences import author_exit_position
+
+        story = (Path(__file__).resolve().parents[1] / "examples" / "mini_story_chain.json").read_text()
+        original = parse_document(compose_story_project(story))
+        raw = canonical_json(original)
+        raw = author_exit_position(raw, "Harbor", "Door", 480, 80)
+        raw = author_exit_position(raw, "Cellar", "Back2", 144, 80)
+        raw = author_exit_position(raw, "Archive", "Back3", 152, 80)
+        saved = canonical_studio_project(story, raw)
+        restored_story, restored = parse_studio_project(saved)
+        self.assertEqual(compose_story_project(restored_story, restored), raw)
+        project = parse_document(raw)
+        for room, initial in zip(project.rooms, original.rooms):
+            self.assertEqual(room.use_rules, initial.use_rules)
+            for h, before in zip(room.hotspots, initial.hotspots):
+                if h.authored_exit_position:
+                    self.assertEqual(replace(h, x=before.x, y=before.y,
+                                             authored_exit_position=False), before)
+                    self.assertIn(f"object {h.id} {{\n        x = {h.x};\n        y = {h.y};",
+                                  scummc_room_source(room))
+                else:
+                    self.assertEqual(h, before)
+        for x, y in ((-1, 80), (625, 80), (480, 185), (480.5, 80), (True, 80)):
+            with self.assertRaises(ValueError):
+                author_exit_position(raw, "Harbor", "Door", x, y)
+        for room, hotspot in (("Missing", "Door"), ("Harbor", "Key"), ("Harbor", "Missing")):
+            with self.assertRaises(ValueError):
+                author_exit_position(raw, room, hotspot, 480, 80)
+        malformed = json.loads(raw)
+        next(h for h in malformed["rooms"][0]["hotspots"] if h["id"] == "Key")["authored_exit_position"] = True
+        with self.assertRaisesRegex(ValueError, "Authored exit position"):
+            parse_document(json.dumps(malformed))
+        self.assertNotIn("authored_exit_position", canonical_json(original))
+
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "Pillow required for PNG import")
     def test_authored_background_roundtrip(self):
         from dataclasses import replace

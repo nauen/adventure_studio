@@ -30,7 +30,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                duplicate_sequence_variant, sequence_skip_enabled,
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
-                               compose_story_project, import_room_music,
+                               compose_story_project, author_exit_position, import_room_music,
                                import_room_sound, import_room_background, import_room_zplane, import_object_zplane, import_object_third_image, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_walkbox_gate, author_room_scale_curve, author_room_camera_plan, room_camera_form_values,
                                room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
@@ -556,6 +556,25 @@ def make_app():
         except (ValueError, OSError, TypeError) as error:
             raise gr.Error(str(error)) from error
 
+    def native_exit_fields(raw, room, hotspot):
+        if raw is not None:
+            selected = next((h for r in parse_document(raw).rooms if r.name == room
+                             for h in r.hotspots if h.id == hotspot and h.exit_destination), None)
+            if selected is not None:
+                return selected.x, selected.y
+        return None, None
+
+    def native_exit_author(raw, room, hotspot, x, y):
+        if raw is None:
+            raise gr.Error("Bitte zuerst ein natives Projekt laden")
+        try:
+            if any(type(v) not in (int, float) or not isfinite(v) or v != int(v) for v in (x, y)):
+                raise ValueError("Ausgangskoordinaten müssen ganze Zahlen sein")
+            updated = author_exit_position(raw, room, hotspot, int(x), int(y))
+            return updated, f"Raumausgang {hotspot} für {room} gespeichert"
+        except (ValueError, TypeError) as error:
+            raise gr.Error(str(error)) from error
+
     def native_walkbox_author(raw, room, index, corners):
         if raw is None:
             raise gr.Error("Bitte zuerst ein natives Projekt laden")
@@ -938,6 +957,11 @@ def make_app():
                 native_room = gr.Dropdown(label="Raum", elem_id="native-room")
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt", elem_id="native-hotspot")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
+            gr.Markdown("**Raumausgang platzieren:** Im Raum das Ausgangsobjekt wählen (z. B. Door oder Back2). X/Y sind die linke obere Ecke in Weltpixeln. Zielraum, Türzustände und Inventarregeln bleiben unverändert.")
+            with gr.Row():
+                native_exit_x = gr.Number(label="Ausgang X", precision=0, elem_id="native-exit-x")
+                native_exit_y = gr.Number(label="Ausgang Y", precision=0, elem_id="native-exit-y")
+                native_exit_save = gr.Button("Raumausgang platzieren", elem_id="native-exit-save")
             gr.Markdown("**Native Raumverdeckung (ZPxx):** Eine PNG-Maske in exakter Raumgröße importieren. Weiß verdeckt Actors, Schwarz lässt sie sichtbar; transparente Pixel sind frei. Ebene 1 zuerst anlegen, bestehende Ebenen können ersetzt werden. Die Änderung wird erst durch den Projekt-JSON-Export dauerhaft gesichert.")
             gr.Markdown("**R01 Raumhintergrund:** Statisches, deckendes PNG in exakter Raumgröße (maximal 8 Bit pro Kanal). Optional nach rechts erweitern: gleiche Höhe, Breite in 8-Pixel-Schritten bis 3280 Pixel. Bestehende Objekte und Walkboxes bleiben an ihrem Ort; neue Spalten vorhandener Z-Masken sind transparent. Vorhandene Paletteneinträge bleiben erhalten; zusammen höchstens 256 Farben. Im gemeinsamen Studio-Projekt speichern.")
             with gr.Row():
@@ -1968,6 +1992,12 @@ def make_app():
         native_sound_add.click(native_sound_import,
                                [native_state, native_room, native_sound_id, native_sound_file],
                                [native_state, *native_outputs, native_report])
+        native_exit_save.click(native_exit_author,
+                               [native_state, native_room, native_hotspot, native_exit_x, native_exit_y],
+                               [native_state, native_report])
+        for trigger in (native_state, native_room, native_hotspot):
+            trigger.change(native_exit_fields, [native_state, native_room, native_hotspot],
+                           [native_exit_x, native_exit_y])
         native_background_add.click(native_background_import,
                                     [native_state, native_room, native_background_file, native_background_expand],
                                     [native_state, *native_outputs, native_report])

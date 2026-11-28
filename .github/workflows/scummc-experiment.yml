@@ -1595,6 +1595,19 @@ jobs:
           name: native-room-background
           path: /tmp/native-room-background
           if-no-files-found: ignore
+      - name: Verify authored exit positions and native room transitions
+        if: ${{ matrix.shard == 'story' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_exit_position_probe /tmp/scummc-upstream /tmp/native-exit-position
+      - name: Retain authored exit gameplay evidence
+        if: ${{ always() && matrix.shard == 'story' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-exit-position
+          path: /tmp/native-exit-position
+          if-no-files-found: ignore
       - name: Compile v2 recipe story and its inventory combination
         if: ${{ matrix.shard == 'story' }}
         env:

@@ -46,6 +46,8 @@ class RoomHotspot:
     third_object_zplane3_pixels: bytes | None = None  # IM03 ZP03 requires ZP01 and ZP02
     third_object_zplane4_pixels: bytes | None = None  # IM03 ZP04 requires ZP01 through ZP03
 
+    authored_exit_position: bool = False
+
 
 @dataclass(frozen=True)
 class UseRule:
@@ -380,6 +382,9 @@ def _validate(room: RoomAsset) -> None:
                 raise ValueError("IM03 ZP04 requires existing IM03 ZP01 through ZP03 and exact dimensions")
             if any(pixel not in (0, 1) for pixel in hotspot.third_object_zplane4_pixels):
                 raise ValueError("IM03 ZP04 mask pixels must be binary")
+        if (type(hotspot.authored_exit_position) is not bool
+                or hotspot.authored_exit_position and hotspot.exit_destination is None):
+            raise ValueError("Authored exit position requires a room exit")
         if hotspot.exit_destination is not None:
             if not _IDENTIFIER.fullmatch(hotspot.exit_destination) or hotspot.exit_destination == room.name:
                 raise ValueError("Invalid exit destination room")
