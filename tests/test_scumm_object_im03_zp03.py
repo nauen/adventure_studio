@@ -42,7 +42,7 @@ class IM03ZP03Tests(unittest.TestCase):
                           scummc_room_source(doc.rooms[0]))
             write_room_sources(doc.rooms[0], folder)
             self.assertTrue((folder/"DoorThirdZ03.bmp").is_file())
-            for layer in (4,5):
+            for layer in (5,):
                 with self.assertRaises(ValueError):
                     import_object_zplane(raw, "Harbor", "Door", str(mask), 3, layer)
             for bad in (replace(door, third_object_zplane2_pixels=None),
