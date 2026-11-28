@@ -69,6 +69,33 @@ nachweisen. Kein neuer Engine-Befehl ohne Versions-/Bytecode-Beweis.
 - [Architekturaudit](docs/architecture-audit.md) und
   [ADR-0001](docs/adr/0001-domain-and-export-boundaries.md) beachten.
 
+## Verbindliche Produktpriorität (Nutzerentscheidung 27.11.2026)
+
+Der Maßstab ist ein vollständiges, mit Adventure Studio erstelltes und in
+unverändertem ScummVM spielbares mehrraumiges Adventure – nicht die Anzahl
+abgedeckter Opcodes, Spezialposen, PRs oder Einzelproben. Die native
+SCUMM-v6-Kompatibilität und das Ziel vollständiger Engine-Abdeckung bleiben
+bestehen, bestimmen aber nicht allein die Reihenfolge der Produktarbeit.
+
+- Zuerst den vorhandenen durchgängigen Autorenworkflow auf main und die
+  bereits implementierten offenen PRs prüfen. Vorhandene Funktionen nutzen
+  und integrieren, nicht doppelt entwickeln.
+- Fehlende Funktionen nach ihrem Nutzen für das vollständige Adventure
+  priorisieren; jedes neue Paket muss einen konkreten Autoren- oder
+  Spielerblocker des Referenzspiels beseitigen.
+- Keine neuen isolierten Actor-Posen, Chore-Bindungen, Opcode-Varianten oder
+  zusätzlichen Kombinationsproben als Selbstzweck. Nur dann aufnehmen, wenn
+  eine konkrete benötigte Spielmechanik ohne sie nicht funktioniert.
+- Verbindliche Reihenfolge: vorhandenen Stand konsolidieren, dann native
+  Lücken priorisieren, genau eine Fähigkeit vollständig Modell → Export →
+  stock ScummVM bis zur Evidenz abnehmen, erst dann das nächste Paket öffnen.
+  Keine neuen parallelen Feature-PRs bei offenen Pflichtgates des aktiven
+  Pakets; bestehende Branches und Nachweise erhalten. Kein Merge vor Pflichtgates.
+- NPC-Komfort nach #190 beendet. Nach der Konsolidierung haben Raumgrafik,
+  Z-Masken und Walkboxen Vorrang vor weiteren isolierten Actor-Details.
+  Tests und Dokumentation dienen der konkreten Produktabnahme. Bei roter CI
+  Ursache des aktiven Pakets beheben, keine neue Fähigkeit beginnen.
+
 ## Wahl des Arbeitspakets
 
 - Das oberste unverblockierte, nutzbare Arbeitspaket aus
