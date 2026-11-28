@@ -480,11 +480,11 @@ def make_app():
         except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
 
-    def native_background_import(raw, room, file_path):
+    def native_background_import(raw, room, file_path, expand_width):
         if raw is None or not file_path:
             raise gr.Error("Bitte zuerst ein natives Projekt und einen PNG-Raumhintergrund wählen")
         try:
-            updated = import_room_background(raw, room, file_path)
+            updated = import_room_background(raw, room, file_path, expand_width)
             return (updated, *native_selectors(updated, selected_room=room),
                     f"Raumhintergrund für {room} gespeichert. Gesamtes Studio-Projekt speichern.")
         except (ValueError, OSError) as error:
@@ -939,11 +939,12 @@ def make_app():
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt", elem_id="native-hotspot")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             gr.Markdown("**Native Raumverdeckung (ZPxx):** Eine PNG-Maske in exakter Raumgröße importieren. Weiß verdeckt Actors, Schwarz lässt sie sichtbar; transparente Pixel sind frei. Ebene 1 zuerst anlegen, bestehende Ebenen können ersetzt werden. Die Änderung wird erst durch den Projekt-JSON-Export dauerhaft gesichert.")
-            gr.Markdown("**R01 Raumhintergrund:** Statisches, deckendes PNG in exakter Raumgröße (maximal 8 Bit pro Kanal). Vorhandene Paletteneinträge bleiben erhalten; zusammen höchstens 256 Farben. Im gemeinsamen Studio-Projekt speichern.")
+            gr.Markdown("**R01 Raumhintergrund:** Statisches, deckendes PNG in exakter Raumgröße (maximal 8 Bit pro Kanal). Optional nach rechts erweitern: gleiche Höhe, Breite in 8-Pixel-Schritten bis 3280 Pixel. Bestehende Objekte und Walkboxes bleiben an ihrem Ort; neue Spalten vorhandener Z-Masken sind transparent. Vorhandene Paletteneinträge bleiben erhalten; zusammen höchstens 256 Farben. Im gemeinsamen Studio-Projekt speichern.")
             with gr.Row():
                 native_background_file = gr.File(label="Raumhintergrund (PNG)", file_types=[".png"], type="filepath", elem_id="native-background-file")
+                native_background_expand = gr.Checkbox(label="Raum nach rechts erweitern", value=False, elem_id="native-background-expand")
                 native_background_add = gr.Button("Raumhintergrund übernehmen", elem_id="native-background-add")
-            native_background_image = gr.Image(label="Aktueller Raumhintergrund", interactive=False, elem_id="native-background-preview")
+            native_background_image = gr.Image(label="Aktueller Raumhintergrund", height=200, interactive=False, elem_id="native-background-preview")
             with gr.Row():
                 native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-zplane-file")
                 native_zplane_index = gr.Number(label="Z-Ebene (1–9)", value=1, precision=0, elem_id="native-zplane-index")
@@ -1968,7 +1969,7 @@ def make_app():
                                [native_state, native_room, native_sound_id, native_sound_file],
                                [native_state, *native_outputs, native_report])
         native_background_add.click(native_background_import,
-                                    [native_state, native_room, native_background_file],
+                                    [native_state, native_room, native_background_file, native_background_expand],
                                     [native_state, *native_outputs, native_report])
         native_room.change(native_background_preview, [native_state, native_room], [native_background_image])
         native_state.change(native_background_preview, [native_state, native_room], [native_background_image])

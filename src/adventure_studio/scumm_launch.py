@@ -18,6 +18,18 @@ from pathlib import Path
 from .scumm_recipe_plan import plan_recipes
 
 
+def convert_frame(image_path: Path) -> Path:
+    """Convert a captured X framebuffer to its retained PNG preview."""
+    preview_path = image_path.with_suffix(".png")
+    preview = subprocess.run(
+        ["convert", str(image_path), str(preview_path)],
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    if preview.returncode != 0 or not preview_path.is_file() or preview_path.stat().st_size < 64:
+        raise RuntimeError(f"Screenshot PNG conversion failed: {preview.stderr}")
+    return preview_path
+
+
 def parse_changed_pixels(metric: str) -> int:
     """Parse ImageMagick's absolute-error metric, rejecting ambiguous output."""
     if not re.fullmatch(r"\s*\d+\s*", metric):
@@ -449,9 +461,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         save_path.mkdir(exist_ok=True)
     environment = {**os.environ, "SDL_AUDIODRIVER": "dummy"}
 
-    def capture_frame(label: str, *, on_framebuffer_capture=None) -> Path:
+    def capture_frame(label: str, *, on_framebuffer_capture=None, defer_preview=False) -> Path:
         image_path = output_directory / f"scummvm-{label}.xwd"
-        preview_path = output_directory / f"scummvm-{label}.png"
         capture_started = time.monotonic()
         capture = subprocess.run(
             ["xwd", "-root", "-silent", "-out", str(image_path)],
@@ -462,13 +473,7 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
             raise RuntimeError(f"X framebuffer capture failed: {capture.stderr}")
         if on_framebuffer_capture is not None:
             on_framebuffer_capture(capture_started, capture_finished)
-        preview = subprocess.run(
-            ["convert", str(image_path), str(preview_path)],
-            capture_output=True, text=True, timeout=10, check=False,
-        )
-        if preview.returncode != 0 or not preview_path.is_file() or preview_path.stat().st_size < 64:
-            raise RuntimeError(f"Screenshot PNG conversion failed: {preview.stderr}")
-        return preview_path
+        return image_path if defer_preview else convert_frame(image_path)
 
     independent_gate_routes = {}
 

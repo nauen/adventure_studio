@@ -287,8 +287,15 @@ def author_room_scale_curve(raw: str, room_name: str, slot: int, scale1: int,
     return _checked(replace(document, rooms=rooms))
 
 
-def import_room_background(raw: str, room_name: str, png_path: str) -> str:
-    """Import opaque PNG pixels without changing existing room palette indices."""
+def validate_background_width(current: int, width: int) -> None:
+    # ScummVM scumm.h: gfxUsageBits has 410 eight-pixel screen strips.
+    if type(width) is not int or width < current or width % 8 or width > 410 * 8:
+        raise ValueError("Raumbreite darf nur nach rechts wachsen (8-Pixel-Schritte, höchstens 3280 Pixel)")
+
+
+def import_room_background(raw: str, room_name: str, png_path: str,
+                           expand_width: bool = False) -> str:
+    """Import opaque PNG pixels, optionally extending the room to the right."""
     from PIL import Image
 
     document = parse_document(raw)
@@ -303,8 +310,12 @@ def import_room_background(raw: str, room_name: str, png_path: str) -> str:
             header = file.read(25)
             file.seek(0)
             with Image.open(file) as source:
-                if source.format != "PNG" or source.size != size:
+                if source.format != "PNG" or source.height != size[1] or (
+                        not expand_width and source.width != size[0]):
                     raise ValueError(f"Raumhintergrund benötigt echtes PNG in {size[0]} × {size[1]} Pixel")
+                if source.width != size[0]:
+                    validate_background_width(size[0], source.width)
+                width = source.width
                 # PNG IHDR bit depth; Pillow otherwise silently reduces RGB16 to RGB8.
                 if header[24] > 8 or getattr(source, "n_frames", 1) != 1:
                     raise ValueError("Raumhintergrund benötigt ein statisches PNG mit maximal 8 Bit pro Kanal")
@@ -322,7 +333,15 @@ def import_room_background(raw: str, room_name: str, png_path: str) -> str:
                 pixels.append(indices[rgb])
     except (OSError, Image.DecompressionBombError) as error:
         raise ValueError(f"PNG-Raumhintergrund nicht lesbar: {error}") from error
-    updated = replace(room, pixels=bytes(pixels), palette=tuple(palette),
+    zplanes = room.zplanes
+    if width != size[0]:
+        # Existing world coordinates are unchanged; newly added columns are transparent.
+        padding = bytes(width - size[0])
+        zplanes = tuple(replace(plane, pixels=b"".join(
+            plane.pixels[y:y + size[0]] + padding
+            for y in range(0, len(plane.pixels), size[0]))) for plane in zplanes)
+    updated = replace(room, geometry=replace(room.geometry, room_width=width),
+                      pixels=bytes(pixels), palette=tuple(palette), zplanes=zplanes,
                       authored_background=True)
     return _checked(replace(document, rooms=tuple(
         updated if r.name == room_name else r for r in document.rooms)))
@@ -2677,7 +2696,9 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
         previous = native_by_room.get(room.name)
         if previous is not None and previous.authored_background:
             if room.geometry != previous.geometry:
-                raise ValueError(f"Story changed authored background geometry: {room.name}")
+                if replace(previous.geometry, room_width=room.geometry.room_width) != room.geometry:
+                    raise ValueError(f"Story changed authored background geometry: {room.name}")
+                validate_background_width(room.geometry.room_width, previous.geometry.room_width)
             palette = (*previous.palette, *dict.fromkeys(
                 rgb for rgb in room.palette if rgb not in previous.palette))
             if len(palette) > 256:
@@ -2688,7 +2709,7 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                 field: bytes(mapping[i] for i in getattr(h, field))
                 for field in ("sprite_pixels", "open_sprite_pixels", "third_sprite_pixels")
                 if getattr(h, field) is not None}) for h in room.hotspots)
-            room = replace(room, pixels=previous.pixels, palette=palette,
+            room = replace(room, geometry=previous.geometry, pixels=previous.pixels, palette=palette,
                            hotspots=hotspots, palette_cycles=previous.palette_cycles,
                            authored_background=True)
         zplanes = previous.zplanes if previous is not None else ()

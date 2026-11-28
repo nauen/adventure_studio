@@ -10,13 +10,13 @@ import json
 
 from .scumm_project import canonical_json, parse_document
 from .story_document import canonical_story_json, parse_story_document
-from .studio_sequences import compose_story_project
+from .studio_sequences import compose_story_project, validate_background_width
 
 
 NATIVE_FIELDS = frozenset(("costumes", "actors", "animation_rules",
                            "animation_input_rules", "animation_triggers",
                            "interaction_sequences", "dialogue_animation_cues"))
-ROOM_OVERRIDE_FIELDS = frozenset(("pixels", "palette", "authored_background", "palette_cycles",
+ROOM_OVERRIDE_FIELDS = frozenset(("geometry", "pixels", "palette", "authored_background", "palette_cycles",
                                   "hotspots", "use_rules", "zplanes", "walkboxes", "box_routes",
                                   "scale_slots", "scale_curves", "camera_cues", "demo_walk_to_x",
                                   "demo_walk_to_y", "ego_start_x", "ego_start_y"))
@@ -62,8 +62,13 @@ def parse_studio_project(raw: str) -> tuple[str, str]:
         fields = overrides.get(room["name"], {})
         if not isinstance(fields, dict) or set(fields) - ROOM_OVERRIDE_FIELDS:
             raise ValueError("Unknown native Studio room authoring field")
-        if (set(fields) & {"pixels", "palette"}) and fields.get("authored_background") is not True:
+        if (set(fields) & {"geometry", "pixels", "palette"}) and fields.get("authored_background") is not True:
             raise ValueError("Room background override needs authored background flag")
+        if "geometry" in fields:
+            geometry = fields["geometry"]
+            if not isinstance(geometry, dict) or {**geometry, "width": room["geometry"]["width"]} != room["geometry"] or "width" not in geometry:
+                raise ValueError("Only horizontal room extension is supported")
+            validate_background_width(room["geometry"]["width"], geometry["width"])
         for key, value in fields.items():
             if value is None and key != "demo_walk_to_x":
                 room.pop(key, None)
