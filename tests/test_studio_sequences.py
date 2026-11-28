@@ -113,6 +113,59 @@ class NativeSequenceEditorTests(unittest.TestCase):
                 parse_studio_project(json.dumps(malformed))
 
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "Pillow required for PNG import")
+    def test_extend_room_background_roundtrip(self):
+        import json
+        from PIL import Image
+        from adventure_studio.scumm_assets import write_room_sources
+        from adventure_studio.studio_sequences import (
+            import_room_background, import_room_zplane, author_room_walkbox, author_room_camera_plan)
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        raw = compose_story_project(story)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            png = root / "room.png"
+            Image.new("L", (640, 200), 255).save(png)
+            raw = import_room_zplane(raw, "Harbor", 1, str(png))
+            raw = author_room_walkbox(raw, "Harbor", 1, "0,70; 639,70; 639,150; 0,150")
+            before = parse_document(raw)
+            color = (18, 166, 111)
+            Image.new("RGB", (960, 200), color).save(png)
+            with self.assertRaises(ValueError):
+                import_room_background(raw, "Harbor", str(png))
+            raw = import_room_background(raw, "Harbor", str(png), expand_width=True)
+            extended = parse_document(raw)
+            room = extended.rooms[0]
+            self.assertEqual(room.geometry.room_width, 960)
+            self.assertEqual(room.hotspots, before.rooms[0].hotspots)
+            self.assertEqual(room.walkboxes, before.rooms[0].walkboxes)
+            self.assertEqual(room.zplanes[0].pixels, (bytes([1]) * 640 + bytes(320)) * 200)
+            self.assertEqual(extended.rooms[1:], before.rooms[1:])
+            raw = author_room_walkbox(raw, "Harbor", 2, "640,70; 959,70; 959,150; 640,150")
+            raw = author_room_camera_plan(raw, "Harbor", 700, 100, "set:800", True)
+            saved = canonical_studio_project(story, raw)
+            restored_story, restored = parse_studio_project(saved)
+            self.assertEqual(compose_story_project(restored_story, restored), compose_story_project(story, raw))
+            self.assertEqual(canonical_studio_project(restored_story, restored), saved)
+            room = parse_document(restored).rooms[0]
+            self.assertEqual(room.geometry.room_width, 960)
+            self.assertEqual(room.ego_start_x, 700)
+            self.assertEqual(room.camera_cues[0].x, 800)
+            self.assertEqual(room.walkboxes[1].corners[2][0], 959)
+            bmp, _ = write_room_sources(room, root)
+            with Image.open(bmp) as image:
+                self.assertEqual(image.size, (960, 200))
+                self.assertEqual(image.convert("RGB").getpixel((959, 30)), color)
+            for size in ((640, 200), (961, 200), (968, 201), (3288, 200)):
+                Image.new("RGB", size, color).save(png)
+                with self.subTest(size=size), self.assertRaises(ValueError):
+                    import_room_background(raw, "Harbor", str(png), expand_width=True)
+            data = json.loads(saved)
+            data["native"]["room_overrides"]["Harbor"]["geometry"]["height"] = 208
+            with self.assertRaises(ValueError):
+                parse_studio_project(json.dumps(data))
+
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "Pillow required for PNG import")
     def test_third_object_image_roundtrip_and_native_state(self):
         from PIL import Image
         from adventure_studio.scumm_assets import scummc_room_source
