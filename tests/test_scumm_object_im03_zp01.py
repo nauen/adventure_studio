@@ -39,7 +39,7 @@ class IM03ZP01Tests(unittest.TestCase):
             self.assertIn('"DoorThird.bmp", { "DoorThirdZ01.bmp" }', source)
             write_room_sources(doc.rooms[0], folder)
             self.assertTrue((folder/"DoorThirdZ01.bmp").is_file())
-            for layer in (2,3,4,5):
+            for layer in (3,4,5):
                 with self.assertRaises(ValueError):
                     import_object_zplane(raw, "Harbor", "Door", str(mask), 3, layer)
             Image.new("L", (8,8), 255).save(mask)
@@ -66,9 +66,13 @@ class IM03ZP01Tests(unittest.TestCase):
             Image.new("L", (16, 16), 255).save(mask)
             raw = import_object_third_image(raw, "Harbor", "Door", str(png))
             raw = import_object_zplane(raw, "Harbor", "Door", str(mask), 3, 1)
+            Image.new("L", (16, 16), 0).save(mask)
+            raw = import_object_zplane(raw, "Harbor", "Door", str(mask), 3, 2)
             composed = parse_document(compose_story_project(story, raw))
             harbor = next(r for r in composed.rooms if r.name == "Harbor")
             door = next(h for h in harbor.hotspots if h.id == "Door")
             self.assertEqual(door.third_object_zplane_pixels, bytes([1]) * 256)
+            self.assertEqual(door.third_object_zplane2_pixels, bytes(256))
             self.assertIsNotNone(door.third_sprite_pixels)
-            self.assertIn('"DoorThird.bmp", { "DoorThirdZ01.bmp" }', scummc_room_source(harbor))
+            self.assertIn('"DoorThird.bmp", { "DoorThirdZ01.bmp", "DoorThirdZ02.bmp" }',
+                          scummc_room_source(harbor))
