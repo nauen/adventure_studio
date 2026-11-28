@@ -37,6 +37,82 @@ from test_scumm_toolchain import fake_upstream
 
 class NativeSequenceEditorTests(unittest.TestCase):
     @unittest.skipUnless(importlib.util.find_spec("PIL"), "Pillow required for PNG import")
+    def test_authored_background_roundtrip(self):
+        from dataclasses import replace
+        import json
+        from PIL import Image
+        from adventure_studio.scumm_assets import write_room_sources
+        from adventure_studio.studio_sequences import (
+            import_room_background, import_room_zplane, author_room_walkbox,
+            import_object_third_image, import_object_zplane)
+        story = (Path(__file__).resolve().parents[1] / "examples" /
+                 "mini_story_chain.json").read_text(encoding="utf-8")
+        raw = compose_story_project(story)
+        original = parse_document(raw)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            png = root / "room.png"
+            mask = root / "mask.png"
+            Image.new("L", (640, 200), 255).save(mask)
+            raw = import_room_zplane(raw, "Harbor", 1, str(mask))
+            raw = import_room_zplane(raw, "Cellar", 1, str(mask))
+            raw = author_room_walkbox(raw, "Harbor", 1, "0,70; 639,70; 639,150; 0,150")
+            Image.new("RGB", (16, 16), original.rooms[0].palette[2]).save(png)
+            raw = import_object_third_image(raw, "Harbor", "Door", str(png))
+            Image.new("L", (16, 16), 255).save(mask)
+            for layer in (1, 2, 3, 4):
+                raw = import_object_zplane(raw, "Harbor", "Door", str(mask), 3, layer)
+            before = parse_document(raw)
+            color = (12, 34, 56)
+            Image.new("RGB", (640, 200), color).save(png)
+            raw = import_room_background(raw, "Harbor", str(png))
+            imported = parse_document(raw)
+            room = imported.rooms[0]
+            self.assertTrue(room.authored_background)
+            self.assertEqual(room.palette[:len(before.rooms[0].palette)], before.rooms[0].palette)
+            self.assertEqual(set(room.pixels), {room.palette.index(color)})
+            self.assertEqual(replace(room, pixels=before.rooms[0].pixels,
+                                     palette=before.rooms[0].palette, authored_background=False),
+                             before.rooms[0])
+            self.assertEqual(imported.rooms[1:], before.rooms[1:])
+            Image.new("RGB", (640, 200), (98, 76, 54)).save(png)
+            raw = import_room_background(raw, "Cellar", str(png))
+            composed = compose_story_project(story, raw)
+            combined = canonical_studio_project(story, raw)
+            self.assertEqual(set(json.loads(combined)["native"]["room_overrides"]),
+                             {"Harbor", "Cellar"})
+            restored_story, restored = parse_studio_project(combined)
+            self.assertEqual(parse_document(restored), parse_document(composed))
+            self.assertEqual(compose_story_project(restored_story, restored), composed)
+            self.assertEqual(canonical_studio_project(restored_story, restored), combined)
+            self.assertEqual(parse_document(restored).rooms[2], original.rooms[2])
+            bmp, _ = write_room_sources(parse_document(restored).rooms[0], root)
+            with Image.open(bmp) as image:
+                self.assertEqual(image.convert("RGB").getpixel((0, 0)), color)
+            Image.new("RGB", (8, 8), color).save(png)
+            with self.assertRaises(ValueError):
+                import_room_background(raw, "Harbor", str(png))
+            Image.new("RGBA", (640, 200), (*color, 0)).save(png)
+            with self.assertRaises(ValueError):
+                import_room_background(raw, "Harbor", str(png))
+            image = Image.new("RGB", (640, 200))
+            for i in range(257):
+                image.putpixel((i, 0), (i % 256, i // 256, 17))
+            image.save(png)
+            with self.assertRaisesRegex(ValueError, "256"):
+                import_room_background(raw, "Harbor", str(png))
+            Image.new("I;16", (640, 200), 500).save(png)
+            with self.assertRaisesRegex(ValueError, "8 Bit"):
+                import_room_background(raw, "Harbor", str(png))
+            Image.new("RGB", (640, 200), color).save(png, format="BMP")
+            with self.assertRaises(ValueError):
+                import_room_background(raw, "Harbor", str(png))
+            malformed = json.loads(combined)
+            malformed["native"]["room_overrides"]["Harbor"]["authored_background"] = False
+            with self.assertRaises(ValueError):
+                parse_studio_project(json.dumps(malformed))
+
+    @unittest.skipUnless(importlib.util.find_spec("PIL"), "Pillow required for PNG import")
     def test_third_object_image_roundtrip_and_native_state(self):
         from PIL import Image
         from adventure_studio.scumm_assets import scummc_room_source

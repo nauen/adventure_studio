@@ -1581,6 +1581,20 @@ jobs:
           name: native-puzzle-workflow
           path: /tmp/native-puzzle-workflow
           if-no-files-found: ignore
+      - name: Verify authored room background after Studio reload in stock ScummVM
+        if: ${{ matrix.shard == 'story' }}
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pip install 'Pillow>=10,<13'
+          xvfb-run -a -s '-screen 0 1024x768x24' python -m adventure_studio.scumm_room_background_probe /tmp/scummc-upstream /tmp/native-room-background
+      - name: Retain authored room background gameplay evidence
+        if: ${{ always() && matrix.shard == 'story' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-room-background
+          path: /tmp/native-room-background
+          if-no-files-found: ignore
       - name: Compile v2 recipe story and its inventory combination
         if: ${{ matrix.shard == 'story' }}
         env:

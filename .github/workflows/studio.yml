@@ -98,6 +98,18 @@ jobs:
             /tmp/studio-object-zmask-evidence/*.png
             /tmp/studio-object-zmask-evidence/*.json
           if-no-files-found: ignore
+      - name: Import and reopen authored room background in real Chrome
+        env:
+          ADVENTURE_STUDIO_BACKGROUND_EVIDENCE: /tmp/studio-background-evidence
+        run: |
+          python tests/gradio_browser_room_background.py
+      - name: Retain authored room background browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-gradio-room-background-browser
+          path: /tmp/studio-background-evidence
+          if-no-files-found: ignore
       - name: Click through authored SCAL perspective in real Chrome
         env:
           ADVENTURE_STUDIO_SCAL_EVIDENCE: /tmp/studio-scal-evidence
