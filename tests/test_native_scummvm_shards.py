@@ -23,8 +23,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
         matches = list(STEP.finditer(contents))
         # Counts include real gameplay and evidence-retention steps. New native
         # capabilities change the matrix length; preserve the per-shard gates.
-        self.assertEqual(len(matches), 182)
-        expected_counts = {"actors": 26, "mask": 12, "geometry": 82, "story": 52}
+        self.assertEqual(len(matches), 184)
+        expected_counts = {"actors": 26, "mask": 12, "geometry": 82, "story": 54}
         observed_counts = {shard: 0 for shard in SHARDS}
         shared = {
             "Restore previously downloaded Ubuntu packages",
@@ -43,6 +43,8 @@ class NativeScummVMShardingTests(unittest.TestCase):
             "Retain authored native puzzle workflow evidence": "story",
             "Verify authored room background after Studio reload in stock ScummVM": "story",
             "Retain authored room background gameplay evidence": "story",
+            "Verify authored exit positions and native room transitions": "story",
+            "Retain authored exit gameplay evidence": "story",
             "Verify native IM03 object image cycle in stock ScummVM": "mask",
             "Retain native IM03 object image evidence": "mask",
             "Verify native IM03 ZP01 object occlusion in stock ScummVM": "mask",

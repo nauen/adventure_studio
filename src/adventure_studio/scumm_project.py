@@ -536,6 +536,7 @@ def document_dict(document: GameDocument) -> dict:
                           **({"third_object_zplane4_pixels": _encode_pixels(h.third_object_zplane4_pixels)}
                              if h.third_object_zplane4_pixels is not None else {}),
                           "exit_destination": h.exit_destination,
+                          **({"authored_exit_position": True} if h.authored_exit_position else {}),
                           **({"object_zplane_pixels": _encode_pixels(h.object_zplane_pixels)}
                              if h.object_zplane_pixels is not None else {}),
                           **({"open_object_zplane_pixels": _encode_pixels(h.open_object_zplane_pixels)}
@@ -1549,7 +1550,7 @@ def parse_document(source: str) -> GameDocument:
                              "open_object_zplane3_pixels", "object_zplane4_pixels",
                              "open_object_zplane4_pixels", "third_sprite_pixels",
                              "third_object_zplane_pixels", "third_object_zplane2_pixels",
-                             "third_object_zplane3_pixels", "third_object_zplane4_pixels"},
+                             "third_object_zplane3_pixels", "third_object_zplane4_pixels", "authored_exit_position"},
                       {"id", "label", "description", "x", "y", "width", "height", "pickup",
                        "sprite_pixels", "open_sprite_pixels", "exit_destination"})
             if type(h["pickup"]) is not bool:
@@ -1585,6 +1586,7 @@ def parse_document(source: str) -> GameDocument:
                 _decode_pixels(h["third_object_zplane2_pixels"]) if h.get("third_object_zplane2_pixels") is not None else None,
                 _decode_pixels(h["third_object_zplane3_pixels"]) if h.get("third_object_zplane3_pixels") is not None else None,
                 _decode_pixels(h["third_object_zplane4_pixels"]) if h.get("third_object_zplane4_pixels") is not None else None,
+                h.get("authored_exit_position", False),
             ))
         rules = []
         for item in room["use_rules"]:

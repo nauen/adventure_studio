@@ -32,6 +32,13 @@ def run(width, evidence):
                 page.locator("#native-background-expand input[type=checkbox]").check()
             page.locator("#native-background-add").click()
             expect(report).to_have_value(re.compile(r"Raumhintergrund für Harbor gespeichert"), timeout=30000)
+            page.locator("#native-hotspot input").click()
+            page.get_by_role("option", name="Door", exact=True).click()
+            expect(page.locator("#native-exit-x input")).to_have_value("450", timeout=30000)
+            page.locator("#native-exit-x input").fill("480")
+            page.locator("#native-exit-y input").fill("80")
+            page.locator("#native-exit-save").click()
+            expect(report).to_have_value(re.compile(r"Raumausgang Door für Harbor gespeichert"), timeout=30000)
             page.locator("#studio-project-save").click()
             link = page.locator("#studio-project-download a[download]")
             expect(link.first).to_be_visible(timeout=30000)
@@ -43,6 +50,8 @@ def run(width, evidence):
             room = parse_document(raw).rooms[0]
             assert room.authored_background and room.geometry.room_width == width
             assert set(room.pixels) == {room.palette.index(color)}
+            door = next(h for h in room.hotspots if h.id == "Door")
+            assert (door.x, door.y, door.authored_exit_position) == (480, 80, True)
             page.goto("http://127.0.0.1:7860/", wait_until="domcontentloaded", timeout=30000)
             page.locator("#studio-project-file input[type=file]").set_input_files(str(saved))
             page.get_by_role("tab", name="Native Interaktionsabläufe").click()

@@ -84,6 +84,22 @@ def author_room_camera_plan(raw: str, room_name: str, start_x: int, start_y: int
     return _checked(replace(document, rooms=rooms))
 
 
+def author_exit_position(raw: str, room_name: str, hotspot_id: str, x: int, y: int) -> str:
+    """Place an existing room exit without changing its destination or verb rules."""
+    document = parse_document(raw)
+    room = next((item for item in document.rooms if item.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    exit_hotspot = next((h for h in room.hotspots
+                         if h.id == hotspot_id and h.exit_destination is not None), None)
+    if exit_hotspot is None:
+        raise ValueError("Bitte einen vorhandenen Raumausgang wählen")
+    updated = replace(exit_hotspot, x=x, y=y, authored_exit_position=True)
+    room = replace(room, hotspots=tuple(updated if h.id == hotspot_id else h for h in room.hotspots))
+    return _checked(replace(document, rooms=tuple(room if r.name == room_name else r
+                                                  for r in document.rooms)))
+
+
 def author_room_walkbox(raw: str, room_name: str, index: int, corners_text: str) -> str:
     """Create or replace one convex native walkbox without inventing box routes."""
     document = parse_document(raw)
@@ -2691,6 +2707,9 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
     if any(r.authored_background and r.name not in {item.name for item in project.rooms}
            for r in native.rooms):
         raise ValueError("Story removed room with authored background")
+    if any(any(h.authored_exit_position for h in r.hotspots)
+           and r.name not in {item.name for item in project.rooms} for r in native.rooms):
+        raise ValueError("Story removed room with authored exit position")
     rooms = []
     for room in project.rooms:
         previous = native_by_room.get(room.name)
@@ -2735,6 +2754,11 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
             if old_hotspot is None:
                 authored_hotspots.append(hotspot)
                 continue
+            if old_hotspot.authored_exit_position:
+                if hotspot.exit_destination != old_hotspot.exit_destination:
+                    raise ValueError(f"Story changed authored exit destination: {room.name}/{hotspot.id}")
+                hotspot = replace(hotspot, x=old_hotspot.x, y=old_hotspot.y,
+                                  authored_exit_position=True)
             masks = {field: getattr(old_hotspot, field) for field in mask_fields
                      if getattr(old_hotspot, field) is not None}
             if masks:
@@ -2761,6 +2785,8 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
                 hotspot = replace(hotspot, third_sprite_pixels=third)
             authored_hotspots.append(hotspot)
         for removed in native_hotspots.values():
+            if removed.authored_exit_position:
+                raise ValueError(f"Story removed authored exit: {room.name}/{removed.id}")
             if removed.third_sprite_pixels is not None:
                 raise ValueError(f"Story removed native IM03 target: {room.name}/{removed.id}")
             if any(getattr(removed, field) is not None for field in mask_fields):
