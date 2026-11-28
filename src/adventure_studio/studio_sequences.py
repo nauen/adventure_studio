@@ -365,7 +365,7 @@ def import_object_third_image(raw: str, room_name: str, hotspot_id: str, png_pat
 
 def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: str,
                          image_state: int = 1, zplane_index: int = 1) -> str:
-    """Assign a PNG mask to IM01 or IM02 ZP01–04 independently."""
+    """Assign independent PNG masks: IM01/IM02 ZP01–04 or IM03 ZP01."""
     from PIL import Image
 
     document = parse_document(raw)
@@ -375,12 +375,16 @@ def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: st
     hotspot = next((item for item in room.hotspots if item.id == hotspot_id), None)
     if hotspot is None or hotspot.sprite_pixels is None:
         raise ValueError("Objekt-Z-Maske benötigt ein vorhandenes Objektbild")
-    if type(image_state) is not int or image_state not in (1, 2):
-        raise ValueError("Objekt-Z-Maske unterstützt Bildzustand 1 oder 2")
+    if type(image_state) is not int or image_state not in (1, 2, 3):
+        raise ValueError("Objekt-Z-Maske unterstützt Bildzustand 1, 2 oder 3")
+    if image_state == 3 and hotspot.third_sprite_pixels is None:
+        raise ValueError("Bildzustand 3 benötigt ein vorhandenes drittes Objektbild")
     if image_state == 2 and hotspot.open_sprite_pixels is None:
         raise ValueError("Bildzustand 2 benötigt ein vorhandenes offenes Objektbild")
     if type(zplane_index) is not int or zplane_index not in (1, 2, 3, 4):
         raise ValueError("Objekt-Z-Ebene muss für IM01 oder IM02 1 bis 4 sein")
+    if image_state == 3 and zplane_index != 1:
+        raise ValueError("IM03 unterstützt derzeit ausschließlich ZP01")
     if zplane_index == 2 and image_state == 1 and hotspot.object_zplane_pixels is None:
         raise ValueError("Objekt-Z-Ebene 2 benötigt zunächst ZP01 im Grundbild")
     if zplane_index == 3 and image_state == 1 and (
@@ -415,7 +419,9 @@ def import_object_zplane(raw: str, room_name: str, hotspot_id: str, png_path: st
             )
     except (OSError, Image.DecompressionBombError) as error:
         raise ValueError(f"PNG-Objekt-Z-Maske nicht lesbar: {error}") from error
-    updated = (replace(hotspot, open_object_zplane4_pixels=pixels)
+    updated = (replace(hotspot, third_object_zplane_pixels=pixels)
+               if image_state == 3
+               else replace(hotspot, open_object_zplane4_pixels=pixels)
                if (image_state, zplane_index) == (2, 4)
                else replace(hotspot, object_zplane4_pixels=pixels)
                if (image_state, zplane_index) == (1, 4)
@@ -2619,12 +2625,13 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
             raise ValueError(f"Raum-Z-Maske/Walkbox für {room.name} passt nicht mehr zur Story-Raumgröße")
         # The Story owns hotspot identity, interactions and sprites. Preserve
         # only compatible native per-image occlusion masks: silently dropping
-        # Studio-authored IM01/IM02 Z-planes would change exported gameplay.
+        # Studio-authored per-image Z-planes would change exported gameplay.
         mask_fields = (
             "object_zplane_pixels", "object_zplane2_pixels",
             "object_zplane3_pixels", "object_zplane4_pixels",
             "open_object_zplane_pixels", "open_object_zplane2_pixels",
             "open_object_zplane3_pixels", "open_object_zplane4_pixels",
+            "third_object_zplane_pixels",
         )
         native_hotspots = {h.id: h for h in previous.hotspots} if previous is not None else {}
         authored_hotspots = []

@@ -1,10 +1,10 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; erstes Produktziel: ein im Studio authoriertes, mehrraumiges Adventure bis zum Spielende in unverändertem ScummVM.
-- **Jetzt:** Stand konsolidieren; die bereits implementierte dritte native Objektgrafik IM03 ([#348](https://github.com/nauen/adventure_studio/pull/348), R07) konfliktbewusst auf aktuellem main integrieren. Keine neue Fähigkeit parallel beginnen.
-- **Abnahme:** Bestehende Studio-/JSON-v1-/Story-/ScummC-Pfade und native IM01→IM02→IM03→IM01-Klickfolge auf gemeinsamer Basis erhalten; Core und relevante Native-/Studio-Pflichtgates grün. Keine pauschale V-Freigabe.
-- **Blocker:** #348 ist nach Konfliktauflösung auf [21da68b](https://github.com/nauen/adventure_studio/commit/21da68b785846ed1d5ed2e59b93a6f137cb87699) mergebar; [Core](https://github.com/nauen/adventure_studio/actions/runs/46059721878) und [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/46059728975) auf neuem Stand noch offen. Kein Merge, kein Folgepaket vor Abnahme.
-- **Danach:** Nach Konsolidierung die noch fehlenden nativen Raumgrafik-/Z-Masken-/Walkbox-Fähigkeiten nach tatsächlichem Autorenbedarf priorisieren; genau eine Fähigkeit vollständig Modell → Export → ScummVM-Evidenz abnehmen, erst dann die nächste.
+- **Jetzt:** R07 [#363](https://github.com/nauen/adventure_studio/pull/363) – unabhängige IM03/ZP01-Objektbildmaske auf integriertem #348; genau eine Fähigkeit.
+- **Abnahme:** IM03/ZP01 per Studio-PNG → Modell/JSON-v1/Story → produktivem ScummC/BMP; bestehende IM01/IM02 unverändert; drei unabhängige stock-ScummVM-Kontrollen (maskiert, transparent, falscher BOXD-Index); Core und alle relevanten Pflichtgates grün.
+- **Blocker:** #348 integriert ([19b887f](https://github.com/nauen/adventure_studio/commit/19b887f7c23985e1a0e53e127e4efe2d70763ed1)); [Core](https://github.com/nauen/adventure_studio/actions/runs/46059721878), [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/46059728975), [Main-Core](https://github.com/nauen/adventure_studio/actions/runs/46074285907) grün; [Gameplay](https://github.com/nauen/adventure_studio/actions/runs/46059728975/artifacts/15228222323): 4096 Pixel je Zustand 1→2→3→1. #363 auf gemeinsamer Basis erneut abzunehmen; alter Native-Nachweis ist kein neues Gesamtgate.
+- **Danach:** Erst nach #363-Abnahme nächste benötigte native Raumgrafik-/Z-Masken-/Walkbox-Fähigkeit priorisieren; bestehende Folge-PRs unverändert lassen.
 
 ## Historischer Roadmap-Kopf (ersetzt, keine aktive Paketauswahl)
 
