@@ -944,7 +944,7 @@ def make_app():
                 native_background_file = gr.File(label="Raumhintergrund (PNG)", file_types=[".png"], type="filepath", elem_id="native-background-file")
                 native_background_expand = gr.Checkbox(label="Raum nach rechts erweitern", value=False, elem_id="native-background-expand")
                 native_background_add = gr.Button("Raumhintergrund übernehmen", elem_id="native-background-add")
-            native_background_image = gr.Image(label="Aktueller Raumhintergrund", interactive=False, elem_id="native-background-preview")
+            native_background_image = gr.Image(label="Aktueller Raumhintergrund", height=200, interactive=False, elem_id="native-background-preview")
             with gr.Row():
                 native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-zplane-file")
                 native_zplane_index = gr.Number(label="Z-Ebene (1–9)", value=1, precision=0, elem_id="native-zplane-index")

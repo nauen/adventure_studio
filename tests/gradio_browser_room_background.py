@@ -49,7 +49,14 @@ def run(width, evidence):
             expect(report).to_have_value(re.compile(r"Story, Actors, Costumes und Interaktionen gemeinsam geladen"), timeout=30000)
             page.locator("#native-sync").click()
             expect(report).to_have_value(re.compile(r"Story-Räume übernommen"), timeout=30000)
-            expect(page.locator("#native-background-preview img").first).to_be_visible(timeout=30000)
+            preview = page.locator("#native-background-preview")
+            preview.scroll_into_view_if_needed()
+            expect(preview.locator("img").first).to_be_visible(timeout=30000)
+            page.wait_for_function(
+                """width => {
+                    const img = document.querySelector('#native-background-preview img');
+                    return img && img.naturalWidth === width && img.naturalHeight === 200;
+                }""", arg=width, timeout=30000)
             page.locator("#studio-project-save").click()
             expect(link.first).to_be_visible(timeout=30000)
             with page.expect_download() as downloading:

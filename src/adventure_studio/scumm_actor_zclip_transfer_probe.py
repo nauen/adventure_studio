@@ -12,7 +12,7 @@ from .scumm_actor_zclip_probe import author_project
 from .scumm_assets import CameraCue, RoomHotspot
 from .scumm_costume import CostumeDirection
 from .scumm_camera_zp01_probe import camera_from_sky
-from .scumm_launch import close_rgb, colored_item_center, colored_item_pixels, launch_smoke, scene_pixel
+from .scumm_launch import close_rgb, colored_item_center, colored_item_pixels, convert_frame, launch_smoke, scene_pixel
 from .scumm_project import canonical_json, export_document, parse_document, InteractionSequence
 from .scumm_toolchain import compile_story_game
 from .scumm_two_actor_four_mask_probe import ACTOR_IDS
@@ -235,6 +235,16 @@ def author_transfer_project(root, variant, profiles=False, entry_restore=False, 
     return raw
 
 
+def walk_actor_center(image):
+    """Locate the fixture's solid 16-pixel Actor, not the moving black Ego sprite."""
+    rgb = image.convert("RGB")
+    columns = [x for x in range(432, 673)
+               if sum(max(rgb.getpixel((x, y))) <= 24 for y in range(312, 343)) >= 28]
+    if len(columns) == 32 and columns[-1] - columns[0] == 31:
+        return (sum(columns) / len(columns) - 192) / 2
+    return None
+
+
 def play_transfer(output, capture, process, dynamic=False, restore_profile=False, walk=False, animation=False, facing=False, camera=False, position=False):
     def click(x, y):
         subprocess.run(["xdotool", "mousemove", str(x), str(y), "click", "1"],
@@ -328,18 +338,21 @@ def play_transfer(output, capture, process, dynamic=False, restore_profile=False
                 index += 1
                 time.sleep(.15)
         elif walk:
-            for i in range(60):
-                label = f"transfer-walk-{i:02d}"
-                capture(label)
-                with Image.open(output / f"scummvm-{label}.png") as img:
-                    rgb = img.convert("RGB")
-                    columns = [(x, sum(max(rgb.getpixel((x, y))) <= 24
-                                       for y in range(312, 343)))
-                               for x in range(432, 673)]
-                pixels = sum(n for _, n in columns)
-                if pixels >= 100:
-                    motion.append({"frame": label, "world_x": (sum(x*n for x,n in columns)/pixels - 192)/2})
-                time.sleep(.06)
+            # PNG conversion and pixel analysis must not consume the short
+            # native walk interval. Retain real X frames first, then measure.
+            frames = []
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                if process.poll() is not None:
+                    raise RuntimeError("ScummVM exited during transferred Actor walk")
+                label = f"transfer-walk-{len(frames):03d}"
+                frames.append((label, capture(label, defer_preview=True)))
+                time.sleep(.02)
+            for label, frame in frames:
+                with Image.open(convert_frame(frame)) as img:
+                    world_x = walk_actor_center(img)
+                if world_x is not None:
+                    motion.append({"frame": label, "world_x": world_x})
         else:
             deadline = time.monotonic() + 20
             stable = 0

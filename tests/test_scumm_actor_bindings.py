@@ -24,6 +24,21 @@ from dataclasses import replace
 
 
 class ActorBootstrapTests(unittest.TestCase):
+    def test_transferred_walk_measurement_excludes_ego(self):
+        from PIL import Image, ImageDraw
+        from adventure_studio.scumm_actor_zclip_transfer_probe import walk_actor_center
+
+        image = Image.new("RGB", (1024, 768), (70, 130, 190))
+        draw = ImageDraw.Draw(image)
+        # Irregular black Ego silhouette crosses the same vertical lane.
+        draw.polygon([(450, 325), (457, 337), (480, 340), (445, 342)], fill="black")
+        self.assertIsNone(walk_actor_center(image))
+        for world_x in (220, 188, 172, 140):
+            frame = image.copy()
+            x = 192 + 2 * world_x
+            ImageDraw.Draw(frame).rectangle((x - 16, 308, x + 15, 350), fill="black")
+            self.assertAlmostEqual(walk_actor_center(frame), world_x, delta=1)
+
     def test_zclip_probes_use_disjoint_native_costumes(self):
         import tempfile
         from pathlib import Path
