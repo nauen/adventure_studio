@@ -287,6 +287,47 @@ def author_room_scale_curve(raw: str, room_name: str, slot: int, scale1: int,
     return _checked(replace(document, rooms=rooms))
 
 
+def import_room_background(raw: str, room_name: str, png_path: str) -> str:
+    """Import opaque PNG pixels without changing existing room palette indices."""
+    from PIL import Image
+
+    document = parse_document(raw)
+    room = next((r for r in document.rooms if r.name == room_name), None)
+    if room is None:
+        raise ValueError("Bitte einen vorhandenen Raum wählen")
+    palette = list(room.palette)
+    indices = {rgb: i for i, rgb in reversed(tuple(enumerate(palette)))}
+    size = (room.geometry.room_width, room.geometry.room_height)
+    try:
+        with Path(png_path).open("rb") as file:
+            header = file.read(25)
+            file.seek(0)
+            with Image.open(file) as source:
+                if source.format != "PNG" or source.size != size:
+                    raise ValueError(f"Raumhintergrund benötigt echtes PNG in {size[0]} × {size[1]} Pixel")
+                # PNG IHDR bit depth; Pillow otherwise silently reduces RGB16 to RGB8.
+                if header[24] > 8 or getattr(source, "n_frames", 1) != 1:
+                    raise ValueError("Raumhintergrund benötigt ein statisches PNG mit maximal 8 Bit pro Kanal")
+                rgba = source.convert("RGBA")
+            pixels = bytearray()
+            for red, green, blue, alpha in rgba.getdata():
+                if alpha != 255:
+                    raise ValueError("Raumhintergrund muss vollständig deckend sein")
+                rgb = (red, green, blue)
+                if rgb not in indices:
+                    if len(palette) == 256:
+                        raise ValueError("Raumpalette einschließlich vorhandener Farben überschreitet 256 Einträge")
+                    indices[rgb] = len(palette)
+                    palette.append(rgb)
+                pixels.append(indices[rgb])
+    except (OSError, Image.DecompressionBombError) as error:
+        raise ValueError(f"PNG-Raumhintergrund nicht lesbar: {error}") from error
+    updated = replace(room, pixels=bytes(pixels), palette=tuple(palette),
+                      authored_background=True)
+    return _checked(replace(document, rooms=tuple(
+        updated if r.name == room_name else r for r in document.rooms)))
+
+
 def import_room_zplane(raw: str, room_name: str, index: int, png_path: str) -> str:
     """Author one full-room native occlusion plane from a white-on-black PNG.
 
@@ -2618,8 +2659,8 @@ def edit_voice_variant(raw: str, identity: str, step_number: int,
 def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
     """Combine current authored Story rooms with typed native Actor and verb actions.
 
-    The Story owns the room resources. Only the explicitly supported native
-    Actor/Costume/action fields are carried across; all references are validated
+    The Story owns room identity and generated interactions. Explicitly authored
+    backgrounds and supported native assets/actions are carried across; all references are validated
     against the freshly compiled Story rooms before a project is returned.
     """
     project = compile_story_to_scumm(parse_story_document(story_raw))
@@ -2628,9 +2669,28 @@ def compose_story_project(story_raw: str, native_raw: str | None = None) -> str:
     native = parse_document(native_raw)
     music_by_room = {room.name: room.music_id for room in native.rooms}
     native_by_room = {room.name: room for room in native.rooms}
+    if any(r.authored_background and r.name not in {item.name for item in project.rooms}
+           for r in native.rooms):
+        raise ValueError("Story removed room with authored background")
     rooms = []
     for room in project.rooms:
         previous = native_by_room.get(room.name)
+        if previous is not None and previous.authored_background:
+            if room.geometry != previous.geometry:
+                raise ValueError(f"Story changed authored background geometry: {room.name}")
+            palette = (*previous.palette, *dict.fromkeys(
+                rgb for rgb in room.palette if rgb not in previous.palette))
+            if len(palette) > 256:
+                raise ValueError(f"Story palette exceeds 256 entries with authored background: {room.name}")
+            indices = {rgb: i for i, rgb in reversed(tuple(enumerate(palette)))}
+            mapping = bytes(indices[rgb] for rgb in room.palette)
+            hotspots = tuple(replace(h, **{
+                field: bytes(mapping[i] for i in getattr(h, field))
+                for field in ("sprite_pixels", "open_sprite_pixels", "third_sprite_pixels")
+                if getattr(h, field) is not None}) for h in room.hotspots)
+            room = replace(room, pixels=previous.pixels, palette=palette,
+                           hotspots=hotspots, palette_cycles=previous.palette_cycles,
+                           authored_background=True)
         zplanes = previous.zplanes if previous is not None else ()
         if previous is not None and (zplanes or previous.walkboxes) and (
                 room.geometry.room_width != previous.geometry.room_width or

@@ -324,7 +324,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                  native_actor_zclip_return_probe: bool = False,
                  native_two_actor_walk_probe: bool = False,
                  native_two_actor_capture_frames: int = 210,
-                 native_two_actor_capture_interval: float = 0.07) -> None:
+                 native_two_actor_capture_interval: float = 0.07,
+                 scene_ready_rgb: tuple[int, int, int] | None = None) -> None:
     if (native_actor_zclip_dynamic_probe or native_actor_zclip_profile_restore_probe or native_transferred_actor_walk_probe or native_transferred_actor_animation_probe or native_transferred_actor_facing_probe or native_transferred_actor_camera_probe or native_transferred_actor_position_probe) and not native_actor_zclip_transfer_probe:
         raise ValueError("Dynamic Actor clipping requires transfer probe")
     if native_actor_zclip_transfer_probe and (not scene_only or scene_walk_clicks or native_two_actor_walk_probe or native_actor_zclip_return_probe):
@@ -363,6 +364,8 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
         raise ValueError("Scene click coordinates must lie within game viewport")
     if allow_static_scene and not (verify_chain or scene_only):
         raise ValueError("Static scene exception requires a chain or isolated scene fixture")
+    if scene_ready_rgb is not None and not (scene_only and allow_static_scene):
+        raise ValueError("Custom scene readiness color requires isolated static scene mode")
     if reverse_recipe and not verify_recipe:
         raise ValueError("Reversed inventory combination requires recipe mode")
     if auto_recipe and not verify_recipe:
@@ -535,9 +538,13 @@ def launch_smoke(game_directory: Path, output_directory: Path, seconds: float = 
                 # Harbor sky confirms the room has loaded. Four-phase
                 # acceptance still independently requires an initial blue
                 # view and the complete outward/return journey.
-                if (close_rgb(start_rgb, (70, 130, 190))
-                        or ((camera_pan_capture or native_two_actor_walk_probe or native_actor_zclip_return_probe or native_actor_zclip_transfer_probe) and
-                            close_rgb(start_rgb, (240, 175, 95)))):
+                if scene_ready_rgb is not None:
+                    ready = close_rgb(start_rgb, scene_ready_rgb, tolerance=8)
+                else:
+                    ready = (close_rgb(start_rgb, (70, 130, 190))
+                             or ((camera_pan_capture or native_two_actor_walk_probe or native_actor_zclip_return_probe or native_actor_zclip_transfer_probe)
+                                 and close_rgb(start_rgb, (240, 175, 95))))
+                if ready:
                     break
                 time.sleep(0.3)
             else:

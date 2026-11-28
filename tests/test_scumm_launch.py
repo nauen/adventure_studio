@@ -178,6 +178,16 @@ class ScummLaunchTests(unittest.TestCase):
                     self.assertTrue(launch.call_args.kwargs["auto_recipe"])
                     self.assertFalse(launch.call_args.kwargs["verify_return"])
 
+    def test_custom_scene_readiness_requires_isolated_static_scene(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp)
+            for options in ({}, {"scene_only": True}, {"verify_chain": True, "allow_static_scene": True}):
+                with self.subTest(options=options), self.assertRaisesRegex(ValueError, "isolated static scene"):
+                    launch_smoke(path, path / "out", scene_ready_rgb=(175, 37, 210), **options)
+            with self.assertRaisesRegex(ValueError, "Missing isolated"):
+                launch_smoke(path, path / "out", scene_only=True, allow_static_scene=True,
+                             scene_ready_rgb=(175, 37, 210))
+
     def test_static_scene_exception_requires_full_chain_verification(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp)

@@ -31,7 +31,7 @@ from .studio_sequences import (actor_animations, append_sequence_step, append_se
                                set_sequence_skippable,
                                project_choices, sequence_choices, sequence_steps,
                                compose_story_project, import_room_music,
-                               import_room_sound, import_room_zplane, import_object_zplane, import_object_third_image, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_walkbox_gate, author_room_scale_curve, author_room_camera_plan, room_camera_form_values,
+                               import_room_sound, import_room_background, import_room_zplane, import_object_zplane, import_object_third_image, author_room_walkbox, author_room_walkbox_zplane, author_room_box_connections, author_room_walkbox_gate, author_room_scale_curve, author_room_camera_plan, room_camera_form_values,
                                room_sound_ids,
                                edit_voice_variant, set_default_voice_language,
                                dialogue_voice_lines, edit_dialogue_voice,
@@ -217,7 +217,7 @@ def catalog_view(raw: str):
                f"{len(catalog.characters)} Figuren · {len(catalog.items)} Objekte · "
                f"{len(catalog.puzzles)} Rätsel · {len(catalog.recipes)} Rezepte · "
                f"{len(catalog.dialogues)} Dialoge · {len(catalog.assets)} Asset-Referenzen**\n\n"
-               "Raumbilder sind derzeit technische Vorschauen. Referenzierte "
+               "Story-Raumvorschauen sind technische Vorschauen; eigene Raumhintergründe im nativen Tab ansehen. Referenzierte "
                "Charakterbilder und Sprachdateien werden noch nicht gerendert.")
     return (summary, list(catalog.chapters), list(catalog.scenes),
             list(catalog.characters), list(catalog.items), list(catalog.puzzles),
@@ -480,6 +480,28 @@ def make_app():
         except (ValueError, OSError) as error:
             raise gr.Error(str(error)) from error
 
+    def native_background_import(raw, room, file_path):
+        if raw is None or not file_path:
+            raise gr.Error("Bitte zuerst ein natives Projekt und einen PNG-Raumhintergrund wählen")
+        try:
+            updated = import_room_background(raw, room, file_path)
+            return (updated, *native_selectors(updated, selected_room=room),
+                    f"Raumhintergrund für {room} gespeichert. Gesamtes Studio-Projekt speichern.")
+        except (ValueError, OSError) as error:
+            raise gr.Error(str(error)) from error
+
+    def native_background_preview(raw, room):
+        if raw is None or room is None:
+            return None
+        from PIL import Image
+        selected = next((r for r in parse_document(raw).rooms if r.name == room), None)
+        if selected is None:
+            return None
+        image = Image.frombytes("P", (selected.geometry.room_width, selected.geometry.room_height),
+                                selected.pixels)
+        image.putpalette([c for rgb in selected.palette for c in rgb])
+        return image.convert("RGB")
+
     def native_zplane_import(raw, room, index, file_path):
         if raw is None or not file_path:
             raise gr.Error("Bitte zuerst ein natives Projekt und eine PNG-Z-Maske wählen")
@@ -688,10 +710,10 @@ def make_app():
             export_button = gr.Button("Geprüfte Story exportieren", variant="primary")
             download = gr.File(label="Story herunterladen")
         with gr.Row():
-            studio_file = gr.File(label="Gemeinsames Studio-Projekt öffnen", file_types=[".json"], type="filepath")
-            studio_save_button = gr.Button("Gesamtes Studio-Projekt speichern", variant="primary")
-            studio_download_file = gr.File(label="Studio-Projekt herunterladen")
-        gr.Markdown("Das gemeinsame Projekt speichert Story und native Actors/Costumes/Interaktionsregeln ohne doppelte Raum-Bitmaps. Bisherige Story- und native Projekt-JSON-Dateien bleiben separat ladbar.")
+            studio_file = gr.File(label="Gemeinsames Studio-Projekt öffnen", file_types=[".json"], type="filepath", elem_id="studio-project-file")
+            studio_save_button = gr.Button("Gesamtes Studio-Projekt speichern", variant="primary", elem_id="studio-project-save")
+            studio_download_file = gr.File(label="Studio-Projekt herunterladen", elem_id="studio-project-download")
+        gr.Markdown("Das gemeinsame Projekt speichert Story und native Actors/Costumes/Interaktionsregeln mit eigenen Raumhintergründen und nativen Raumänderungen, ohne unveränderte generierte Bitmaps zu duplizieren. Bisherige Story- und native Projekt-JSON-Dateien bleiben separat ladbar.")
         with gr.Row():
             source_language = gr.Dropdown(label="Quellsprache der Story",
                                           choices=[("Deutsch", "de"), ("Englisch", "en"),
@@ -833,7 +855,7 @@ def make_app():
                 native_file_switch_cancel = gr.Button(
                     "Bisheriges Projekt behalten", elem_id="native-file-switch-cancel",
                     visible=False)
-            native_sync_button = gr.Button("Aktuelle Story als natives Projekt übernehmen / aktualisieren")
+            native_sync_button = gr.Button("Aktuelle Story als natives Projekt übernehmen / aktualisieren", elem_id="native-sync")
             with gr.Accordion("Actors und Costumes erstellen", open=True):
                 gr.Markdown("Ein PNG wird in eine native 32-Farben-Costume mit Transparenzfarbe umgewandelt. Bilder mit mehr als 31 sichtbaren Farben werden auf 31 Farben reduziert. Weitere Frames behalten die vorhandenen Farben; ist die Palette voll, wird der Import mit einer klaren Meldung abgelehnt.")
                 with gr.Row():
@@ -917,6 +939,11 @@ def make_app():
                 native_hotspot = gr.Dropdown(label="Auslösendes Objekt", elem_id="native-hotspot")
                 native_verb = gr.Dropdown(label="Verb", choices=["Push", "Pull", "Open", "Close"], value="Open")
             gr.Markdown("**Native Raumverdeckung (ZPxx):** Eine PNG-Maske in exakter Raumgröße importieren. Weiß verdeckt Actors, Schwarz lässt sie sichtbar; transparente Pixel sind frei. Ebene 1 zuerst anlegen, bestehende Ebenen können ersetzt werden. Die Änderung wird erst durch den Projekt-JSON-Export dauerhaft gesichert.")
+            gr.Markdown("**R01 Raumhintergrund:** Statisches, deckendes PNG in exakter Raumgröße (maximal 8 Bit pro Kanal). Vorhandene Paletteneinträge bleiben erhalten; zusammen höchstens 256 Farben. Im gemeinsamen Studio-Projekt speichern.")
+            with gr.Row():
+                native_background_file = gr.File(label="Raumhintergrund (PNG)", file_types=[".png"], type="filepath", elem_id="native-background-file")
+                native_background_add = gr.Button("Raumhintergrund übernehmen", elem_id="native-background-add")
+            native_background_image = gr.Image(label="Aktueller Raumhintergrund", interactive=False, elem_id="native-background-preview")
             with gr.Row():
                 native_zplane_file = gr.File(label="Raum-Z-Maske (PNG)", file_types=[".png"], type="filepath", elem_id="native-zplane-file")
                 native_zplane_index = gr.Number(label="Z-Ebene (1–9)", value=1, precision=0, elem_id="native-zplane-index")
@@ -1940,6 +1967,11 @@ def make_app():
         native_sound_add.click(native_sound_import,
                                [native_state, native_room, native_sound_id, native_sound_file],
                                [native_state, *native_outputs, native_report])
+        native_background_add.click(native_background_import,
+                                    [native_state, native_room, native_background_file],
+                                    [native_state, *native_outputs, native_report])
+        native_room.change(native_background_preview, [native_state, native_room], [native_background_image])
+        native_state.change(native_background_preview, [native_state, native_room], [native_background_image])
         native_zplane_add.click(native_zplane_import,
                                 [native_state, native_room, native_zplane_index, native_zplane_file],
                                 [native_state, *native_outputs, native_report])

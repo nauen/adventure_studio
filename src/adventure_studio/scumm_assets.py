@@ -154,6 +154,7 @@ class RoomAsset:
     camera_cues: tuple[CameraCue, ...] = ()
     ego_start_x: int = 60
     ego_start_y: int = 100
+    authored_background: bool = False
 
 
 def _scumm_string(value: str) -> str:
@@ -165,6 +166,8 @@ def _scumm_string(value: str) -> str:
 
 def _validate(room: RoomAsset) -> None:
     validate_geometry(room.geometry)
+    if type(room.authored_background) is not bool:
+        raise ValueError("Authored background flag must be boolean")
     if not _IDENTIFIER.fullmatch(room.name):
         raise ValueError("Invalid SCUMM room identifier")
     width = room.geometry.room_width
