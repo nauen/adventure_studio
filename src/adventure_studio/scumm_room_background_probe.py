@@ -38,7 +38,8 @@ def run(upstream: Path, destination: Path) -> dict:
     export_document(document, build / "resources")
     game = compile_story_game(build, upstream, destination / "game")
     screenshots = destination / "screenshots"
-    launch_smoke(game, screenshots, seconds=8, scene_only=True, allow_static_scene=True)
+    launch_smoke(game, screenshots, seconds=8, scene_only=True, allow_static_scene=True,
+                 scene_ready_rgb=colors[1])
     observations = []
     with Image.open(screenshots / "scummvm-end.png") as source:
         frame = source.convert("RGB")
