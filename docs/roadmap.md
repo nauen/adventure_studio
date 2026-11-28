@@ -1,10 +1,10 @@
 # Adventure Studio – aktive Produktroadmap
 
 - **Hauptziel:** Vollständiger nativer SCUMM-v6-Generator ohne Zusatzruntime; erstes Produktziel: ein im Studio authoriertes, mehrraumiges Adventure bis zum Spielende in unverändertem ScummVM.
-- **Jetzt:** R07 [#363](https://github.com/nauen/adventure_studio/pull/363) – unabhängige IM03/ZP01-Objektbildmaske auf integriertem #348; genau eine Fähigkeit.
-- **Abnahme:** IM03/ZP01 per Studio-PNG → Modell/JSON-v1/Story → produktivem ScummC/BMP; bestehende IM01/IM02 unverändert; drei unabhängige stock-ScummVM-Kontrollen (maskiert, transparent, falscher BOXD-Index); Core und alle relevanten Pflichtgates grün.
-- **Blocker:** #348 integriert ([19b887f](https://github.com/nauen/adventure_studio/commit/19b887f7c23985e1a0e53e127e4efe2d70763ed1)); [Core](https://github.com/nauen/adventure_studio/actions/runs/46059721878), [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/46059728975), [Main-Core](https://github.com/nauen/adventure_studio/actions/runs/46074285907) grün; [Gameplay](https://github.com/nauen/adventure_studio/actions/runs/46059728975/artifacts/15228222323): 4096 Pixel je Zustand 1→2→3→1. #363 auf gemeinsamer Basis erneut abzunehmen; alter Native-Nachweis ist kein neues Gesamtgate.
-- **Danach:** Erst nach #363-Abnahme nächste benötigte native Raumgrafik-/Z-Masken-/Walkbox-Fähigkeit priorisieren; bestehende Folge-PRs unverändert lassen.
+- **Jetzt:** R07 [#364](https://github.com/nauen/adventure_studio/pull/364) – unabhängige IM03/ZP02-Objektbildmaske auf integriertem #363; ZP01 vorausgesetzt.
+- **Abnahme:** IM03/ZP02 per Studio-PNG → Modell/JSON-v1/Story → produktivem ScummC/BMP; IM01/IM02 und IM03/ZP01 unverändert; drei unabhängige stock-ScummVM-Kontrollen (maskiert mit BOXD2, transparent, falscher BOXD1); Core und alle relevanten Pflichtgates grün.
+- **Blocker:** #363 integriert ([5160ba5](https://github.com/nauen/adventure_studio/commit/5160ba50f13e6a63348663ac2e3bc8c3162efcc7)); [Core](https://github.com/nauen/adventure_studio/actions/runs/46076209058), [Native/Studio](https://github.com/nauen/adventure_studio/actions/runs/46076214643) und [Main-Core](https://github.com/nauen/adventure_studio/actions/runs/46087334183) grün; [ScummVM](https://github.com/nauen/adventure_studio/actions/runs/46076214643/artifacts/15235770578) 108/1388/1388 sichtbare Actor-Pixel, [Chromium](https://github.com/nauen/adventure_studio/actions/runs/46076214643/artifacts/15235916147). #364 auf gemeinsamer Basis erneut abzunehmen; alter Native-Nachweis ist kein neues Gesamtgate.
+- **Danach:** Erst nach vollständiger #364-Abnahme und Konsolidierung die nächste benötigte native Raumgrafik-/Z-Masken-/Walkbox-Fähigkeit priorisieren; #365/#366 unverändert lassen.
 
 ## Historischer Roadmap-Kopf (ersetzt, keine aktive Paketauswahl)
 
